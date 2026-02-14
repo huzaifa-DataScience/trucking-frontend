@@ -23,12 +23,12 @@ export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
           "Job Name": r.jobName,
           Route: r.route,
           "Truck Number": r.truckNumber,
-          "Fleet Avg Loads": r.fleetAvgLoads,
-          "This Truck Loads": r.thisTruckLoads,
-          "First Ticket Time": r.firstTicketTime,
-          "Last Ticket Time": r.lastTicketTime,
-          "Implied Hours": r.impliedHours,
-          "Loads Per Hour": r.loadsPerHour,
+          "Hauler Name": r.haulerName ?? "",
+          "Total Tickets": r.totalTickets,
+          "Work Duration": r.workDuration,
+          "My Avg Cycle (min)": r.myAvgCycle,
+          "Fleet Benchmark (min)": r.fleetBenchmark,
+          Status: r.status === "red" ? "SLOW (>15%)" : r.status === "grey" ? "Single Load" : "Within 15%",
         }))
       );
       const wb = XLSX.utils.book_new();
@@ -56,33 +56,56 @@ export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
           <thead>
             <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
               <Th>Date</Th>
-              <Th>Job Name / Route</Th>
+              <Th>Job Name</Th>
+              <Th>Route</Th>
               <Th>Truck Number</Th>
-              <Th>Fleet Avg Loads</Th>
-              <Th>This Truck&apos;s Loads</Th>
-              <Th>First Ticket Time</Th>
-              <Th>Last Ticket Time</Th>
-              <Th>Implied Hours</Th>
-              <Th>Loads Per Hour</Th>
+              <Th>Hauler Name</Th>
+              <Th>Total Tickets</Th>
+              <Th>Work Duration</Th>
+              <Th>My Avg Cycle</Th>
+              <Th>Fleet Benchmark</Th>
+              <Th>Status</Th>
             </tr>
           </thead>
           <tbody>
-            {pageRows.map((row, i) => (
-              <tr
-                key={`${row.date}-${row.truckNumber}-${row.route}-${i}`}
-                className="border-b border-stone-100 hover:bg-stone-50 dark:border-stone-800 dark:hover:bg-stone-800/50"
-              >
-                <Td>{row.date}</Td>
-                <Td>{row.route}</Td>
-                <Td>{row.truckNumber}</Td>
-                <Td>{row.fleetAvgLoads}</Td>
-                <Td>{row.thisTruckLoads}</Td>
-                <Td>{row.firstTicketTime}</Td>
-                <Td>{row.lastTicketTime}</Td>
-                <Td>{row.impliedHours} Hrs</Td>
-                <Td>{row.loadsPerHour}</Td>
-              </tr>
-            ))}
+            {pageRows.map((row, i) => {
+              const statusClass =
+                row.status === "red"
+                  ? "bg-red-50 text-red-800 dark:bg-red-950/50 dark:text-red-200"
+                  : row.status === "grey"
+                    ? "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
+                    : "bg-green-50 text-green-800 dark:bg-green-950/50 dark:text-green-200";
+              const statusText =
+                row.status === "red"
+                  ? "SLOW (>15%)"
+                  : row.status === "grey"
+                    ? "Single Load"
+                    : "Within 15%";
+              
+              return (
+                <tr
+                  key={`${row.date}-${row.truckNumber}-${row.route}-${i}`}
+                  className={`border-b hover:bg-stone-50 dark:hover:bg-stone-800/50 ${
+                    row.status === "red" ? "bg-red-50/50 dark:bg-red-950/20" : ""
+                  }`}
+                >
+                  <Td>{row.date}</Td>
+                  <Td>{row.jobName}</Td>
+                  <Td>{row.route}</Td>
+                  <Td>{row.truckNumber}</Td>
+                  <Td>{row.haulerName ?? "—"}</Td>
+                  <Td>{row.totalTickets}</Td>
+                  <Td>{row.workDuration}</Td>
+                  <Td>{row.myAvgCycle} min</Td>
+                  <Td>{row.fleetBenchmark} min</Td>
+                  <Td>
+                    <span className={`rounded px-2 py-1 text-xs font-medium ${statusClass}`}>
+                      {statusText}
+                    </span>
+                  </Td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

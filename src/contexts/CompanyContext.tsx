@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { COMPANIES } from "@/lib/mock-data";
+import { COMPANIES } from "@/lib/config/companies";
 import type { Company } from "@/lib/types";
 
 const STORAGE_KEY = "construction-logistics-company-id";

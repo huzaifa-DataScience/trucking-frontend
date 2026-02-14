@@ -1,21 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  filterTickets,
-  getHaulerDashboardKpis,
-  getBillableUnitsSummary,
-  getCostCenterSummary,
-  JOBS,
-  MATERIALS,
-  HAULERS,
-  TRUCK_TYPES,
-} from "@/lib/mock-data";
-import { useCompany } from "@/contexts/CompanyContext";
-import { ReportFilters, type FilterConfig, type FilterOptions } from "@/components/reporting/ReportFilters";
+import { useCallback, useState } from "react";
+import type { FilterConfig } from "@/components/reporting/ReportFilters";
+import { ReportFilters } from "@/components/reporting/ReportFilters";
 import { KPICards } from "@/components/reporting/KPICards";
 import { SummaryTable } from "@/components/reporting/SummaryTable";
 import { TicketGrid } from "@/components/reporting/TicketGrid";
+import { useCompany } from "@/contexts/CompanyContext";
+import { useLookups } from "@/hooks/useLookups";
+import { useHaulerDashboard } from "@/hooks/useHaulerDashboard";
+import { useTicketDetail } from "@/hooks/useTicketDetail";
+import * as haulerApi from "@/lib/api/endpoints/hauler-dashboard";
 
 const defaultFilters: FilterConfig = {
   startDate: "2025-01-01",
@@ -27,35 +22,64 @@ const defaultFilters: FilterConfig = {
   direction: "Both",
 };
 
-const filterOptions: FilterOptions = {
-  jobs: [{ value: "all", label: "All" }, ...JOBS.map((j) => ({ value: j, label: j }))],
-  materials: [{ value: "all", label: "All" }, ...MATERIALS.map((m) => ({ value: m, label: m }))],
-  haulers: [{ value: "all", label: "All" }, ...HAULERS.map((h) => ({ value: h, label: h }))],
-  truckTypes: [{ value: "all", label: "All" }, ...TRUCK_TYPES.map((t) => ({ value: t, label: t }))],
-};
-
 export default function HaulerDashboardPage() {
   const { companyId } = useCompany();
   const [filters, setFilters] = useState<FilterConfig>(defaultFilters);
 
-  const tickets = useMemo(
-    () =>
-      filterTickets({
-        companyId,
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        jobId: filters.jobId,
-        materialId: filters.materialId,
-        haulerId: filters.haulerId,
-        truckTypeId: filters.truckTypeId,
-        direction: filters.direction,
-      }),
-    [companyId, filters]
+  const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId);
+
+  const {
+    kpis,
+    billableUnits,
+    costCenter,
+    tickets,
+    totalTickets,
+    page,
+    pageSize,
+    setPage,
+    loading: dataLoading,
+    error: dataError,
+  } = useHaulerDashboard({
+    companyId,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    jobId: filters.jobId,
+    materialId: filters.materialId,
+    haulerId: filters.haulerId,
+    truckTypeId: filters.truckTypeId,
+    direction: filters.direction,
+  });
+
+  const { ticket: detailTicket, fetchDetail, clear: closeDetail } = useTicketDetail();
+
+  const handleOpenDetail = useCallback(
+    (ticketNumber: string) => fetchDetail(ticketNumber, companyId),
+    [fetchDetail, companyId]
   );
 
-  const kpis = useMemo(() => getHaulerDashboardKpis(tickets), [tickets]);
-  const billableUnits = useMemo(() => getBillableUnitsSummary(tickets), [tickets]);
-  const costCenter = useMemo(() => getCostCenterSummary(tickets), [tickets]);
+  const handleExportClick = useCallback(() => {
+    const apiFilters = {
+      companyId,
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      jobId: filters.jobId === "all" ? undefined : filters.jobId,
+      materialId: filters.materialId === "all" ? undefined : filters.materialId,
+      haulerId: filters.haulerId === "all" ? undefined : filters.haulerId,
+      truckTypeId: filters.truckTypeId === "all" ? undefined : filters.truckTypeId,
+      direction: filters.direction === "Both" ? undefined : filters.direction,
+    };
+    haulerApi.getHaulerTicketsExportBlob(apiFilters).then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "hauler-dashboard-tickets.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }, [companyId, filters]);
+
+  const loading = lookupsLoading || dataLoading;
+  const error = lookupsError ?? dataError;
 
   return (
     <div className="space-y-6">
@@ -79,36 +103,63 @@ export default function HaulerDashboardPage() {
         showDirection
       />
 
-      <KPICards
-        items={[
-          { label: "Total Tickets", value: kpis.totalTickets },
-          { label: "Unique Trucks", value: kpis.uniqueTrucks },
-          { label: "Active Jobs", value: kpis.activeJobs },
-        ]}
-      />
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
+          {error.message}
+        </div>
+      )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <SummaryTable
-          title="Billable units"
-          subtitle="By truck type (verify vendor invoices)"
-          columns={[
-            { key: "truckType", label: "Truck Type" },
-            { key: "totalTickets", label: "Total Tickets" },
-          ]}
-          rows={billableUnits}
-        />
-        <SummaryTable
-          title="Cost center"
-          subtitle="By job"
-          columns={[
-            { key: "jobName", label: "Job Name" },
-            { key: "totalTickets", label: "Total Tickets" },
-          ]}
-          rows={costCenter}
-        />
-      </div>
+      {loading && (
+        <div className="flex justify-center py-8">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+        </div>
+      )}
 
-      <TicketGrid tickets={tickets} companyId={companyId} />
+      {!loading && (
+        <>
+          <KPICards
+            items={[
+              { label: "Total Tickets", value: kpis.totalTickets },
+              { label: "Unique Trucks", value: kpis.uniqueTrucks },
+              { label: "Active Jobs", value: kpis.activeJobs },
+            ]}
+          />
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <SummaryTable
+              title="Billable units"
+              subtitle="By truck type (verify vendor invoices)"
+              columns={[
+                { key: "truckType", label: "Truck Type" },
+                { key: "totalTickets", label: "Total Tickets" },
+              ]}
+              rows={billableUnits}
+            />
+            <SummaryTable
+              title="Cost center"
+              subtitle="By job"
+              columns={[
+                { key: "jobName", label: "Job Name" },
+                { key: "totalTickets", label: "Total Tickets" },
+              ]}
+              rows={costCenter}
+            />
+          </div>
+
+          <TicketGrid
+            tickets={tickets}
+            total={totalTickets}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            companyId={companyId}
+            onOpenDetail={handleOpenDetail}
+            detailTicket={detailTicket}
+            onCloseDetail={closeDetail}
+            onExportClick={handleExportClick}
+          />
+        </>
+      )}
     </div>
   );
 }

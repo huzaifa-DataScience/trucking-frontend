@@ -2,33 +2,69 @@
 
 import { useCallback, useState } from "react";
 import type { TicketRow, TicketDetail } from "@/lib/types";
-import { getTicketByNumber } from "@/lib/mock-data";
 import { TicketDetailModal } from "./TicketDetailModal";
-
-const ROWS_PER_PAGE = 50;
 
 interface TicketGridProps {
   tickets: TicketRow[];
+  /** When provided, use server-side pagination. */
+  total?: number;
+  /** 1-based page (for server-side). */
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
   companyId?: string;
-  onExportExcel?: (tickets: TicketRow[]) => void;
+  /** When provided, parent fetches detail (e.g. from API) and passes detailTicket + onCloseDetail. */
+  onOpenDetail?: (ticketNumber: string) => void;
+  detailTicket?: TicketDetail | null;
+  onCloseDetail?: () => void;
+  /** When provided, Export button calls this (e.g. backend export blob). Otherwise client-side xlsx. */
+  onExportClick?: () => void;
 }
 
-export function TicketGrid({ tickets, companyId, onExportExcel }: TicketGridProps) {
-  const [page, setPage] = useState(0);
-  const [detailTicket, setDetailTicket] = useState<TicketDetail | null>(null);
+const DEFAULT_PAGE_SIZE = 50;
 
-  const totalPages = Math.ceil(tickets.length / ROWS_PER_PAGE) || 1;
-  const start = page * ROWS_PER_PAGE;
-  const pageTickets = tickets.slice(start, start + ROWS_PER_PAGE);
+export function TicketGrid({
+  tickets,
+  total: totalFromServer,
+  page: pageFromServer = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+  onPageChange,
+  companyId: _companyId,
+  onOpenDetail,
+  detailTicket: detailTicketProp,
+  onCloseDetail,
+  onExportClick,
+}: TicketGridProps) {
+  const [clientPage, setClientPage] = useState(0);
+  const [detailTicketLocal, setDetailTicketLocal] = useState<TicketDetail | null>(null);
 
-  const openDetail = useCallback((ticketNumber: string) => {
-    const full = getTicketByNumber(ticketNumber, companyId);
-    setDetailTicket(full);
-  }, [companyId]);
+  const isServerPagination = totalFromServer != null && onPageChange != null;
+  const total = isServerPagination ? totalFromServer : tickets.length;
+  const page = isServerPagination ? pageFromServer : clientPage + 1;
+  const totalPages = Math.ceil(total / pageSize) || 1;
+  const pageTickets = isServerPagination ? tickets : tickets.slice(clientPage * pageSize, (clientPage + 1) * pageSize);
+
+  const detailTicket = detailTicketProp ?? detailTicketLocal;
+  const setDetailTicket = onCloseDetail != null ? (t: TicketDetail | null) => (t ? undefined : onCloseDetail()) : setDetailTicketLocal;
+  const closeDetail = useCallback(() => {
+    if (onCloseDetail) onCloseDetail();
+    else setDetailTicketLocal(null);
+  }, [onCloseDetail]);
+
+  const openDetail = useCallback(
+    (ticketNumber: string) => {
+      if (onOpenDetail) {
+        onOpenDetail(ticketNumber);
+        return;
+      }
+      setDetailTicketLocal(null);
+    },
+    [onOpenDetail]
+  );
 
   const exportExcel = useCallback(() => {
-    if (onExportExcel) {
-      onExportExcel(tickets);
+    if (onExportClick) {
+      onExportClick();
       return;
     }
     import("xlsx").then((XLSX) => {
@@ -53,14 +89,23 @@ export function TicketGrid({ tickets, companyId, onExportExcel }: TicketGridProp
       XLSX.utils.book_append_sheet(wb, ws, "Tickets");
       XLSX.writeFile(wb, "tickets-export.xlsx");
     });
-  }, [tickets, onExportExcel]);
+  }, [tickets, onExportClick]);
+
+  const goPrev = () => {
+    if (isServerPagination) onPageChange!(Math.max(1, page - 1));
+    else setClientPage((p) => Math.max(0, p - 1));
+  };
+  const goNext = () => {
+    if (isServerPagination) onPageChange!(Math.min(totalPages, page + 1));
+    else setClientPage((p) => Math.min(totalPages - 1, p + 1));
+  };
 
   return (
     <>
       <div className="rounded-xl border border-stone-200/80 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900/50">
         <div className="flex items-center justify-between border-b border-stone-200/80 px-4 py-3 dark:border-stone-800">
           <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
-            Detailed ticket grid ({tickets.length} rows)
+            Detailed ticket grid ({total} rows)
           </span>
           <button
             type="button"
@@ -139,21 +184,21 @@ export function TicketGrid({ tickets, companyId, onExportExcel }: TicketGridProp
         </div>
         <div className="flex items-center justify-between border-t border-stone-200/80 px-4 py-3 dark:border-stone-800">
           <span className="text-xs text-stone-500 dark:text-stone-400">
-            Page {page + 1} of {totalPages} ({tickets.length} total)
+            Page {page} of {totalPages} ({total} total)
           </span>
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
+              onClick={goPrev}
+              disabled={page <= 1}
               className="rounded border border-stone-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-stone-600"
             >
               Previous
             </button>
             <button
               type="button"
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
+              onClick={goNext}
+              disabled={page >= totalPages}
               className="rounded border border-stone-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-stone-600"
             >
               Next
@@ -161,7 +206,7 @@ export function TicketGrid({ tickets, companyId, onExportExcel }: TicketGridProp
           </div>
         </div>
       </div>
-      <TicketDetailModal ticket={detailTicket} onClose={() => setDetailTicket(null)} />
+      <TicketDetailModal ticket={detailTicket ?? null} onClose={closeDetail} />
     </>
   );
 }

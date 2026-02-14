@@ -73,16 +73,23 @@ export interface LateSubmissionRow {
   hauler: string;
 }
 
-/** Efficiency outlier row. */
+/** Efficiency outlier row (per spec). */
 export interface EfficiencyOutlierRow {
   date: string;
   jobName: string;
-  route: string;
+  route: string; // Format: "Material Name → Destination Site"
   truckNumber: string;
-  fleetAvgLoads: number;
-  thisTruckLoads: number;
-  firstTicketTime: string;
-  lastTicketTime: string;
-  impliedHours: number;
-  loadsPerHour: number;
+  haulerName?: string; // Backend may not return this yet
+  totalTickets: number; // thisTruckLoads
+  workDuration: string; // Format: "Hours:Minutes" (e.g., "7:30")
+  myAvgCycle: number; // Minutes per Trip
+  fleetBenchmark: number; // Average Cycle time in minutes (all other trucks)
+  status: "green" | "red" | "grey"; // green: within 15%, red: SLOW (>15%), grey: Single Load
+  // Legacy fields (for backward compatibility with current backend)
+  fleetAvgLoads?: number;
+  thisTruckLoads?: number;
+  firstTicketTime?: string;
+  lastTicketTime?: string;
+  impliedHours?: number;
+  loadsPerHour?: number;
 }
