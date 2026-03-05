@@ -1,15 +1,15 @@
-import { RequireAuth } from "@/components/auth/RequireAuth";
-import { CompanyProvider } from "@/contexts/CompanyContext";
+import { RequireAdmin } from "@/components/admin/RequireAdmin";
 import { Header } from "@/components/dashboard/Header";
 import { Sidebar } from "@/components/dashboard/Sidebar";
+import { CompanyProvider } from "@/contexts/CompanyContext";
 
-export default function DashboardLayout({
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <RequireAuth>
+    <RequireAdmin>
       <CompanyProvider>
         <div className="min-h-screen bg-stone-100 dark:bg-stone-950">
           <Sidebar />
@@ -19,6 +19,6 @@ export default function DashboardLayout({
           </div>
         </div>
       </CompanyProvider>
-    </RequireAuth>
+    </RequireAdmin>
   );
 }

@@ -62,34 +62,28 @@ export interface ReportFilters {
   direction: Direction;
 }
 
-/** Late submission audit row. */
+/** Late submission audit row (matches API: systemEntryDate, haulerCompanyName). */
 export interface LateSubmissionRow {
   ticketNumber: string;
   ticketDate: string;
-  systemDate: string;
+  systemEntryDate: string;
   lagTime: string;
   signedBy: string;
   jobName: string;
-  hauler: string;
+  haulerCompanyName: string;
 }
 
-/** Efficiency outlier row (per spec). */
+/** Efficiency outlier row (per FRONTEND_API_GUIDE.md: status RED / Single Load / Green). */
 export interface EfficiencyOutlierRow {
   date: string;
   jobName: string;
-  route: string; // Format: "Material Name → Destination Site"
+  route: string;
   truckNumber: string;
-  haulerName?: string; // Backend may not return this yet
-  totalTickets: number; // thisTruckLoads
-  workDuration: string; // Format: "Hours:Minutes" (e.g., "7:30")
-  myAvgCycle: number; // Minutes per Trip
-  fleetBenchmark: number; // Average Cycle time in minutes (all other trucks)
-  status: "green" | "red" | "grey"; // green: within 15%, red: SLOW (>15%), grey: Single Load
-  // Legacy fields (for backward compatibility with current backend)
-  fleetAvgLoads?: number;
-  thisTruckLoads?: number;
-  firstTicketTime?: string;
-  lastTicketTime?: string;
-  impliedHours?: number;
-  loadsPerHour?: number;
+  haulerName: string;
+  totalTickets: number;
+  workDuration: string;
+  myAvgCycle: number;
+  fleetBenchmark: number;
+  status: "RED" | "Single Load" | "Green";
+  statusLabel: string;
 }

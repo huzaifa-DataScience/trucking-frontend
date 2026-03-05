@@ -12,19 +12,23 @@ import { useMaterialDashboard } from "@/hooks/useMaterialDashboard";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import * as materialApi from "@/lib/api/endpoints/material-dashboard";
 
-const defaultFilters: FilterConfig = {
-  startDate: "2025-01-01",
-  endDate: "2025-01-31",
-  jobId: "all",
-  materialId: "all",
-  haulerId: "all",
-  truckTypeId: "all",
-  direction: "Both",
-};
+function createDefaultFilters(): FilterConfig {
+  // Use local machine date for default end date
+  const today = new Date().toISOString().split("T")[0]!;
+  return {
+    startDate: "2025-01-01",
+    endDate: today,
+    jobId: "all",
+    materialId: "all",
+    haulerId: "all",
+    truckTypeId: "all",
+    direction: "Both",
+  };
+}
 
 export default function MaterialDashboardPage() {
   const { companyId } = useCompany();
-  const [filters, setFilters] = useState<FilterConfig>(defaultFilters);
+  const [filters, setFilters] = useState<FilterConfig>(() => createDefaultFilters());
 
   const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId);
 

@@ -1,23 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { FilterConfig } from "@/components/reporting/ReportFilters";
 import { ReportFilters } from "@/components/reporting/ReportFilters";
 import { LateSubmissionGrid } from "@/components/reporting/LateSubmissionGrid";
 import { EfficiencyOutlierGrid } from "@/components/reporting/EfficiencyOutlierGrid";
+import { TicketDetailModal } from "@/components/reporting/TicketDetailModal";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useLookups } from "@/hooks/useLookups";
 import { useForensic } from "@/hooks/useForensic";
+import { useTicketDetail } from "@/hooks/useTicketDetail";
 
-const defaultFilters: FilterConfig = {
-  startDate: "2025-01-01",
-  endDate: "2025-01-31",
-  jobId: "all",
-  materialId: "all",
-  haulerId: "all",
-  truckTypeId: "all",
-  direction: "Both",
-};
+// Default to last 7 days for Efficiency Outlier Report (per spec)
+function getDefaultFilters(): FilterConfig {
+  const today = new Date();
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 7);
+  
+  return {
+    startDate: sevenDaysAgo.toISOString().split("T")[0]!,
+    endDate: today.toISOString().split("T")[0]!,
+    jobId: "all",
+    materialId: "all",
+    haulerId: "all",
+    truckTypeId: "all",
+    direction: "Both",
+  };
+}
+
+const defaultFilters: FilterConfig = getDefaultFilters();
 
 type TabId = "late" | "efficiency";
 
@@ -27,8 +38,16 @@ export default function ForensicAuditPage() {
   const [tab, setTab] = useState<TabId>("late");
 
   const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId);
+  const { ticket: detailTicket, fetchDetail, clear: closeDetail } = useTicketDetail();
 
-  const { lateRows, efficiencyRows, loading: dataLoading, error: dataError } = useForensic({
+  const openTicketDetail = useCallback(
+    (ticketNumber: string) => {
+      fetchDetail(ticketNumber, companyId);
+    },
+    [fetchDetail, companyId]
+  );
+
+  const { lateTicketsFound, lateRows, efficiencyRows, loading: dataLoading, error: dataError } = useForensic({
     companyId,
     startDate: filters.startDate,
     endDate: filters.endDate,
@@ -111,7 +130,7 @@ export default function ForensicAuditPage() {
                 <div className="rounded-xl border border-stone-200/80 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900/50">
                   <p className="text-xs font-medium text-stone-500 dark:text-stone-400">Late Tickets Found</p>
                   <p className="mt-1 text-2xl font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-                    {lateRows.length}
+                    {lateTicketsFound}
                   </p>
                 </div>
               </div>
@@ -119,7 +138,8 @@ export default function ForensicAuditPage() {
                 Tickets where <strong>Created At</strong> (system time) is more than 24 hours after{" "}
                 <strong>Ticket Date</strong>. Use to identify backdating.
               </p>
-              <LateSubmissionGrid rows={lateRows} />
+              <LateSubmissionGrid rows={lateRows} onOpenDetail={openTicketDetail} />
+              <TicketDetailModal ticket={detailTicket ?? null} onClose={closeDetail} />
             </div>
           )}
 

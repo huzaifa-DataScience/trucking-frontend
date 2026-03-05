@@ -3,7 +3,7 @@
  * Uses NEXT_PUBLIC_ so it's available in the browser.
  */
 
-const FALLBACK_BASE = "http://localhost:3001";
+const FALLBACK_BASE = "http://localhost:3000";
 
 export function getBaseUrl(): string {
   const url = process.env.NEXT_PUBLIC_API_BASE_URL ?? FALLBACK_BASE;

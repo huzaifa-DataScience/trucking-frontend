@@ -2,7 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { getBaseUrl } from "@/lib/api/config";
-import * as lookupsApi from "@/lib/api/endpoints/lookups";
+
+/** Ping backend root (GET /) – public, no auth – to verify it's up. */
+async function pingBackend(baseUrl: string): Promise<void> {
+  const url = baseUrl.replace(/\/$/, "") + "/";
+  const res = await fetch(url, { method: "GET", credentials: "omit" });
+  if (!res.ok) {
+    const text = await res.text();
+    let msg = `${res.status} ${res.statusText}`;
+    if (res.status === 401) {
+      msg = "401 Unauthorized – backend requires auth for this request.";
+    } else if (text) {
+      try {
+        const j = JSON.parse(text) as { message?: string };
+        if (j?.message) msg = j.message;
+      } catch {
+        if (text.length < 100) msg = text;
+      }
+    }
+    throw new Error(msg);
+  }
+}
 
 export function ApiConnectionTest() {
   const [status, setStatus] = useState<"checking" | "connected" | "error">("checking");
@@ -13,7 +33,7 @@ export function ApiConnectionTest() {
     const url = getBaseUrl();
     setBaseUrl(url);
 
-    lookupsApi.getJobs()
+    pingBackend(url)
       .then(() => {
         setStatus("connected");
         setError(null);
@@ -40,8 +60,8 @@ export function ApiConnectionTest() {
         <p className="mt-2">Error: {error}</p>
         <p className="mt-2 text-xs">
           Make sure:
-          <br />• Backend is running on port 3000
-          <br />• Backend CORS allows requests from http://localhost:3002
+          <br />• Backend is running at the URL above (from NEXT_PUBLIC_API_BASE_URL, e.g. http://localhost:3000)
+          <br />• Backend CORS allows requests from this app (e.g. http://localhost:3000)
           <br />• Check backend logs for errors
         </p>
       </div>

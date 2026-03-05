@@ -1,9 +1,24 @@
 /**
  * HTTP client – single instance used by all API modules.
- * Centralizes fetch, error handling, and base URL.
+ * Centralizes fetch, error handling, base URL, and JWT (Bearer) token.
+ * On 401, clears auth and redirects to /login (FRONTEND_AUTH.md).
  */
 
+import { getAccessToken, clearAuth } from "@/lib/auth/store";
 import { getApiUrl } from "./config";
+
+function authHeaders(): HeadersInit {
+  const token = getAccessToken();
+  return {
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+function handleUnauthorized(): void {
+  clearAuth();
+  if (typeof window !== "undefined") window.location.href = "/login";
+}
 
 export class ApiError extends Error {
   constructor(
@@ -27,6 +42,12 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    if (response.status === 403) {
+      // 403 Forbidden = not admin, redirect to dashboard
+      if (typeof window !== "undefined") window.location.href = "/job";
+      throw new ApiError("Access denied. Admin role required.", 403, "FORBIDDEN", body);
+    }
     const msg = typeof body === "object" && body !== null && "message" in body
       ? String((body as { message: unknown }).message)
       : response.statusText;
@@ -53,13 +74,13 @@ export async function get<T>(
   try {
     const response = await fetch(url, {
       method: "GET",
-      headers: { Accept: "application/json" },
+      headers: authHeaders(),
     });
     return handleResponse<T>(response);
   } catch (error) {
     if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
       throw new ApiError(
-        `Cannot connect to backend at ${url}. Is the backend running on port 3000?`,
+        `Cannot connect to backend at ${url}. Is the backend running?`,
         0,
         "CONNECTION_REFUSED",
         { url, originalError: error.message }
@@ -77,10 +98,59 @@ export async function getBlob(
   params?: Record<string, string | number | undefined>
 ): Promise<Blob> {
   const url = getApiUrl(path, params);
-  const response = await fetch(url, { method: "GET" });
+  const response = await fetch(url, { method: "GET", headers: authHeaders() });
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     const text = await response.text();
     throw new ApiError(text || response.statusText, response.status);
   }
   return response.blob();
+}
+
+/**
+ * POST request with JSON body.
+ */
+export async function post<T>(
+  path: string,
+  body: unknown
+): Promise<T> {
+  const url = getApiUrl(path);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return handleResponse<T>(response);
+}
+
+/**
+ * PATCH request with JSON body.
+ */
+export async function patch<T>(
+  path: string,
+  body: unknown
+): Promise<T> {
+  const url = getApiUrl(path);
+  const response = await fetch(url, {
+    method: "PATCH",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return handleResponse<T>(response);
+}
+
+/**
+ * DELETE request with optional JSON body.
+ */
+export async function del<T>(
+  path: string,
+  body?: unknown
+): Promise<T> {
+  const url = getApiUrl(path);
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers: { ...authHeaders(), ...(body ? { "Content-Type": "application/json" } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  return handleResponse<T>(response);
 }

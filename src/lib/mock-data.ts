@@ -297,14 +297,14 @@ export function getLateSubmissionRows(tickets: TicketRow[]): LateSubmissionRow[]
     out.push({
       ticketNumber: t.ticketNumber,
       ticketDate: t.ticketDate,
-      systemDate: t.createdAt,
+      systemEntryDate: t.createdAt,
       lagTime: `+${days} Day${days !== 1 ? "s" : ""}`,
       signedBy: t.signedBy,
       jobName: t.jobName,
-      hauler: t.haulingCompany,
+      haulerCompanyName: t.haulingCompany,
     });
   }
-  return out.sort((a, b) => b.systemDate.localeCompare(a.systemDate));
+  return out.sort((a, b) => b.systemEntryDate.localeCompare(a.systemEntryDate));
 }
 
 /** Efficiency outlier: by Date + Job + Destination (route), avg loads vs this truck. */
@@ -335,9 +335,7 @@ export function getEfficiencyOutlierRows(tickets: TicketRow[]): EfficiencyOutlie
       list.push(t);
       byTruck.set(t.truckNumber, list);
     }
-    const totalLoads = group.tickets.length;
-    const truckCount = byTruck.size;
-    const fleetAvgLoads = truckCount ? Math.round((totalLoads / truckCount) * 10) / 10 : 0;
+    const fleetBenchmark = 95; // Mock: average cycle time (min) for peer group
 
     for (const [truckNumber, truckTickets] of byTruck) {
       const sorted = [...truckTickets].sort(
@@ -348,20 +346,32 @@ export function getEfficiencyOutlierRows(tickets: TicketRow[]): EfficiencyOutlie
       const firstTime = new Date(first.createdAt.replace(" ", "T"));
       const lastTime = new Date(last.createdAt.replace(" ", "T"));
       const impliedHours = Math.round((lastTime.getTime() - firstTime.getTime()) / (1000 * 60 * 60) * 10) / 10;
-      const hours = Math.max(impliedHours, 0.1);
-      const loadsPerHour = Math.round((truckTickets.length / hours) * 10) / 10;
+
+      const totalTickets = truckTickets.length;
+      const workDurationMins = Math.round(impliedHours * 60);
+      const workDuration = `${Math.floor(workDurationMins / 60)}:${String(workDurationMins % 60).padStart(2, "0")}`;
+      const myAvgCycle = totalTickets > 1 ? Math.round((impliedHours * 60) / (totalTickets - 1)) : 0;
+      const isSingleLoad = totalTickets === 1;
+      const status: "RED" | "Single Load" | "Green" = isSingleLoad
+        ? "Single Load"
+        : myAvgCycle > fleetBenchmark * 1.15
+          ? "RED"
+          : "Green";
+      const statusLabel = isSingleLoad ? "Single Load" : status === "RED" ? "SLOW (>15%)" : "Within 15%";
+      const haulerName = truckTickets[0]?.haulingCompany ?? "";
 
       rows.push({
         date: group.date,
         jobName: group.jobName,
         route: group.route,
         truckNumber,
-        fleetAvgLoads,
-        thisTruckLoads: truckTickets.length,
-        firstTicketTime: firstTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-        lastTicketTime: lastTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-        impliedHours,
-        loadsPerHour,
+        haulerName,
+        totalTickets,
+        workDuration,
+        myAvgCycle,
+        fleetBenchmark,
+        status,
+        statusLabel,
       });
     }
   }

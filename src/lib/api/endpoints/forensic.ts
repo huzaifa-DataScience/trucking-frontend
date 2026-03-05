@@ -1,5 +1,8 @@
 import { get } from "../client";
-import type { ApiLateSubmissionRow, ApiEfficiencyOutlierRow } from "../types";
+import type {
+  ApiLateSubmissionResponse,
+  ApiEfficiencyOutlierRow,
+} from "../types";
 import type { LateSubmissionRow, EfficiencyOutlierRow } from "@/lib/types";
 import type { Direction } from "@/lib/types";
 
@@ -27,65 +30,52 @@ const toParams = (f: ForensicFilters) => ({
   companyId: f.companyId ? Number(f.companyId) : undefined,
 });
 
-export async function getLateSubmissions(filters: ForensicFilters): Promise<LateSubmissionRow[]> {
-  const rows = await get<ApiLateSubmissionRow[]>("/forensic/late-submission", toParams(filters));
-  return rows;
+export interface LateSubmissionData {
+  lateTicketsFound: number;
+  items: LateSubmissionRow[];
 }
 
-export async function getEfficiencyOutliers(filters: ForensicFilters): Promise<EfficiencyOutlierRow[]> {
-  const rows = await get<ApiEfficiencyOutlierRow[]>("/forensic/efficiency-outlier", toParams(filters));
-  return rows.map((r) => {
-    // Calculate what we can from existing fields
-    const totalTickets = r.thisTruckLoads;
-    const isSingleLoad = totalTickets === 1;
-    
-    // Work Duration: Format impliedHours as "Hours:Minutes"
-    const hours = Math.floor(r.impliedHours);
-    const minutes = Math.round((r.impliedHours - hours) * 60);
-    const workDuration = `${hours}:${minutes.toString().padStart(2, "0")}`;
-    
-    // My Avg Cycle: Duration / (Total Tickets - 1) in minutes
-    // If single load, set to 0 or null
-    const myAvgCycleMinutes = isSingleLoad
-      ? 0
-      : Math.round((r.impliedHours * 60) / (totalTickets - 1));
-    
-    // Fleet Benchmark: Use backend value if provided, otherwise use fleetAvgLoads as placeholder
-    // Note: Backend should calculate this as average of all trucks' My Avg Cycles in peer group
-    const fleetBenchmarkMinutes = r.fleetBenchmarkMinutes ?? (r.fleetAvgLoads > 0 ? myAvgCycleMinutes : 0);
-    
-    // Status: Calculate if not provided by backend
-    let status: "green" | "red" | "grey" = r.status ?? "green";
-    if (isSingleLoad) {
-      status = "grey";
-    } else if (r.fleetBenchmarkMinutes != null && myAvgCycleMinutes > 0) {
-      const threshold = fleetBenchmarkMinutes * 1.15;
-      status = myAvgCycleMinutes > threshold ? "red" : "green";
-    }
-    
-    // Route: Format as "Material Name → Destination Site" per spec
-    const route = r.materialName
-      ? `${r.materialName} → ${r.routeName}`
-      : `${r.jobName} / ${r.routeName}`; // Fallback if materialName not available
-    
-    return {
-      date: r.date,
+/** GET /forensic/late-submission – returns { lateTicketsFound, items }. */
+export async function getLateSubmissions(
+  filters: ForensicFilters
+): Promise<LateSubmissionData> {
+  const data = await get<ApiLateSubmissionResponse>(
+    "/forensic/late-submission",
+    toParams(filters)
+  );
+  return {
+    lateTicketsFound: data.lateTicketsFound,
+    items: data.items.map((r) => ({
+      ticketNumber: r.ticketNumber,
+      ticketDate: r.ticketDate,
+      systemEntryDate: r.systemEntryDate,
+      lagTime: r.lagTime,
+      signedBy: r.signedBy,
       jobName: r.jobName,
-      route,
-      truckNumber: r.truckNumber,
-      haulerName: r.haulerName,
-      totalTickets,
-      workDuration,
-      myAvgCycle: myAvgCycleMinutes,
-      fleetBenchmark: fleetBenchmarkMinutes,
-      status,
-      // Keep legacy fields for backward compatibility
-      fleetAvgLoads: r.fleetAvgLoads,
-      thisTruckLoads: r.thisTruckLoads,
-      firstTicketTime: r.firstTicketTime,
-      lastTicketTime: r.lastTicketTime,
-      impliedHours: r.impliedHours,
-      loadsPerHour: r.loadsPerHour,
-    };
-  });
+      haulerCompanyName: r.haulerCompanyName,
+    })),
+  };
+}
+
+/** GET /forensic/efficiency-outlier – backend returns full shape (status, statusLabel, etc.). */
+export async function getEfficiencyOutliers(
+  filters: ForensicFilters
+): Promise<EfficiencyOutlierRow[]> {
+  const rows = await get<ApiEfficiencyOutlierRow[]>(
+    "/forensic/efficiency-outlier",
+    toParams(filters)
+  );
+  return rows.map((r) => ({
+    date: r.date,
+    jobName: r.jobName,
+    route: r.route,
+    truckNumber: r.truckNumber,
+    haulerName: r.haulerName ?? "",
+    totalTickets: r.totalTickets,
+    workDuration: r.workDuration,
+    myAvgCycle: r.myAvgCycle,
+    fleetBenchmark: r.fleetBenchmark,
+    status: r.status,
+    statusLabel: r.statusLabel ?? (r.status === "RED" ? "SLOW (>15%)" : r.status === "Single Load" ? "Single Load" : "Within 15%"),
+  }));
 }

@@ -103,20 +103,21 @@ export function TicketGrid({
   return (
     <>
       <div className="rounded-xl border border-stone-200/80 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900/50">
-        <div className="flex items-center justify-between border-b border-stone-200/80 px-4 py-3 dark:border-stone-800">
+        <div className="flex flex-col gap-3 border-b border-stone-200/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-stone-800">
           <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
             Detailed ticket grid ({total} rows)
           </span>
           <button
             type="button"
             onClick={exportExcel}
-            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-600"
+            className="w-full rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-600 sm:w-auto"
           >
             Export to Excel
           </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0">
+          <div className="inline-block min-w-full align-middle">
+            <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
                 <Th>Ticket #</Th>
@@ -181,8 +182,9 @@ export function TicketGrid({
               ))}
             </tbody>
           </table>
+          </div>
         </div>
-        <div className="flex items-center justify-between border-t border-stone-200/80 px-4 py-3 dark:border-stone-800">
+        <div className="flex flex-col gap-3 border-t border-stone-200/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-stone-800">
           <span className="text-xs text-stone-500 dark:text-stone-400">
             Page {page} of {totalPages} ({total} total)
           </span>
@@ -213,7 +215,7 @@ export function TicketGrid({
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
+    <th className="sticky top-0 z-10 whitespace-nowrap bg-stone-50 px-2 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400 sm:px-3">
       {children}
     </th>
   );
@@ -221,7 +223,7 @@ function Th({ children }: { children: React.ReactNode }) {
 
 function Td({ children }: { children: React.ReactNode }) {
   return (
-    <td className="whitespace-nowrap px-3 py-2 text-stone-800 dark:text-stone-200">
+    <td className="whitespace-nowrap px-2 py-2 text-stone-800 dark:text-stone-200 sm:px-3">
       {children}
     </td>
   );

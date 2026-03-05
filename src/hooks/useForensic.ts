@@ -17,6 +17,7 @@ export interface ForensicFilters {
 }
 
 export function useForensic(filters: ForensicFilters) {
+  const [lateTicketsFound, setLateTicketsFound] = useState(0);
   const [lateRows, setLateRows] = useState<LateSubmissionRow[]>([]);
   const [efficiencyRows, setEfficiencyRows] = useState<EfficiencyOutlierRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,8 +42,9 @@ export function useForensic(filters: ForensicFilters) {
       forensicApi.getLateSubmissions(apiFilters),
       forensicApi.getEfficiencyOutliers(apiFilters),
     ])
-      .then(([late, eff]) => {
-        setLateRows(late);
+      .then(([lateData, eff]) => {
+        setLateTicketsFound(lateData.lateTicketsFound);
+        setLateRows(lateData.items);
         setEfficiencyRows(eff);
       })
       .catch((e) => setError(e instanceof Error ? e : new Error(String(e))))
@@ -62,5 +64,5 @@ export function useForensic(filters: ForensicFilters) {
     load();
   }, [load]);
 
-  return { lateRows, efficiencyRows, loading, error, refetch: load };
+  return { lateTicketsFound, lateRows, efficiencyRows, loading, error, refetch: load };
 }

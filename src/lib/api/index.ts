@@ -7,9 +7,11 @@ export { get, getBlob, ApiError } from "./client";
 export { getApiUrl, getBaseUrl } from "./config";
 export * from "./types";
 
+export * as auth from "./endpoints/auth";
 export * as lookups from "./endpoints/lookups";
 export * as jobDashboard from "./endpoints/job-dashboard";
 export * as materialDashboard from "./endpoints/material-dashboard";
 export * as haulerDashboard from "./endpoints/hauler-dashboard";
 export * as forensic from "./endpoints/forensic";
 export * as tickets from "./endpoints/tickets";
+export * as admin from "./endpoints/admin";

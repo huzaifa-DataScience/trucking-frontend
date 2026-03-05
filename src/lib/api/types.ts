@@ -77,33 +77,34 @@ export interface CostCenterRow {
   totalTickets: number;
 }
 
-/** Forensic – late submission (backend shape). */
+/** Forensic – late submission row (backend shape). FRONTEND_API_GUIDE.md contract. */
 export interface ApiLateSubmissionRow {
   ticketNumber: string;
   ticketDate: string;
-  systemDate: string;
+  systemEntryDate: string; // System Entry Date (CreatedAt)
   lagTime: string;
   signedBy: string;
   jobName: string;
-  hauler: string;
+  haulerCompanyName: string;
 }
 
-/** Forensic – efficiency outlier (backend shape). */
+/** Late submission API response: KPI count + items for grid. */
+export interface ApiLateSubmissionResponse {
+  lateTicketsFound: number;
+  items: ApiLateSubmissionRow[];
+}
+
+/** Forensic – efficiency outlier row (backend shape). FRONTEND_API_GUIDE.md contract. */
 export interface ApiEfficiencyOutlierRow {
   date: string;
   jobName: string;
-  routeName: string; // external site name (destination)
+  route: string; // "Material Name → Destination Site"
   truckNumber: string;
-  fleetAvgLoads: number;
-  thisTruckLoads: number;
-  firstTicketTime: string;
-  lastTicketTime: string;
-  impliedHours: number;
-  loadsPerHour: number;
-  // Optional fields per spec (backend should add these):
-  materialName?: string; // For route display: "Material Name → Destination Site"
-  haulerName?: string;
-  fleetBenchmarkMinutes?: number; // Average cycle time in minutes (all trucks in peer group)
-  myAvgCycleMinutes?: number; // This truck's cycle time in minutes
-  status?: "green" | "red" | "grey"; // green: within 15%, red: SLOW (>15%), grey: Single Load
+  haulerName: string;
+  totalTickets: number;
+  workDuration: string; // "Hours:Minutes"
+  myAvgCycle: number; // minutes per trip
+  fleetBenchmark: number; // average cycle time (min) of peer group
+  status: "RED" | "Single Load" | "Green";
+  statusLabel: string; // "SLOW (>15%)" | "Single Load" | "Within 15%"
 }
