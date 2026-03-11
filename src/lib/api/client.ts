@@ -1,10 +1,9 @@
 /**
  * HTTP client – single instance used by all API modules.
  * Centralizes fetch, error handling, base URL, and JWT (Bearer) token.
- * On 401, clears auth and redirects to /login (FRONTEND_AUTH.md).
  */
-
-import { getAccessToken, clearAuth } from "@/lib/auth/store";
+ 
+import { getAccessToken } from "@/lib/auth/store";
 import { getApiUrl } from "./config";
 
 function authHeaders(): HeadersInit {
@@ -13,11 +12,6 @@ function authHeaders(): HeadersInit {
     Accept: "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
-}
-
-function handleUnauthorized(): void {
-  clearAuth();
-  if (typeof window !== "undefined") window.location.href = "/login";
 }
 
 export class ApiError extends Error {
@@ -42,7 +36,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok) {
-    if (response.status === 401) handleUnauthorized();
     if (response.status === 403) {
       // 403 Forbidden = not admin, redirect to dashboard
       if (typeof window !== "undefined") window.location.href = "/job";
@@ -59,6 +52,42 @@ async function handleResponse<T>(response: Response): Promise<T> {
     );
   }
 
+  return body as T;
+}
+
+/**
+ * GET request without Authorization (for public endpoints, e.g. GET /siteline/status).
+ * On 401, throws ApiError but does NOT clear auth or redirect (so the page can show a message).
+ */
+export async function getPublic<T>(
+  path: string,
+  params?: Record<string, string | number | undefined>
+): Promise<T> {
+  const url = getApiUrl(path, params);
+  const response = await fetch(url, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+  const text = await response.text();
+  let body: unknown;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = { message: text || response.statusText };
+  }
+  if (!response.ok) {
+    const msg = typeof body === "object" && body !== null && "message" in body
+      ? String((body as { message: unknown }).message)
+      : typeof body === "object" && body !== null && "error" in body
+        ? String((body as { error: unknown }).error)
+        : response.statusText;
+    throw new ApiError(
+      response.status === 401 ? "Not authorized. Please log in to view billing." : msg,
+      response.status,
+      undefined,
+      body
+    );
+  }
   return body as T;
 }
 
@@ -100,7 +129,6 @@ export async function getBlob(
   const url = getApiUrl(path, params);
   const response = await fetch(url, { method: "GET", headers: authHeaders() });
   if (!response.ok) {
-    if (response.status === 401) handleUnauthorized();
     const text = await response.text();
     throw new ApiError(text || response.statusText, response.status);
   }

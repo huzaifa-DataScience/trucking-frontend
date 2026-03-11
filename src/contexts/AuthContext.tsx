@@ -51,8 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     const profile = await getProfile();
-    setUser(profile);
-    if (profile) setSessionCookie();
+    if (profile) {
+      setUser(profile);
+      setSessionCookie();
+    }
   }, []);
 
   useEffect(() => {
@@ -62,14 +64,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-    setUser(getStoredUser());
+    const stored = getStoredUser();
+    setUser(stored);
     getProfile()
       .then((profile) => {
-        setUser(profile);
-        if (profile) setSessionCookie();
-      })
-      .catch(() => {
-        setUser(null);
+        if (profile) {
+          setUser(profile);
+          setSessionCookie();
+        }
       })
       .finally(() => {
         setLoading(false);

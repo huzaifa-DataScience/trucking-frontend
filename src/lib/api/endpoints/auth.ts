@@ -103,10 +103,9 @@ export async function getProfile(): Promise<AuthUser | null> {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (res.status === 401) {
-    clearAuth();
-    return null;
-  }
+  // For profile checks, don't hard-logout on a single 401.
+  // Just treat it as "no current user" and let the app show the login screen.
+  if (res.status === 401) return null;
   if (!res.ok) return null;
   const raw = (await res.json()) as Record<string, unknown>;
   return normalizeUser(raw);
