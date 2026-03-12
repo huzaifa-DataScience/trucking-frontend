@@ -69,3 +69,18 @@ Revert to the env-based check when you want behavior to follow `NEXT_PUBLIC_AUTH
 |-------------------|--------|
 | Require login     | Set `NEXT_PUBLIC_AUTH_ENABLED=true` in `.env.local` and restart. |
 | No login (guest)  | Omit the variable or set `NEXT_PUBLIC_AUTH_ENABLED=false` (or leave unset). |
+
+---
+
+## Billings: “Contracts & Pay apps” tab
+
+The **Contracts & Pay apps** tab on the Billings page is currently **hidden** (Contracts table + Pay apps by month).
+
+To show it again:
+
+1. Open `src/app/(dashboard)/billings/page.tsx`.
+2. Find the constant `CONTRACTS_PAYAPPS_TAB_ENABLED` and set it to `true`:
+   ```ts
+   const CONTRACTS_PAYAPPS_TAB_ENABLED = true;
+   ```
+3. Save and reload. The tab and its content will appear; the page will also load contracts and pay apps data when that tab is active.
