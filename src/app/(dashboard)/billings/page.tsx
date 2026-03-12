@@ -72,6 +72,9 @@ function isSitelineError(value: unknown): value is SitelineError {
   );
 }
 
+/** Set to true to show the "Contracts & Pay apps" tab again. See ENABLE_SIGNIN.md § Billings. */
+const CONTRACTS_PAYAPPS_TAB_ENABLED = false;
+
 export default function BillingsPage() {
   const { status, error: statusError, loading: statusLoading, refetch: refetchStatus } = useSitelineStatus();
   const configured = status?.configured ?? false;
@@ -94,7 +97,9 @@ export default function BillingsPage() {
   const [payAppsLoading, setPayAppsLoading] = useState(false);
   const [payAppsError, setPayAppsError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"contracts" | "aging">("contracts");
+  const [activeTab, setActiveTab] = useState<"contracts" | "aging">(
+    CONTRACTS_PAYAPPS_TAB_ENABLED ? "contracts" : "aging"
+  );
 
   const [agingReport, setAgingReport] = useState<AgingReportResponse | null>(null);
   const [agingLoading, setAgingLoading] = useState(false);
@@ -183,7 +188,7 @@ export default function BillingsPage() {
   }, [configured]);
 
   useEffect(() => {
-    if (configured) {
+    if (configured && CONTRACTS_PAYAPPS_TAB_ENABLED) {
       loadContracts();
       loadPayApps();
     }
@@ -197,8 +202,14 @@ export default function BillingsPage() {
 
   const initialLoading =
     statusLoading ||
-    (activeTab === "contracts" && !contractsPage && contractsLoading) ||
-    (activeTab === "contracts" && !payAppsPage && payAppsLoading);
+    (CONTRACTS_PAYAPPS_TAB_ENABLED &&
+      activeTab === "contracts" &&
+      !contractsPage &&
+      contractsLoading) ||
+    (CONTRACTS_PAYAPPS_TAB_ENABLED &&
+      activeTab === "contracts" &&
+      !payAppsPage &&
+      payAppsLoading);
   const topError = statusError;
 
   const contracts = contractsPage?.contracts ?? [];
@@ -252,17 +263,19 @@ export default function BillingsPage() {
           )}
 
           <div className="flex gap-1 border-b border-stone-200 dark:border-stone-700">
-            <button
-              type="button"
-              onClick={() => setActiveTab("contracts")}
-              className={`rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                activeTab === "contracts"
-                  ? "bg-white text-stone-900 shadow-sm dark:bg-stone-900 dark:text-stone-100 border border-stone-200 border-b-0 dark:border-stone-700"
-                  : "text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
-              }`}
-            >
-              Contracts & Pay apps
-            </button>
+            {CONTRACTS_PAYAPPS_TAB_ENABLED && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("contracts")}
+                className={`rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+                  activeTab === "contracts"
+                    ? "bg-white text-stone-900 shadow-sm dark:bg-stone-900 dark:text-stone-100 border border-stone-200 border-b-0 dark:border-stone-700"
+                    : "text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+                }`}
+              >
+                Contracts & Pay apps
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setActiveTab("aging")}
@@ -276,7 +289,7 @@ export default function BillingsPage() {
             </button>
           </div>
 
-          {activeTab === "contracts" && (
+          {CONTRACTS_PAYAPPS_TAB_ENABLED && activeTab === "contracts" && (
           <>
           <Card>
             <CardHeader

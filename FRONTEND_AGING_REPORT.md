@@ -8,7 +8,7 @@ This document describes how to integrate the **Siteline aging report** in the fr
 
 The aging report answers: **“For each project, how much money (net dollars) is in each ‘days past due’ bucket?”**
 
-- **Net dollars** = amount due to the contractor for that pay app = (Billed − Retention) ÷ 100 (values are stored in cents).
+- **Net dollars** = amount due to the contractor for >envthat pay app = (Billed − Retention) ÷ 100 (values are stored in cents).
 - **Buckets** = how many days past the pay app due date:
   - **Current** — not overdue (due date today or in the future)
   - **1-30 Days** — 1–30 days overdue
