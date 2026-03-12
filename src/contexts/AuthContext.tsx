@@ -17,8 +17,21 @@ import {
   getStoredUser,
   setSessionCookie,
 } from "@/lib/auth/store";
+import { AUTH_DISABLED } from "@/lib/auth/config";
 import type { AuthUser } from "@/lib/auth/types";
 import type { LoginResponse } from "@/lib/auth/types";
+
+const GUEST_USER: AuthUser = {
+  id: 0,
+  firstName: "Guest",
+  lastName: "",
+  email: "",
+  phone: null,
+  company: null,
+  role: "user",
+  status: "active",
+  permissions: [],
+};
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -44,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    if (AUTH_DISABLED) return;
     storeClearAuth();
     setUser(null);
     if (typeof window !== "undefined") window.location.href = "/login";
@@ -58,6 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (AUTH_DISABLED) {
+      setUser(GUEST_USER);
+      setLoading(false);
+      return;
+    }
     const token = typeof window !== "undefined" ? getAccessToken() : null;
     if (!token) {
       setUser(null);

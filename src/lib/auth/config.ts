@@ -1,11 +1,14 @@
 /**
- * Auth bypass flag for local testing.
+ * When true, sign-in is disabled: all routes are accessible without login (guest mode).
+ * When false, normal auth applies: middleware and RequireAuth enforce login.
  *
- * - Default: bypass is ON (no login required).
- * - To re-enable real auth, set NEXT_PUBLIC_BYPASS_AUTH="false" in .env.local and restart dev server.
+ * To turn sign-in back on, see ENABLE_SIGNIN.md.
  */
-export const BYPASS_AUTH =
+export const AUTH_DISABLED =
   typeof process !== "undefined"
-    ? process.env.NEXT_PUBLIC_BYPASS_AUTH !== "false"
+    ? process.env.NEXT_PUBLIC_AUTH_ENABLED !== "true"
     : true;
+
+/** @deprecated Use AUTH_DISABLED. */
+export const BYPASS_AUTH = AUTH_DISABLED;
 

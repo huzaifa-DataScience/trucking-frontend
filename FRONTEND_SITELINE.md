@@ -4,6 +4,8 @@ Siteline is our construction billing provider. The **backend** talks to Siteline
 
 **Base URL:** Same as the rest of the API (e.g. `http://localhost:3000` in development).
 
+**Backend / Siteline token:** The backend uses `SITELINE_API_URL` and `SITELINE_API_TOKEN` from its `.env` to call Siteline. The frontend never sees this token. For Billings and Siteline to work, the backend must have these set regardless of whether user sign-in is enabled.
+
 **Authentication:** When auth is enabled, send the JWT for all Siteline endpoints except status:
 
 ```

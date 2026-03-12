@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { login } from "@/lib/api/endpoints/auth";
+import { AUTH_DISABLED } from "@/lib/auth/config";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,8 +15,11 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in. Login only succeeds for active users (FRONTEND_AUTH.md).
   useEffect(() => {
+    if (AUTH_DISABLED) {
+      router.replace("/job");
+      return;
+    }
     if (authLoading || !user) return;
     if (user.status !== "active") router.replace("/pending");
     else router.replace("/job");
@@ -38,7 +42,7 @@ export default function LoginPage() {
     }
   }
 
-  if (authLoading || user) return null;
+  if (AUTH_DISABLED || authLoading || user) return null;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-stone-100 px-4 dark:bg-stone-950">

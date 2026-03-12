@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { register } from "@/lib/api/endpoints/auth";
+import { AUTH_DISABLED } from "@/lib/auth/config";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-stone-900 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-100";
@@ -24,6 +25,10 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (AUTH_DISABLED) {
+      router.replace("/job");
+      return;
+    }
     if (authLoading) return;
     if (user) {
       if (user.status === "pending") router.replace("/pending");
@@ -76,7 +81,7 @@ export default function RegisterPage() {
     }
   }
 
-  if (authLoading || user) return null;
+  if (AUTH_DISABLED || authLoading || user) return null;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-stone-100 px-4 py-8 dark:bg-stone-950">
