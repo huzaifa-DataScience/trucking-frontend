@@ -27,6 +27,8 @@ export interface TicketRow {
   ticketDate: string;
   createdAt: string;
   jobName: string;
+  /** Our internal company name (Ref_OurEntities.EntityName) for this ticket's job. */
+  companyName?: string;
   direction: "Import" | "Export";
   destinationOrigin: string;
   haulingCompany: string;

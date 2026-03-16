@@ -52,6 +52,8 @@ export default function HaulerDashboardPage() {
     haulerId: filters.haulerId,
     truckTypeId: filters.truckTypeId,
     direction: filters.direction,
+    // Global Our company filter from the top Company selector.
+    entityId: companyId,
   });
 
   const { ticket: detailTicket, fetchDetail, clear: closeDetail } = useTicketDetail();
@@ -71,6 +73,7 @@ export default function HaulerDashboardPage() {
       haulerId: filters.haulerId === "all" ? undefined : filters.haulerId,
       truckTypeId: filters.truckTypeId === "all" ? undefined : filters.truckTypeId,
       direction: filters.direction === "Both" ? undefined : filters.direction,
+      entityId: companyId,
     };
     haulerApi.getHaulerTicketsExportBlob(apiFilters).then((blob) => {
       const url = URL.createObjectURL(blob);

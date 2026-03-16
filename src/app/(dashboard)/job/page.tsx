@@ -24,6 +24,7 @@ function createDefaultFilters(): FilterConfig {
     haulerId: "all",
     truckTypeId: "all",
     direction: "Both",
+    entityId: undefined,
   };
 }
 
@@ -50,6 +51,8 @@ export default function JobDashboardPage() {
     endDate: filters.endDate,
     jobId: filters.jobId,
     direction: filters.direction,
+    // Use the top-level Company selector as Our company (entityId) filter for the job dashboard.
+    entityId: companyId,
   });
 
   const { ticket: detailTicket, fetchDetail, clear: closeDetail } = useTicketDetail();
@@ -68,6 +71,8 @@ export default function JobDashboardPage() {
       endDate: filters.endDate,
       jobId: filters.jobId === "all" ? undefined : filters.jobId,
       direction: filters.direction === "Both" ? undefined : filters.direction,
+      // Match the main dashboards: use the selected Company as entityId filter.
+      entityId: companyId,
     };
     jobApi.getJobTicketsExportBlob(apiFilters).then((blob) => {
       const url = URL.createObjectURL(blob);

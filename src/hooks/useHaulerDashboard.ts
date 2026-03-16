@@ -14,6 +14,8 @@ export interface HaulerDashboardFilters {
   haulerId: string;
   truckTypeId: string;
   direction: Direction;
+  /** Our internal company (Ref_OurEntities). */
+  entityId?: string;
 }
 
 export function useHaulerDashboard(filters: HaulerDashboardFilters) {
@@ -37,6 +39,7 @@ export function useHaulerDashboard(filters: HaulerDashboardFilters) {
       haulerId: filters.haulerId === "all" ? undefined : filters.haulerId,
       truckTypeId: filters.truckTypeId === "all" ? undefined : filters.truckTypeId,
       direction: filters.direction,
+      entityId: filters.entityId,
     };
 
     setLoading(true);
@@ -66,6 +69,7 @@ export function useHaulerDashboard(filters: HaulerDashboardFilters) {
     filters.haulerId,
     filters.truckTypeId,
     filters.direction,
+    filters.entityId,
     page,
     pageSize,
   ]);
