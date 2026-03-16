@@ -11,6 +11,8 @@ export interface JobDashboardFilters {
   endDate: string;
   jobId: string;
   direction: Direction;
+  /** Our internal company (Ref_OurEntities). */
+  entityId?: string;
 }
 
 export interface JobDashboardState {
@@ -45,6 +47,7 @@ export function useJobDashboard(filters: JobDashboardFilters) {
       endDate: filters.endDate,
       jobId: filters.jobId === "all" ? undefined : filters.jobId,
       direction: filters.direction,
+      entityId: filters.entityId,
     };
 
     setLoading(true);
@@ -65,7 +68,7 @@ export function useJobDashboard(filters: JobDashboardFilters) {
       })
       .catch((e) => setError(e instanceof Error ? e : new Error(String(e))))
       .finally(() => setLoading(false));
-  }, [filters.companyId, filters.startDate, filters.endDate, filters.jobId, filters.direction, page, pageSize]);
+  }, [filters.companyId, filters.startDate, filters.endDate, filters.jobId, filters.direction, filters.entityId, page, pageSize]);
 
   useEffect(() => {
     load();

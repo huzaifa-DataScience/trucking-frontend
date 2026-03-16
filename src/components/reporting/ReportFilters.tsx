@@ -10,6 +10,8 @@ export interface FilterConfig {
   haulerId: string;
   truckTypeId: string;
   direction: Direction;
+  /** Our internal company (Ref_OurEntities). "all" / undefined means no company filter. */
+  entityId?: string;
 }
 
 export interface FilterOptions {
@@ -17,6 +19,7 @@ export interface FilterOptions {
   materials: { value: string; label: string }[];
   haulers: { value: string; label: string }[];
   truckTypes: { value: string; label: string }[];
+  ourEntities: { value: string; label: string }[];
 }
 
 interface ReportFiltersProps {
@@ -28,6 +31,8 @@ interface ReportFiltersProps {
   showHauler?: boolean;
   showTruckType?: boolean;
   showDirection?: boolean;
+  /** Show the "Our company" filter (Ref_OurEntities). */
+  showOurCompany?: boolean;
 }
 
 const DIRECTION_OPTIONS: { value: Direction; label: string }[] = [
@@ -45,6 +50,7 @@ export function ReportFilters({
   showHauler = false,
   showTruckType = false,
   showDirection = true,
+  showOurCompany = false,
 }: ReportFiltersProps) {
   const update = (partial: Partial<FilterConfig>) => {
     onChange({ ...filters, ...partial });
@@ -148,6 +154,24 @@ export function ReportFilters({
               className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
             >
               {DIRECTION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {showOurCompany && (
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Our company</span>
+            <select
+              value={filters.entityId ?? "all"}
+              onChange={(e) =>
+                update({ entityId: e.target.value === "all" ? undefined : e.target.value })
+              }
+              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            >
+              {options.ourEntities.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>

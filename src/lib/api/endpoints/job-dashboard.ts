@@ -15,6 +15,8 @@ export interface JobDashboardFilters {
   endDate: string;
   jobId?: string;
   direction?: Direction;
+  /** Our internal company (Ref_OurEntities). */
+  entityId?: string;
 }
 
 const toParams = (f: JobDashboardFilters, page?: number, pageSize?: number) => {
@@ -24,8 +26,8 @@ const toParams = (f: JobDashboardFilters, page?: number, pageSize?: number) => {
     // Convert jobId string to number if it's not "all" (backend expects number)
     jobId: f.jobId && f.jobId !== "all" ? Number(f.jobId) : undefined,
     direction: f.direction === "Both" ? undefined : f.direction,
-    // Convert companyId string to number (backend expects number)
-    companyId: f.companyId ? Number(f.companyId) : undefined,
+    // Our internal company filter (Ref_OurEntities)
+    entityId: f.entityId ? Number(f.entityId) : undefined,
   };
   if (page != null) p.page = page;
   if (pageSize != null) p.pageSize = pageSize;
