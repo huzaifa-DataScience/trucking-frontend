@@ -18,6 +18,7 @@ export function useLookups(companyId?: string) {
   const [materials, setMaterials] = useState<LookupItem[]>([]);
   const [haulers, setHaulers] = useState<LookupItem[]>([]);
   const [truckTypes, setTruckTypes] = useState<LookupItem[]>([]);
+  const [ourEntities, setOurEntities] = useState<LookupItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -33,13 +34,15 @@ export function useLookups(companyId?: string) {
       lookupsApi.getMaterials(params),
       lookupsApi.getHaulers(params),
       lookupsApi.getTruckTypes(params),
+      lookupsApi.getOurEntities(),
     ])
-      .then(([j, m, h, t]) => {
+      .then(([j, m, h, t, e]) => {
         if (!cancelled) {
           setJobs(j);
           setMaterials(m);
           setHaulers(h);
           setTruckTypes(t);
+          setOurEntities(e);
         }
       })
       .catch((e) => {
@@ -59,7 +62,8 @@ export function useLookups(companyId?: string) {
     materials: [{ value: "all", label: "All" }, ...toOptions(materials)],
     haulers: [{ value: "all", label: "All" }, ...toOptions(haulers)],
     truckTypes: [{ value: "all", label: "All" }, ...toOptions(truckTypes)],
+    ourEntities: [{ value: "all", label: "All companies" }, ...toOptions(ourEntities)],
   };
 
-  return { jobs, materials, haulers, truckTypes, filterOptions, loading, error };
+  return { jobs, materials, haulers, truckTypes, ourEntities, filterOptions, loading, error };
 }

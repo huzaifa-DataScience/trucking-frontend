@@ -28,3 +28,8 @@ export async function getTruckTypes(params?: LookupParams): Promise<LookupItem[]
 export async function getExternalSites(params?: LookupParams): Promise<LookupItem[]> {
   return get<LookupItem[]>("/lookups/external-sites", toLookupParams(params));
 }
+
+// Our internal companies (Ref_OurEntities) for the "Our company" filter.
+export async function getOurEntities(): Promise<LookupItem[]> {
+  return get<LookupItem[]>("/lookups/our-entities");
+}

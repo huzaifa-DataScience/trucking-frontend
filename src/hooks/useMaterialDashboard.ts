@@ -12,6 +12,8 @@ export interface MaterialDashboardFilters {
   jobId: string;
   materialId: string;
   direction: Direction;
+  /** Our internal company (Ref_OurEntities). */
+  entityId?: string;
 }
 
 export function useMaterialDashboard(filters: MaterialDashboardFilters) {
@@ -33,6 +35,7 @@ export function useMaterialDashboard(filters: MaterialDashboardFilters) {
       jobId: filters.jobId === "all" ? undefined : filters.jobId,
       materialId: filters.materialId === "all" ? undefined : filters.materialId,
       direction: filters.direction,
+      entityId: filters.entityId,
     };
 
     setLoading(true);
@@ -60,6 +63,7 @@ export function useMaterialDashboard(filters: MaterialDashboardFilters) {
     filters.jobId,
     filters.materialId,
     filters.direction,
+    filters.entityId,
     page,
     pageSize,
   ]);

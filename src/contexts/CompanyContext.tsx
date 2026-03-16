@@ -9,17 +9,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { COMPANIES } from "@/lib/config/companies";
 import type { Company } from "@/lib/types";
+import * as lookupsApi from "@/lib/api/endpoints/lookups";
 
 const STORAGE_KEY = "construction-logistics-company-id";
-const DEFAULT_ID = COMPANIES[0]!.id;
 
-function getStoredCompanyId(): string {
-  if (typeof window === "undefined") return DEFAULT_ID;
-  const stored = localStorage.getItem(STORAGE_KEY);
-  const valid = COMPANIES.some((c) => c.id === stored);
-  return valid ? stored! : DEFAULT_ID;
+function getStoredCompanyId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(STORAGE_KEY);
 }
 
 interface CompanyContextValue {
@@ -32,11 +29,41 @@ interface CompanyContextValue {
 const CompanyContext = createContext<CompanyContextValue | null>(null);
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
-  const [companyId, setCompanyIdState] = useState<string>(() => DEFAULT_ID);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [companyId, setCompanyIdState] = useState<string>("");
 
   useEffect(() => {
-    const stored = getStoredCompanyId();
-    setCompanyIdState(stored);
+    let cancelled = false;
+
+    async function loadCompanies() {
+      try {
+        const items = await lookupsApi.getOurEntities();
+        if (cancelled) return;
+        const mapped: Company[] = items.map((i) => ({
+          id: String(i.id),
+          name: i.name,
+        }));
+        setCompanies(mapped);
+
+        const stored = getStoredCompanyId();
+        const validStored =
+          stored && mapped.some((c) => c.id === stored) ? stored : null;
+        const initialId = validStored ?? mapped[0]?.id ?? "";
+        if (initialId) {
+          setCompanyIdState(initialId);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(STORAGE_KEY, initialId);
+          }
+        }
+      } catch {
+        // If the lookup fails, leave companies empty and companyId unset.
+      }
+    }
+
+    loadCompanies();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const setCompanyId = useCallback((id: string) => {
@@ -45,8 +72,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const company = useMemo(
-    () => COMPANIES.find((c) => c.id === companyId) ?? null,
-    [companyId]
+    () => companies.find((c) => c.id === companyId) ?? null,
+    [companies, companyId]
   );
 
   const value = useMemo<CompanyContextValue>(
@@ -54,9 +81,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       companyId,
       company,
       setCompanyId,
-      companies: COMPANIES,
+      companies,
     }),
-    [companyId, company, setCompanyId]
+    [companyId, company, setCompanyId, companies]
   );
 
   return (
