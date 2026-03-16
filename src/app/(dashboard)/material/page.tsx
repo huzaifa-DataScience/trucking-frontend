@@ -50,6 +50,8 @@ export default function MaterialDashboardPage() {
     jobId: filters.jobId,
     materialId: filters.materialId,
     direction: filters.direction,
+    // Global Our company filter from the top Company selector.
+    entityId: companyId,
   });
 
   const { ticket: detailTicket, fetchDetail, clear: closeDetail } = useTicketDetail();
@@ -67,6 +69,7 @@ export default function MaterialDashboardPage() {
       jobId: filters.jobId === "all" ? undefined : filters.jobId,
       materialId: filters.materialId === "all" ? undefined : filters.materialId,
       direction: filters.direction === "Both" ? undefined : filters.direction,
+      entityId: companyId,
     };
     materialApi.getMaterialTicketsExportBlob(apiFilters).then((blob) => {
       const url = URL.createObjectURL(blob);

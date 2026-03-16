@@ -74,6 +74,7 @@ export function TicketGrid({
           "Ticket Date": t.ticketDate,
           "Created At": t.createdAt,
           Job: t.jobName,
+          Company: t.companyName ?? "",
           Direction: t.direction,
           "Destination/Origin": t.destinationOrigin,
           "Hauling Company": t.haulingCompany,
@@ -124,6 +125,7 @@ export function TicketGrid({
                 <Th>Ticket Date</Th>
                 <Th>Created At</Th>
                 <Th>Job Name</Th>
+                <Th>Company</Th>
                 <Th>Import/Export</Th>
                 <Th>Destination / Origin</Th>
                 <Th>Hauling Company</Th>
@@ -158,6 +160,7 @@ export function TicketGrid({
                   <Td>{row.ticketDate}</Td>
                   <Td>{row.createdAt}</Td>
                   <Td>{row.jobName}</Td>
+                  <Td>{row.companyName ?? "—"}</Td>
                   <Td>{row.direction}</Td>
                   <Td>{row.destinationOrigin}</Td>
                   <Td>{row.haulingCompany}</Td>
