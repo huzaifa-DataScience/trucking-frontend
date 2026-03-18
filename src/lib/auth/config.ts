@@ -1,14 +1,11 @@
 /**
- * When true, sign-in is disabled: all routes are accessible without login (guest mode).
- * When false, normal auth applies: middleware and RequireAuth enforce login.
+ * Auth feature flag.
  *
- * To turn sign-in back on, see ENABLE_SIGNIN.md.
+ * Auth is now always enabled per FRONTEND_AUTH.md. This flag is kept only for
+ * backwards compatibility and should not be used in new code.
  */
-export const AUTH_DISABLED =
-  typeof process !== "undefined"
-    ? process.env.NEXT_PUBLIC_AUTH_ENABLED !== "true"
-    : true;
+export const AUTH_DISABLED = false;
 
-/** @deprecated Use AUTH_DISABLED. */
+/** @deprecated Auth bypass is no longer supported. */
 export const BYPASS_AUTH = AUTH_DISABLED;
 

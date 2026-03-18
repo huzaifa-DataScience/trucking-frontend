@@ -3,7 +3,7 @@
  * Centralizes fetch, error handling, base URL, and JWT (Bearer) token.
  */
  
-import { getAccessToken } from "@/lib/auth/store";
+import { getAccessToken, clearAuth } from "@/lib/auth/store";
 import { getApiUrl } from "./config";
 
 function authHeaders(): HeadersInit {
@@ -26,6 +26,14 @@ export class ApiError extends Error {
   }
 }
 
+function handleUnauthorized() {
+  // Clear stored auth and force a full redirect to login (FRONTEND_AUTH.md).
+  clearAuth();
+  if (typeof window !== "undefined") {
+    window.location.href = "/login";
+  }
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   const text = await response.text();
   let body: unknown;
@@ -36,6 +44,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized();
+    }
     if (response.status === 403) {
       // 403 Forbidden = not admin, redirect to dashboard
       if (typeof window !== "undefined") window.location.href = "/job";
@@ -129,6 +140,9 @@ export async function getBlob(
   const url = getApiUrl(path, params);
   const response = await fetch(url, { method: "GET", headers: authHeaders() });
   if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized();
+    }
     const text = await response.text();
     throw new ApiError(text || response.statusText, response.status);
   }

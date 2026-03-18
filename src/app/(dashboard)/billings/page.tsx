@@ -12,6 +12,7 @@ import {
   getSitelinePaginatedContracts,
   getSitelinePaginatedPayApps,
   getSitelineAgingReport,
+  getSitelineAgingOverdue,
 } from "@/lib/api/endpoints/siteline";
 import type {
   SitelineContract,
@@ -22,6 +23,8 @@ import type {
   SitelinePayApp,
   SitelineError,
   AgingReportResponse,
+  AgingOverdueResponse,
+  AgingOverdueItem,
 } from "@/lib/api/endpoints/siteline";
 import { ContractDetailModal } from "@/components/billings/ContractDetailModal";
 import { PayAppDetailModal } from "@/components/billings/PayAppDetailModal";
@@ -97,13 +100,17 @@ export default function BillingsPage() {
   const [payAppsLoading, setPayAppsLoading] = useState(false);
   const [payAppsError, setPayAppsError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"contracts" | "aging">(
+  const [activeTab, setActiveTab] = useState<"contracts" | "aging" | "overdue">(
     CONTRACTS_PAYAPPS_TAB_ENABLED ? "contracts" : "aging"
   );
 
   const [agingReport, setAgingReport] = useState<AgingReportResponse | null>(null);
   const [agingLoading, setAgingLoading] = useState(false);
   const [agingError, setAgingError] = useState<string | null>(null);
+
+  const [agingOverdue, setAgingOverdue] = useState<AgingOverdueResponse | null>(null);
+  const [agingOverdueLoading, setAgingOverdueLoading] = useState(false);
+  const [agingOverdueError, setAgingOverdueError] = useState<string | null>(null);
 
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
   const [selectedPayAppId, setSelectedPayAppId] = useState<string | null>(null);
@@ -187,6 +194,32 @@ export default function BillingsPage() {
     }
   }, [configured]);
 
+  const loadAgingOverdue = useCallback(async () => {
+    if (!configured) return;
+    setAgingOverdueLoading(true);
+    setAgingOverdueError(null);
+    try {
+      const result = await getSitelineAgingOverdue();
+      if (isSitelineError(result)) {
+        setAgingOverdue(null);
+        setAgingOverdueError(
+          (result as SitelineError).error ??
+            (result as SitelineError).message ??
+            "Failed to load overdue aging items"
+        );
+      } else {
+        setAgingOverdue(result);
+      }
+    } catch (e) {
+      setAgingOverdue(null);
+      setAgingOverdueError(
+        e instanceof Error ? e.message : "Unknown error loading overdue items"
+      );
+    } finally {
+      setAgingOverdueLoading(false);
+    }
+  }, [configured]);
+
   useEffect(() => {
     if (configured && CONTRACTS_PAYAPPS_TAB_ENABLED) {
       loadContracts();
@@ -195,10 +228,13 @@ export default function BillingsPage() {
   }, [configured, loadContracts, loadPayApps]);
 
   useEffect(() => {
-    if (configured && activeTab === "aging") {
+    if (!configured) return;
+    if (activeTab === "aging") {
       loadAgingReport();
+    } else if (activeTab === "overdue") {
+      loadAgingOverdue();
     }
-  }, [configured, activeTab, loadAgingReport]);
+  }, [configured, activeTab, loadAgingReport, loadAgingOverdue]);
 
   const initialLoading =
     statusLoading ||
@@ -286,6 +322,17 @@ export default function BillingsPage() {
               }`}
             >
               A/R Aging
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("overdue")}
+              className={`rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+                activeTab === "overdue"
+                  ? "bg-white text-stone-900 shadow-sm dark:bg-stone-900 dark:text-stone-100 border border-stone-200 border-b-0 dark:border-stone-700"
+                  : "text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+              }`}
+            >
+              Over 50 Days
             </button>
           </div>
 
@@ -588,11 +635,17 @@ export default function BillingsPage() {
                   <table className="min-w-full text-sm">
                     <thead>
                       <tr className="border-b border-stone-200 dark:border-stone-700">
-                        <th className="sticky left-0 z-10 bg-stone-50 px-3 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400">
+                        <th className="sticky left-0 z-20 bg-stone-50 px-3 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400">
                           Project
                         </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
+                          PM
+                        </th>
                         {agingReport.buckets.map((b) => (
-                          <th key={b} className="whitespace-nowrap px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
+                          <th
+                            key={b}
+                            className="whitespace-nowrap px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400"
+                          >
                             {b}
                           </th>
                         ))}
@@ -603,13 +656,32 @@ export default function BillingsPage() {
                     </thead>
                     <tbody>
                       {agingReport.rows.map((row, i) => (
-                        <tr key={i} className="border-b border-stone-100 last:border-0 dark:border-stone-800">
+                        <tr
+                          key={i}
+                          className="border-b border-stone-100 last:border-0 dark:border-stone-800"
+                        >
                           <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium text-stone-900 dark:bg-stone-900 dark:text-stone-100">
                             {row.projectName}
                           </td>
+                          <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                            <div className="flex flex-col">
+                              <span>{row.leadPmName ?? "—"}</span>
+                              {row.leadPmEmail && (
+                                <a
+                                  href={`mailto:${row.leadPmEmail}`}
+                                  className="text-xs text-amber-700 hover:underline dark:text-amber-400"
+                                >
+                                  {row.leadPmEmail}
+                                </a>
+                              )}
+                            </div>
+                          </td>
                           {agingReport.buckets.map((b) => (
-                            <td key={b} className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
-                              {formatAgingCurrency(row.buckets[b])}
+                            <td
+                              key={b}
+                              className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums"
+                            >
+                              {formatAgingCurrency(row.buckets[b as keyof typeof row.buckets])}
                             </td>
                           ))}
                           <td className="px-3 py-2 text-right font-medium text-stone-800 dark:text-stone-200 tabular-nums">
@@ -621,9 +693,17 @@ export default function BillingsPage() {
                         <td className="sticky left-0 z-10 bg-stone-50 px-3 py-2 dark:bg-stone-800/50">
                           TOTALS
                         </td>
+                        <td className="px-3 py-2 text-stone-900 dark:text-stone-100 tabular-nums">
+                          {/* PM column has no totals */}
+                        </td>
                         {agingReport.buckets.map((b) => (
-                          <td key={b} className="px-3 py-2 text-right text-stone-900 dark:text-stone-100 tabular-nums">
-                            {formatAgingCurrency(agingReport.totals[b])}
+                          <td
+                            key={b}
+                            className="px-3 py-2 text-right text-stone-900 dark:text-stone-100 tabular-nums"
+                          >
+                            {formatAgingCurrency(
+                              agingReport.totals[b as keyof typeof agingReport.totals]
+                            )}
                           </td>
                         ))}
                         <td className="px-3 py-2 text-right text-stone-900 dark:text-stone-100 tabular-nums">
@@ -634,6 +714,130 @@ export default function BillingsPage() {
                   </table>
                 </div>
               )}
+            </Card>
+          )}
+
+          {activeTab === "overdue" && (
+            <Card>
+              <CardHeader
+                title="Over 50 Days"
+                subtitle="Individual pay apps more than 50 days past due with project manager info."
+              />
+              {agingOverdueLoading && (
+                <div className="flex justify-center py-8">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+                </div>
+              )}
+              {agingOverdueError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
+                  {agingOverdueError}
+                  <button
+                    type="button"
+                    onClick={loadAgingOverdue}
+                    className="ml-3 underline"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+              {!agingOverdueLoading &&
+                !agingOverdueError &&
+                agingOverdue &&
+                agingOverdue.items.length === 0 && (
+                  <p className="py-8 text-center text-sm text-stone-500 dark:text-stone-400">
+                    No pay apps are more than 50 days past due.
+                  </p>
+                )}
+              {!agingOverdueLoading &&
+                !agingOverdueError &&
+                agingOverdue &&
+                agingOverdue.items.length > 0 && (
+                  <div className="overflow-x-auto overflow-y-auto max-h-96 -mx-1 px-1 sm:mx-0 sm:px-0">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
+                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
+                            Project
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
+                            GC / Project #
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
+                            PM
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
+                            Due date
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
+                            Days past due
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
+                            Net amount
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {agingOverdue.items.map((item: AgingOverdueItem, idx: number) => {
+                          const due = item.dueDate
+                            ? new Date(item.dueDate).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "2-digit",
+                              })
+                            : "—";
+                          return (
+                            <tr
+                              key={`${item.contractId}-${idx}`}
+                              className="border-b border-stone-100 last:border-0 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                            >
+                              <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                                <div className="flex flex-col">
+                                  <span>{item.projectName ?? "—"}</span>
+                                  {item.internalProjectNumber && (
+                                    <span className="text-xs text-stone-500 dark:text-stone-400">
+                                      {item.internalProjectNumber}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                                {item.projectNumber ?? "—"}
+                              </td>
+                              <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                                <div className="flex flex-col">
+                                  <span>{item.leadPmName ?? "—"}</span>
+                                  {item.leadPmEmail && (
+                                    <a
+                                      href={`mailto:${item.leadPmEmail}`}
+                                      className="text-xs text-amber-700 hover:underline dark:text-amber-400"
+                                    >
+                                      {item.leadPmEmail}
+                                    </a>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                                {due}
+                              </td>
+                              <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
+                                {item.daysPastDue}
+                              </td>
+                              <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
+                                {formatAgingCurrency(item.netDollars)}
+                              </td>
+                              <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                                {item.status ?? "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
             </Card>
           )}
         </>
