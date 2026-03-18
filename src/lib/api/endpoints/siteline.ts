@@ -252,11 +252,14 @@ export type AgingBucket = (typeof AGING_BUCKETS)[number];
 
 export interface AgingReportRow {
   projectName: string;
-  buckets: Record<string, number>;
+  /** Primary PM for this project, when available (FRONTEND_RECENT_CHANGES_MAR2026.md). */
+  leadPmName?: string | null;
+  leadPmEmail?: string | null;
+  buckets: Record<AgingBucket, number>;
   projectTotal: number;
 }
 
-export interface AgingReportTotals extends Record<string, number> {
+export interface AgingReportTotals extends Record<AgingBucket, number> {
   projectTotal: number;
 }
 
@@ -271,5 +274,32 @@ export async function getSitelineAgingReport(): Promise<
   AgingReportResponse | SitelineError
 > {
   return get<AgingReportResponse | SitelineError>("siteline/aging-report");
+}
+
+// --- Aging overdue (>50 days) (FRONTEND_AGING_REPORT copy.md) ---
+
+export interface AgingOverdueItem {
+  contractId: string;
+  projectName: string | null;
+  projectNumber: string | null;
+  internalProjectNumber: string | null;
+  companyId: string | null;
+  leadPmName: string | null;
+  leadPmEmail: string | null;
+  dueDate: string | null;
+  daysPastDue: number;
+  netDollars: number;
+  status: string | null;
+}
+
+export interface AgingOverdueResponse {
+  items: AgingOverdueItem[];
+}
+
+/** Over 50 Days tab: individual overdue pay apps with PM info. */
+export async function getSitelineAgingOverdue(): Promise<
+  AgingOverdueResponse | SitelineError
+> {
+  return get<AgingOverdueResponse | SitelineError>("siteline/aging-overdue");
 }
 
