@@ -32,7 +32,7 @@ export default function JobDashboardPage() {
   const { companyId } = useCompany();
   const [filters, setFilters] = useState<FilterConfig>(() => createDefaultFilters());
 
-  const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId);
+  const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId ?? undefined);
 
   const {
     kpis,
@@ -46,33 +46,33 @@ export default function JobDashboardPage() {
     loading: dataLoading,
     error: dataError,
   } = useJobDashboard({
-    companyId,
+    companyId: companyId ?? undefined,
     startDate: filters.startDate,
     endDate: filters.endDate,
     jobId: filters.jobId,
     direction: filters.direction,
     // Use the top-level Company selector as Our company (entityId) filter for the job dashboard.
-    entityId: companyId,
+    entityId: companyId ?? undefined,
   });
 
   const { ticket: detailTicket, fetchDetail, clear: closeDetail } = useTicketDetail();
 
   const handleOpenDetail = useCallback(
     (ticketNumber: string) => {
-      fetchDetail(ticketNumber, companyId);
+      fetchDetail(ticketNumber, companyId ?? undefined);
     },
     [fetchDetail, companyId]
   );
 
   const handleExportClick = useCallback(() => {
     const apiFilters = {
-      companyId,
+      companyId: companyId ?? undefined,
       startDate: filters.startDate,
       endDate: filters.endDate,
       jobId: filters.jobId === "all" ? undefined : filters.jobId,
       direction: filters.direction === "Both" ? undefined : filters.direction,
       // Match the main dashboards: use the selected Company as entityId filter.
-      entityId: companyId,
+      entityId: companyId ?? undefined,
     };
     jobApi.getJobTicketsExportBlob(apiFilters).then((blob) => {
       const url = URL.createObjectURL(blob);
@@ -158,7 +158,7 @@ export default function JobDashboardPage() {
             page={page}
             pageSize={pageSize}
             onPageChange={setPage}
-            companyId={companyId}
+            companyId={companyId ?? undefined}
             onOpenDetail={handleOpenDetail}
             detailTicket={detailTicket}
             onCloseDetail={closeDetail}

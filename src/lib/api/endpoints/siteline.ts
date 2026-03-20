@@ -255,6 +255,8 @@ export interface AgingReportRow {
   /** Primary PM for this project, when available (FRONTEND_RECENT_CHANGES_MAR2026.md). */
   leadPmName?: string | null;
   leadPmEmail?: string | null;
+  /** Invoice/Pay App number (max/latest seen for this project), when available. */
+  invoiceNumber?: number | null;
   buckets: Record<AgingBucket, number>;
   projectTotal: number;
 }
@@ -269,11 +271,33 @@ export interface AgingReportResponse {
   totals: AgingReportTotals;
 }
 
+export interface SitelineAgingFilters {
+  search?: string;
+  overdueOnly?: boolean;
+  minDaysPastDue?: number;
+  maxDaysPastDue?: number;
+  minNetDollars?: number;
+  maxNetDollars?: number;
+  includeStatuses?: string; // comma-separated
+  excludeStatuses?: string; // comma-separated
+}
+
 /** A/R aging report: net dollars per project in days-past-due buckets. */
-export async function getSitelineAgingReport(): Promise<
+export async function getSitelineAgingReport(
+  filters?: SitelineAgingFilters
+): Promise<
   AgingReportResponse | SitelineError
 > {
-  return get<AgingReportResponse | SitelineError>("siteline/aging-report");
+  return get<AgingReportResponse | SitelineError>("siteline/aging-report", {
+    search: filters?.search,
+    overdueOnly: filters?.overdueOnly ? "true" : undefined,
+    minDaysPastDue: filters?.minDaysPastDue,
+    maxDaysPastDue: filters?.maxDaysPastDue,
+    minNetDollars: filters?.minNetDollars,
+    maxNetDollars: filters?.maxNetDollars,
+    includeStatuses: filters?.includeStatuses,
+    excludeStatuses: filters?.excludeStatuses,
+  });
 }
 
 // --- Aging overdue (>50 days) (FRONTEND_AGING_REPORT copy.md) ---
@@ -286,6 +310,8 @@ export interface AgingOverdueItem {
   companyId: string | null;
   leadPmName: string | null;
   leadPmEmail: string | null;
+  /** Invoice/Pay App number from Siteline (payAppNumber). */
+  invoiceNumber: number | null;
   dueDate: string | null;
   daysPastDue: number;
   netDollars: number;
@@ -297,9 +323,20 @@ export interface AgingOverdueResponse {
 }
 
 /** Over 50 Days tab: individual overdue pay apps with PM info. */
-export async function getSitelineAgingOverdue(): Promise<
+export async function getSitelineAgingOverdue(
+  filters?: SitelineAgingFilters
+): Promise<
   AgingOverdueResponse | SitelineError
 > {
-  return get<AgingOverdueResponse | SitelineError>("siteline/aging-overdue");
+  return get<AgingOverdueResponse | SitelineError>("siteline/aging-overdue", {
+    search: filters?.search,
+    overdueOnly: filters?.overdueOnly ? "true" : undefined,
+    minDaysPastDue: filters?.minDaysPastDue,
+    maxDaysPastDue: filters?.maxDaysPastDue,
+    minNetDollars: filters?.minNetDollars,
+    maxNetDollars: filters?.maxNetDollars,
+    includeStatuses: filters?.includeStatuses,
+    excludeStatuses: filters?.excludeStatuses,
+  });
 }
 

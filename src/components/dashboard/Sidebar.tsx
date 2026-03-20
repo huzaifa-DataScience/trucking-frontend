@@ -19,6 +19,7 @@ const billingNavItems = [
 
 const adminNavItems = [
   { href: "/admin/users", label: "User Management", icon: "⚙" },
+  { href: "/admin/email-templates", label: "Email templates", icon: "✉" },
 ];
 
 export function Sidebar() {
