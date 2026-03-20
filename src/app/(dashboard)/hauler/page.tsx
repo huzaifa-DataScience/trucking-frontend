@@ -30,7 +30,7 @@ export default function HaulerDashboardPage() {
   const { companyId } = useCompany();
   const [filters, setFilters] = useState<FilterConfig>(() => createDefaultFilters());
 
-  const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId);
+  const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId ?? undefined);
 
   const {
     kpis,
@@ -44,7 +44,7 @@ export default function HaulerDashboardPage() {
     loading: dataLoading,
     error: dataError,
   } = useHaulerDashboard({
-    companyId,
+    companyId: companyId ?? undefined,
     startDate: filters.startDate,
     endDate: filters.endDate,
     jobId: filters.jobId,
@@ -53,19 +53,19 @@ export default function HaulerDashboardPage() {
     truckTypeId: filters.truckTypeId,
     direction: filters.direction,
     // Global Our company filter from the top Company selector.
-    entityId: companyId,
+    entityId: companyId ?? undefined,
   });
 
   const { ticket: detailTicket, fetchDetail, clear: closeDetail } = useTicketDetail();
 
   const handleOpenDetail = useCallback(
-    (ticketNumber: string) => fetchDetail(ticketNumber, companyId),
+    (ticketNumber: string) => fetchDetail(ticketNumber, companyId ?? undefined),
     [fetchDetail, companyId]
   );
 
   const handleExportClick = useCallback(() => {
     const apiFilters = {
-      companyId,
+      companyId: companyId ?? undefined,
       startDate: filters.startDate,
       endDate: filters.endDate,
       jobId: filters.jobId === "all" ? undefined : filters.jobId,
@@ -73,7 +73,7 @@ export default function HaulerDashboardPage() {
       haulerId: filters.haulerId === "all" ? undefined : filters.haulerId,
       truckTypeId: filters.truckTypeId === "all" ? undefined : filters.truckTypeId,
       direction: filters.direction === "Both" ? undefined : filters.direction,
-      entityId: companyId,
+      entityId: companyId ?? undefined,
     };
     haulerApi.getHaulerTicketsExportBlob(apiFilters).then((blob) => {
       const url = URL.createObjectURL(blob);
@@ -159,7 +159,7 @@ export default function HaulerDashboardPage() {
             page={page}
             pageSize={pageSize}
             onPageChange={setPage}
-            companyId={companyId}
+            companyId={companyId ?? undefined}
             onOpenDetail={handleOpenDetail}
             detailTicket={detailTicket}
             onCloseDetail={closeDetail}

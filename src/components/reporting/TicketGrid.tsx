@@ -12,7 +12,7 @@ interface TicketGridProps {
   page?: number;
   pageSize?: number;
   onPageChange?: (page: number) => void;
-  companyId?: string;
+  companyId?: string | null;
   /** When provided, parent fetches detail (e.g. from API) and passes detailTicket + onCloseDetail. */
   onOpenDetail?: (ticketNumber: string) => void;
   detailTicket?: TicketDetail | null;

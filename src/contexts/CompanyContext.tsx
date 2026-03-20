@@ -16,13 +16,16 @@ const STORAGE_KEY = "construction-logistics-company-id";
 
 function getStoredCompanyId(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(STORAGE_KEY);
+  const v = localStorage.getItem(STORAGE_KEY);
+  if (!v || v === "all") return null;
+  return v;
 }
 
 interface CompanyContextValue {
-  companyId: string;
+  /** Selected "our entity" id; null means "All". */
+  companyId: string | null;
   company: Company | null;
-  setCompanyId: (id: string) => void;
+  setCompanyId: (id: string | null) => void;
   companies: readonly Company[];
 }
 
@@ -30,7 +33,7 @@ const CompanyContext = createContext<CompanyContextValue | null>(null);
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [companyId, setCompanyIdState] = useState<string>("");
+  const [companyId, setCompanyIdState] = useState<string | null>(null);
   const [companiesError, setCompaniesError] = useState<string | null>(null);
   const [companiesLoading, setCompaniesLoading] = useState(false);
 
@@ -56,12 +59,10 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         const stored = getStoredCompanyId();
         const validStored =
           stored && mapped.some((c) => c.id === stored) ? stored : null;
-        const initialId = validStored ?? mapped[0]?.id ?? "";
-        if (initialId) {
-          setCompanyIdState(initialId);
-          if (typeof window !== "undefined") {
-            localStorage.setItem(STORAGE_KEY, initialId);
-          }
+        const initialId = validStored ?? null; // default to "All"
+        setCompanyIdState(initialId);
+        if (typeof window !== "undefined") {
+          localStorage.setItem(STORAGE_KEY, initialId ?? "all");
         }
       } catch {
         // If the lookup fails, leave companies empty and companyId unset.
@@ -79,13 +80,13 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const setCompanyId = useCallback((id: string) => {
+  const setCompanyId = useCallback((id: string | null) => {
     setCompanyIdState(id);
-    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, id);
+    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, id ?? "all");
   }, []);
 
   const company = useMemo(
-    () => companies.find((c) => c.id === companyId) ?? null,
+    () => (companyId ? companies.find((c) => c.id === companyId) ?? null : null),
     [companies, companyId]
   );
 

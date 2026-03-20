@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import {
   useSitelineStatus,
@@ -25,6 +25,7 @@ import type {
   AgingReportResponse,
   AgingOverdueResponse,
   AgingOverdueItem,
+  SitelineAgingFilters,
 } from "@/lib/api/endpoints/siteline";
 import { ContractDetailModal } from "@/components/billings/ContractDetailModal";
 import { PayAppDetailModal } from "@/components/billings/PayAppDetailModal";
@@ -41,6 +42,9 @@ const formatAgingCurrency = (value: number | undefined) =>
 
 const formatPercent = (value: number | undefined) =>
   value != null ? `${(value * 100).toFixed(1)}%` : "—";
+
+const formatInvoiceNumber = (value: number | null | undefined) =>
+  value != null ? `${value}` : "—";
 
 const formatDateTimeParts = (value?: string, timeZone?: string) => {
   if (!value) return { date: "—", time: "—" };
@@ -107,10 +111,43 @@ export default function BillingsPage() {
   const [agingReport, setAgingReport] = useState<AgingReportResponse | null>(null);
   const [agingLoading, setAgingLoading] = useState(false);
   const [agingError, setAgingError] = useState<string | null>(null);
+  const [agingFilters, setAgingFilters] = useState<SitelineAgingFilters>(() => ({
+    search: "",
+    overdueOnly: false,
+  }));
+  const agingFiltersRef = useRef(agingFilters);
 
   const [agingOverdue, setAgingOverdue] = useState<AgingOverdueResponse | null>(null);
   const [agingOverdueLoading, setAgingOverdueLoading] = useState(false);
   const [agingOverdueError, setAgingOverdueError] = useState<string | null>(null);
+  const [overdueFilters, setOverdueFilters] = useState<SitelineAgingFilters>(() => ({
+    search: "",
+    overdueOnly: true,
+    minDaysPastDue: 50,
+  }));
+  const overdueFiltersRef = useRef(overdueFilters);
+
+  const defaultAgingFilters: SitelineAgingFilters = {
+    search: "",
+    overdueOnly: false,
+  };
+
+  // Over 50 Days tab is inherently `daysPastDue > 50` (and `netDollars > 0` server-side),
+  // so the UI hides the "min days" + "overdue only" controls and keeps them enforced via defaults.
+  const defaultOverdueFilters: SitelineAgingFilters = {
+    search: "",
+    overdueOnly: true,
+    minDaysPastDue: 50,
+  };
+
+  // Keep refs updated so our fetch callbacks don't change identity on every input change.
+  // That prevents the auto-fetch useEffect from re-running continuously while the user types.
+  useEffect(() => {
+    agingFiltersRef.current = agingFilters;
+  }, [agingFilters]);
+  useEffect(() => {
+    overdueFiltersRef.current = overdueFilters;
+  }, [overdueFilters]);
 
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
   const [selectedPayAppId, setSelectedPayAppId] = useState<string | null>(null);
@@ -174,12 +211,14 @@ export default function BillingsPage() {
     }
   }, [configured, payAppsFilters.submittedInMonth]);
 
-  const loadAgingReport = useCallback(async () => {
+  const loadAgingReport = useCallback(async (filtersOverride?: SitelineAgingFilters) => {
     if (!configured) return;
     setAgingLoading(true);
     setAgingError(null);
     try {
-      const result = await getSitelineAgingReport();
+      const result = await getSitelineAgingReport(
+        filtersOverride ?? agingFiltersRef.current
+      );
       if (isSitelineError(result)) {
         setAgingReport(null);
         setAgingError((result as SitelineError).error ?? (result as SitelineError).message ?? "Failed to load aging report");
@@ -194,12 +233,14 @@ export default function BillingsPage() {
     }
   }, [configured]);
 
-  const loadAgingOverdue = useCallback(async () => {
+  const loadAgingOverdue = useCallback(async (filtersOverride?: SitelineAgingFilters) => {
     if (!configured) return;
     setAgingOverdueLoading(true);
     setAgingOverdueError(null);
     try {
-      const result = await getSitelineAgingOverdue();
+      const result = await getSitelineAgingOverdue(
+        filtersOverride ?? overdueFiltersRef.current
+      );
       if (isSitelineError(result)) {
         setAgingOverdue(null);
         setAgingOverdueError(
@@ -219,6 +260,16 @@ export default function BillingsPage() {
       setAgingOverdueLoading(false);
     }
   }, [configured]);
+
+  const clearAgingFiltersAndReload = useCallback(async () => {
+    setAgingFilters(defaultAgingFilters);
+    await loadAgingReport(defaultAgingFilters);
+  }, [loadAgingReport]);
+
+  const clearOverdueFiltersAndReload = useCallback(async () => {
+    setOverdueFilters(defaultOverdueFilters);
+    await loadAgingOverdue(defaultOverdueFilters);
+  }, [loadAgingOverdue]);
 
   useEffect(() => {
     if (configured && CONTRACTS_PAYAPPS_TAB_ENABLED) {
@@ -608,6 +659,143 @@ export default function BillingsPage() {
                 title="A/R Aging"
                 subtitle="Net dollars by project and days past due. Data syncs every 10 minutes."
               />
+              <div className="mb-3 px-1 sm:px-0 max-w-4xl">
+                <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700 dark:bg-transparent">
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                    <span>Search</span>
+                    <input
+                      value={agingFilters.search ?? ""}
+                      onChange={(e) => setAgingFilters((p) => ({ ...p, search: e.target.value }))}
+                      placeholder="Project, PM, numbers…"
+                      className="h-8 w-72 rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                    />
+                  </label>
+
+                  <label className="flex items-center gap-2 pb-[2px] text-xs text-stone-600 dark:text-stone-400">
+                    <input
+                      type="checkbox"
+                      checked={!!agingFilters.overdueOnly}
+                      onChange={(e) => setAgingFilters((p) => ({ ...p, overdueOnly: e.target.checked }))}
+                    />
+                    <span>Overdue only</span>
+                  </label>
+
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => loadAgingReport()}
+                      className="rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200"
+                    >
+                      Apply
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => clearAgingFiltersAndReload()}
+                      className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-800 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900/30 dark:text-stone-100 dark:hover:bg-stone-900/60"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <details className="mt-3">
+                  <summary className="cursor-pointer select-none text-xs font-medium text-stone-700 dark:text-stone-200">
+                    Advanced filters
+                  </summary>
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700">
+                      <div className="grid grid-cols-2 gap-1">
+                        <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                          <span>Min days past due</span>
+                          <input
+                            type="number"
+                            step={1}
+                            value={agingFilters.minDaysPastDue ?? ""}
+                            onChange={(e) =>
+                              setAgingFilters((p) => ({
+                                ...p,
+                                minDaysPastDue: e.target.value === "" ? undefined : Number(e.target.value),
+                              }))
+                            }
+                            className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                          />
+                        </label>
+
+                        <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                          <span>Max days past due</span>
+                          <input
+                            type="number"
+                            step={1}
+                            value={agingFilters.maxDaysPastDue ?? ""}
+                            onChange={(e) =>
+                              setAgingFilters((p) => ({
+                                ...p,
+                                maxDaysPastDue: e.target.value === "" ? undefined : Number(e.target.value),
+                              }))
+                            }
+                            className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700">
+                      <div className="grid grid-cols-2 gap-1">
+                        <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                          <span>Min net ($)</span>
+                          <input
+                            type="number"
+                            step={0.01}
+                            value={agingFilters.minNetDollars ?? ""}
+                            onChange={(e) =>
+                              setAgingFilters((p) => ({
+                                ...p,
+                                minNetDollars: e.target.value === "" ? undefined : Number(e.target.value),
+                              }))
+                            }
+                            className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                          />
+                        </label>
+
+                        <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                          <span>Max net ($)</span>
+                          <input
+                            type="number"
+                            step={0.01}
+                            value={agingFilters.maxNetDollars ?? ""}
+                            onChange={(e) =>
+                              setAgingFilters((p) => ({
+                                ...p,
+                                maxNetDollars: e.target.value === "" ? undefined : Number(e.target.value),
+                              }))
+                            }
+                            className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700">
+                      <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                        <span>Status</span>
+                        <input
+                          value={agingFilters.includeStatuses ?? ""}
+                          onChange={(e) =>
+                            setAgingFilters((p) => ({
+                              ...p,
+                              includeStatuses: e.target.value || undefined,
+                            }))
+                          }
+                          placeholder="PROPOSED,SIGNED"
+                          className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </details>
+                </div>
+              </div>
               {agingLoading && (
                 <div className="flex justify-center py-8">
                   <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
@@ -618,7 +806,7 @@ export default function BillingsPage() {
                   {agingError}
                   <button
                     type="button"
-                    onClick={loadAgingReport}
+                    onClick={() => loadAgingReport()}
                     className="ml-3 underline"
                   >
                     Retry
@@ -640,6 +828,9 @@ export default function BillingsPage() {
                         </th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
                           PM
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
+                          Invoice #
                         </th>
                         {agingReport.buckets.map((b) => (
                           <th
@@ -676,6 +867,9 @@ export default function BillingsPage() {
                               )}
                             </div>
                           </td>
+                          <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
+                            {formatInvoiceNumber(row.invoiceNumber)}
+                          </td>
                           {agingReport.buckets.map((b) => (
                             <td
                               key={b}
@@ -695,6 +889,9 @@ export default function BillingsPage() {
                         </td>
                         <td className="px-3 py-2 text-stone-900 dark:text-stone-100 tabular-nums">
                           {/* PM column has no totals */}
+                        </td>
+                        <td className="px-3 py-2 text-stone-900 dark:text-stone-100 tabular-nums">
+                          {/* Invoice # column has no totals */}
                         </td>
                         {agingReport.buckets.map((b) => (
                           <td
@@ -723,6 +920,134 @@ export default function BillingsPage() {
                 title="Over 50 Days"
                 subtitle="Individual pay apps more than 50 days past due with project manager info."
               />
+              <div className="mb-3 px-1 sm:px-0 max-w-4xl">
+                <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700 dark:bg-transparent">
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                    <span>Search</span>
+                    <input
+                      value={overdueFilters.search ?? ""}
+                      onChange={(e) => setOverdueFilters((p) => ({ ...p, search: e.target.value }))}
+                      placeholder="Project, PM, numbers…"
+                      className="h-8 w-72 rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                    />
+                  </label>
+
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => loadAgingOverdue()}
+                      className="rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200"
+                    >
+                      Apply
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => clearOverdueFiltersAndReload()}
+                      className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-800 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900/30 dark:text-stone-100 dark:hover:bg-stone-900/60"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <details className="mt-3">
+                  <summary className="cursor-pointer select-none text-xs font-medium text-stone-700 dark:text-stone-200">
+                    Advanced filters
+                  </summary>
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700">
+                      <div className="grid grid-cols-2 gap-1">
+                        <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                          <span>Min days past due</span>
+                          <input
+                            type="number"
+                            step={1}
+                            value={overdueFilters.minDaysPastDue ?? ""}
+                            onChange={(e) =>
+                              setOverdueFilters((p) => ({
+                                ...p,
+                                minDaysPastDue: e.target.value === "" ? undefined : Number(e.target.value),
+                              }))
+                            }
+                            className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                          />
+                        </label>
+
+                        <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                          <span>Max days past due</span>
+                          <input
+                            type="number"
+                            step={1}
+                            value={overdueFilters.maxDaysPastDue ?? ""}
+                            onChange={(e) =>
+                              setOverdueFilters((p) => ({
+                                ...p,
+                                maxDaysPastDue: e.target.value === "" ? undefined : Number(e.target.value),
+                              }))
+                            }
+                            className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700">
+                      <div className="grid grid-cols-2 gap-1">
+                        <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                          <span>Min net ($)</span>
+                          <input
+                            type="number"
+                            step={0.01}
+                            value={overdueFilters.minNetDollars ?? ""}
+                            onChange={(e) =>
+                              setOverdueFilters((p) => ({
+                                ...p,
+                                minNetDollars: e.target.value === "" ? undefined : Number(e.target.value),
+                              }))
+                            }
+                            className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                          />
+                        </label>
+
+                        <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                          <span>Max net ($)</span>
+                          <input
+                            type="number"
+                            step={0.01}
+                            value={overdueFilters.maxNetDollars ?? ""}
+                            onChange={(e) =>
+                              setOverdueFilters((p) => ({
+                                ...p,
+                                maxNetDollars: e.target.value === "" ? undefined : Number(e.target.value),
+                              }))
+                            }
+                            className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700">
+                      <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                        <span>Status</span>
+                        <input
+                          value={overdueFilters.includeStatuses ?? ""}
+                          onChange={(e) =>
+                            setOverdueFilters((p) => ({
+                              ...p,
+                              includeStatuses: e.target.value || undefined,
+                            }))
+                          }
+                          placeholder="PROPOSED,SIGNED"
+                          className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </details>
+                </div>
+              </div>
               {agingOverdueLoading && (
                 <div className="flex justify-center py-8">
                   <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
@@ -733,7 +1058,7 @@ export default function BillingsPage() {
                   {agingOverdueError}
                   <button
                     type="button"
-                    onClick={loadAgingOverdue}
+                    onClick={() => loadAgingOverdue()}
                     className="ml-3 underline"
                   >
                     Retry
@@ -770,6 +1095,9 @@ export default function BillingsPage() {
                           </th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
                             Days past due
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
+                            Invoice #
                           </th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
                             Net amount
@@ -824,6 +1152,9 @@ export default function BillingsPage() {
                               </td>
                               <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
                                 {item.daysPastDue}
+                              </td>
+                              <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
+                                {formatInvoiceNumber(item.invoiceNumber)}
                               </td>
                               <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
                                 {formatAgingCurrency(item.netDollars)}

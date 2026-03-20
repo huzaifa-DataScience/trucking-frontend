@@ -30,7 +30,7 @@ export default function MaterialDashboardPage() {
   const { companyId } = useCompany();
   const [filters, setFilters] = useState<FilterConfig>(() => createDefaultFilters());
 
-  const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId);
+  const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId ?? undefined);
 
   const {
     kpis,
@@ -44,32 +44,32 @@ export default function MaterialDashboardPage() {
     loading: dataLoading,
     error: dataError,
   } = useMaterialDashboard({
-    companyId,
+    companyId: companyId ?? undefined,
     startDate: filters.startDate,
     endDate: filters.endDate,
     jobId: filters.jobId,
     materialId: filters.materialId,
     direction: filters.direction,
     // Global Our company filter from the top Company selector.
-    entityId: companyId,
+    entityId: companyId ?? undefined,
   });
 
   const { ticket: detailTicket, fetchDetail, clear: closeDetail } = useTicketDetail();
 
   const handleOpenDetail = useCallback(
-    (ticketNumber: string) => fetchDetail(ticketNumber, companyId),
+    (ticketNumber: string) => fetchDetail(ticketNumber, companyId ?? undefined),
     [fetchDetail, companyId]
   );
 
   const handleExportClick = useCallback(() => {
     const apiFilters = {
-      companyId,
+      companyId: companyId ?? undefined,
       startDate: filters.startDate,
       endDate: filters.endDate,
       jobId: filters.jobId === "all" ? undefined : filters.jobId,
       materialId: filters.materialId === "all" ? undefined : filters.materialId,
       direction: filters.direction === "Both" ? undefined : filters.direction,
-      entityId: companyId,
+      entityId: companyId ?? undefined,
     };
     materialApi.getMaterialTicketsExportBlob(apiFilters).then((blob) => {
       const url = URL.createObjectURL(blob);
@@ -156,7 +156,7 @@ export default function MaterialDashboardPage() {
             page={page}
             pageSize={pageSize}
             onPageChange={setPage}
-            companyId={companyId}
+            companyId={companyId ?? undefined}
             onOpenDetail={handleOpenDetail}
             detailTicket={detailTicket}
             onCloseDetail={closeDetail}
