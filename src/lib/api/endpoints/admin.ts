@@ -3,13 +3,21 @@
  * All endpoints require admin role (backend enforces).
  */
 
-import { get, post, patch, del } from "../client";
+import { get, post, patch, put, del } from "../client";
 import type {
   AdminUser,
   AdminUsersResponse,
   UserFilters,
   UpdateUserPayload,
   BulkActionResponse,
+  SitelineOverdueEmailTemplate,
+  SitelineOverdueEmailTemplateUpdate,
+  AdminEmailTemplate,
+  AdminEmailTemplateActive,
+  AdminEmailTemplateListItem,
+  AdminEmailTemplatesPurposesResponse,
+  AdminEmailTemplateUpdatePayload,
+  AdminEmailTemplateCreatePayload,
 } from "@/lib/admin/types";
 
 export async function getUsers(filters: UserFilters): Promise<AdminUsersResponse> {
@@ -56,4 +64,59 @@ export async function bulkReject(userIds: number[]): Promise<BulkActionResponse>
 
 export async function bulkDelete(userIds: number[]): Promise<BulkActionResponse> {
   return del<BulkActionResponse>("/admin/users/bulk-delete", { userIds });
+}
+
+/** Siteline lead-PM overdue email HTML template (admin JWT). */
+export async function getSitelineOverdueEmailTemplate(): Promise<SitelineOverdueEmailTemplate> {
+  return get<SitelineOverdueEmailTemplate>("/admin/email-templates/siteline-overdue");
+}
+
+export async function updateSitelineOverdueEmailTemplate(
+  payload: SitelineOverdueEmailTemplateUpdate
+): Promise<SitelineOverdueEmailTemplate> {
+  return put<SitelineOverdueEmailTemplate>("/admin/email-templates/siteline-overdue", payload);
+}
+
+/**
+ * Generic admin email template management (see FRONTEND_EMAIL_TEMPLATES.md).
+ */
+export async function listEmailTemplates(params?: { purpose?: string }): Promise<AdminEmailTemplateListItem[]> {
+  return get<AdminEmailTemplateListItem[]>("/admin/email-templates", {
+    purpose: params?.purpose,
+  });
+}
+
+export async function getEmailTemplatePurposes(): Promise<AdminEmailTemplatesPurposesResponse> {
+  return get<AdminEmailTemplatesPurposesResponse>("/admin/email-templates/purposes");
+}
+
+export async function getActiveEmailTemplateByPurpose(
+  purpose: string
+): Promise<AdminEmailTemplateActive> {
+  return get<AdminEmailTemplateActive>("/admin/email-templates/active", { purpose });
+}
+
+export async function updateEmailTemplateByKey(
+  templateKey: string,
+  payload: AdminEmailTemplateUpdatePayload
+): Promise<{ message: string }> {
+  return put<{ message: string }>(`/admin/email-templates/${templateKey}`, payload);
+}
+
+export async function activateEmailTemplateByKey(
+  templateKey: string
+): Promise<{ message: string }> {
+  return post<{ message: string }>(`/admin/email-templates/${templateKey}/activate`, {});
+}
+
+export async function createEmailTemplate(
+  payload: AdminEmailTemplateCreatePayload
+): Promise<{ message: string; template: AdminEmailTemplate }> {
+  return post<{ message: string; template: AdminEmailTemplate }>("/admin/email-templates", payload);
+}
+
+export async function deleteEmailTemplateByKey(
+  templateKey: string
+): Promise<{ message: string }> {
+  return del<{ message: string }>(`/admin/email-templates/${templateKey}`);
 }
