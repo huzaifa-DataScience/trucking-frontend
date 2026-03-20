@@ -26,6 +26,13 @@ export class ApiError extends Error {
   }
 }
 
+/** User-facing message from fetch errors (ApiError or generic Error). */
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) return error.message;
+  if (error instanceof Error) return error.message;
+  return fallback;
+}
+
 function handleUnauthorized() {
   // Clear stored auth and force a full redirect to login (FRONTEND_AUTH.md).
   clearAuth();
@@ -175,6 +182,22 @@ export async function patch<T>(
   const url = getApiUrl(path);
   const response = await fetch(url, {
     method: "PATCH",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return handleResponse<T>(response);
+}
+
+/**
+ * PUT request with JSON body.
+ */
+export async function put<T>(
+  path: string,
+  body: unknown
+): Promise<T> {
+  const url = getApiUrl(path);
+  const response = await fetch(url, {
+    method: "PUT",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });

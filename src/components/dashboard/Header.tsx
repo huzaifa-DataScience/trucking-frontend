@@ -15,11 +15,12 @@ export function Header() {
             Company
           </span>
           <select
-            value={companyId}
-            onChange={(e) => setCompanyId(e.target.value)}
+            value={companyId ?? "all"}
+            onChange={(e) => setCompanyId(e.target.value === "all" ? null : e.target.value)}
             className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-900 shadow-sm dark:border-stone-600 dark:bg-stone-900 dark:text-stone-100"
             aria-label="Select company or branch"
           >
+            <option value="all">All</option>
             {companies.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
