@@ -37,18 +37,18 @@ export default function ForensicAuditPage() {
   const [filters, setFilters] = useState<FilterConfig>(defaultFilters);
   const [tab, setTab] = useState<TabId>("late");
 
-  const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId);
+  const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId ?? undefined);
   const { ticket: detailTicket, fetchDetail, clear: closeDetail } = useTicketDetail();
 
   const openTicketDetail = useCallback(
     (ticketNumber: string) => {
-      fetchDetail(ticketNumber, companyId);
+      fetchDetail(ticketNumber, companyId ?? undefined);
     },
     [fetchDetail, companyId]
   );
 
   const { lateTicketsFound, lateRows, efficiencyRows, loading: dataLoading, error: dataError } = useForensic({
-    companyId,
+    companyId: companyId ?? undefined,
     startDate: filters.startDate,
     endDate: filters.endDate,
     jobId: filters.jobId,
