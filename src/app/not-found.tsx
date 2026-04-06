@@ -13,7 +13,7 @@ export default function NotFound() {
         <div className="mt-6 flex justify-center gap-4">
           <Link
             href="/login"
-            className="rounded-lg bg-amber-600 px-4 py-2.5 font-medium text-white hover:bg-amber-700"
+            className="rounded-lg bg-brand px-4 py-2.5 font-medium text-white hover:bg-brand-secondary"
           >
             Go to Sign in
           </Link>

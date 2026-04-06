@@ -103,15 +103,13 @@ export function TicketGrid({
 
   return (
     <>
-      <div className="rounded-xl border border-stone-200/80 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900/50">
-        <div className="flex flex-col gap-3 border-b border-stone-200/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-stone-800">
-          <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
-            Detailed ticket grid ({total} rows)
-          </span>
+      <div className="rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.06)]">
+        <div className="flex flex-col gap-3 border-b border-ink/[0.08] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <span className="text-sm font-semibold text-ink">Detailed ticket grid ({total} rows)</span>
           <button
             type="button"
             onClick={exportExcel}
-            className="w-full rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-600 sm:w-auto"
+            className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-secondary sm:w-auto"
           >
             Export to Excel
           </button>
@@ -120,7 +118,7 @@ export function TicketGrid({
           <div className="inline-block min-w-full align-middle">
             <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
+              <tr className="border-b border-ink/[0.08] bg-[#f8f9fb]">
                 <Th>Ticket #</Th>
                 <Th>Ticket Date</Th>
                 <Th>Created At</Th>
@@ -146,13 +144,13 @@ export function TicketGrid({
               {pageTickets.map((row) => (
                 <tr
                   key={row.ticketNumber}
-                  className="border-b border-stone-100 hover:bg-stone-50 dark:border-stone-800 dark:hover:bg-stone-800/50"
+                  className="border-b border-ink/[0.05] hover:bg-ink/[0.02]"
                 >
                   <Td>
                     <button
                       type="button"
                       onClick={() => openDetail(row.ticketNumber)}
-                      className="font-medium text-amber-700 hover:underline dark:text-amber-400"
+                      className="font-semibold text-brand hover:text-brand-secondary hover:underline"
                     >
                       {row.ticketNumber}
                     </button>
@@ -187,8 +185,8 @@ export function TicketGrid({
           </table>
           </div>
         </div>
-        <div className="flex flex-col gap-3 border-t border-stone-200/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-stone-800">
-          <span className="text-xs text-stone-500 dark:text-stone-400">
+        <div className="flex flex-col gap-3 border-t border-ink/[0.08] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <span className="text-xs font-medium text-ink/45">
             Page {page} of {totalPages} ({total} total)
           </span>
           <div className="flex gap-2">
@@ -196,7 +194,7 @@ export function TicketGrid({
               type="button"
               onClick={goPrev}
               disabled={page <= 1}
-              className="rounded border border-stone-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-stone-600"
+              className="rounded-xl border border-ink/15 bg-surface px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/[0.03] disabled:opacity-50"
             >
               Previous
             </button>
@@ -204,7 +202,7 @@ export function TicketGrid({
               type="button"
               onClick={goNext}
               disabled={page >= totalPages}
-              className="rounded border border-stone-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-stone-600"
+              className="rounded-xl border border-ink/15 bg-surface px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/[0.03] disabled:opacity-50"
             >
               Next
             </button>
@@ -218,7 +216,7 @@ export function TicketGrid({
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="sticky top-0 z-10 whitespace-nowrap bg-stone-50 px-2 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400 sm:px-3">
+    <th className="sticky top-0 z-10 whitespace-nowrap bg-[#f8f9fb] px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-ink/45">
       {children}
     </th>
   );
@@ -226,7 +224,7 @@ function Th({ children }: { children: React.ReactNode }) {
 
 function Td({ children }: { children: React.ReactNode }) {
   return (
-    <td className="whitespace-nowrap px-2 py-2 text-stone-800 dark:text-stone-200 sm:px-3">
+    <td className="whitespace-nowrap px-3 py-2.5 text-sm text-ink/85">
       {children}
     </td>
   );
@@ -238,7 +236,7 @@ function PhotoLink({ url, label }: { url: string; label: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-amber-700 hover:underline dark:text-amber-400"
+      className="text-brand-secondary hover:underline dark:text-brand"
     >
       {label}
     </a>

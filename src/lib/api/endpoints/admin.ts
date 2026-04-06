@@ -18,6 +18,7 @@ import type {
   AdminEmailTemplatesPurposesResponse,
   AdminEmailTemplateUpdatePayload,
   AdminEmailTemplateCreatePayload,
+  OverdueEmailSendingSettings,
 } from "@/lib/admin/types";
 
 export async function getUsers(filters: UserFilters): Promise<AdminUsersResponse> {
@@ -119,4 +120,21 @@ export async function deleteEmailTemplateByKey(
   templateKey: string
 ): Promise<{ message: string }> {
   return del<{ message: string }>(`/admin/email-templates/${templateKey}`);
+}
+
+/** Overdue email cron sending toggle (env + admin toggle → effective). */
+export async function getOverdueEmailSendingSettings(): Promise<OverdueEmailSendingSettings> {
+  return get<OverdueEmailSendingSettings>("/admin/settings/overdue-email-sending");
+}
+
+export async function patchOverdueEmailSendingSettings(enabled: boolean): Promise<void> {
+  await patch<unknown>("/admin/settings/overdue-email-sending", { enabled });
+}
+
+/** SMTP connectivity test; does not require OVERDUE_EMAIL_ENABLED. */
+export async function postSmtpTestEmail(to: string): Promise<{ ok: boolean; message: string }> {
+  return post<{ ok: boolean; message: string }>("/admin/settings/smtp-test-email", {
+    to,
+    leadPmName: "Test PM",
+  });
 }

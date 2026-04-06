@@ -124,7 +124,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-secondary disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save Changes"}
           </button>

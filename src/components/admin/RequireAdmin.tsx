@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 
 /**
  * Redirects to dashboard if not admin. Use in admin routes.
@@ -20,8 +21,9 @@ export function RequireAdmin({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-stone-100 dark:bg-stone-950">
-        <p className="text-stone-500 dark:text-stone-400">Loading…</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-surface dark:bg-ink">
+        <LogoLoader size={48} />
+        <p className="text-sm text-ink/50 dark:text-white/50">Loading…</p>
       </div>
     );
   }
