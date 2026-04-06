@@ -1,5 +1,9 @@
 import { Card, CardHeader } from "@/components/ui/Card";
 
+const thClass =
+  "sticky top-0 z-10 whitespace-nowrap bg-[#f8f9fb] px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-ink/45";
+const tdClass = "whitespace-nowrap px-3 py-2.5 text-sm text-ink/85";
+
 export interface SummaryColumn<T> {
   key: keyof T | string;
   label: string;
@@ -27,12 +31,9 @@ export function SummaryTable<T extends Record<string, string | number>>({
         <div className="inline-block min-w-full align-middle">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-stone-200 dark:border-stone-700">
+              <tr className="border-b border-ink/[0.08]">
                 {columns.map((col) => (
-                  <th
-                    key={String(col.key)}
-                    className="sticky top-0 z-10 whitespace-nowrap bg-stone-50 px-2 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400 sm:px-3"
-                  >
+                  <th key={String(col.key)} className={thClass}>
                     {col.label}
                   </th>
                 ))}
@@ -42,12 +43,12 @@ export function SummaryTable<T extends Record<string, string | number>>({
               {rows.slice(0, 20).map((row, i) => (
                 <tr
                   key={i}
-                  className="border-b border-stone-100 last:border-0 dark:border-stone-800"
+                  className="border-b border-ink/[0.05] transition-colors last:border-0 hover:bg-ink/[0.02]"
                 >
                   {columns.map((col) => (
                     <td
                       key={String(col.key)}
-                      className="whitespace-nowrap px-2 py-2 text-stone-800 dark:text-stone-200 sm:px-3"
+                      className={tdClass}
                     >
                       {row[col.key as keyof T] ?? "—"}
                     </td>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import {
   useSitelineStatus,
@@ -29,6 +29,7 @@ import type {
 } from "@/lib/api/endpoints/siteline";
 import { ContractDetailModal } from "@/components/billings/ContractDetailModal";
 import { PayAppDetailModal } from "@/components/billings/PayAppDetailModal";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 
 const formatCurrency = (value: number | undefined) =>
   value != null
@@ -45,6 +46,16 @@ const formatPercent = (value: number | undefined) =>
 
 const formatInvoiceNumber = (value: number | null | undefined) =>
   value != null ? `${value}` : "—";
+
+/** ISO 8601 invoice / billing start date; same locale style as due date (frontend-siteline-invoice-date.md). */
+const formatInvoiceDate = (value: string | null | undefined) =>
+  value
+    ? new Date(value).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+      })
+    : "—";
 
 const formatDateTimeParts = (value?: string, timeZone?: string) => {
   if (!value) return { date: "—", time: "—" };
@@ -70,6 +81,23 @@ const formatMonth = (date: Date) => {
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   return `${year}-${month}`;
 };
+
+// Siteline-style threshold labels for aging columns.
+const SITELINE_AGING_DISPLAY_MAP: Record<string, string> = {
+  Current: "Current",
+  "31-60 Days": ">30 days",
+  "61-90 Days": ">60 days",
+  "91-120 Days": ">90 days",
+  ">120 Days": ">120 days",
+};
+
+/** Fills remaining card size; scroll inside viewport (Billings aging / overdue). */
+const BILLING_TABLE_FILL_SCROLL =
+  "min-h-0 min-w-0 w-full flex-1 overflow-x-auto overflow-y-auto";
+
+/** Contracts / pay apps tab (fixed max height when that tab is enabled). */
+const BILLING_TABLE_SCROLL_WRAPPER =
+  "min-w-0 w-full overflow-x-auto overflow-y-auto min-h-[12rem] max-h-[min(70dvh,calc(100dvh-13.5rem))] sm:max-h-[min(72dvh,calc(100dvh-14rem))]";
 
 function isSitelineError(value: unknown): value is SitelineError {
   return (
@@ -123,7 +151,8 @@ export default function BillingsPage() {
   const [overdueFilters, setOverdueFilters] = useState<SitelineAgingFilters>(() => ({
     search: "",
     overdueOnly: true,
-    minDaysPastDue: 50,
+    /** Inclusive minimum days past due; 51 matches backend default / legacy “> 50”. */
+    minDaysPastDue: 51,
   }));
   const overdueFiltersRef = useRef(overdueFilters);
 
@@ -132,13 +161,13 @@ export default function BillingsPage() {
     overdueOnly: false,
   };
 
-  // Over 50 Days tab is inherently `daysPastDue > 50` (and `netDollars > 0` server-side),
-  // so the UI hides the "min days" + "overdue only" controls and keeps them enforced via defaults.
   const defaultOverdueFilters: SitelineAgingFilters = {
     search: "",
     overdueOnly: true,
-    minDaysPastDue: 50,
+    minDaysPastDue: 51,
   };
+
+  const overdueMinDays = overdueFilters.minDaysPastDue ?? 51;
 
   // Keep refs updated so our fetch callbacks don't change identity on every input change.
   // That prevents the auto-fetch useEffect from re-running continuously while the user types.
@@ -238,9 +267,11 @@ export default function BillingsPage() {
     setAgingOverdueLoading(true);
     setAgingOverdueError(null);
     try {
-      const result = await getSitelineAgingOverdue(
-        filtersOverride ?? overdueFiltersRef.current
-      );
+      const base = filtersOverride ?? overdueFiltersRef.current;
+      const result = await getSitelineAgingOverdue({
+        ...base,
+        minDaysPastDue: base.minDaysPastDue ?? 51,
+      });
       if (isSitelineError(result)) {
         setAgingOverdue(null);
         setAgingOverdueError(
@@ -270,6 +301,12 @@ export default function BillingsPage() {
     setOverdueFilters(defaultOverdueFilters);
     await loadAgingOverdue(defaultOverdueFilters);
   }, [loadAgingOverdue]);
+
+  const agingDisplayBuckets = useMemo(
+    () =>
+      (agingReport?.buckets ?? []).filter((bucket) => bucket !== "1-30 Days"),
+    [agingReport]
+  );
 
   useEffect(() => {
     if (configured && CONTRACTS_PAYAPPS_TAB_ENABLED) {
@@ -303,8 +340,8 @@ export default function BillingsPage() {
   const payApps = payAppsPage?.payApps ?? [];
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-6">
+      <div className="shrink-0">
         <h2 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
           Billings
         </h2>
@@ -315,12 +352,12 @@ export default function BillingsPage() {
 
       {initialLoading && (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+          <LogoLoader size={32} />
         </div>
       )}
 
       {!statusLoading && !configured && (
-        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
+        <Card className="border-brand/30 bg-brand/5 dark:border-brand/40 dark:bg-brand/10">
           <CardHeader title="Siteline not configured" subtitle={status?.message ?? "Billing is not available."} />
           <p className="text-sm text-stone-600 dark:text-stone-400 mb-4">
             Set SITELINE_API_URL and SITELINE_API_TOKEN in the backend .env to enable construction billing.
@@ -328,7 +365,7 @@ export default function BillingsPage() {
           <button
             type="button"
             onClick={refetchStatus}
-            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500"
+            className="rounded-lg bg-brand/80 px-4 py-2 text-sm font-medium text-white hover:bg-brand-secondary dark:bg-brand dark:hover:bg-brand"
           >
             Check again
           </button>
@@ -344,12 +381,13 @@ export default function BillingsPage() {
       {!initialLoading && configured && (
         <>
           {company && (
-            <p className="text-sm text-stone-500 dark:text-stone-400">
+            <p className="shrink-0 text-sm text-stone-500 dark:text-stone-400">
               Company: <span className="font-medium text-stone-700 dark:text-stone-300">{company.name}</span>
             </p>
           )}
 
-          <div className="flex gap-1 border-b border-stone-200 dark:border-stone-700">
+          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
+          <div className="shrink-0 flex w-full min-w-0 gap-1 border-b border-stone-200 dark:border-stone-700">
             {CONTRACTS_PAYAPPS_TAB_ENABLED && (
               <button
                 type="button"
@@ -383,10 +421,11 @@ export default function BillingsPage() {
                   : "text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
               }`}
             >
-              Over 50 Days
+              Past due
             </button>
           </div>
 
+          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col pt-2">
           {CONTRACTS_PAYAPPS_TAB_ENABLED && activeTab === "contracts" && (
           <>
           <Card>
@@ -458,7 +497,7 @@ export default function BillingsPage() {
                 No contracts found for this filter.
               </p>
             ) : (
-              <div className="overflow-x-auto overflow-y-auto max-h-80 -mx-1 px-1 sm:mx-0 sm:px-0">
+              <div className={BILLING_TABLE_SCROLL_WRAPPER}>
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="border-b border-stone-200 dark:border-stone-700">
@@ -532,7 +571,7 @@ export default function BillingsPage() {
                             <button
                               type="button"
                               onClick={() => openContract(row)}
-                              className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
+                              className="text-brand hover:text-brand-secondary dark:text-brand dark:hover:text-white font-medium"
                             >
                               View contract
                             </button>
@@ -586,7 +625,7 @@ export default function BillingsPage() {
                 No pay apps found for this filter.
               </p>
             ) : (
-              <div className="overflow-x-auto overflow-y-auto max-h-80 -mx-1 px-1 sm:mx-0 sm:px-0">
+              <div className={BILLING_TABLE_SCROLL_WRAPPER}>
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="border-b border-stone-200 dark:border-stone-700">
@@ -638,7 +677,7 @@ export default function BillingsPage() {
                           <button
                             type="button"
                             onClick={() => setSelectedPayAppId(row.id)}
-                            className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
+                            className="text-brand hover:text-brand-secondary dark:text-brand dark:hover:text-white font-medium"
                           >
                             Open pay app
                           </button>
@@ -654,12 +693,13 @@ export default function BillingsPage() {
           )}
 
           {activeTab === "aging" && (
-            <Card>
+            <Card className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+              <div className="shrink-0 w-full min-w-0">
               <CardHeader
                 title="A/R Aging"
                 subtitle="Net dollars by project and days past due. Data syncs every 10 minutes."
               />
-              <div className="mb-3 px-1 sm:px-0 max-w-4xl">
+              <div className="mb-3 w-full min-w-0">
                 <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700 dark:bg-transparent">
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
@@ -796,13 +836,14 @@ export default function BillingsPage() {
                 </details>
                 </div>
               </div>
+              </div>
               {agingLoading && (
-                <div className="flex justify-center py-8">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+                <div className="flex shrink-0 justify-center py-8">
+                  <LogoLoader size={32} />
                 </div>
               )}
               {agingError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
+                <div className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
                   {agingError}
                   <button
                     type="button"
@@ -814,12 +855,12 @@ export default function BillingsPage() {
                 </div>
               )}
               {!agingLoading && !agingError && agingReport && agingReport.rows.length === 0 && (
-                <p className="py-8 text-center text-sm text-stone-500 dark:text-stone-400">
+                <p className="shrink-0 py-8 text-center text-sm text-stone-500 dark:text-stone-400">
                   No aging data yet. Data syncs every 10 minutes.
                 </p>
               )}
               {!agingLoading && !agingError && agingReport && agingReport.rows.length > 0 && (
-                <div className="overflow-x-auto overflow-y-auto max-h-96 -mx-1 px-1 sm:mx-0 sm:px-0">
+                <div className={BILLING_TABLE_FILL_SCROLL}>
                   <table className="min-w-full text-sm">
                     <thead>
                       <tr className="border-b border-stone-200 dark:border-stone-700">
@@ -832,12 +873,15 @@ export default function BillingsPage() {
                         <th className="whitespace-nowrap px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
                           Invoice #
                         </th>
-                        {agingReport.buckets.map((b) => (
+                        <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
+                          Invoice date
+                        </th>
+                        {agingDisplayBuckets.map((b) => (
                           <th
                             key={b}
                             className="whitespace-nowrap px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400"
                           >
-                            {b}
+                            {SITELINE_AGING_DISPLAY_MAP[b] ?? b}
                           </th>
                         ))}
                         <th className="whitespace-nowrap px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
@@ -860,7 +904,7 @@ export default function BillingsPage() {
                               {row.leadPmEmail && (
                                 <a
                                   href={`mailto:${row.leadPmEmail}`}
-                                  className="text-xs text-amber-700 hover:underline dark:text-amber-400"
+                                  className="text-xs text-brand-secondary hover:underline dark:text-brand"
                                 >
                                   {row.leadPmEmail}
                                 </a>
@@ -870,7 +914,10 @@ export default function BillingsPage() {
                           <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
                             {formatInvoiceNumber(row.invoiceNumber)}
                           </td>
-                          {agingReport.buckets.map((b) => (
+                          <td className="whitespace-nowrap px-3 py-2 text-left text-stone-800 dark:text-stone-200">
+                            {formatInvoiceDate(row.invoiceDate)}
+                          </td>
+                          {agingDisplayBuckets.map((b) => (
                             <td
                               key={b}
                               className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums"
@@ -893,7 +940,10 @@ export default function BillingsPage() {
                         <td className="px-3 py-2 text-stone-900 dark:text-stone-100 tabular-nums">
                           {/* Invoice # column has no totals */}
                         </td>
-                        {agingReport.buckets.map((b) => (
+                        <td className="px-3 py-2 text-stone-900 dark:text-stone-100">
+                          {/* Invoice date column has no totals */}
+                        </td>
+                        {agingDisplayBuckets.map((b) => (
                           <td
                             key={b}
                             className="px-3 py-2 text-right text-stone-900 dark:text-stone-100 tabular-nums"
@@ -915,12 +965,13 @@ export default function BillingsPage() {
           )}
 
           {activeTab === "overdue" && (
-            <Card>
+            <Card className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+              <div className="shrink-0 w-full min-w-0">
               <CardHeader
-                title="Over 50 Days"
-                subtitle="Individual pay apps more than 50 days past due with project manager info."
+                title="Past due pay apps"
+                subtitle="Pay apps with days past due ≥ your minimum (inclusive). Adjust the threshold and click Apply; net > 0 is enforced server-side."
               />
-              <div className="mb-3 px-1 sm:px-0 max-w-4xl">
+              <div className="mb-3 w-full min-w-0">
                 <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700 dark:bg-transparent">
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
@@ -930,6 +981,41 @@ export default function BillingsPage() {
                       onChange={(e) => setOverdueFilters((p) => ({ ...p, search: e.target.value }))}
                       placeholder="Project, PM, numbers…"
                       className="h-8 w-72 rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                    <span>At least (days past due)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={
+                        overdueFilters.minDaysPastDue === undefined
+                          ? ""
+                          : overdueFilters.minDaysPastDue
+                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "") {
+                          setOverdueFilters((p) => ({ ...p, minDaysPastDue: undefined }));
+                          return;
+                        }
+                        const n = parseInt(v, 10);
+                        if (!Number.isNaN(n)) {
+                          setOverdueFilters((p) => ({
+                            ...p,
+                            minDaysPastDue: Math.max(0, n),
+                          }));
+                        }
+                      }}
+                      onBlur={() => {
+                        setOverdueFilters((p) => ({
+                          ...p,
+                          minDaysPastDue: p.minDaysPastDue ?? 51,
+                        }));
+                      }}
+                      className="h-8 w-24 rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                     />
                   </label>
 
@@ -957,39 +1043,21 @@ export default function BillingsPage() {
                   </summary>
                   <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700">
-                      <div className="grid grid-cols-2 gap-1">
-                        <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
-                          <span>Min days past due</span>
-                          <input
-                            type="number"
-                            step={1}
-                            value={overdueFilters.minDaysPastDue ?? ""}
-                            onChange={(e) =>
-                              setOverdueFilters((p) => ({
-                                ...p,
-                                minDaysPastDue: e.target.value === "" ? undefined : Number(e.target.value),
-                              }))
-                            }
-                            className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-                          />
-                        </label>
-
-                        <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
-                          <span>Max days past due</span>
-                          <input
-                            type="number"
-                            step={1}
-                            value={overdueFilters.maxDaysPastDue ?? ""}
-                            onChange={(e) =>
-                              setOverdueFilters((p) => ({
-                                ...p,
-                                maxDaysPastDue: e.target.value === "" ? undefined : Number(e.target.value),
-                              }))
-                            }
-                            className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-                          />
-                        </label>
-                      </div>
+                      <label className="flex flex-col gap-1 text-xs text-stone-600 dark:text-stone-400">
+                        <span>Max days past due</span>
+                        <input
+                          type="number"
+                          step={1}
+                          value={overdueFilters.maxDaysPastDue ?? ""}
+                          onChange={(e) =>
+                            setOverdueFilters((p) => ({
+                              ...p,
+                              maxDaysPastDue: e.target.value === "" ? undefined : Number(e.target.value),
+                            }))
+                          }
+                          className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                        />
+                      </label>
                     </div>
 
                     <div className="rounded-lg border border-stone-200/80 bg-transparent p-2 dark:border-stone-700">
@@ -1048,13 +1116,14 @@ export default function BillingsPage() {
                 </details>
                 </div>
               </div>
+              </div>
               {agingOverdueLoading && (
-                <div className="flex justify-center py-8">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+                <div className="flex shrink-0 justify-center py-8">
+                  <LogoLoader size={32} />
                 </div>
               )}
               {agingOverdueError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
+                <div className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
                   {agingOverdueError}
                   <button
                     type="button"
@@ -1069,15 +1138,15 @@ export default function BillingsPage() {
                 !agingOverdueError &&
                 agingOverdue &&
                 agingOverdue.items.length === 0 && (
-                  <p className="py-8 text-center text-sm text-stone-500 dark:text-stone-400">
-                    No pay apps are more than 50 days past due.
+                  <p className="shrink-0 py-8 text-center text-sm text-stone-500 dark:text-stone-400">
+                    No pay apps at least {overdueMinDays} days past due (with current filters).
                   </p>
                 )}
               {!agingOverdueLoading &&
                 !agingOverdueError &&
                 agingOverdue &&
                 agingOverdue.items.length > 0 && (
-                  <div className="overflow-x-auto overflow-y-auto max-h-96 -mx-1 px-1 sm:mx-0 sm:px-0">
+                  <div className={BILLING_TABLE_FILL_SCROLL}>
                     <table className="min-w-full text-sm">
                       <thead>
                         <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
@@ -1099,6 +1168,9 @@ export default function BillingsPage() {
                           <th className="px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
                             Invoice #
                           </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
+                            Invoice date
+                          </th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
                             Net amount
                           </th>
@@ -1116,6 +1188,7 @@ export default function BillingsPage() {
                                 day: "2-digit",
                               })
                             : "—";
+                          const invDate = formatInvoiceDate(item.invoiceDate);
                           return (
                             <tr
                               key={`${item.contractId}-${idx}`}
@@ -1140,7 +1213,7 @@ export default function BillingsPage() {
                                   {item.leadPmEmail && (
                                     <a
                                       href={`mailto:${item.leadPmEmail}`}
-                                      className="text-xs text-amber-700 hover:underline dark:text-amber-400"
+                                      className="text-xs text-brand-secondary hover:underline dark:text-brand"
                                     >
                                       {item.leadPmEmail}
                                     </a>
@@ -1155,6 +1228,9 @@ export default function BillingsPage() {
                               </td>
                               <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
                                 {formatInvoiceNumber(item.invoiceNumber)}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-2 text-left text-stone-800 dark:text-stone-200">
+                                {invDate}
                               </td>
                               <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
                                 {formatAgingCurrency(item.netDollars)}
@@ -1171,6 +1247,8 @@ export default function BillingsPage() {
                 )}
             </Card>
           )}
+          </div>
+          </div>
         </>
       )}
 

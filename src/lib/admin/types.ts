@@ -104,3 +104,10 @@ export interface AdminEmailTemplateCreatePayload extends AdminEmailTemplateUpdat
   bodyHtmlTemplate: string;
   isActive: boolean;
 }
+
+/** GET/PATCH /admin/settings/overdue-email-sending (ADMIN_OVERDUE_EMAIL_TEMPLATE.md). */
+export interface OverdueEmailSendingSettings {
+  envMasterEnabled: boolean;
+  adminToggleEnabled: boolean;
+  effectiveEnabled: boolean;
+}

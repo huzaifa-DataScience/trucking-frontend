@@ -9,6 +9,8 @@ import { TicketGrid } from "@/components/reporting/TicketGrid";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useLookups } from "@/hooks/useLookups";
 import { useMaterialDashboard } from "@/hooks/useMaterialDashboard";
+import { PageHeader } from "@/components/dashboard/PageHeader";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import * as materialApi from "@/lib/api/endpoints/material-dashboard";
 
@@ -21,6 +23,7 @@ function createDefaultFilters(): FilterConfig {
     jobId: "all",
     materialId: "all",
     haulerId: "all",
+    
     truckTypeId: "all",
     direction: "Both",
   };
@@ -85,15 +88,11 @@ export default function MaterialDashboardPage() {
   const error = lookupsError ?? dataError;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-          Material Dashboard
-        </h2>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Billing Reconciliation & Audit.
-        </p>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-8">
+      <PageHeader
+        title="Material Dashboard"
+        subtitle="Billing reconciliation, sources and destinations, and ticket-level audit."
+      />
 
       <ReportFilters
         filters={filters}
@@ -105,14 +104,14 @@ export default function MaterialDashboardPage() {
       />
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
+        <div className="rounded-2xl border border-red-200/80 bg-red-50 px-4 py-3 text-sm text-red-900">
           {error.message}
         </div>
       )}
 
       {loading && (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+          <LogoLoader size={32} />
         </div>
       )}
 
