@@ -46,7 +46,7 @@ export function ApiConnectionTest() {
 
   if (status === "checking") {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+      <div className="rounded-lg border border-brand/30 bg-brand/8 px-4 py-3 text-sm text-ink dark:border-brand/40 dark:bg-brand/15 dark:text-white">
         Testing backend connection to {baseUrl}...
       </div>
     );

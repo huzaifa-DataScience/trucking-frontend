@@ -35,7 +35,7 @@ export function LateSubmissionGrid({ rows, onOpenDetail }: LateSubmissionGridPro
         <button
           type="button"
           onClick={exportExcel}
-          className="w-full rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-600 sm:w-auto"
+          className="w-full rounded-lg bg-brand/80 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-secondary sm:w-auto"
         >
           Export to Excel
         </button>
@@ -68,7 +68,7 @@ export function LateSubmissionGrid({ rows, onOpenDetail }: LateSubmissionGridPro
                   {onOpenDetail ? (
                     <button
                       type="button"
-                      className="font-medium text-amber-600 hover:underline dark:text-amber-400"
+                      className="font-medium text-brand hover:underline dark:text-brand"
                       onClick={(e) => {
                         e.stopPropagation();
                         onOpenDetail(row.ticketNumber);

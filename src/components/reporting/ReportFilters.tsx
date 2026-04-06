@@ -41,6 +41,10 @@ const DIRECTION_OPTIONS: { value: Direction; label: string }[] = [
   { value: "Export", label: "Export" },
 ];
 
+const fieldClass =
+  "rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
+const labelClass = "text-xs font-medium text-ink/45";
+
 export function ReportFilters({
   filters,
   options,
@@ -57,33 +61,36 @@ export function ReportFilters({
   };
 
   return (
-    <div className="sticky top-14 z-20 -mx-6 -mt-6 flex flex-wrap items-end gap-4 border-b border-stone-200/80 bg-white/95 px-6 py-4 backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
-      <div className="flex flex-wrap items-end gap-4">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Start Date</span>
+    <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.06)]">
+      <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-wider text-ink/40">
+        Filters
+      </h2>
+      <div className="flex flex-wrap items-end gap-x-5 gap-y-4">
+        <label className="flex flex-col gap-1.5">
+          <span className={labelClass}>Start date</span>
           <input
             type="date"
             value={filters.startDate}
             onChange={(e) => update({ startDate: e.target.value })}
-            className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            className={fieldClass}
           />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-stone-500 dark:text-stone-400">End Date</span>
+        <label className="flex flex-col gap-1.5">
+          <span className={labelClass}>End date</span>
           <input
             type="date"
             value={filters.endDate}
             onChange={(e) => update({ endDate: e.target.value })}
-            className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            className={fieldClass}
           />
         </label>
         {showJob && (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Job</span>
+          <label className="flex flex-col gap-1.5">
+            <span className={labelClass}>Job</span>
             <select
               value={filters.jobId}
               onChange={(e) => update({ jobId: e.target.value })}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className={fieldClass}
             >
               <option value="all">All</option>
               {options.jobs.map((o) => (
@@ -95,12 +102,12 @@ export function ReportFilters({
           </label>
         )}
         {showMaterial && (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Material</span>
+          <label className="flex flex-col gap-1.5">
+            <span className={labelClass}>Material</span>
             <select
               value={filters.materialId}
               onChange={(e) => update({ materialId: e.target.value })}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className={fieldClass}
             >
               <option value="all">All</option>
               {options.materials.map((o) => (
@@ -112,12 +119,12 @@ export function ReportFilters({
           </label>
         )}
         {showHauler && (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Hauler</span>
+          <label className="flex flex-col gap-1.5">
+            <span className={labelClass}>Hauler</span>
             <select
               value={filters.haulerId}
               onChange={(e) => update({ haulerId: e.target.value })}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className={fieldClass}
             >
               <option value="all">All</option>
               {options.haulers.map((o) => (
@@ -129,12 +136,12 @@ export function ReportFilters({
           </label>
         )}
         {showTruckType && (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Truck Type</span>
+          <label className="flex flex-col gap-1.5">
+            <span className={labelClass}>Truck type</span>
             <select
               value={filters.truckTypeId}
               onChange={(e) => update({ truckTypeId: e.target.value })}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className={fieldClass}
             >
               <option value="all">All</option>
               {options.truckTypes.map((o) => (
@@ -146,12 +153,12 @@ export function ReportFilters({
           </label>
         )}
         {showDirection && (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Direction</span>
+          <label className="flex flex-col gap-1.5">
+            <span className={labelClass}>Direction</span>
             <select
               value={filters.direction}
               onChange={(e) => update({ direction: e.target.value as Direction })}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className={fieldClass}
             >
               {DIRECTION_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -162,14 +169,14 @@ export function ReportFilters({
           </label>
         )}
         {showOurCompany && (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Our company</span>
+          <label className="flex flex-col gap-1.5">
+            <span className={labelClass}>Our company</span>
             <select
               value={filters.entityId ?? "all"}
               onChange={(e) =>
                 update({ entityId: e.target.value === "all" ? undefined : e.target.value })
               }
-              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className={fieldClass}
             >
               {options.ourEntities.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -180,6 +187,6 @@ export function ReportFilters({
           </label>
         )}
       </div>
-    </div>
+    </section>
   );
 }

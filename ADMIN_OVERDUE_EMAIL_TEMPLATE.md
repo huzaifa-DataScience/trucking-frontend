@@ -1,23 +1,18 @@
 # Admin: Siteline overdue email template
 
-**Frontend:** Admins can edit templates via the multi-template editor at **`/admin/email-templates?purpose=siteline.overdue_leadpm`** (sidebar: **Overdue email** under Construction Logistics).
-
-Lead PM overdue alerts use **HTML templates** stored in SQL (`App_EmailTemplates`, key `siteline_overdue`). On first app start the table is created (if missing) and a default row is inserted.
+Lead PM overdue alerts use **HTML templates** stored in SQL (`App_EmailTemplates`).
+The runtime template is selected by purpose: `siteline.overdue_leadpm` (only the active template for that purpose is used).
 
 ## API (admin JWT required)
 
-- **Purpose selector:** `purpose = siteline.overdue_leadpm`
-- **GET active template for purpose** `GET /admin/email-templates/active?purpose=siteline.overdue_leadpm`  
-  Returns `templateKey`, `subjectTemplate`, `bodyHtmlTemplate`, `placeholders`, `updatedAt`.
+Use the generic template management API:
 
-- **Update a specific template (active or inactive)** `PUT /admin/email-templates/:templateKey`  
-  Note: this endpoint is message-only; after saving, the frontend should refetch.
-  ```json
-  { "subjectTemplate": "...", "bodyHtmlTemplate": "<p>...</p>", "name": "Optional name change", "isActive": false }
-  ```
-
-- **Activate another template for this purpose (optional)** `POST /admin/email-templates/:templateKey/activate`  
-  Note: message-only; after activating, the frontend should refetch.
+- **List**: `GET /admin/email-templates?purpose=siteline.overdue_leadpm`
+- **Get active**: `GET /admin/email-templates/active?purpose=siteline.overdue_leadpm`
+- **Update active**: `PUT /admin/email-templates/active?purpose=siteline.overdue_leadpm`
+- **Create**: `POST /admin/email-templates` (set `purpose` and `isActive`)
+- **Activate**: `POST /admin/email-templates/:templateKey/activate` (enforces single active template per purpose)
+- **Update/Delete**: `PUT /admin/email-templates/:templateKey` / `DELETE /admin/email-templates/:templateKey`
 
 ## Placeholders
 
@@ -29,3 +24,27 @@ Lead PM overdue alerts use **HTML templates** stored in SQL (`App_EmailTemplates
 | `{{itemsTableHtml}}` | Pre-built HTML table of rows (do not edit row data here) |
 
 The cron job still uses SMTP settings from `.env` (`SMTP_*`, `OVERDUE_EMAIL_FROM`, `OVERDUE_EMAIL_ENABLED`).
+
+## Enable / disable sending (admin toggle)
+
+Emails send only when **both** are true:
+
+1. **Env master**: `OVERDUE_EMAIL_ENABLED=true` (requires deploy/restart to change).
+2. **Admin toggle** (stored in SQL `App_Settings`, key `overdue_email_sending_enabled`): default **on** if no row exists.
+
+| Method | Path | Body |
+|--------|------|------|
+| `GET` | `/admin/settings/overdue-email-sending` | — |
+| `PATCH` | `/admin/settings/overdue-email-sending` | `{ "enabled": true }` or `false` |
+
+Response shape: `{ envMasterEnabled, adminToggleEnabled, effectiveEnabled }`. The cron uses `effectiveEnabled` logic (env on **and** admin toggle on) before SMTP.
+
+## SMTP test email (admin)
+
+Verify Gmail / Office365 / etc. without enabling overdue cron or waiting for the scheduler.
+
+| Method | Path | Body |
+|--------|------|------|
+| `POST` | `/admin/settings/smtp-test-email` | `{ "to": "your-address@example.com" }` |
+
+Uses `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `OVERDUE_EMAIL_FROM` from `.env`. Does **not** require `OVERDUE_EMAIL_ENABLED=true`. Returns `{ ok, message }` or `400` with `{ missing: [...] }` if env is incomplete.

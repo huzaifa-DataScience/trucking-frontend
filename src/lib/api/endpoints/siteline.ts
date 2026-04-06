@@ -257,6 +257,11 @@ export interface AgingReportRow {
   leadPmEmail?: string | null;
   /** Invoice/Pay App number (max/latest seen for this project), when available. */
   invoiceNumber?: number | null;
+  /**
+   * Billing period start for the pay app tied to `invoiceNumber` (ISO 8601).
+   * Optional for older API responses; treat missing as no value (frontend-siteline-invoice-date.md).
+   */
+  invoiceDate?: string | null;
   buckets: Record<AgingBucket, number>;
   projectTotal: number;
 }
@@ -300,7 +305,7 @@ export async function getSitelineAgingReport(
   });
 }
 
-// --- Aging overdue (>50 days) (FRONTEND_AGING_REPORT copy.md) ---
+// --- Aging overdue list (frontend-siteline-api.md: minDaysPastDue, default 51) ---
 
 export interface AgingOverdueItem {
   contractId: string;
@@ -312,6 +317,8 @@ export interface AgingOverdueItem {
   leadPmEmail: string | null;
   /** Invoice/Pay App number from Siteline (payAppNumber). */
   invoiceNumber: number | null;
+  /** Billing period start for this pay app (ISO 8601); backend should always send key (may be null). */
+  invoiceDate?: string | null;
   dueDate: string | null;
   daysPastDue: number;
   netDollars: number;
@@ -322,7 +329,7 @@ export interface AgingOverdueResponse {
   items: AgingOverdueItem[];
 }
 
-/** Over 50 Days tab: individual overdue pay apps with PM info. */
+/** Past-due pay apps with PM info. Query `minDaysPastDue` = inclusive floor (default 51 ≈ prior “> 50”). */
 export async function getSitelineAgingOverdue(
   filters?: SitelineAgingFilters
 ): Promise<

@@ -10,7 +10,8 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { useLookups } from "@/hooks/useLookups";
 import { useJobDashboard } from "@/hooks/useJobDashboard";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
-import { ApiConnectionTest } from "@/components/reporting/ApiConnectionTest";
+import { PageHeader } from "@/components/dashboard/PageHeader";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 import * as jobApi from "@/lib/api/endpoints/job-dashboard";
 
 function createDefaultFilters(): FilterConfig {
@@ -88,15 +89,11 @@ export default function JobDashboardPage() {
   const error = lookupsError ?? dataError;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-          Job Dashboard
-        </h2>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Supply Chain, Disposal Limits & Compliance.
-        </p>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-8">
+      <PageHeader
+        title="Job Dashboard"
+        subtitle="Supply chain visibility, disposal limits, and compliance in one place."
+      />
 
       <ReportFilters
         filters={filters}
@@ -109,14 +106,14 @@ export default function JobDashboardPage() {
      
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
+        <div className="rounded-2xl border border-red-200/80 bg-red-50 px-4 py-3 text-sm text-red-900">
           {error.message}
         </div>
       )}
 
       {loading && (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+          <LogoLoader size={32} />
         </div>
       )}
 

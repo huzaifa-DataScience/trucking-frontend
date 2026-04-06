@@ -3,112 +3,184 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { AppLogo } from "@/components/ui/AppLogo";
+import {
+  NavIconLayout,
+  NavIconCube,
+  NavIconTruck,
+  NavIconShield,
+  NavIconInvoice,
+  NavIconUsers,
+  NavIconCog,
+} from "@/components/dashboard/DashboardNavIcons";
+import type { AuthUser } from "@/lib/auth/types";
 
 type ViewMode = "operations" | "billings";
 
-const operationsNavItems = [
-  { href: "/job", label: "Job Dashboard", icon: "◉" },
-  { href: "/material", label: "Material Dashboard", icon: "▣" },
-  { href: "/hauler", label: "Hauler Dashboard", icon: "▸" },
-  { href: "/forensic", label: "Forensic & Audit", icon: "◈" },
+function userInitials(user: AuthUser | null): string {
+  if (!user) return "?";
+  const f = user.firstName?.[0];
+  const l = user.lastName?.[0];
+  if (f && l) return `${f}${l}`.toUpperCase();
+  const parts = user.displayName?.split(/\s+/).filter(Boolean) ?? [];
+  if (parts.length >= 2) return `${parts[0]![0]}${parts[1]![0]}`.toUpperCase();
+  if (parts[0]) return parts[0].slice(0, 2).toUpperCase();
+  return user.email.slice(0, 2).toUpperCase();
+}
+
+function displayName(user: AuthUser | null): string {
+  if (!user) return "User";
+  return (
+    user.displayName ||
+    [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+    user.email
+  );
+}
+
+const operationsNavItems: {
+  href: string;
+  label: string;
+  Icon: typeof NavIconLayout;
+}[] = [
+  { href: "/job", label: "Job Dashboard", Icon: NavIconLayout },
+  { href: "/material", label: "Material Dashboard", Icon: NavIconCube },
+  { href: "/hauler", label: "Hauler Dashboard", Icon: NavIconTruck },
+  { href: "/forensic", label: "Forensic & Audit", Icon: NavIconShield },
 ];
 
-const billingNavItems = [
-  { href: "/billings", label: "Billings", icon: "§" },
+const billingNavItems: { href: string; label: string; Icon: typeof NavIconInvoice }[] = [
+  { href: "/billings", label: "Billings", Icon: NavIconInvoice },
 ];
 
-const adminNavItems = [
-  { href: "/admin/users", label: "User Management", icon: "⚙" },
-  { href: "/admin/email-templates", label: "Email templates", icon: "✉" },
+const adminNavItems: { href: string; label: string; Icon: typeof NavIconUsers }[] = [
+  { href: "/admin/users", label: "User Management", Icon: NavIconUsers },
+  { href: "/admin/settings", label: "Settings", Icon: NavIconCog },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user, logout } = useAuth();
 
-  const currentView: ViewMode = pathname.startsWith("/billings")
-    ? "billings"
-    : "operations";
+  const currentView: ViewMode = pathname.startsWith("/billings") ? "billings" : "operations";
 
   const handleViewChange = (value: ViewMode) => {
     if (value === currentView) return;
-    if (value === "operations") {
-      router.push("/job");
-    } else {
-      router.push("/billings");
-    }
+    if (value === "operations") router.push("/job");
+    else router.push("/billings");
   };
 
   const navItems = currentView === "billings" ? billingNavItems : operationsNavItems;
 
+  const navLinkClass = (active: boolean) =>
+    `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+      active
+        ? "bg-brand/10 text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
+        : "text-ink/55 hover:bg-ink/[0.04] hover:text-ink"
+    }`;
+
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-56 flex-col border-r border-stone-200/80 bg-stone-50/95 backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
-      <div className="flex h-14 items-center gap-2 border-b border-stone-200/80 px-4 dark:border-stone-800">
-        <label className="flex w-full items-center justify-between gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-stone-400 dark:text-stone-500">
-            Workspace
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-ink/[0.08] bg-surface">
+      <div className="border-b border-ink/[0.08] px-4 pb-4 pt-5">
+        <Link
+          href={currentView === "billings" ? "/billings" : "/job"}
+          className="flex flex-col items-center gap-2 rounded-xl outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
+          aria-label="Home"
+        >
+          <AppLogo height={44} />
+          <span className="text-center text-xs font-semibold tracking-tight text-ink">
+            Construction Logistics
           </span>
+        </Link>
+        <div className="mt-4">
+          <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-ink/40">
+            Workspace
+          </p>
           <select
             value={currentView}
             onChange={(e) => handleViewChange(e.target.value as ViewMode)}
-            className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm font-semibold text-stone-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            className="w-full rounded-xl border border-ink/10 bg-[#f8f9fb] px-3 py-2 text-sm font-medium text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
             aria-label="Select workspace"
           >
-            <option value="operations">Construction Logistics</option>
+            <option value="operations">Operations & reporting</option>
             <option value="billings">Billing</option>
           </select>
-        </label>
+        </div>
       </div>
-      <nav className="flex-1 space-y-0.5 p-3">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-amber-500/15 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200"
-                  : "text-stone-600 hover:bg-stone-200/80 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-100"
-              }`}
-            >
-              <span className="text-base opacity-80" aria-hidden>
-                {item.icon}
-              </span>
-              {item.label}
-            </Link>
-          );
-        })}
-        {isAdmin && currentView === "operations" && (
-          <>
-            <div className="my-2 border-t border-stone-200/80 dark:border-stone-800" />
-            {adminNavItems.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+        <div>
+          <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-ink/40">
+            {currentView === "billings" ? "Billing" : "Overview"}
+          </p>
+          <div className="space-y-0.5">
+            {navItems.map(({ href, label, Icon }) => {
+              const active = pathname === href || pathname.startsWith(`${href}/`);
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-purple-500/15 text-purple-800 dark:bg-purple-500/20 dark:text-purple-200"
-                      : "text-stone-600 hover:bg-stone-200/80 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-100"
-                  }`}
-                >
-                  <span className="text-base opacity-80" aria-hidden>
-                    {item.icon}
-                  </span>
-                  {item.label}
+                <Link key={href} href={href} className={navLinkClass(active)}>
+                  <Icon
+                    className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-ink/40"}`}
+                  />
+                  {label}
                 </Link>
               );
             })}
-          </>
+          </div>
+        </div>
+
+        {isAdmin && currentView === "operations" && (
+          <div>
+            <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-ink/40">
+              System
+            </p>
+            <div className="space-y-0.5">
+              {adminNavItems.map(({ href, label, Icon }) => {
+                const active = pathname === href || pathname.startsWith(`${href}/`);
+                return (
+                  <Link key={href} href={href} className={navLinkClass(active)}>
+                    <Icon
+                      className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-ink/40"}`}
+                    />
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         )}
       </nav>
-      <div className="border-t border-stone-200/80 p-3 dark:border-stone-800">
-        <p className="px-3 text-xs text-stone-500 dark:text-stone-500">
-          {currentView === "billings" ? "Billing Dashboard" : "Reporting Dashboard"}
-        </p>
+
+      <div className="border-t border-ink/[0.08] p-3">
+        <div className="flex items-center gap-3 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] p-3">
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+            style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%)" }}
+            aria-hidden
+          >
+            {userInitials(user)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-ink">{displayName(user)}</p>
+            <p className="truncate text-xs text-ink/45">
+              {isAdmin ? "Administrator" : "Team member"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => logout()}
+            className="shrink-0 rounded-lg p-2 text-ink/45 transition hover:bg-white hover:text-ink"
+            title="Log out"
+            aria-label="Log out"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+              <path
+                d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </aside>
   );

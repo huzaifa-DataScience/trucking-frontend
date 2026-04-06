@@ -1,22 +1,36 @@
 @import "tailwindcss";
 
+/*
+  Brand: #FF7B11, #F26620, #010101 on #FFFFFF.
+  Dark variant is class-based only — we do not set `dark` on <html>, so the UI stays light
+  (matches product spec; avoids OS dark mode flipping the whole app black).
+*/
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  Brand palette (usage ~40% ink / 30% primary / 20% secondary on white):
+  --brand #FF7B11, --brand-secondary #F26620, --ink #010101, surface #FFFFFF
+*/
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #010101;
+  --brand: #ff7b11;
+  --brand-secondary: #f26620;
+  --ink: #010101;
+  /** App canvas behind white cards (executive dashboard pattern). */
+  --canvas: #f0f1f4;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-ink: var(--ink);
+  --color-surface: #ffffff;
+  --color-canvas: var(--canvas);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
