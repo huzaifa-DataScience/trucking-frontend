@@ -10,6 +10,8 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { useLookups } from "@/hooks/useLookups";
 import { useHaulerDashboard } from "@/hooks/useHaulerDashboard";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
+import { PageHeader } from "@/components/dashboard/PageHeader";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 import * as haulerApi from "@/lib/api/endpoints/hauler-dashboard";
 
 function createDefaultFilters(): FilterConfig {
@@ -89,15 +91,11 @@ export default function HaulerDashboardPage() {
   const error = lookupsError ?? dataError;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-          Hauler (Vendor) Dashboard
-        </h2>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Fraud Detection & Efficiency Analysis. Created At timestamp helps detect late entries.
-        </p>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-8">
+      <PageHeader
+        title="Hauler (vendor) dashboard"
+        subtitle="Fraud detection and efficiency analysis — Created At helps surface late or backdated entries."
+      />
 
       <ReportFilters
         filters={filters}
@@ -111,14 +109,14 @@ export default function HaulerDashboardPage() {
       />
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
+        <div className="rounded-2xl border border-red-200/80 bg-red-50 px-4 py-3 text-sm text-red-900">
           {error.message}
         </div>
       )}
 
       {loading && (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+          <LogoLoader size={32} />
         </div>
       )}
 

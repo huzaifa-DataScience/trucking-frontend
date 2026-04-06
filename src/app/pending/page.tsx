@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 
 export default function PendingApprovalPage() {
   const router = useRouter();
@@ -22,15 +23,16 @@ export default function PendingApprovalPage() {
 
   if (loading || !user || user.status === "active") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-stone-100 dark:bg-stone-950">
-        <p className="text-stone-500 dark:text-stone-400">Loading…</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-surface dark:bg-ink">
+        <LogoLoader size={48} />
+        <p className="text-sm text-ink/50 dark:text-white/50">Loading…</p>
       </div>
     );
   }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-stone-100 px-4 dark:bg-stone-950">
-      <div className="w-full max-w-md rounded-xl border border-amber-200 bg-amber-50/50 p-8 text-center dark:border-amber-800 dark:bg-amber-950/30">
+      <div className="w-full max-w-md rounded-xl border border-brand/30 bg-brand/5 p-8 text-center dark:border-brand/40 dark:bg-brand/10">
         <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
           Account pending approval
         </h1>
@@ -51,7 +53,7 @@ export default function PendingApprovalPage() {
           </button>
           <Link
             href="/login"
-            className="rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700"
+            className="rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-secondary dark:bg-brand dark:hover:bg-brand-secondary"
           >
             Back to sign in
           </Link>

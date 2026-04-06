@@ -11,11 +11,15 @@ export default function AdminLayout({
   return (
     <RequireAdmin>
       <CompanyProvider>
-        <div className="min-h-screen bg-stone-100 dark:bg-stone-950">
+        <div className="min-h-screen bg-canvas">
           <Sidebar />
-          <div className="pl-56">
+          <div className="flex min-h-screen flex-col pl-64">
             <Header />
-            <main className="min-h-[calc(100vh-3.5rem)] p-6">{children}</main>
+            <main className="flex min-h-0 min-w-0 w-full flex-1 flex-col bg-canvas px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+              <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col">
+                {children}
+              </div>
+            </main>
           </div>
         </div>
       </CompanyProvider>

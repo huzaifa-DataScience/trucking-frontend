@@ -26,7 +26,7 @@ export function ConfirmModal({
   const confirmColor =
     variant === "danger"
       ? "bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
-      : "bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700";
+      : "bg-brand hover:bg-brand-secondary dark:bg-brand dark:hover:bg-brand-secondary";
 
   return (
     <div

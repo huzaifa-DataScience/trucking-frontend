@@ -8,6 +8,7 @@ import { UserDetailModal } from "@/components/admin/UserDetailModal";
 import * as adminApi from "@/lib/api/endpoints/admin";
 import type { AdminUser, UserFilters, UserStatus, UserRole } from "@/lib/admin/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 
 const PAGE_SIZE = 25;
 
@@ -345,8 +346,8 @@ export default function AdminUsersPage() {
 
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/50">
-          <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+        <div className="flex items-center justify-between rounded-lg border border-brand/30 bg-brand/8 px-4 py-3 dark:border-brand/40 dark:bg-brand/15">
+          <span className="text-sm font-medium text-ink dark:text-white">
             {selectedIds.size} user(s) selected
           </span>
           <div className="flex gap-2">
@@ -383,7 +384,7 @@ export default function AdminUsersPage() {
 
       {loading && (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+          <LogoLoader size={32} />
         </div>
       )}
 
@@ -452,7 +453,7 @@ export default function AdminUsersPage() {
                             <button
                               type="button"
                               onClick={() => setDetailUser(user)}
-                              className="font-medium text-amber-600 hover:underline dark:text-amber-400"
+                              className="font-medium text-brand hover:underline dark:text-brand"
                             >
                               {user.email}
                             </button>

@@ -46,7 +46,7 @@ export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
         <button
           type="button"
           onClick={exportExcel}
-          className="w-full rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-600 sm:w-auto"
+          className="w-full rounded-lg bg-brand/80 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-secondary sm:w-auto"
         >
           Export to Excel
         </button>

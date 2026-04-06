@@ -1,6 +1,7 @@
 "use client";
 
 import type { SitelinePayApp } from "@/lib/api/endpoints/siteline";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 
 const formatCurrency = (value: number | undefined) =>
   value != null
@@ -76,7 +77,7 @@ export function PayAppDetailModal({
         <div className="p-6 space-y-6">
           {loading && (
             <div className="flex justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+              <LogoLoader size={32} />
             </div>
           )}
           {error && (

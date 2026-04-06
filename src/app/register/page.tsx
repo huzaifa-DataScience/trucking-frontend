@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { register } from "@/lib/api/endpoints/auth";
+import { AppLogo } from "@/components/ui/AppLogo";
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-stone-900 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-100";
-const labelClass = "block text-sm font-medium text-stone-700 dark:text-stone-300";
+  "mt-1 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-ink shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand dark:border-white/15 dark:bg-ink dark:text-white";
+const labelClass = "block text-sm font-medium text-ink dark:text-white";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -76,16 +77,31 @@ export default function RegisterPage() {
     }
   }
 
-  if (authLoading || user) return null;
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface px-4 dark:bg-ink">
+        <div className="animate-pulse">
+          <AppLogo height={56} />
+        </div>
+        <p className="text-sm text-ink/50 dark:text-white/50">Loading…</p>
+      </div>
+    );
+  }
+
+  if (user) return null;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-stone-100 px-4 py-8 dark:bg-stone-950">
-      <div className="w-full max-w-md rounded-xl border border-stone-200 bg-white p-8 shadow-lg dark:border-stone-700 dark:bg-stone-900">
-        <h1 className="text-center text-xl font-semibold text-stone-900 dark:text-stone-100">
-          Create account
-        </h1>
-        <p className="mt-1 text-center text-sm text-stone-500 dark:text-stone-400">
-          Sign up for Construction Logistics
+    <div className="flex min-h-screen flex-col items-center justify-center bg-surface px-4 py-8 dark:bg-ink">
+      <div className="mb-8 flex flex-col items-center gap-2">
+        <AppLogo height={56} />
+        <p className="text-center text-sm font-medium text-ink/60 dark:text-white/60">
+          Construction Logistics
+        </p>
+      </div>
+      <div className="w-full max-w-md rounded-xl border border-ink/10 bg-surface p-8 shadow-[0_8px_30px_rgb(1,1,1,0.06)] dark:border-white/10 dark:bg-ink dark:shadow-none">
+        <h1 className="text-center text-lg font-semibold text-ink dark:text-white">Create account</h1>
+        <p className="mt-1 text-center text-sm text-ink/55 dark:text-white/55">
+          Sign up with your work details
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {error && (
@@ -182,7 +198,7 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               className={inputClass}
             />
-            <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">At least 6 characters</p>
+            <p className="mt-0.5 text-xs text-ink/50 dark:text-white/50">At least 6 characters</p>
           </div>
           <div>
             <label htmlFor="confirmPassword" className={labelClass}>
@@ -200,14 +216,14 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-amber-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-700"
+            className="w-full rounded-lg bg-brand px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-secondary disabled:opacity-50 dark:bg-brand dark:hover:bg-brand-secondary"
           >
             {loading ? "Creating account…" : "Sign up"}
           </button>
         </form>
-        <p className="mt-6 text-center text-sm text-stone-500 dark:text-stone-400">
+        <p className="mt-6 text-center text-sm text-ink/55 dark:text-white/55">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-amber-600 hover:underline dark:text-amber-400">
+          <Link href="/login" className="font-medium text-brand hover:underline">
             Sign in
           </Link>
         </p>
