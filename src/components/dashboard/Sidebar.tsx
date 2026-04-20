@@ -1,5 +1,6 @@
 "use client";
 
+import type { ComponentType } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,12 +11,20 @@ import {
   NavIconTruck,
   NavIconShield,
   NavIconInvoice,
+  NavIconLayers,
   NavIconUsers,
   NavIconCog,
 } from "@/components/dashboard/DashboardNavIcons";
 import type { AuthUser } from "@/lib/auth/types";
 
 type ViewMode = "operations" | "billings";
+
+type SidebarNavItem = {
+  href: string;
+  label: string;
+  Icon: ComponentType<{ className?: string }>;
+  activePathPrefix?: string;
+};
 
 function userInitials(user: AuthUser | null): string {
   if (!user) return "?";
@@ -37,22 +46,24 @@ function displayName(user: AuthUser | null): string {
   );
 }
 
-const operationsNavItems: {
-  href: string;
-  label: string;
-  Icon: typeof NavIconLayout;
-}[] = [
+const operationsNavItems: SidebarNavItem[] = [
   { href: "/job", label: "Job Dashboard", Icon: NavIconLayout },
   { href: "/material", label: "Material Dashboard", Icon: NavIconCube },
   { href: "/hauler", label: "Hauler Dashboard", Icon: NavIconTruck },
   { href: "/forensic", label: "Forensic & Audit", Icon: NavIconShield },
 ];
 
-const billingNavItems: { href: string; label: string; Icon: typeof NavIconInvoice }[] = [
+const billingNavItems: SidebarNavItem[] = [
   { href: "/billings", label: "Billings", Icon: NavIconInvoice },
+  {
+    href: "/clearstory/projects",
+    label: "Clearstory",
+    Icon: NavIconLayers,
+    activePathPrefix: "/clearstory",
+  },
 ];
 
-const adminNavItems: { href: string; label: string; Icon: typeof NavIconUsers }[] = [
+const adminNavItems: SidebarNavItem[] = [
   { href: "/admin/users", label: "User Management", Icon: NavIconUsers },
   { href: "/admin/settings", label: "Settings", Icon: NavIconCog },
 ];
@@ -62,7 +73,8 @@ export function Sidebar() {
   const router = useRouter();
   const { isAdmin, user, logout } = useAuth();
 
-  const currentView: ViewMode = pathname.startsWith("/billings") ? "billings" : "operations";
+  const currentView: ViewMode =
+    pathname.startsWith("/billings") || pathname.startsWith("/clearstory") ? "billings" : "operations";
 
   const handleViewChange = (value: ViewMode) => {
     if (value === currentView) return;
@@ -83,7 +95,13 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-ink/[0.08] bg-surface">
       <div className="border-b border-ink/[0.08] px-4 pb-4 pt-5">
         <Link
-          href={currentView === "billings" ? "/billings" : "/job"}
+          href={
+            currentView === "billings"
+              ? pathname.startsWith("/clearstory")
+                ? "/clearstory/projects"
+                : "/billings"
+              : "/job"
+          }
           className="flex flex-col items-center gap-2 rounded-xl outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
           aria-label="Home"
         >
@@ -114,8 +132,10 @@ export function Sidebar() {
             {currentView === "billings" ? "Billing" : "Overview"}
           </p>
           <div className="space-y-0.5">
-            {navItems.map(({ href, label, Icon }) => {
-              const active = pathname === href || pathname.startsWith(`${href}/`);
+            {navItems.map(({ href, label, Icon, activePathPrefix }) => {
+              const active = activePathPrefix
+                ? pathname === activePathPrefix || pathname.startsWith(`${activePathPrefix}/`)
+                : pathname === href || pathname.startsWith(`${href}/`);
               return (
                 <Link key={href} href={href} className={navLinkClass(active)}>
                   <Icon
