@@ -19,63 +19,11 @@ import {
   humanizeColumnKey,
 } from "@/lib/clearstory/swaggerTableColumns";
 import { JsonPayloadModal } from "@/components/clearstory/JsonPayloadModal";
+import { ClearstoryTablePagination } from "@/components/clearstory/ClearstoryTablePagination";
 
 // Match COR tables: the table scrolls (X+Y) inside a bounded region.
 const TABLE_SCROLL =
   "min-h-0 min-w-0 w-full flex-1 overflow-x-auto overflow-y-auto max-h-[min(70dvh,calc(100dvh-14rem))]";
-
-function clampInt(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, n));
-}
-
-function pageItems(current: number, totalPages: number): (number | "…")[] {
-  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
-
-  const first = 1;
-  const last = totalPages;
-  const start = clampInt(current - 1, 2, totalPages - 1);
-  const end = clampInt(current + 1, 2, totalPages - 1);
-
-  const out: (number | "…")[] = [first];
-
-  if (start > 2) out.push("…");
-  else if (start === 2) out.push(2);
-
-  for (let p = start; p <= end; p++) out.push(p);
-
-  if (end < totalPages - 1) out.push("…");
-  else if (end === totalPages - 1) out.push(totalPages - 1);
-
-  out.push(last);
-
-  // Avoid ellipsis for a single hidden page (Primer-style behavior).
-  const fixed: (number | "…")[] = [];
-  for (let i = 0; i < out.length; i++) {
-    const a = out[i];
-    const b = out[i + 1];
-    const c = out[i + 2];
-    if (typeof a === "number" && b === "…" && typeof c === "number" && c === a + 2) {
-      fixed.push(a, a + 1);
-      i += 1;
-      continue;
-    }
-    fixed.push(a);
-  }
-
-  // De-dupe neighbors.
-  const dedup: (number | "…")[] = [];
-  for (const x of fixed) {
-    if (dedup.length && dedup[dedup.length - 1] === x) continue;
-    dedup.push(x);
-  }
-  return dedup;
-}
-
-function formatProjectDate(value: string | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" });
-}
 
 function formatDataAsOf(iso: string | undefined): string {
   if (!iso) return "";
@@ -142,7 +90,6 @@ export default function ClearstoryProjectsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
-  const [pageInput, setPageInput] = useState("1");
   const { data: statusData, error: statusError, loading: statusLoading, refetch: refetchStatus } =
     useClearstoryStatus();
   const { data, error, loading, refetch: refetchProjects } = useClearstoryProjects({
@@ -166,16 +113,14 @@ export default function ClearstoryProjectsPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  useEffect(() => {
-    setPageInput(String(page));
-  }, [page]);
-
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
-  const projects = (data && "projects" in data ? data.projects : []) ?? [];
+  const projects = useMemo(
+    () => ((data && "projects" in data ? data.projects : []) ?? []) as ClearstoryProjectRowAllColumns[],
+    [data]
+  );
   const total = data && "total" in data ? data.total : projects.length;
-  const totalPages = data && "total" in data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
   const dataAsOf = useMemo(() => formatDataAsOf(newestUpdatedAt(projects)), [projects]);
   const columnKeys = useMemo(() => collectProjectColumnKeys(projects), [projects]);
 
@@ -408,117 +353,15 @@ export default function ClearstoryProjectsPage() {
                 </table>
               </div>
 
-              <div className="mt-4 flex shrink-0 flex-col gap-3 border-t border-ink/[0.08] pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm text-ink/55">
-                  <span className="text-ink/40">Total</span>{" "}
-                  <strong className="font-semibold text-ink">{total.toLocaleString()}</strong>
-                  <span className="mx-2 text-ink/25">·</span>
-                  <span className="text-ink/40">Page</span>{" "}
-                  <strong className="font-semibold text-ink">
-                    {page} of {totalPages}
-                  </strong>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <label htmlFor="cs-projects-page-size" className="sr-only">
-                    Page size
-                  </label>
-                  <select
-                    id="cs-projects-page-size"
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value));
-                      setPage(1);
-                    }}
-                    className="rounded-lg border border-ink/12 bg-white px-3 py-2 text-sm font-medium text-ink shadow-sm"
-                  >
-                    {[25, 50, 100, 200].map((n) => (
-                      <option key={n} value={n}>
-                        {n} per page
-                      </option>
-                    ))}
-                  </select>
-
-                  <nav className="flex items-center gap-1" aria-label="Project pages">
-                    <button
-                      type="button"
-                      disabled={page <= 1}
-                      onClick={() => setPage(1)}
-                      className="rounded-lg border border-ink/12 bg-white px-2.5 py-2 text-sm font-semibold text-ink/70 shadow-sm transition hover:bg-ink/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      First
-                    </button>
-                    <button
-                      type="button"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="rounded-lg border border-ink/12 bg-white px-2.5 py-2 text-sm font-semibold text-ink/70 shadow-sm transition hover:bg-ink/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Prev
-                    </button>
-
-                    {pageItems(page, totalPages).map((it, idx) =>
-                      it === "…" ? (
-                        <span key={`e-${idx}`} className="px-2 text-sm font-semibold text-ink/35">
-                          …
-                        </span>
-                      ) : (
-                        <button
-                          key={it}
-                          type="button"
-                          onClick={() => setPage(it)}
-                          aria-current={it === page ? "page" : undefined}
-                          className={`min-w-10 rounded-lg border px-3 py-2 text-sm font-semibold shadow-sm transition ${
-                            it === page
-                              ? "border-brand/25 bg-brand/15 text-brand"
-                              : "border-ink/12 bg-white text-ink/70 hover:bg-ink/[0.03]"
-                          }`}
-                        >
-                          {it}
-                        </button>
-                      )
-                    )}
-
-                    <button
-                      type="button"
-                      disabled={page >= totalPages}
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      className="rounded-lg border border-ink/12 bg-white px-2.5 py-2 text-sm font-semibold text-ink/70 shadow-sm transition hover:bg-ink/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Next
-                    </button>
-                    <button
-                      type="button"
-                      disabled={page >= totalPages}
-                      onClick={() => setPage(totalPages)}
-                      className="rounded-lg border border-ink/12 bg-white px-2.5 py-2 text-sm font-semibold text-ink/70 shadow-sm transition hover:bg-ink/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Last
-                    </button>
-                  </nav>
-
-                  <form
-                    className="flex items-center gap-2"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const n = Number(pageInput);
-                      if (!Number.isFinite(n)) return;
-                      setPage(clampInt(Math.trunc(n), 1, totalPages));
-                    }}
-                  >
-                    <label htmlFor="cs-projects-page-input" className="text-sm font-semibold text-ink/55">
-                      Go to
-                    </label>
-                    <input
-                      id="cs-projects-page-input"
-                      inputMode="numeric"
-                      value={pageInput}
-                      onChange={(e) => setPageInput(e.target.value.replace(/[^\d]/g, ""))}
-                      className="w-20 rounded-lg border border-ink/12 bg-white px-3 py-2 text-sm font-semibold text-ink shadow-sm"
-                    />
-                  </form>
-                </div>
-              </div>
+              <ClearstoryTablePagination
+                total={total}
+                page={page}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                ariaLabel="Project pages"
+                idPrefix="cs-projects"
+              />
             </div>
           )}
         </Card>

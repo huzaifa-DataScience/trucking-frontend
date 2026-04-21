@@ -10,7 +10,7 @@ export default function ClearstoryTagsTablePage() {
   const [projectIdInput, setProjectIdInput] = useState("");
   const [projectId, setProjectId] = useState<string | undefined>(undefined);
 
-  const { rows, total, page, pageSize, setPage, setPageSize, totalPages, isLoading, error } = useClearstoryTable(
+  const { rows, total, page, pageSize, setPage, setPageSize, isLoading, error } = useClearstoryTable(
     "tags",
     { projectId }
   );
@@ -28,7 +28,6 @@ export default function ClearstoryTagsTablePage() {
         total={total}
         page={page}
         pageSize={pageSize}
-        totalPages={totalPages}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         loading={isLoading}

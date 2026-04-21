@@ -45,7 +45,6 @@ export default function ClearstoryCompanyPage() {
           total={1}
           page={1}
           pageSize={1}
-          totalPages={1}
           onPageChange={() => {}}
           onPageSizeChange={() => {}}
           loading={false}
