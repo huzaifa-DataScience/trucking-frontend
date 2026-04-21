@@ -5,7 +5,7 @@ import { ClearstorySwaggerTable } from "@/components/clearstory/ClearstorySwagge
 import { useClearstoryTable } from "@/hooks/useClearstoryTable";
 
 export default function ClearstoryCustomersTablePage() {
-  const { rows, total, page, pageSize, setPage, setPageSize, totalPages, isLoading, error } =
+  const { rows, total, page, pageSize, setPage, setPageSize, isLoading, error } =
     useClearstoryTable("customers");
 
   return (
@@ -21,7 +21,6 @@ export default function ClearstoryCustomersTablePage() {
         total={total}
         page={page}
         pageSize={pageSize}
-        totalPages={totalPages}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         loading={isLoading}
