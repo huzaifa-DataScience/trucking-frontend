@@ -45,6 +45,19 @@ export function NavIconInvoice({ className = "h-4 w-4 shrink-0" }: { className?:
   );
 }
 
+/** Change order / stacked docs (Clearstory). */
+export function NavIconLayers({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+      <path
+        d="M12 2L4 6l8 4 8-4-8-4zM4 12l8 4 8-4M4 18l8 4 8-4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function NavIconUsers({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
