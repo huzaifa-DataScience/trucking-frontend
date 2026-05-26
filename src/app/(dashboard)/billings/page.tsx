@@ -30,6 +30,9 @@ import type {
 import { ContractDetailModal } from "@/components/billings/ContractDetailModal";
 import { PayAppDetailModal } from "@/components/billings/PayAppDetailModal";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { useCompany } from "@/contexts/CompanyContext";
+import { sitelineEntityIdFromContext } from "@/lib/siteline-entity";
+import { SitelineClearstoryGapsBanner } from "@/components/billings/SitelineClearstoryGapsBanner";
 
 const formatCurrency = (value: number | undefined) =>
   value != null
@@ -113,6 +116,12 @@ const CONTRACTS_PAYAPPS_TAB_ENABLED = false;
 export default function BillingsPage() {
   const { status, error: statusError, loading: statusLoading, refetch: refetchStatus } = useSitelineStatus();
   const configured = status?.configured ?? false;
+
+  const { companyId, company: ourCompany } = useCompany();
+  const sitelineEntityId = useMemo(
+    () => sitelineEntityIdFromContext(companyId),
+    [companyId]
+  );
 
   const { company } = useSitelineCompany(configured);
 
@@ -242,12 +251,18 @@ export default function BillingsPage() {
 
   const loadAgingReport = useCallback(async (filtersOverride?: SitelineAgingFilters) => {
     if (!configured) return;
+    if (sitelineEntityId == null) {
+      setAgingReport(null);
+      setAgingError("Select GOEL, GOEL DC, or DCB in the header to view Siteline billing.");
+      return;
+    }
     setAgingLoading(true);
     setAgingError(null);
     try {
-      const result = await getSitelineAgingReport(
-        filtersOverride ?? agingFiltersRef.current
-      );
+      const result = await getSitelineAgingReport({
+        ...(filtersOverride ?? agingFiltersRef.current),
+        entityId: sitelineEntityId,
+      });
       if (isSitelineError(result)) {
         setAgingReport(null);
         setAgingError((result as SitelineError).error ?? (result as SitelineError).message ?? "Failed to load aging report");
@@ -260,16 +275,22 @@ export default function BillingsPage() {
     } finally {
       setAgingLoading(false);
     }
-  }, [configured]);
+  }, [configured, sitelineEntityId]);
 
   const loadAgingOverdue = useCallback(async (filtersOverride?: SitelineAgingFilters) => {
     if (!configured) return;
+    if (sitelineEntityId == null) {
+      setAgingOverdue(null);
+      setAgingOverdueError("Select GOEL, GOEL DC, or DCB in the header to view Siteline billing.");
+      return;
+    }
     setAgingOverdueLoading(true);
     setAgingOverdueError(null);
     try {
       const base = filtersOverride ?? overdueFiltersRef.current;
       const result = await getSitelineAgingOverdue({
         ...base,
+        entityId: sitelineEntityId,
         minDaysPastDue: base.minDaysPastDue ?? 51,
       });
       if (isSitelineError(result)) {
@@ -290,7 +311,7 @@ export default function BillingsPage() {
     } finally {
       setAgingOverdueLoading(false);
     }
-  }, [configured]);
+  }, [configured, sitelineEntityId]);
 
   const clearAgingFiltersAndReload = useCallback(async () => {
     setAgingFilters(defaultAgingFilters);
@@ -322,7 +343,7 @@ export default function BillingsPage() {
     } else if (activeTab === "overdue") {
       loadAgingOverdue();
     }
-  }, [configured, activeTab, loadAgingReport, loadAgingOverdue]);
+  }, [configured, activeTab, companyId, loadAgingReport, loadAgingOverdue]);
 
   const initialLoading =
     statusLoading ||
@@ -347,8 +368,17 @@ export default function BillingsPage() {
         </h2>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
           Siteline construction billing — contracts, schedule of values, and pay applications.
+          {ourCompany
+            ? ` Showing data for ${ourCompany.name}.`
+            : sitelineEntityId != null
+              ? " Showing data for GOEL DC (default when All companies is selected)."
+              : null}
         </p>
       </div>
+
+      {configured && sitelineEntityId != null ? (
+        <SitelineClearstoryGapsBanner entityId={sitelineEntityId} className="shrink-0" />
+      ) : null}
 
       {initialLoading && (
         <div className="flex justify-center py-8">

@@ -4,7 +4,7 @@ This guide helps you populate your SQL Server database with dummy data for testi
 
 ## Prerequisites
 
-1. **Know your table structure**: The seed script (`database-seed.sql`) is a template. You need to adjust it to match your actual table/column names.
+1. **Know your table structure**: The seed script ([`sql/database-seed.sql`](./sql/database-seed.sql)) is a template. You need to adjust it to match your actual table/column names.
 2. **Backend schema**: Check your NestJS entities or database schema to confirm:
    - Table names (e.g., `Fact_SiteTickets`, `Ref_Jobs`, `dbo.Photos`)
    - Column names (e.g., `TicketID`, `JobID`, `TicketNumber`, `CreatedAt`)
@@ -23,7 +23,7 @@ Check your backend entities (in `/Users/apple/trucking/trucking-backend/src/data
 
 ### 2. Adjust the Seed Script
 
-Open `database-seed.sql` and:
+Open [`sql/database-seed.sql`](./sql/database-seed.sql) and:
 - Replace placeholder table names with your actual table names
 - Replace placeholder column names with your actual column names
 - Uncomment and expand the INSERT statements
@@ -65,7 +65,7 @@ USE YourDatabaseName;
 GO
 
 -- Run the seed script
--- Adjust and execute database-seed.sql
+-- Adjust and execute docs/sql/database-seed.sql
 ```
 
 ### 5. Verify Data
