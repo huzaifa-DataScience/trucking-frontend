@@ -10,6 +10,8 @@ import {
   NavIconCube,
   NavIconTruck,
   NavIconShield,
+  NavIconProposal,
+  NavIconPlus,
   NavIconInvoice,
   NavIconLayers,
   NavIconUsers,
@@ -17,7 +19,21 @@ import {
 } from "@/components/dashboard/DashboardNavIcons";
 import type { AuthUser } from "@/lib/auth/types";
 
-type ViewMode = "operations" | "billings";
+type ViewMode = "operations" | "billings" | "bidding";
+
+const WORKSPACE_STORAGE_KEY = "construction-logistics-workspace";
+
+function viewFromPathname(pathname: string): ViewMode {
+  if (pathname.startsWith("/bidding")) return "bidding";
+  if (pathname.startsWith("/billings") || pathname.startsWith("/clearstory")) return "billings";
+  return "operations";
+}
+
+function defaultHrefForView(view: ViewMode): string {
+  if (view === "billings") return "/billings";
+  if (view === "bidding") return "/bidding";
+  return "/job";
+}
 
 type SidebarNavItem = {
   href: string;
@@ -53,6 +69,11 @@ const operationsNavItems: SidebarNavItem[] = [
   { href: "/forensic", label: "Forensic & Audit", Icon: NavIconShield },
 ];
 
+const biddingNavItems: SidebarNavItem[] = [
+  { href: "/bidding", label: "Bidding sheet", Icon: NavIconProposal, activePathPrefix: "/bidding" },
+  { href: "/bidding/new", label: "New estimate", Icon: NavIconPlus },
+];
+
 const billingNavItems: SidebarNavItem[] = [
   { href: "/billings", label: "Billings", Icon: NavIconInvoice },
   {
@@ -73,16 +94,34 @@ export function Sidebar() {
   const router = useRouter();
   const { isAdmin, user, logout } = useAuth();
 
-  const currentView: ViewMode =
-    pathname.startsWith("/billings") || pathname.startsWith("/clearstory") ? "billings" : "operations";
+  const currentView: ViewMode = viewFromPathname(pathname);
 
   const handleViewChange = (value: ViewMode) => {
     if (value === currentView) return;
-    if (value === "operations") router.push("/job");
-    else router.push("/billings");
+    try {
+      localStorage.setItem(WORKSPACE_STORAGE_KEY, value);
+    } catch {
+      /* ignore */
+    }
+    router.push(defaultHrefForView(value));
   };
 
-  const navItems = currentView === "billings" ? billingNavItems : operationsNavItems;
+  const navItems =
+    currentView === "billings"
+      ? billingNavItems
+      : currentView === "bidding"
+        ? biddingNavItems
+        : operationsNavItems;
+
+  const navSectionLabel =
+    currentView === "billings" ? "Billing" : currentView === "bidding" ? "Bidding" : "Overview";
+
+  const logoHref =
+    currentView === "billings"
+      ? pathname.startsWith("/clearstory")
+        ? "/clearstory/projects"
+        : "/billings"
+      : defaultHrefForView(currentView);
 
   const navLinkClass = (active: boolean) =>
     `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -95,13 +134,7 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-ink/[0.08] bg-surface">
       <div className="border-b border-ink/[0.08] px-4 pb-4 pt-5">
         <Link
-          href={
-            currentView === "billings"
-              ? pathname.startsWith("/clearstory")
-                ? "/clearstory/projects"
-                : "/billings"
-              : "/job"
-          }
+          href={logoHref}
           className="flex flex-col items-center gap-2 rounded-xl outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
           aria-label="Home"
         >
@@ -122,6 +155,7 @@ export function Sidebar() {
           >
             <option value="operations">Operations & reporting</option>
             <option value="billings">Billing</option>
+            <option value="bidding">Bidding sheet</option>
           </select>
         </div>
       </div>
@@ -129,7 +163,7 @@ export function Sidebar() {
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
         <div>
           <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-ink/40">
-            {currentView === "billings" ? "Billing" : "Overview"}
+            {navSectionLabel}
           </p>
           <div className="space-y-0.5">
             {navItems.map(({ href, label, Icon, activePathPrefix }) => {

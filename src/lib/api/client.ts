@@ -193,9 +193,10 @@ export async function patch<T>(
  */
 export async function put<T>(
   path: string,
-  body: unknown
+  body: unknown,
+  params?: Record<string, string | number | undefined>
 ): Promise<T> {
-  const url = getApiUrl(path);
+  const url = getApiUrl(path, params);
   const response = await fetch(url, {
     method: "PUT",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
