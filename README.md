@@ -17,7 +17,11 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Root redirects to **Job Dashboard**.
+Open [http://localhost:3002](http://localhost:3002) (dev). Root redirects to **Job Dashboard**.
+
+## Documentation
+
+All specs, guides, and SQL scripts are in **[docs/](./docs/)** — see [docs/README.md](./docs/README.md) for the index (`docs/sql/` for `.sql` files).
 
 ## Pages (per spec)
 

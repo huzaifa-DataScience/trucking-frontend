@@ -111,3 +111,14 @@ export interface OverdueEmailSendingSettings {
   adminToggleEnabled: boolean;
   effectiveEnabled: boolean;
 }
+
+/** GET/PATCH /admin/settings/siteline-clearstory-gap-alert (FRONTEND_SITELINE_PM_EMAILS.md). */
+export interface SitelineClearstoryGapAlertSettings {
+  envMasterEnabled: boolean;
+  adminToggleEnabled: boolean;
+  effectiveEnabled: boolean;
+  recipientTo: string;
+}
+
+export const EMAIL_PURPOSE_OVERDUE_LEAD_PM = "siteline.overdue_leadpm" as const;
+export const EMAIL_PURPOSE_CLEARSTORY_GAP = "siteline.clearstory_data_gap" as const;

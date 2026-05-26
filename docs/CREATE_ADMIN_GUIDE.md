@@ -6,7 +6,7 @@ Since the admin panel requires admin access to approve users, you need to create
 
 ### Option 1: SQL Script (Recommended)
 
-1. **Open the SQL script**: `create-first-admin.sql`
+1. **Open the SQL script**: [`sql/create-first-admin.sql`](./sql/create-first-admin.sql)
 
 2. **Generate a password hash**:
    - **Method A (Backend Code)**: Create a temporary script:
