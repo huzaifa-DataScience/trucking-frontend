@@ -12,7 +12,8 @@ Examples:
 - `signup.pending`
 - `signup.welcome`
 - `password.reset`
-- `siteline.overdue_leadpm` (current implemented email job)
+- `siteline.overdue_leadpm` (lead PM overdue pay apps)
+- `siteline.clearstory_data_gap` (Siteline billing with no Clearstory comparison — ops alert; see [FRONTEND_SITELINE_PM_EMAILS.md](./FRONTEND_SITELINE_PM_EMAILS.md))
 
 ## Placeholder syntax
 Templates use `{{placeholderName}}` variables.
@@ -21,14 +22,27 @@ At runtime the backend replaces placeholders with values from the email job/serv
 If a placeholder is missing in the provided context, it becomes an empty string.
 
 ## Current implemented purpose + placeholders
+
+Full behavior (cron rules, recipients, Clearstory matching): **[FRONTEND_SITELINE_PM_EMAILS.md](./FRONTEND_SITELINE_PM_EMAILS.md)**.
+
 ### `siteline.overdue_leadpm`
-Backend sends to the lead PM email for overdue pay apps (> 50 days, configurable).
+Backend sends to the lead PM email for overdue pay apps (inclusive `minDaysPastDue`, default 51).
 
 Available placeholders:
 - `{{leadPmName}}`
 - `{{daysThreshold}}`
 - `{{itemCount}}`
 - `{{itemsTableHtml}}` (backend-provided HTML table of overdue items)
+
+### `siteline.clearstory_data_gap` (backend: [BACKEND_SITELINE_PM_EMAILS.md](./BACKEND_SITELINE_PM_EMAILS.md))
+When Siteline has billing/overdue data but **no usable Clearstory project/COR data** for comparison, send to ops (default: `joannabelle.salalila@Goelservices.com` via `SITELINE_CLEARSTORY_GAP_ALERT_TO`).
+
+Suggested placeholders:
+- `{{gapCount}}`
+- `{{runAt}}`
+- `{{entityName}}`
+- `{{gapsTableHtml}}`
+- `{{dashboardUrl}}` (optional)
 
 ## Admin API (backend routes) — what the frontend should call
 Base route: `admin/email-templates`

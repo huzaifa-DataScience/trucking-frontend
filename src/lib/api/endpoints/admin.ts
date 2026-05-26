@@ -19,6 +19,7 @@ import type {
   AdminEmailTemplateUpdatePayload,
   AdminEmailTemplateCreatePayload,
   OverdueEmailSendingSettings,
+  SitelineClearstoryGapAlertSettings,
 } from "@/lib/admin/types";
 
 export async function getUsers(filters: UserFilters): Promise<AdminUsersResponse> {
@@ -97,6 +98,13 @@ export async function getActiveEmailTemplateByPurpose(
   return get<AdminEmailTemplateActive>("/admin/email-templates/active", { purpose });
 }
 
+export async function updateActiveEmailTemplateByPurpose(
+  purpose: string,
+  payload: Pick<AdminEmailTemplateUpdatePayload, "subjectTemplate" | "bodyHtmlTemplate" | "name">
+): Promise<AdminEmailTemplateActive> {
+  return put<AdminEmailTemplateActive>("/admin/email-templates/active", payload, { purpose });
+}
+
 export async function updateEmailTemplateByKey(
   templateKey: string,
   payload: AdminEmailTemplateUpdatePayload
@@ -137,4 +145,29 @@ export async function postSmtpTestEmail(to: string): Promise<{ ok: boolean; mess
     to,
     leadPmName: "Test PM",
   });
+}
+
+/** Siteline vs Clearstory gap alert cron toggle (FRONTEND_SITELINE_PM_EMAILS.md). */
+export async function getSitelineClearstoryGapAlertSettings(): Promise<SitelineClearstoryGapAlertSettings> {
+  return get<SitelineClearstoryGapAlertSettings>(
+    "/admin/settings/siteline-clearstory-gap-alert"
+  );
+}
+
+export async function patchSitelineClearstoryGapAlertSettings(
+  enabled: boolean
+): Promise<void> {
+  await patch<unknown>("/admin/settings/siteline-clearstory-gap-alert", { enabled });
+}
+
+/** Manually trigger gap alert job (backend optional). */
+export async function postRunSitelineClearstoryGapAlertJob(): Promise<{
+  ok: boolean;
+  message: string;
+  gapCount?: number;
+}> {
+  return post<{ ok: boolean; message: string; gapCount?: number }>(
+    "/admin/jobs/siteline-clearstory-gap-alert/run",
+    {}
+  );
 }

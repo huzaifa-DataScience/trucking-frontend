@@ -277,6 +277,8 @@ export interface AgingReportResponse {
 }
 
 export interface SitelineAgingFilters {
+  /** Our entity id (Ref_OurEntities); required for per-company Siteline snapshots. */
+  entityId?: number;
   search?: string;
   overdueOnly?: boolean;
   minDaysPastDue?: number;
@@ -294,6 +296,7 @@ export async function getSitelineAgingReport(
   AgingReportResponse | SitelineError
 > {
   return get<AgingReportResponse | SitelineError>("siteline/aging-report", {
+    entityId: filters?.entityId,
     search: filters?.search,
     overdueOnly: filters?.overdueOnly ? "true" : undefined,
     minDaysPastDue: filters?.minDaysPastDue,
@@ -336,6 +339,7 @@ export async function getSitelineAgingOverdue(
   AgingOverdueResponse | SitelineError
 > {
   return get<AgingOverdueResponse | SitelineError>("siteline/aging-overdue", {
+    entityId: filters?.entityId,
     search: filters?.search,
     overdueOnly: filters?.overdueOnly ? "true" : undefined,
     minDaysPastDue: filters?.minDaysPastDue,
@@ -345,5 +349,42 @@ export async function getSitelineAgingOverdue(
     includeStatuses: filters?.includeStatuses,
     excludeStatuses: filters?.excludeStatuses,
   });
+}
+
+// --- Siteline ↔ Clearstory reconciliation gaps (FRONTEND_SITELINE_PM_EMAILS.md) ---
+
+export type SitelineReconciliationGapReason =
+  | "NO_CLEARSTORY_PROJECT"
+  | "CLEARSTORY_EMPTY"
+  | "NOT_COMPARABLE";
+
+export interface SitelineReconciliationGapItem {
+  contractId: string;
+  projectName: string | null;
+  projectNumber: string | null;
+  internalProjectNumber: string | null;
+  leadPmName: string | null;
+  leadPmEmail: string | null;
+  netDollars: number;
+  daysPastDue?: number | null;
+  clearstoryProjectId: string | null;
+  clearstoryJobNumber: string | null;
+  matchKeyTried: string | null;
+  gapReason: SitelineReconciliationGapReason;
+}
+
+export interface SitelineReconciliationGapsResponse {
+  items: SitelineReconciliationGapItem[];
+  evaluatedAt?: string;
+}
+
+/** Projects with Siteline billing data but no usable Clearstory comparison. */
+export async function getSitelineReconciliationGaps(params?: {
+  entityId?: number;
+}): Promise<SitelineReconciliationGapsResponse | SitelineError> {
+  return get<SitelineReconciliationGapsResponse | SitelineError>(
+    "siteline/reconciliation/gaps",
+    { entityId: params?.entityId }
+  );
 }
 
