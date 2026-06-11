@@ -16,3 +16,4 @@ export * as forensic from "./endpoints/forensic";
 export * as tickets from "./endpoints/tickets";
 export * as admin from "./endpoints/admin";
 export * as siteline from "./endpoints/siteline";
+export * as bidding from "./endpoints/bidding";
