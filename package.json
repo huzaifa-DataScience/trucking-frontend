@@ -6,8 +6,11 @@
     "dev": "next dev -p 3002",
     "dev:clean": "rm -rf .next && next dev -p 3002",
     "build": "next build",
+    "build:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next build",
     "start": "next start -p 3002",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:bidding": "npx --yes tsx --test src/lib/bidding/engine/idc6098-golden.test.ts",
+    "verify:bidding-excel": "node scripts/verify-bidding-excel.mjs"
   },
   "dependencies": {
     "next": "16.1.6",

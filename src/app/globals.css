@@ -108,11 +108,90 @@ body {
   animation: bid-shimmer 1.4s ease-in-out infinite;
 }
 
+@keyframes bid-rail-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Base Bid workspace — 3:1 form / results (1280px+) */
+.bid-workspace {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 1280px) {
+  .bid-workspace {
+    grid-template-columns: minmax(0, 3fr) minmax(280px, 1fr);
+    gap: 1.75rem;
+  }
+}
+
+.bid-workspace-form {
+  min-width: 0;
+}
+
+.bid-results-rail {
+  min-width: 0;
+}
+
+@media (min-width: 1280px) {
+  .bid-results-rail {
+    position: sticky;
+    top: 0.5rem;
+    max-height: calc(100vh - 10rem);
+    align-self: start;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .bid-results-rail > :last-child {
+    flex: 1;
+    min-height: 12rem;
+  }
+}
+
+.bid-rail-enter {
+  animation: bid-rail-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+.bid-excel-grid .bid-grid-input,
+.bid-excel-grid select,
+.bid-excel-grid input[type="text"],
+.bid-excel-grid input[type="date"] {
+  margin: 0;
+  width: 100%;
+  min-height: 1.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--ink-rgb, 15 23 42) / 0.1);
+  background: #fff;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  outline: none;
+}
+
+.bid-excel-grid .bid-grid-input:focus,
+.bid-excel-grid select:focus,
+.bid-excel-grid input:focus {
+  border-color: var(--brand, #e85d04);
+  box-shadow: 0 0 0 2px rgb(232 93 4 / 0.15);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bid-animate-in,
   .bid-stagger > *,
   .bid-recalc-pulse,
-  .bid-shimmer-bar {
+  .bid-shimmer-bar,
+  .bid-rail-enter {
     animation: none !important;
   }
 }
