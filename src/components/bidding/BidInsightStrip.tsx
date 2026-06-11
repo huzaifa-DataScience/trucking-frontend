@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMoney, formatPercent } from "@/lib/bidding/mock-data";
+import { formatMoney, formatPercentDecimal } from "@/lib/bidding/format";
 import type { BidInsights } from "@/lib/bidding/types";
 
 function InsightCard({
@@ -64,8 +64,8 @@ export function BidInsightStrip({ insights }: { insights: BidInsights }) {
       />
       <InsightCard
         label="Margin"
-        value={formatPercent(insights.marginPercent)}
-        sub={`Wage total ${formatMoney(insights.wageTotal)}`}
+        value={formatPercentDecimal(insights.marginPercent)}
+        sub="From Base Bid inputs"
         accent="neutral"
       />
       <div className="relative overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.05)]">

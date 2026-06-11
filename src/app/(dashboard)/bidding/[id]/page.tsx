@@ -1,10 +1,7 @@
-import { redirect } from "next/navigation";
+"use client";
 
-export default async function BidDetailIndex({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  redirect(`/bidding/${id}/startup`);
+import { BidSheetForm } from "@/components/bidding/BidSheetForm";
+
+export default function BidSheetPage() {
+  return <BidSheetForm />;
 }

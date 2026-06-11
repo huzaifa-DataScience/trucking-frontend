@@ -1,41 +1,67 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { BidListCard } from "@/components/bidding/BidListCard";
-import { MOCK_BIDS } from "@/lib/bidding/mock-data";
-import type { BidStatus } from "@/lib/bidding/types";
+import { LogoLoader } from "@/components/ui/LogoLoader";
+import { useCompany } from "@/contexts/CompanyContext";
+import * as biddingApi from "@/lib/api/endpoints/bidding";
+import { getApiErrorMessage } from "@/lib/api/client";
+import type { BidListItem, BidStatus } from "@/lib/bidding/types";
 
 const STATUS_FILTERS: { value: "all" | BidStatus; label: string }[] = [
   { value: "all", label: "All" },
   { value: "draft", label: "Draft" },
-  { value: "in_review", label: "In review" },
   { value: "submitted", label: "Submitted" },
+  { value: "archived", label: "Archived" },
 ];
 
 export default function BiddingListPage() {
+  const { companyId } = useCompany();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"all" | BidStatus>("all");
+  const [bids, setBids] = useState<BidListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const bids = useMemo(() => {
-    return MOCK_BIDS.filter((b) => {
-      if (status !== "all" && b.status !== status) return false;
-      const q = search.trim().toLowerCase();
-      if (!q) return true;
-      return (
-        b.estimateNumber.toLowerCase().includes(q) ||
-        b.bidName.toLowerCase().includes(q) ||
-        b.companyName.toLowerCase().includes(q)
-      );
-    });
-  }, [search, status]);
+  const entityId = companyId ? Number(companyId) : undefined;
+
+  const loadBids = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await biddingApi.listBids({
+        status: status === "all" ? undefined : status,
+        entityId: entityId && !Number.isNaN(entityId) ? entityId : undefined,
+        search: search.trim() || undefined,
+      });
+      setBids(list);
+    } catch (e) {
+      setError(getApiErrorMessage(e, "Failed to load bids"));
+      setBids([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [status, entityId, search]);
+
+  useEffect(() => {
+    const t = setTimeout(() => void loadBids(), search ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [loadBids, search]);
+
+  const emptyMessage = useMemo(() => {
+    if (error) return error;
+    if (search.trim()) return "No bids match your search.";
+    if (status !== "all") return "No bids with this status.";
+    return "No estimates yet.";
+  }, [error, search, status]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-8 bid-animate-in">
       <PageHeader
         title="Bidding sheet"
-        subtitle="Build estimates with live labor, wage, and proposal insight — the same flow as your Excel workbook, without leaving the app."
+        subtitle="Base Bid estimator — team, wage rates, systems, and live MIKE/PJ totals from the backend calculator."
         action={
           <Link
             href="/bidding/new"
@@ -75,12 +101,21 @@ export default function BiddingListPage() {
         />
       </div>
 
-      {bids.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <LogoLoader />
+        </div>
+      ) : bids.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-ink/15 bg-surface/80 px-8 py-16 text-center">
-          <p className="text-sm font-medium text-ink/60">No bids match your filters.</p>
-          <Link href="/bidding/new" className="mt-3 inline-block text-sm font-semibold text-brand hover:underline">
-            Start a new estimate
-          </Link>
+          <p className="text-sm font-medium text-ink/60">{emptyMessage}</p>
+          {!error ? (
+            <Link
+              href="/bidding/new"
+              className="mt-3 inline-block text-sm font-semibold text-brand hover:underline"
+            >
+              Start a new estimate
+            </Link>
+          ) : null}
         </div>
       ) : (
         <div className="bid-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -89,10 +124,6 @@ export default function BiddingListPage() {
           ))}
         </div>
       )}
-
-      <p className="text-center text-[11px] text-ink/35">
-        Prototype UI — connect to <code className="rounded bg-ink/[0.04] px-1">/bids</code> API when backend is ready.
-      </p>
     </div>
   );
 }
