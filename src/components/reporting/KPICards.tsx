@@ -17,10 +17,10 @@ export function KPICards({ items }: KPICardsProps) {
       {items.map((item) => (
         <div
           key={item.label}
-          className="rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.06)]"
+          className="ui-shadow-card ui-card-highlight rounded-2xl border border-ink/[0.06] bg-surface p-5"
         >
           <p className="text-[11px] font-semibold uppercase tracking-wider text-ink/40">{item.label}</p>
-          <p className="mt-3 text-2xl font-bold tracking-tight text-ink sm:text-[1.75rem] sm:leading-tight">
+          <p className="ui-num mt-3 text-2xl font-bold tracking-tight text-ink sm:text-[1.75rem] sm:leading-tight">
             {item.value}
           </p>
         </div>

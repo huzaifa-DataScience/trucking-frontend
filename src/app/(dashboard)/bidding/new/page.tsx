@@ -7,17 +7,22 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { BidFormField, BidSelect, BidTextInput } from "@/components/bidding/BidFormField";
 import { Card } from "@/components/ui/Card";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { RestrictedState } from "@/components/ui/RestrictedState";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useBiddingLookups } from "@/hooks/useBiddingLookups";
+import { useBiddingAccess } from "@/hooks/useBiddingAccess";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { getApiErrorMessage } from "@/lib/api/client";
+import { PERMISSIONS } from "@/lib/auth/permissions";
 
 export default function NewBidPage() {
   const router = useRouter();
   const { companyId } = useCompany();
   const lookups = useBiddingLookups();
+  const { canWrite } = useBiddingAccess();
   const [estimateNumber, setEstimateNumber] = useState("");
   const [bidName, setBidName] = useState("");
+  const [jobId, setJobId] = useState("");
   const [entity, setEntity] = useState(
     companyId && companyId !== "all" ? companyId : "1"
   );
@@ -33,6 +38,14 @@ export default function NewBidPage() {
           { value: "3", label: "DCB" },
         ];
 
+  const jobOptions = [
+    { value: "", label: "No job (optional)" },
+    ...lookups.jobs.map((j) => ({
+      value: String(j.id),
+      label: j.name || `Job #${j.id}`,
+    })),
+  ];
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     const est = estimateNumber.trim();
@@ -43,10 +56,12 @@ export default function NewBidPage() {
     setSubmitting(true);
     setError(null);
     try {
+      const parsedJobId = jobId ? Number(jobId) : undefined;
       const created = await biddingApi.createBid({
         ourEntityId: Number(entity),
         estimateNumber: est,
         bidName: bidName.trim() || undefined,
+        jobId: parsedJobId,
       });
       router.push(`/bidding/${created.id}`);
     } catch (err) {
@@ -59,6 +74,25 @@ export default function NewBidPage() {
     return (
       <div className="flex flex-1 items-center justify-center py-24">
         <LogoLoader />
+      </div>
+    );
+  }
+
+  if (!canWrite) {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col gap-8">
+        <PageHeader title="New estimate" subtitle="Create a draft bidding sheet." />
+        <RestrictedState
+          title="Edit access required"
+          message="You can view bids but cannot create new estimates."
+          permission={PERMISSIONS.biddingWrite}
+        />
+        <Link
+          href="/bidding"
+          className="text-center text-sm font-medium text-brand hover:underline"
+        >
+          Back to bidding list
+        </Link>
       </div>
     );
   }
@@ -93,6 +127,9 @@ export default function NewBidPage() {
               onChange={setBidName}
               placeholder="Job name as it appears on the proposal"
             />
+          </BidFormField>
+          <BidFormField label="Linked job" htmlFor="job" hint="Optional — enables company prefill on the sheet.">
+            <BidSelect id="job" value={jobId} onChange={setJobId} options={jobOptions} />
           </BidFormField>
           <BidFormField label="Company bidding" htmlFor="co" hint="Matches header company when set.">
             <BidSelect id="co" value={entity} onChange={setEntity} options={entityOptions} />

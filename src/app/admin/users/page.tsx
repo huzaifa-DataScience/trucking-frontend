@@ -9,6 +9,7 @@ import * as adminApi from "@/lib/api/endpoints/admin";
 import type { AdminUser, UserFilters, UserStatus, UserRole } from "@/lib/admin/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { StatusPill, type StatusTone } from "@/components/ui/StatusPill";
 
 const PAGE_SIZE = 25;
 
@@ -58,6 +59,8 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<Error | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [detailUser, setDetailUser] = useState<AdminUser | null>(null);
+  const [pendingUsers, setPendingUsers] = useState<AdminUser[]>([]);
+  const [pendingTotal, setPendingTotal] = useState(0);
   const [confirmAction, setConfirmAction] = useState<{
     type: "approve" | "reject" | "delete" | "deactivate" | "bulk-approve" | "bulk-reject" | "bulk-delete";
     userIds: number[];
@@ -87,6 +90,18 @@ export default function AdminUsersPage() {
     };
   }, [searchInput, filters.search]);
 
+  const loadPending = useCallback(async () => {
+    try {
+      const data = await adminApi.getUsers({ page: 1, pageSize: 5, status: "pending" });
+      setPendingUsers(data.items);
+      setPendingTotal(data.total);
+    } catch {
+      // Non-critical zone; main table surfaces errors.
+      setPendingUsers([]);
+      setPendingTotal(0);
+    }
+  }, []);
+
   const loadUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -94,6 +109,7 @@ export default function AdminUsersPage() {
       const data = await adminApi.getUsers(filters);
       setUsers(data.items);
       setTotal(data.total);
+      void loadPending();
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
@@ -105,7 +121,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters, showToast]);
+  }, [filters, showToast, loadPending]);
 
   useEffect(() => {
     loadUsers();
@@ -140,9 +156,13 @@ export default function AdminUsersPage() {
   );
 
   const handleUpdate = useCallback(
-    async (id: number, role: UserRole, status: UserStatus) => {
+    async (id: number, role: UserRole, status: UserStatus, permissions?: string[]) => {
       try {
-        await adminApi.updateUser(id, { role, status });
+        await adminApi.updateUser(id, {
+          role,
+          status,
+          ...(permissions !== undefined ? { permissions } : {}),
+        });
         showToast("User updated successfully", "success");
         loadUsers();
       } catch (err) {
@@ -221,32 +241,23 @@ export default function AdminUsersPage() {
   };
 
   const getStatusBadge = (status: UserStatus) => {
-    const styles = {
-      pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200",
-      active: "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200",
-      inactive: "bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-200",
-      rejected: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200",
+    const tones: Record<UserStatus, StatusTone> = {
+      pending: "warning",
+      active: "success",
+      inactive: "neutral",
+      rejected: "danger",
     };
     return (
-      <span className={`rounded px-2 py-1 text-xs font-medium ${styles[status]}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
+      <StatusPill
+        tone={tones[status]}
+        label={status.charAt(0).toUpperCase() + status.slice(1)}
+      />
     );
   };
 
-  const getRoleBadge = (role: UserRole) => {
-    return (
-      <span
-        className={`rounded px-2 py-1 text-xs font-medium ${
-          role === "admin"
-            ? "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200"
-            : "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200"
-        }`}
-      >
-        {role === "admin" ? "Admin" : "User"}
-      </span>
-    );
-  };
+  const getRoleBadge = (role: UserRole) => (
+    <StatusPill tone={role === "admin" ? "info" : "neutral"} label={role === "admin" ? "Admin" : "User"} />
+  );
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -272,6 +283,56 @@ export default function AdminUsersPage() {
           Manage users, approve signups, and control access.
         </p>
       </div>
+
+      {pendingTotal > 0 && (
+        <div className="rounded-2xl border border-warning-border bg-warning-tint p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-warning">
+              {pendingTotal} user{pendingTotal === 1 ? "" : "s"} awaiting approval
+            </p>
+            {pendingTotal > pendingUsers.length ? (
+              <button
+                type="button"
+                onClick={() => setFilters({ status: "pending" })}
+                className="text-xs font-semibold text-warning underline-offset-2 hover:underline"
+              >
+                View all
+              </button>
+            ) : null}
+          </div>
+          <ul className="mt-3 space-y-2">
+            {pendingUsers.map((u) => (
+              <li
+                key={u.id}
+                className="flex flex-col gap-2 rounded-xl border border-warning-border/60 bg-surface px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-ink">{u.email}</p>
+                  <p className="text-xs text-ink/45">Signed up {formatDate(u.createdAt)}</p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(u.id)}
+                    className="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success/90"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setConfirmAction({ type: "reject", userIds: [u.id], userEmail: u.email })
+                    }
+                    className="rounded-lg border border-ink/15 bg-surface px-3 py-1.5 text-xs font-semibold text-ink/70 hover:bg-ink/[0.04]"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="sticky top-14 z-20 -mx-6 -mt-6 flex flex-wrap items-end gap-4 border-b border-stone-200/80 bg-white/95 px-6 py-4 backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
@@ -656,8 +717,8 @@ export default function AdminUsersPage() {
         user={detailUser}
         isOpen={!!detailUser}
         onClose={() => setDetailUser(null)}
-        onSave={async (id, role, status) => {
-          await handleUpdate(id, role, status);
+        onSave={async (id, role, status, permissions) => {
+          await handleUpdate(id, role, status, permissions);
           setDetailUser(null);
         }}
       />

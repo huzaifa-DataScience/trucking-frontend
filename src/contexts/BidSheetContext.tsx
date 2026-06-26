@@ -21,6 +21,7 @@ import {
 } from "@/lib/bidding/snapshot";
 import type {
   BaseBidInput,
+  BidCompanyInfo,
   BidDetail,
   BidInsights,
   BidSystemRow,
@@ -28,9 +29,16 @@ import type {
   PatchBidBody,
 } from "@/lib/bidding/types";
 import { useBiddingLookups } from "@/hooks/useBiddingLookups";
+import { useBiddingAccess } from "@/hooks/useBiddingAccess";
+
+const AUTO_SAVE_MS = 1500;
+const PREVIEW_DEBOUNCE_MS = 400;
 
 type BidHeaderPatch = Partial<
-  Pick<BidDetail, "estimateNumber" | "bidName" | "bidDate" | "ourEntityId">
+  Pick<
+    BidDetail,
+    "estimateNumber" | "bidName" | "bidDate" | "ourEntityId" | "submitDate" | "timeEstimate"
+  >
 >;
 
 type BidSheetContextValue = {
@@ -42,18 +50,30 @@ type BidSheetContextValue = {
   saving: boolean;
   error: string | null;
   isEditable: boolean;
+  canRead: boolean;
+  canWrite: boolean;
+  dirty: boolean;
+  lastSavedAt: Date | null;
+  serverVerifyWarnings: string[];
   selectedTeam: ReturnType<typeof useBiddingLookups>["teams"][number] | null;
   setBidHeader: (patch: BidHeaderPatch) => void;
+  setJobId: (jobId: number | null, options?: { prefillCompany?: boolean }) => Promise<void>;
+  setCompanyInfoField: (key: keyof BidCompanyInfo, value: string | null) => void;
+  prefillCompanyFromJob: () => Promise<void>;
   setBaseBidField: <K extends keyof BaseBidInput>(key: K, value: BaseBidInput[K]) => void;
   setProjectState: (stateCode: string) => void;
   setSystems: (systems: BidSystemRow[]) => void;
   updateSystemRow: (key: BidSystemRow["key"], patch: Partial<BidSystemRow>) => void;
   selectWageRate: (wageRateId: number) => Promise<void>;
   previewCalculate: () => void;
+  verifyServerCalc: () => Promise<void>;
   refresh: () => Promise<void>;
   saveNow: () => Promise<void>;
+  saveCoverSheet: () => Promise<void>;
   markSubmitted: () => Promise<void>;
   reopenAsDraft: () => Promise<void>;
+  uploadAttachment: (file: File, label?: string) => Promise<void>;
+  deleteAttachment: (attachmentId: number) => Promise<void>;
 };
 
 const BidSheetContext = createContext<BidSheetContextValue | null>(null);
@@ -96,11 +116,6 @@ function mergeSystemRow(
   };
 }
 
-/** Excel ROUNDUP(burdened, 1) */
-function roundUpBurdenedPerHour(rate: number): number {
-  return Math.ceil(rate * 10) / 10;
-}
-
 export function BidSheetProvider({
   bidId,
   children,
@@ -109,14 +124,22 @@ export function BidSheetProvider({
   children: ReactNode;
 }) {
   const lookups = useBiddingLookups();
+  const { canRead, canWrite } = useBiddingAccess();
   const [bid, setBid] = useState<BidDetail | null>(null);
   const [burdenedRate, setBurdenedRate] = useState<BurdenedRateResult | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [serverVerifyWarnings, setServerVerifyWarnings] = useState<string[]>([]);
   const bidRef = useRef<BidDetail | null>(null);
   const fetchedRef = useRef(false);
   const loadGenRef = useRef(0);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canWriteRef = useRef(canWrite);
+  canWriteRef.current = canWrite;
 
   bidRef.current = bid;
 
@@ -133,16 +156,27 @@ export function BidSheetProvider({
 
   const buildContentPatch = useCallback(
     (withCalc: BidDetail): PatchBidBody => ({
+      jobId: withCalc.jobId,
       estimateNumber: withCalc.estimateNumber,
       bidName: withCalc.bidName,
       bidDate: withCalc.bidDate,
+      submitDate: withCalc.submitDate,
+      timeEstimate: withCalc.timeEstimate,
       ourEntityId: withCalc.ourEntityId,
+      companyInfo: withCalc.companyInfo,
       baseBid: withCalc.baseBid,
       systems: withCalc.systems,
       computed: buildClientComputedSnapshot(withCalc, engineLookups),
     }),
     [engineLookups]
   );
+
+  const schedulePreview = useCallback(() => {
+    if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+    previewTimerRef.current = setTimeout(() => {
+      setBid((prev) => (prev ? applyEngineToBid(prev, engineLookups) : prev));
+    }, PREVIEW_DEBOUNCE_MS);
+  }, [engineLookups]);
 
   const loadBurdenForLabel = useCallback(async (label: string | undefined) => {
     if (!label) {
@@ -171,11 +205,14 @@ export function BidSheetProvider({
         const detail = await biddingApi.getBid(bidId);
         if (gen !== loadGenRef.current) return;
         detail.systems = normalizeSystems(detail.systems);
+        if (!detail.companyInfo) detail.companyInfo = {};
+        if (!detail.attachments) detail.attachments = [];
         const hydrated =
           Object.keys(detail.computed ?? {}).length > 0
             ? detail
             : applyEngineToBid(detail, engineLookups);
         setBid(hydrated);
+        setDirty(false);
         await loadBurdenForLabel(detail.baseBid?.wageRateLabel as string | undefined);
       } catch (e) {
         if (gen === loadGenRef.current) {
@@ -219,9 +256,120 @@ export function BidSheetProvider({
     [bidId]
   );
 
-  const setBidHeader = useCallback((patch: BidHeaderPatch) => {
-    setBid((prev) => (prev ? { ...prev, ...patch } : prev));
+  const autoSaveNow = useCallback(async () => {
+    const current = bidRef.current;
+    if (!current || current.status !== "draft" || !canWriteRef.current) return;
+    const withCalc = applyEngineToBid(current, engineLookups);
+    setBid(withCalc);
+    const errs = withCalc.computed?.errors;
+    if (Array.isArray(errs) && errs.length > 0) return;
+    try {
+      await savePatch(buildContentPatch(withCalc), withCalc);
+      setLastSavedAt(new Date());
+      setDirty(false);
+    } catch {
+      /* savePatch sets error */
+    }
+  }, [engineLookups, buildContentPatch, savePatch]);
+
+  const scheduleAutoSave = useCallback(() => {
+    if (!canWriteRef.current) return;
+    const current = bidRef.current;
+    if (!current || current.status !== "draft") return;
+    setDirty(true);
+    schedulePreview();
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      void autoSaveNow();
+    }, AUTO_SAVE_MS);
+  }, [autoSaveNow, schedulePreview]);
+
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+    };
   }, []);
+
+  const setBidHeader = useCallback(
+    (patch: BidHeaderPatch) => {
+      setBid((prev) => (prev ? { ...prev, ...patch } : prev));
+      scheduleAutoSave();
+    },
+    [scheduleAutoSave]
+  );
+
+  const setCompanyInfoField = useCallback(
+    (key: keyof BidCompanyInfo, value: string | null) => {
+      setBid((prev) => {
+        if (!prev) return prev;
+        const companyInfo = { ...(prev.companyInfo ?? {}), [key]: value || null };
+        return {
+          ...prev,
+          companyInfo,
+          clientCompanyName: key === "companyName" ? value : prev.clientCompanyName,
+        };
+      });
+      scheduleAutoSave();
+    },
+    [scheduleAutoSave]
+  );
+
+  const prefillCompanyFromJob = useCallback(async () => {
+    const jobId = bidRef.current?.jobId;
+    if (!jobId) {
+      setError("Link a job to this bid before prefilling company info.");
+      return;
+    }
+    try {
+      const suggested = await biddingApi.getCompanyInfoPrefillFromJob(jobId);
+      setBid((prev) =>
+        prev
+          ? {
+              ...prev,
+              companyInfo: { ...(prev.companyInfo ?? {}), ...suggested },
+              clientCompanyName: suggested.companyName ?? prev.clientCompanyName,
+            }
+          : prev
+      );
+      scheduleAutoSave();
+    } catch (e) {
+      setError(getApiErrorMessage(e, "Failed to load company info from job"));
+    }
+  }, [scheduleAutoSave]);
+
+  const setJobId = useCallback(
+    async (jobId: number | null, options?: { prefillCompany?: boolean }) => {
+      setBid((prev) => (prev ? { ...prev, jobId } : prev));
+      if (bidRef.current?.status === "draft" && canWriteRef.current) {
+        try {
+          await biddingApi.patchBid(bidId, { jobId });
+        } catch (e) {
+          setError(getApiErrorMessage(e, "Failed to link job"));
+          return;
+        }
+      }
+      if (options?.prefillCompany && jobId) {
+        try {
+          const suggested = await biddingApi.getCompanyInfoPrefillFromJob(jobId);
+          setBid((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  jobId,
+                  companyInfo: { ...(prev.companyInfo ?? {}), ...suggested },
+                  clientCompanyName: suggested.companyName ?? prev.clientCompanyName,
+                }
+              : prev
+          );
+        } catch (e) {
+          setError(getApiErrorMessage(e, "Failed to prefill company info"));
+        }
+      }
+      scheduleAutoSave();
+    },
+    [bidId, scheduleAutoSave]
+  );
 
   const setBaseBidField = useCallback(
     <K extends keyof BaseBidInput>(key: K, value: BaseBidInput[K]) => {
@@ -229,29 +377,38 @@ export function BidSheetProvider({
         if (!prev) return prev;
         return { ...prev, baseBid: { ...prev.baseBid, [key]: value } };
       });
+      scheduleAutoSave();
     },
-    []
+    [scheduleAutoSave]
   );
 
-  const setProjectState = useCallback((stateCode: string) => {
-    const st = statesRef.current.find((s) => s.stateCode === stateCode);
-    setBid((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        baseBid: {
-          ...prev.baseBid,
-          projectState: stateCode,
-          stateSalesTaxRate: st?.salesTaxRate ?? prev.baseBid?.stateSalesTaxRate,
-        },
-      };
-    });
-  }, []);
+  const setProjectState = useCallback(
+    (stateCode: string) => {
+      const st = statesRef.current.find((s) => s.stateCode === stateCode);
+      setBid((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          baseBid: {
+            ...prev.baseBid,
+            projectState: stateCode,
+            stateSalesTaxRate: st?.salesTaxRate ?? prev.baseBid?.stateSalesTaxRate,
+          },
+        };
+      });
+      scheduleAutoSave();
+    },
+    [scheduleAutoSave]
+  );
 
-  const setSystems = useCallback((systems: BidSystemRow[]) => {
-    const normalized = normalizeSystems(systems);
-    setBid((prev) => (prev ? { ...prev, systems: normalized } : prev));
-  }, []);
+  const setSystems = useCallback(
+    (systems: BidSystemRow[]) => {
+      const normalized = normalizeSystems(systems);
+      setBid((prev) => (prev ? { ...prev, systems: normalized } : prev));
+      scheduleAutoSave();
+    },
+    [scheduleAutoSave]
+  );
 
   const updateSystemRow = useCallback(
     (key: BidSystemRow["key"], patch: Partial<BidSystemRow>) => {
@@ -262,8 +419,9 @@ export function BidSheetProvider({
         );
         return { ...prev, systems };
       });
+      scheduleAutoSave();
     },
-    []
+    [scheduleAutoSave]
   );
 
   const selectWageRate = useCallback(
@@ -276,16 +434,31 @@ export function BidSheetProvider({
       try {
         const br = await biddingApi.getBiddingWageBurdenedRate(wageRateId);
         setBurdenedRate(br);
-        setBaseBidField(
-          "laborRateCompositePerHour",
-          roundUpBurdenedPerHour(br.burdenedRate)
-        );
+        // Do not auto-fill D10 (laborRateCompositePerHour) — burdened rate ≠ crew composite per API §1.
       } catch (e) {
         setError(getApiErrorMessage(e, "Failed to load burdened rate"));
       }
+      scheduleAutoSave();
     },
-    [lookups.wageRates, setBaseBidField]
+    [lookups.wageRates, setBaseBidField, scheduleAutoSave]
   );
+
+  const verifyServerCalc = useCallback(async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await biddingApi.calculateBid(bidId, { forceServerCalc: true });
+      setServerVerifyWarnings(res.warnings ?? []);
+      if (res.errors?.length) {
+        setError(res.errors.map((e) => e.message).join("; "));
+      }
+    } catch (e) {
+      setError(getApiErrorMessage(e, "Server verify failed"));
+      setServerVerifyWarnings([]);
+    } finally {
+      setSaving(false);
+    }
+  }, [bidId]);
 
   const previewCalculate = useCallback(() => {
     setBid((prev) => (prev ? applyEngineToBid(prev, engineLookups) : prev));
@@ -308,7 +481,30 @@ export function BidSheetProvider({
       return;
     }
     await savePatch(buildContentPatch(withCalc), withCalc);
+    setLastSavedAt(new Date());
+    setDirty(false);
   }, [savePatch, engineLookups, buildContentPatch]);
+
+  const saveCoverSheet = useCallback(async () => {
+    const current = bidRef.current;
+    if (!current) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await biddingApi.patchBid(bidId, {
+        bidDate: current.bidDate,
+        submitDate: current.submitDate,
+        timeEstimate: current.timeEstimate,
+      });
+      updated.systems = normalizeSystems(updated.systems);
+      setBid((prev) => (prev ? { ...prev, ...updated } : updated));
+    } catch (e) {
+      setError(getApiErrorMessage(e, "Failed to save cover sheet"));
+      throw e;
+    } finally {
+      setSaving(false);
+    }
+  }, [bidId]);
 
   const markSubmitted = useCallback(async () => {
     const current = bidRef.current;
@@ -331,6 +527,48 @@ export function BidSheetProvider({
       /* savePatch sets error */
     }
   }, [savePatch]);
+
+  const uploadAttachment = useCallback(
+    async (file: File, label?: string) => {
+      if (bidRef.current?.status !== "draft") {
+        setError("Attachments can only be added on draft bids.");
+        return;
+      }
+      setSaving(true);
+      setError(null);
+      try {
+        await biddingApi.uploadBidAttachment(bidId, file, label);
+        await loadBid({ silent: true });
+      } catch (e) {
+        setError(getApiErrorMessage(e, "Failed to upload attachment"));
+        throw e;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [bidId, loadBid]
+  );
+
+  const deleteAttachment = useCallback(
+    async (attachmentId: number) => {
+      if (bidRef.current?.status !== "draft") {
+        setError("Attachments can only be removed on draft bids.");
+        return;
+      }
+      setSaving(true);
+      setError(null);
+      try {
+        await biddingApi.deleteBidAttachment(bidId, attachmentId);
+        await loadBid({ silent: true });
+      } catch (e) {
+        setError(getApiErrorMessage(e, "Failed to delete attachment"));
+        throw e;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [bidId, loadBid]
+  );
 
   const selectedTeam = useMemo(() => {
     const name = bid?.baseBid?.teamName as string | undefined;
@@ -362,19 +600,31 @@ export function BidSheetProvider({
     initialLoading,
     saving,
     error,
-    isEditable: bid?.status === "draft",
+    isEditable: bid?.status === "draft" && canWrite,
+    canRead,
+    canWrite,
+    dirty,
+    lastSavedAt,
+    serverVerifyWarnings,
     selectedTeam,
     setBidHeader,
+    setJobId,
+    setCompanyInfoField,
+    prefillCompanyFromJob,
     setBaseBidField,
     setProjectState,
     setSystems,
     updateSystemRow,
     selectWageRate,
     previewCalculate,
+    verifyServerCalc,
     refresh: () => loadBid({ silent: true }),
     saveNow,
+    saveCoverSheet,
     markSubmitted,
     reopenAsDraft,
+    uploadAttachment,
+    deleteAttachment,
   };
 
   return (
