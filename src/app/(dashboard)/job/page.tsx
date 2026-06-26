@@ -11,7 +11,7 @@ import { useLookups } from "@/hooks/useLookups";
 import { useJobDashboard } from "@/hooks/useJobDashboard";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { DashboardSkeleton } from "@/components/reporting/DashboardSkeleton";
 import * as jobApi from "@/lib/api/endpoints/job-dashboard";
 
 function createDefaultFilters(): FilterConfig {
@@ -106,16 +106,12 @@ export default function JobDashboardPage() {
      
 
       {error && (
-        <div className="rounded-2xl border border-red-200/80 bg-red-50 px-4 py-3 text-sm text-red-900">
+        <div className="rounded-2xl border border-danger-border bg-danger-tint px-4 py-3 text-sm text-danger">
           {error.message}
         </div>
       )}
 
-      {loading && (
-        <div className="flex justify-center py-8">
-          <LogoLoader size={32} />
-        </div>
-      )}
+      {loading && <DashboardSkeleton kpiCount={3} />}
 
       {!loading && (
         <>

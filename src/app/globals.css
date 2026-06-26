@@ -19,6 +19,24 @@
   --ink: #010101;
   /** App canvas behind white cards (executive dashboard pattern). */
   --canvas: #f0f1f4;
+
+  /*
+    Semantic status colors (UX_UI_DESIGN_REWORK.md §4.1).
+    Brand orange is never a status color: orange = "act here".
+    Each gets text (-700), tint bg (-50), border (-200).
+  */
+  --success: #15803d;
+  --success-tint: #f0fdf4;
+  --success-border: #bbf7d0;
+  --warning: #b45309;
+  --warning-tint: #fffbeb;
+  --warning-border: #fde68a;
+  --danger: #b91c1c;
+  --danger-tint: #fef2f2;
+  --danger-border: #fecaca;
+  --info: #1d4ed8;
+  --info-tint: #eff6ff;
+  --info-border: #bfdbfe;
 }
 
 @theme inline {
@@ -29,14 +47,118 @@
   --color-ink: var(--ink);
   --color-surface: #ffffff;
   --color-canvas: var(--canvas);
+  --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-warning-border: var(--warning-border);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
+  --color-danger-border: var(--danger-border);
+  --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
+  --color-info-border: var(--info-border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* Numeric columns & stat values: lining tabular figures (UX doc §4.2). */
+.ui-num {
+  font-variant-numeric: tabular-nums;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ——— Premium finish details ——— */
+
+/* Brand-tinted text selection */
+::selection {
+  background: rgba(255, 123, 17, 0.18);
+  color: var(--ink);
+}
+
+/* Thin, quiet scrollbars (WebKit + Firefox) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(1, 1, 1, 0.18) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(1, 1, 1, 0.15);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(1, 1, 1, 0.28);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Layered "expensive" card shadow (soft key + tight contact) */
+.ui-shadow-card {
+  box-shadow:
+    0 1px 2px rgba(1, 1, 1, 0.04),
+    0 8px 24px -12px rgba(1, 1, 1, 0.12);
+}
+.ui-shadow-raised {
+  box-shadow:
+    0 1px 2px rgba(1, 1, 1, 0.05),
+    0 16px 40px -16px rgba(1, 1, 1, 0.18);
+}
+
+/* Hairline top highlight for hero/stat cards */
+.ui-card-highlight {
+  position: relative;
+}
+.ui-card-highlight::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 123, 17, 0.35) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Subtle dotted grid for brand panels (auth, empty heroes) */
+.ui-dot-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Scrollbar variant for dark surfaces (sidebar) */
+.ui-scroll-dark {
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.ui-scroll-dark::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.ui-scroll-dark::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 /* Bidding module — subtle motion (respect prefers-reduced-motion) */
@@ -70,25 +192,33 @@ body {
   }
 }
 
+/* Global entrance motion (ui-*). bid-* kept as aliases for existing markup. */
+.ui-animate-in,
 .bid-animate-in {
   animation: bid-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.ui-stagger > *,
 .bid-stagger > * {
   animation: bid-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+.ui-stagger > *:nth-child(1),
 .bid-stagger > *:nth-child(1) {
   animation-delay: 0ms;
 }
+.ui-stagger > *:nth-child(2),
 .bid-stagger > *:nth-child(2) {
   animation-delay: 55ms;
 }
+.ui-stagger > *:nth-child(3),
 .bid-stagger > *:nth-child(3) {
   animation-delay: 110ms;
 }
+.ui-stagger > *:nth-child(4),
 .bid-stagger > *:nth-child(4) {
   animation-delay: 165ms;
 }
+.ui-stagger > *:nth-child(5),
 .bid-stagger > *:nth-child(5) {
   animation-delay: 220ms;
 }
@@ -187,6 +317,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .ui-animate-in,
+  .ui-stagger > *,
   .bid-animate-in,
   .bid-stagger > *,
   .bid-recalc-pulse,

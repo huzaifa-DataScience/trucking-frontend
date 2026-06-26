@@ -31,34 +31,44 @@ export default function PendingApprovalPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-stone-100 px-4 dark:bg-stone-950">
-      <div className="w-full max-w-md rounded-xl border border-brand/30 bg-brand/5 p-8 text-center dark:border-brand/40 dark:bg-brand/10">
-        <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-          Account pending approval
-        </h1>
-        <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">
-          Your account has been created. An administrator must approve your account before you can
-          access the dashboard.
+    <div className="flex min-h-screen flex-col items-center justify-center bg-canvas px-4">
+      <div className="ui-shadow-raised ui-animate-in w-full max-w-md rounded-2xl border border-ink/[0.06] bg-surface p-8 text-center">
+        <span
+          className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand/10 text-brand"
+          aria-hidden
+        >
+          <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <h1 className="mt-4 text-xl font-semibold text-ink">You&apos;re almost in</h1>
+        <p className="mt-3 text-sm leading-relaxed text-ink/60">
+          Your account{user.email ? ` (${user.email})` : ""} has been created and is waiting for an
+          administrator to approve it. This usually doesn&apos;t take long.
         </p>
-        <p className="mt-2 text-sm text-stone-500 dark:text-stone-500">
-          You will be able to sign in and use the app once your account is approved.
+        <p className="mt-2 text-sm text-ink/45">
+          Once approved, just sign in again and you&apos;ll have full access.
         </p>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button
             type="button"
             onClick={() => logout()}
-            className="rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 shadow-sm hover:bg-stone-50 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700"
+            className="rounded-xl border border-ink/15 bg-surface px-4 py-2.5 text-sm font-semibold text-ink/70 transition hover:bg-ink/[0.04]"
           >
             Log out
           </button>
           <Link
             href="/login"
-            className="rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-secondary dark:bg-brand dark:hover:bg-brand-secondary"
+            className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-secondary"
           >
             Back to sign in
           </Link>
         </div>
       </div>
+      <p className="mt-6 text-xs text-ink/40">
+        Need it sooner? Contact your administrator.
+      </p>
     </div>
   );
 }

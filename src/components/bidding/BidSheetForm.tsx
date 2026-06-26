@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { ComputedField } from "@/components/bidding/ComputedField";
 import {
@@ -10,6 +12,9 @@ import {
 } from "@/components/bidding/BidFormField";
 import { BidSheetAlerts } from "@/components/bidding/BidSheetAlerts";
 import { BidSheetHeaderSection } from "@/components/bidding/BidSheetHeaderSection";
+import { BidSheetCompanyInfoSection } from "@/components/bidding/BidSheetCompanyInfoSection";
+import { BidAttachmentsSection } from "@/components/bidding/BidAttachmentsSection";
+import { BidSheetTabNav, type BidSheetTab } from "@/components/bidding/BidSheetTabNav";
 import { BidSheetResultsRail } from "@/components/bidding/BidSheetResultsRail";
 import { BidSheetToolbar } from "@/components/bidding/BidSheetToolbar";
 import { BidSystemsInputTable } from "@/components/bidding/BidSystemsInputTable";
@@ -17,6 +22,9 @@ import { useBidSheet } from "@/contexts/BidSheetContext";
 import { formatMoneyPrecise, formatPercentDecimal } from "@/lib/bidding/format";
 import { parseSystemsComputed, parseWarnings } from "@/lib/bidding/parse-computed";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { RestrictedState } from "@/components/ui/RestrictedState";
+import { useBiddingAccess } from "@/hooks/useBiddingAccess";
+import { PERMISSIONS } from "@/lib/auth/permissions";
 
 function BoolSelect({
   id,
@@ -56,22 +64,49 @@ export function BidSheetForm() {
     saving,
     error,
     isEditable,
+    canRead,
+    dirty,
+    lastSavedAt,
+    serverVerifyWarnings,
     selectedTeam,
     setBidHeader,
+    setJobId,
+    setCompanyInfoField,
+    prefillCompanyFromJob,
     setBaseBidField,
     setProjectState,
     updateSystemRow,
     selectWageRate,
     previewCalculate,
+    verifyServerCalc,
     saveNow,
+    saveCoverSheet,
     markSubmitted,
     reopenAsDraft,
+    uploadAttachment,
+    deleteAttachment,
   } = useBidSheet();
+  const [prefillLoading, setPrefillLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<BidSheetTab>("sheet");
+  const { canSummary } = useBiddingAccess();
+  const canViewSummary = canSummary;
 
   if (initialLoading || !bid) {
     return (
       <div className="flex flex-1 items-center justify-center py-24">
         <LogoLoader />
+      </div>
+    );
+  }
+
+  if (!canRead) {
+    return (
+      <div className="mx-auto max-w-lg py-16">
+        <RestrictedState
+          title="Bidding access required"
+          message="You do not have permission to view bid sheets."
+          permission={PERMISSIONS.biddingRead}
+        />
       </div>
     );
   }
@@ -98,9 +133,23 @@ export function BidSheetForm() {
       : null;
 
   const hasComputed = Object.keys(c).length > 0;
+  const attachmentCount = bid.attachments?.length ?? 0;
+  const showResultsRail = canViewSummary && activeTab === "sheet";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 bid-animate-in">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 ui-animate-in">
+      <nav aria-label="Breadcrumb" className="text-xs text-ink/45">
+        <Link href="/bidding" className="font-medium transition-colors hover:text-ink">
+          Bidding
+        </Link>
+        <span aria-hidden className="mx-1.5 text-ink/25">
+          /
+        </span>
+        <span className="font-mono font-medium text-ink/60">
+          {bid.estimateNumber || "Estimate"}
+        </span>
+      </nav>
+
       <BidSheetAlerts
         error={error}
         warnings={warnings}
@@ -111,26 +160,63 @@ export function BidSheetForm() {
         onReopen={() => void reopenAsDraft()}
       />
 
-      <BidSheetToolbar
-        isEditable={isEditable}
-        saving={saving}
-        status={bid.status}
-        onPreview={previewCalculate}
-        onSave={() => void saveNow()}
-        onSubmit={() => void markSubmitted()}
+      {!isEditable && canRead && bid.status === "draft" ? (
+        <div className="rounded-xl border border-ink/[0.08] bg-ink/[0.03] px-4 py-2.5 text-xs text-ink/60">
+          View-only — you need <span className="font-mono">{PERMISSIONS.biddingWrite}</span> to edit
+          this draft.
+        </div>
+      ) : null}
+
+      <BidSheetTabNav
+        active={activeTab}
+        onChange={setActiveTab}
+        attachmentCount={attachmentCount}
       />
 
-      <div className="bid-workspace min-h-0 flex-1">
-        <div className="bid-workspace-form space-y-5 pb-8">
+      {!canViewSummary ? (
+        <RestrictedState
+          title="Totals restricted"
+          message="You can edit this bid, but MIKE/PJ totals and calculation detail require additional access."
+          permission="bidding:summary"
+        />
+      ) : null}
+
+      <div
+        className={
+          showResultsRail ? "bid-workspace min-h-0 flex-1" : "min-h-0 flex-1"
+        }
+      >
+        <div
+          className={`bid-workspace-form space-y-5 pb-8 ${
+            showResultsRail ? "" : "mx-auto w-full max-w-[960px]"
+          }`}
+        >
+          {activeTab === "sheet" ? (
+            <>
           <BidSheetHeaderSection
             bid={bid}
             isEditable={isEditable}
             entityOptions={entityOptions}
+            jobs={lookups.jobs}
             onEstimateNumber={(v) => setBidHeader({ estimateNumber: v })}
             onBidName={(v) => setBidHeader({ bidName: v })}
             onBidDate={(v) => setBidHeader({ bidDate: v })}
+            onSubmitDate={(v) => setBidHeader({ submitDate: v || null })}
+            onTimeEstimate={(v) => setBidHeader({ timeEstimate: v ?? null })}
             onEntity={(v) => setBidHeader({ ourEntityId: v ? Number(v) : bid.ourEntityId })}
+            onJobChange={(jobId, prefill) => void setJobId(jobId, { prefillCompany: prefill })}
           />
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => void (isEditable ? saveNow() : saveCoverSheet())}
+              disabled={saving}
+              className="rounded-xl border border-ink/10 px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04] disabled:opacity-50"
+            >
+              {saving ? "Saving…" : isEditable ? "Save cover sheet + bid" : "Save cover sheet"}
+            </button>
+          </div>
 
           <Card>
             <CardHeader title="Team" subtitle="F2 — crew leads fill from the team lookup." />
@@ -284,7 +370,7 @@ export function BidSheetForm() {
                 />
               </BidFormField>
               {burdenedRate ? (
-                <div className="rounded-xl border border-brand/20 bg-brand/[0.04] p-4">
+                <div className="rounded-xl border border-brand/20 bg-brand/[0.04] p-4 lg:col-span-2">
                   <p className="text-sm font-semibold text-ink">
                     Burdened: {formatMoneyPrecise(burdenedRate.burdenedRate)}/hr
                   </p>
@@ -300,6 +386,30 @@ export function BidSheetForm() {
                       emphasis
                     />
                   </div>
+                  {burdenedRate.lines.length > 0 ? (
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full min-w-[280px] text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-ink/10 text-ink/45">
+                            <th className="py-1.5 pr-2 font-medium">Code</th>
+                            <th className="py-1.5 pr-2 font-medium">Line</th>
+                            <th className="py-1.5 text-right font-medium">$/hr</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {burdenedRate.lines.map((line) => (
+                            <tr key={line.code} className="border-b border-ink/[0.05]">
+                              <td className="py-1.5 pr-2 font-mono text-ink/60">{line.code}</td>
+                              <td className="py-1.5 pr-2 text-ink/70">{line.label}</td>
+                              <td className="py-1.5 text-right font-mono text-ink">
+                                {formatMoneyPrecise(line.amountPerHour)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -307,7 +417,7 @@ export function BidSheetForm() {
               <BidFormField
                 label="Labor rate composite / hr"
                 htmlFor="composite"
-                hint="D10 — fills from burdened rate on wage select; override for crew composite (e.g. 51.7 on IDC6098)."
+                hint="D10 — crew-weighted composite for PJ totals; not auto-filled from burdened rate (enter manually, e.g. 51.7 on IDC6098)."
               >
                 <BidNumberInput
                   id="composite"
@@ -489,12 +599,73 @@ export function BidSheetForm() {
             isEditable={isEditable}
             onUpdateRow={updateSystemRow}
           />
+            </>
+          ) : null}
+
+          {activeTab === "company" ? (
+            <div className="space-y-4">
+              {!bid.jobId ? (
+                <p className="rounded-xl border border-ink/[0.08] bg-ink/[0.02] px-4 py-3 text-xs text-ink/55">
+                  Link a job on the{" "}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("sheet")}
+                    className="font-semibold text-brand hover:underline"
+                  >
+                    Bidding sheet
+                  </button>{" "}
+                  tab to enable &ldquo;Prefill from job&rdquo;.
+                </p>
+              ) : null}
+              <BidSheetCompanyInfoSection
+                bid={bid}
+                isEditable={isEditable}
+                prefillLoading={prefillLoading}
+                onFieldChange={(key, value) => setCompanyInfoField(key, value)}
+                onPrefillFromJob={async () => {
+                  setPrefillLoading(true);
+                  try {
+                    await prefillCompanyFromJob();
+                  } finally {
+                    setPrefillLoading(false);
+                  }
+                }}
+              />
+            </div>
+          ) : null}
+
+          {activeTab === "files" ? (
+            <BidAttachmentsSection
+              attachments={bid.attachments ?? []}
+              isEditable={isEditable}
+              uploading={saving}
+              onUpload={async (file, label) => uploadAttachment(file, label)}
+              onDelete={async (id) => deleteAttachment(id)}
+            />
+          ) : null}
         </div>
 
-        <BidSheetResultsRail
-          computed={c}
-          hasComputed={hasComputed}
-          hoursPerWeek={hoursPerWeek}
+        {showResultsRail ? (
+          <BidSheetResultsRail
+            computed={c}
+            hasComputed={hasComputed}
+            hoursPerWeek={hoursPerWeek}
+          />
+        ) : null}
+      </div>
+
+      <div className="sticky bottom-0 z-10 shrink-0 border-t border-ink/[0.06] bg-canvas/95 pt-3 pb-1 backdrop-blur-md">
+        <BidSheetToolbar
+          isEditable={isEditable}
+          saving={saving}
+          dirty={dirty}
+          lastSavedAt={lastSavedAt}
+          status={bid.status}
+          serverVerifyWarnings={serverVerifyWarnings}
+          onPreview={previewCalculate}
+          onSave={() => void saveNow()}
+          onSubmit={() => void markSubmitted()}
+          onVerifyServer={() => void verifyServerCalc()}
         />
       </div>
     </div>

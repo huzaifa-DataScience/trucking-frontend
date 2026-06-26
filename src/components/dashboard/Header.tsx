@@ -36,7 +36,7 @@ export function Header() {
   }, [focusSearch]);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-ink/[0.08] bg-surface/90 backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-ink/[0.06] bg-surface/75 shadow-[0_1px_0_rgba(255,255,255,0.6)_inset] backdrop-blur-xl">
       <div className="mx-auto grid h-[3.75rem] w-full max-w-[1600px] grid-cols-1 items-center gap-3 px-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,28rem)_minmax(0,1fr)] sm:gap-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-3">
           <label className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial">

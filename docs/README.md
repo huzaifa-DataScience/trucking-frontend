@@ -54,8 +54,23 @@ All project specs and guides live in this folder. The repo root keeps only the m
 
 | Doc | Description |
 |-----|-------------|
+| [BIDDING_FRONTEND_API.md](./BIDDING_FRONTEND_API.md) | Bidding API — frontend handoff (single source) |
+| [BIDDING_BASEBID_FIELDS.md](./BIDDING_BASEBID_FIELDS.md) | Excel cell ↔ field map |
 | [BIDDING_IMPLEMENTATION.md](./BIDDING_IMPLEMENTATION.md) | Full implementation plan |
 | [BIDDING_FRONTEND_DESIGN.md](./BIDDING_FRONTEND_DESIGN.md) | UI / UX design spec |
+| [BIDDING_FRONTEND_CALCULATOR_HANDOFF.md](./BIDDING_FRONTEND_CALCULATOR_HANDOFF.md) | Client calculator / backend handoff |
+| [BIDDING_EXCEL_PARITY.md](./BIDDING_EXCEL_PARITY.md) | Excel parity notes |
+| [BIDDING_GOLDEN_TEST_IDC6098.md](./BIDDING_GOLDEN_TEST_IDC6098.md) | Golden test IDC6098 |
+| [BIDDING_SCOPE_A1_J49.md](./BIDDING_SCOPE_A1_J49.md) | Scope A1–J49 |
+| [UX_UI_DESIGN_REWORK.md](./UX_UI_DESIGN_REWORK.md) | Platform UX/UI design rework |
+| [BACKEND_RBAC_ADMIN.md](./BACKEND_RBAC_ADMIN.md) | Bidding RBAC admin backend spec |
+
+## Workforce (Connecteam)
+
+| Doc | Description |
+|-----|-------------|
+| [FRONTEND_CONNECTEAM.md](./FRONTEND_CONNECTEAM.md) | Workforce / Connecteam API handoff |
+| [UX_WORKFORCE.md](./UX_WORKFORCE.md) | Workforce module UX/UI spec |
 
 Backend handoff (in `trucking` repo): `BIDDING_SHEET.md`, `BIDDING_NAMED_RANGES.md` + `BiddingSheet.xlsx` at repo root.
 

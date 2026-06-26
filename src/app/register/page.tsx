@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { register } from "@/lib/api/endpoints/auth";
 import { AppLogo } from "@/components/ui/AppLogo";
+import { AuthShell } from "@/components/auth/AuthShell";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-ink shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand dark:border-white/15 dark:bg-ink dark:text-white";
@@ -91,14 +92,8 @@ export default function RegisterPage() {
   if (user) return null;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-surface px-4 py-8 dark:bg-ink">
-      <div className="mb-8 flex flex-col items-center gap-2">
-        <AppLogo height={56} />
-        <p className="text-center text-sm font-medium text-ink/60 dark:text-white/60">
-          Construction Logistics
-        </p>
-      </div>
-      <div className="w-full max-w-md rounded-xl border border-ink/10 bg-surface p-8 shadow-[0_8px_30px_rgb(1,1,1,0.06)] dark:border-white/10 dark:bg-ink dark:shadow-none">
+    <AuthShell>
+      <div className="ui-shadow-raised ui-animate-in w-full max-w-md rounded-2xl border border-ink/[0.06] bg-surface p-8 dark:border-white/10 dark:bg-ink">
         <h1 className="text-center text-lg font-semibold text-ink dark:text-white">Create account</h1>
         <p className="mt-1 text-center text-sm text-ink/55 dark:text-white/55">
           Sign up with your work details
@@ -228,6 +223,6 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }
