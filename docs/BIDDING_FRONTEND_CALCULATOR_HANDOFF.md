@@ -25,8 +25,8 @@ The frontend will **not** depend on the server to re-derive PJ/MIKE, per-system 
 | Doc | Purpose |
 |-----|---------|
 | `BiddingSheet.xlsx` | Formula spec |
-| `BIDDING_BASEBID_FIELDS.md` | Cell ↔ field map, Excel audit |
-| `BIDDING_FRONTEND_API.md` | Current API (will be updated on frontend side after you ship changes) |
+| `BIDDING_BASEBID_FIELDS.md` | Cell ↔ field map, Excel audit — [docs/BIDDING_BASEBID_FIELDS.md](./BIDDING_BASEBID_FIELDS.md) |
+| `BIDDING_FRONTEND_API.md` | Current API — [docs/BIDDING_FRONTEND_API.md](./BIDDING_FRONTEND_API.md) |
 
 ---
 

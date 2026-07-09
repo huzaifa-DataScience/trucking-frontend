@@ -1,4 +1,4 @@
-/** API-aligned types — see BIDDING_FRONTEND_API.md */
+/** API-aligned types — see docs/BIDDING_FRONTEND_API.md */
 
 export type BidStatus = "draft" | "submitted" | "archived";
 
@@ -18,9 +18,46 @@ export interface BidListItem {
   bidName: string;
   status: BidStatus;
   ourEntityId: number;
+  /** Our entity (GOEL / GOEL DC / DCB). */
   companyName: string;
+  /** Client/GC from companyInfo.companyName. */
+  clientCompanyName?: string | null;
   bidDate: string;
+  submitDate?: string | null;
+  timeEstimate?: number | null;
   updatedAt: string;
+}
+
+export interface BidCompanyInfo {
+  companyName?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  notes?: string | null;
+  [key: string]: unknown;
+}
+
+export type BidAttachmentMime =
+  | "image/jpeg"
+  | "image/png"
+  | "image/webp"
+  | "application/pdf"
+  | "text/csv";
+
+export interface BidAttachment {
+  id: number;
+  fileId: number;
+  fileName: string;
+  mimeType: BidAttachmentMime;
+  sizeBytes: number;
+  label: string | null;
+  sortOrder: number;
+  downloadPath: string;
+  createdAt: string;
 }
 
 /** Known keys; backend stores baseBid as a loose object (passthrough). */
@@ -71,6 +108,9 @@ export type BidComputed = Record<string, unknown>;
 
 export interface BidDetail extends BidListItem {
   jobId: number | null;
+  clientCompanyName?: string | null;
+  companyInfo?: BidCompanyInfo;
+  attachments?: BidAttachment[];
   baseBid: BaseBidInput;
   systems: BidSystemRow[];
   computed: BidComputed;
@@ -131,14 +171,21 @@ export interface CreateBidBody {
   estimateNumber: string;
   bidName?: string;
   bidDate?: string;
+  submitDate?: string | null;
+  timeEstimate?: number | null;
+  companyInfo?: BidCompanyInfo;
 }
 
 export interface PatchBidBody {
   status?: BidStatus;
+  jobId?: number | null;
   estimateNumber?: string;
   bidName?: string;
   bidDate?: string;
+  submitDate?: string | null;
+  timeEstimate?: number | null;
   ourEntityId?: number;
+  companyInfo?: BidCompanyInfo;
   baseBid?: BaseBidInput;
   systems?: BidSystemRow[];
   /** Client Excel engine snapshot; stored verbatim (source: client). */
@@ -158,3 +205,38 @@ export interface BidInsights {
   completionPercent: number;
   isRecalculating?: boolean;
 }
+
+export type PayrollBurdenRateType = "pct_wage" | "capped_annual" | "per_hour";
+
+export interface PayrollBurdenItem {
+  id: number;
+  code: string;
+  label: string;
+  rateType: PayrollBurdenRateType;
+  rate: number;
+  annualCap: number | null;
+  hoursBasis: number | null;
+  includeInBaseRate: boolean;
+}
+
+export interface CreateWageRateBody {
+  rateLabel: string;
+  wage: number;
+  fringe: number;
+  displayLabel?: string;
+  wageAsOf?: string;
+}
+
+export type UpdateWageRateBody = Partial<CreateWageRateBody>;
+
+export interface CreatePayrollBurdenBody {
+  code: string;
+  label: string;
+  rateType: PayrollBurdenRateType;
+  rate: number;
+  annualCap?: number | null;
+  hoursBasis?: number | null;
+  includeInBaseRate?: boolean;
+}
+
+export type UpdatePayrollBurdenBody = Partial<CreatePayrollBurdenBody>;

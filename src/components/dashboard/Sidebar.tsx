@@ -16,14 +16,19 @@ import {
   NavIconLayers,
   NavIconUsers,
   NavIconCog,
+  NavIconClock,
+  NavIconCalendar,
+  NavIconTimeList,
+  NavIconSun,
 } from "@/components/dashboard/DashboardNavIcons";
 import type { AuthUser } from "@/lib/auth/types";
 
-type ViewMode = "operations" | "billings" | "bidding";
+type ViewMode = "operations" | "billings" | "bidding" | "workforce";
 
 const WORKSPACE_STORAGE_KEY = "construction-logistics-workspace";
 
 function viewFromPathname(pathname: string): ViewMode {
+  if (pathname.startsWith("/workforce")) return "workforce";
   if (pathname.startsWith("/bidding")) return "bidding";
   if (pathname.startsWith("/billings") || pathname.startsWith("/clearstory")) return "billings";
   return "operations";
@@ -32,6 +37,7 @@ function viewFromPathname(pathname: string): ViewMode {
 function defaultHrefForView(view: ViewMode): string {
   if (view === "billings") return "/billings";
   if (view === "bidding") return "/bidding";
+  if (view === "workforce") return "/workforce";
   return "/job";
 }
 
@@ -74,20 +80,43 @@ const biddingNavItems: SidebarNavItem[] = [
   { href: "/bidding/new", label: "New estimate", Icon: NavIconPlus },
 ];
 
-const billingNavItems: SidebarNavItem[] = [
-  { href: "/billings", label: "Billings", Icon: NavIconInvoice },
-  {
-    href: "/clearstory/projects",
-    label: "Clearstory",
-    Icon: NavIconLayers,
-    activePathPrefix: "/clearstory",
-  },
+const clearstorySubItems: { href: string; label: string }[] = [
+  { href: "/clearstory/projects", label: "Projects" },
+  { href: "/clearstory/cor", label: "CORs" },
+  { href: "/clearstory/rates", label: "Rates" },
+  { href: "/clearstory/directory", label: "Directory" },
+  { href: "/clearstory/tags", label: "Tags" },
+  { href: "/clearstory/notifications", label: "Notifications" },
+  { href: "/clearstory/settings", label: "Settings" },
+];
+
+const workforceNavItems: SidebarNavItem[] = [
+  { href: "/workforce", label: "Overview", Icon: NavIconLayout, activePathPrefix: "/workforce" },
+  { href: "/workforce/my-day", label: "My day", Icon: NavIconSun },
+  { href: "/workforce/time", label: "Time & attendance", Icon: NavIconTimeList },
+  { href: "/workforce/schedule", label: "Schedule", Icon: NavIconCalendar },
+  { href: "/workforce/time-off", label: "Time off", Icon: NavIconClock },
+  { href: "/workforce/crew", label: "Crew", Icon: NavIconUsers },
 ];
 
 const adminNavItems: SidebarNavItem[] = [
   { href: "/admin/users", label: "User Management", Icon: NavIconUsers },
   { href: "/admin/settings", label: "Settings", Icon: NavIconCog },
 ];
+
+const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ className?: string }> }[] = [
+  { value: "operations", label: "Ops", Icon: NavIconTruck },
+  { value: "billings", label: "Billing", Icon: NavIconInvoice },
+  { value: "bidding", label: "Bidding", Icon: NavIconProposal },
+  { value: "workforce", label: "Workforce", Icon: NavIconClock },
+];
+
+const WORKSPACE_FULL_LABELS: Record<ViewMode, string> = {
+  operations: "Operations & reporting",
+  billings: "Billing",
+  bidding: "Bidding sheet",
+  workforce: "Workforce",
+};
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -107,14 +136,22 @@ export function Sidebar() {
   };
 
   const navItems =
-    currentView === "billings"
-      ? billingNavItems
-      : currentView === "bidding"
-        ? biddingNavItems
-        : operationsNavItems;
+    currentView === "workforce"
+      ? workforceNavItems
+      : currentView === "billings"
+        ? [{ href: "/billings", label: "Billings", Icon: NavIconInvoice } as SidebarNavItem]
+        : currentView === "bidding"
+          ? biddingNavItems
+          : operationsNavItems;
 
   const navSectionLabel =
-    currentView === "billings" ? "Billing" : currentView === "bidding" ? "Bidding" : "Overview";
+    currentView === "workforce"
+      ? "Workforce"
+      : currentView === "billings"
+        ? "Billing"
+        : currentView === "bidding"
+          ? "Bidding"
+          : "Overview";
 
   const logoHref =
     currentView === "billings"
@@ -123,79 +160,157 @@ export function Sidebar() {
         : "/billings"
       : defaultHrefForView(currentView);
 
+  const inClearstory = pathname.startsWith("/clearstory");
+
   const navLinkClass = (active: boolean) =>
-    `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+    `flex items-center justify-center gap-3 rounded-xl px-2 py-2.5 text-sm font-medium transition-colors lg:justify-start lg:px-3 ${
       active
-        ? "bg-brand/10 text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
-        : "text-ink/55 hover:bg-ink/[0.04] hover:text-ink"
+        ? "bg-brand/15 text-white shadow-[inset_3px_0_0_0_var(--brand)]"
+        : "text-white/50 hover:bg-white/[0.05] hover:text-white"
+    }`;
+
+  const subLinkClass = (active: boolean) =>
+    `flex items-center gap-2.5 rounded-lg py-2 pl-9 pr-3 text-[13px] font-medium transition-colors ${
+      active
+        ? "bg-brand/15 text-white shadow-[inset_3px_0_0_0_var(--brand)]"
+        : "text-white/45 hover:bg-white/[0.05] hover:text-white"
     }`;
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-ink/[0.08] bg-surface">
-      <div className="border-b border-ink/[0.08] px-4 pb-4 pt-5">
+    <aside
+      className="fixed left-0 top-0 z-40 flex h-screen w-16 flex-col border-r border-white/[0.06] lg:w-64"
+      style={{
+        background: "linear-gradient(180deg, #0c0c0d 0%, #111013 70%, #16120d 100%)",
+      }}
+    >
+      <div className="border-b border-white/[0.07] px-2 pb-4 pt-5 lg:px-4">
         <Link
           href={logoHref}
-          className="flex flex-col items-center gap-2 rounded-xl outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
+          className="flex flex-col items-center gap-2.5 rounded-xl outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
           aria-label="Home"
         >
-          <AppLogo height={44} />
-          <span className="text-center text-xs font-semibold tracking-tight text-ink">
+          <span className="hidden rounded-2xl bg-white/95 px-3 py-2 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] lg:block">
+            <AppLogo height={36} />
+          </span>
+          <span className="rounded-xl bg-white/95 p-1.5 lg:hidden">
+            <AppLogo height={24} />
+          </span>
+          <span className="hidden text-center text-xs font-semibold tracking-tight text-white/85 lg:block">
             Construction Logistics
           </span>
         </Link>
+
         <div className="mt-4">
-          <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-ink/40">
+          <p className="mb-1.5 hidden px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30 lg:block">
             Workspace
           </p>
-          <select
-            value={currentView}
-            onChange={(e) => handleViewChange(e.target.value as ViewMode)}
-            className="w-full rounded-xl border border-ink/10 bg-[#f8f9fb] px-3 py-2 text-sm font-medium text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
-            aria-label="Select workspace"
+          <div
+            role="tablist"
+            aria-label="Workspace"
+            className="grid grid-cols-2 gap-1 rounded-xl border border-white/[0.08] bg-white/[0.04] p-1 lg:grid-cols-4"
           >
-            <option value="operations">Operations & reporting</option>
-            <option value="billings">Billing</option>
-            <option value="bidding">Bidding sheet</option>
-          </select>
-        </div>
-      </div>
-
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
-        <div>
-          <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-ink/40">
-            {navSectionLabel}
-          </p>
-          <div className="space-y-0.5">
-            {navItems.map(({ href, label, Icon, activePathPrefix }) => {
-              const active = activePathPrefix
-                ? pathname === activePathPrefix || pathname.startsWith(`${activePathPrefix}/`)
-                : pathname === href || pathname.startsWith(`${href}/`);
+            {WORKSPACES.map(({ value, label, Icon }) => {
+              const active = currentView === value;
               return (
-                <Link key={href} href={href} className={navLinkClass(active)}>
-                  <Icon
-                    className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-ink/40"}`}
-                  />
-                  {label}
-                </Link>
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  title={WORKSPACE_FULL_LABELS[value]}
+                  onClick={() => handleViewChange(value)}
+                  className={`flex flex-col items-center gap-1 rounded-lg px-1 py-2 text-[11px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand ${
+                    active
+                      ? "bg-white/[0.09] text-white shadow-[0_2px_8px_rgba(0,0,0,0.35)] ring-1 ring-brand/40"
+                      : "text-white/40 hover:bg-white/[0.05] hover:text-white"
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/35"}`} />
+                  <span className="hidden lg:block">{label}</span>
+                </button>
               );
             })}
           </div>
         </div>
+      </div>
 
-        {isAdmin && currentView === "operations" && (
+      <nav className="ui-scroll-dark flex-1 space-y-6 overflow-y-auto px-2 py-4 lg:px-3">
+        <div>
+          <p className="mb-2 hidden px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30 lg:block">
+            {navSectionLabel}
+          </p>
+          <div className="space-y-0.5">
+            {navItems.map(({ href, label, Icon, activePathPrefix }) => {
+              const active =
+                href === "/workforce"
+                  ? pathname === "/workforce"
+                  : activePathPrefix
+                    ? pathname === activePathPrefix || pathname.startsWith(`${activePathPrefix}/`)
+                    : pathname === href || pathname.startsWith(`${href}/`);
+              return (
+                <Link key={href} href={href} className={navLinkClass(active)} title={label}>
+                  <Icon
+                    className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/35"}`}
+                  />
+                  <span className="hidden lg:inline">{label}</span>
+                </Link>
+              );
+            })}
+
+            {currentView === "billings" && (
+              <div>
+                <Link
+                  href="/clearstory/projects"
+                  className={navLinkClass(inClearstory)}
+                  aria-expanded={inClearstory}
+                  title="Clearstory"
+                >
+                  <NavIconLayers
+                    className={`h-4 w-4 shrink-0 ${inClearstory ? "text-brand" : "text-white/35"}`}
+                  />
+                  <span className="hidden flex-1 lg:inline">Clearstory</span>
+                  <svg
+                    className={`hidden h-3.5 w-3.5 shrink-0 text-white/30 transition-transform lg:block ${inClearstory ? "rotate-90" : ""}`}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden
+                  >
+                    <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
+                {inClearstory && (
+                  <div className="mt-0.5 hidden space-y-0.5 lg:block">
+                    {clearstorySubItems.map(({ href, label }) => {
+                      const active = pathname === href || pathname.startsWith(`${href}/`);
+                      return (
+                        <Link key={href} href={href} className={subLinkClass(active)}>
+                          {label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {isAdmin && (
           <div>
-            <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-ink/40">
+            <p className="mb-2 hidden px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30 lg:block">
               System
             </p>
             <div className="space-y-0.5">
               {adminNavItems.map(({ href, label, Icon }) => {
                 const active = pathname === href || pathname.startsWith(`${href}/`);
                 return (
-                  <Link key={href} href={href} className={navLinkClass(active)}>
+                  <Link key={href} href={href} className={navLinkClass(active)} title={label}>
                     <Icon
-                      className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-ink/40"}`}
+                      className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/35"}`}
                     />
-                    {label}
+                    <span className="hidden lg:inline">{label}</span>
                   </Link>
                 );
               })}
@@ -204,25 +319,26 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="border-t border-ink/[0.08] p-3">
-        <div className="flex items-center gap-3 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] p-3">
+      <div className="border-t border-white/[0.07] p-2 lg:p-3">
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] p-2 lg:flex-row lg:gap-3 lg:p-3">
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-[0_4px_12px_rgba(255,123,17,0.35)] lg:h-10 lg:w-10"
             style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%)" }}
+            title={displayName(user)}
             aria-hidden
           >
             {userInitials(user)}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-ink">{displayName(user)}</p>
-            <p className="truncate text-xs text-ink/45">
+          <div className="hidden min-w-0 flex-1 lg:block">
+            <p className="truncate text-sm font-semibold text-white/90">{displayName(user)}</p>
+            <p className="truncate text-xs text-white/40">
               {isAdmin ? "Administrator" : "Team member"}
             </p>
           </div>
           <button
             type="button"
             onClick={() => logout()}
-            className="shrink-0 rounded-lg p-2 text-ink/45 transition hover:bg-white hover:text-ink"
+            className="shrink-0 rounded-lg p-2 text-white/40 transition hover:bg-white/10 hover:text-white"
             title="Log out"
             aria-label="Log out"
           >

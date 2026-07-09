@@ -20,6 +20,7 @@ import type {
   AdminEmailTemplateCreatePayload,
   OverdueEmailSendingSettings,
   SitelineClearstoryGapAlertSettings,
+  RbacUserDefaultsSettings,
 } from "@/lib/admin/types";
 
 export async function getUsers(filters: UserFilters): Promise<AdminUsersResponse> {
@@ -170,4 +171,13 @@ export async function postRunSitelineClearstoryGapAlertJob(): Promise<{
     "/admin/jobs/siteline-clearstory-gap-alert/run",
     {}
   );
+}
+
+/** Default permissions for newly approved / registered users (docs/BACKEND_RBAC_ADMIN.md). */
+export async function getRbacUserDefaults(): Promise<RbacUserDefaultsSettings> {
+  return get<RbacUserDefaultsSettings>("/admin/settings/rbac-user-defaults");
+}
+
+export async function patchRbacUserDefaults(permissions: string[]): Promise<void> {
+  await patch<unknown>("/admin/settings/rbac-user-defaults", { permissions });
 }

@@ -10,7 +10,7 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { useLookups } from "@/hooks/useLookups";
 import { useMaterialDashboard } from "@/hooks/useMaterialDashboard";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { DashboardSkeleton } from "@/components/reporting/DashboardSkeleton";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import * as materialApi from "@/lib/api/endpoints/material-dashboard";
 
@@ -104,16 +104,12 @@ export default function MaterialDashboardPage() {
       />
 
       {error && (
-        <div className="rounded-2xl border border-red-200/80 bg-red-50 px-4 py-3 text-sm text-red-900">
+        <div className="rounded-2xl border border-danger-border bg-danger-tint px-4 py-3 text-sm text-danger">
           {error.message}
         </div>
       )}
 
-      {loading && (
-        <div className="flex justify-center py-8">
-          <LogoLoader size={32} />
-        </div>
-      )}
+      {loading && <DashboardSkeleton kpiCount={4} />}
 
       {!loading && (
         <>
