@@ -72,10 +72,12 @@ export function formatSyncAge(lastSyncAt: string | null): string {
 }
 
 export function connecteamUserName(u: {
+  displayName?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
 }): string {
+  if (u.displayName) return u.displayName;
   const name = [u.firstName, u.lastName].filter(Boolean).join(" ");
   return name || u.email || "Unknown";
 }

@@ -6,6 +6,9 @@ import { WorkforceGate } from "@/components/workforce/WorkforceGate";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { UserAvatar } from "@/components/workforce/UserAvatar";
+import { WorkforcePagination } from "@/components/workforce/WorkforcePagination";
+import { WorkforceScrollPanel } from "@/components/workforce/WorkforceScrollPanel";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useWorkforce } from "@/contexts/WorkforceContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +16,7 @@ import * as connecteamApi from "@/lib/api/endpoints/connecteam";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { TimeOffRequest, TimeOffStatus } from "@/lib/workforce/types";
 import { DEFAULT_TIMEZONE } from "@/lib/workforce/format";
+import { ptoDisplayTitle, WORKFORCE_PAGE_SIZE } from "@/lib/workforce/display";
 
 function statusTone(s: TimeOffStatus): "warning" | "success" | "danger" {
   if (s === "approved") return "success";
@@ -27,6 +31,8 @@ export default function WorkforceTimeOffPage() {
 
   const [tab, setTab] = useState<"mine" | "team">("mine");
   const [requests, setRequests] = useState<TimeOffRequest[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -39,16 +45,19 @@ export default function WorkforceTimeOffPage() {
       const res = await connecteamApi.listTimeOff({
         userId: tab === "mine" ? me?.connecteamUser?.userId : undefined,
         status: tab === "team" && isAdmin ? "pending" : undefined,
-        pageSize: 50,
+        page,
+        pageSize: WORKFORCE_PAGE_SIZE,
       });
       setRequests(res.requests ?? []);
+      setTotal(res.total ?? res.requests?.length ?? 0);
     } catch (e) {
       showToast(getApiErrorMessage(e, "Failed to load time off"), "error");
       setRequests([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [tab, me?.connecteamUser?.userId, isAdmin, showToast]);
+  }, [tab, me?.connecteamUser?.userId, isAdmin, page, showToast]);
 
   useEffect(() => {
     void load();
@@ -72,6 +81,7 @@ export default function WorkforceTimeOffPage() {
       setStartDate("");
       setEndDate("");
       setNote("");
+      setPage(1);
       await load();
     } catch (err) {
       showToast(getApiErrorMessage(err, "Request failed"), "error");
@@ -95,10 +105,13 @@ export default function WorkforceTimeOffPage() {
       <div className="flex min-h-0 flex-1 flex-col gap-6 ui-animate-in">
         <PageHeader title="Time off" subtitle={syncSubtitle} />
 
-        <div className="flex gap-1 rounded-xl border border-ink/[0.08] bg-surface p-1 w-fit">
+        <div className="flex w-fit gap-1 rounded-xl border border-ink/[0.08] bg-surface p-1">
           <button
             type="button"
-            onClick={() => setTab("mine")}
+            onClick={() => {
+              setTab("mine");
+              setPage(1);
+            }}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
               tab === "mine" ? "bg-ink text-white" : "text-ink/55 hover:bg-ink/[0.04]"
             }`}
@@ -108,7 +121,10 @@ export default function WorkforceTimeOffPage() {
           {isAdmin ? (
             <button
               type="button"
-              onClick={() => setTab("team")}
+              onClick={() => {
+                setTab("team");
+                setPage(1);
+              }}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
                 tab === "team" ? "bg-ink text-white" : "text-ink/55 hover:bg-ink/[0.04]"
               }`}
@@ -174,7 +190,10 @@ export default function WorkforceTimeOffPage() {
         ) : null}
 
         <Card>
-          <CardHeader title={tab === "team" ? "Pending requests" : "My time off"} />
+          <CardHeader
+            title={tab === "team" ? "Pending requests" : "My time off"}
+            subtitle={`${total} total`}
+          />
           {loading ? (
             <div className="flex justify-center py-12">
               <LogoLoader />
@@ -182,44 +201,59 @@ export default function WorkforceTimeOffPage() {
           ) : requests.length === 0 ? (
             <p className="text-sm text-ink/45">No requests.</p>
           ) : (
-            <ul className="space-y-2">
-              {requests.map((r) => (
-                <li
-                  key={r.requestId}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink/[0.06] px-4 py-3"
-                >
-                  <div>
-                    <p className="font-medium text-ink">
-                      User #{r.userId} · {r.startDate} → {r.endDate}
-                    </p>
-                    {r.employeeNote ? (
-                      <p className="mt-0.5 text-xs text-ink/45">{r.employeeNote}</p>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatusPill tone={statusTone(r.status)} label={r.status} />
-                    {isAdmin && tab === "team" && r.status === "pending" ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => void handleStatus(r.requestId, "approved")}
-                          className="rounded-lg border border-success-border bg-success-tint px-2 py-1 text-xs font-semibold text-success"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleStatus(r.requestId, "denied")}
-                          className="rounded-lg border border-danger-border bg-danger-tint px-2 py-1 text-xs font-semibold text-danger"
-                        >
-                          Deny
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <>
+              <WorkforceScrollPanel maxHeightClass="max-h-[min(480px,55vh)]">
+                <ul className="divide-y divide-ink/[0.06]">
+                  {requests.map((r) => (
+                    <li
+                      key={r.requestId}
+                      className="flex flex-wrap items-center justify-between gap-3 px-3 py-3"
+                    >
+                      <div className="flex items-start gap-3">
+                        <UserAvatar user={r.user} size={32} />
+                        <div>
+                          <p className="font-medium text-ink">{ptoDisplayTitle(r)}</p>
+                          {r.durationLabel ? (
+                            <p className="mt-0.5 text-xs text-ink/45">{r.durationLabel}</p>
+                          ) : null}
+                          {r.employeeNote ? (
+                            <p className="mt-0.5 text-xs text-ink/45">{r.employeeNote}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <StatusPill tone={statusTone(r.status)} label={r.status} />
+                        {isAdmin && tab === "team" && r.status === "pending" ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => void handleStatus(r.requestId, "approved")}
+                              className="rounded-lg border border-success-border bg-success-tint px-2 py-1 text-xs font-semibold text-success"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleStatus(r.requestId, "denied")}
+                              className="rounded-lg border border-danger-border bg-danger-tint px-2 py-1 text-xs font-semibold text-danger"
+                            >
+                              Deny
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </WorkforceScrollPanel>
+              <WorkforcePagination
+                page={page}
+                pageSize={WORKFORCE_PAGE_SIZE}
+                total={total}
+                onPageChange={setPage}
+                className="mt-3"
+              />
+            </>
           )}
         </Card>
       </div>
