@@ -161,6 +161,20 @@ body {
   background-clip: padding-box;
 }
 
+/* Scrollbar variant for light surfaces (chat, tables) */
+.ui-scroll-light {
+  scrollbar-color: rgba(1, 1, 1, 0.15) transparent;
+}
+.ui-scroll-light::-webkit-scrollbar-thumb {
+  background: rgba(1, 1, 1, 0.12);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+.ui-scroll-light::-webkit-scrollbar-thumb:hover {
+  background: rgba(1, 1, 1, 0.22);
+}
+
 /* Bidding module — subtle motion (respect prefers-reduced-motion) */
 @keyframes bid-fade-up {
   from {

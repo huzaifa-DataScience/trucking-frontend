@@ -20,6 +20,7 @@ import {
   NavIconCalendar,
   NavIconTimeList,
   NavIconSun,
+  NavIconChat,
 } from "@/components/dashboard/DashboardNavIcons";
 import type { AuthUser } from "@/lib/auth/types";
 
@@ -93,6 +94,7 @@ const clearstorySubItems: { href: string; label: string }[] = [
 const workforceNavItems: SidebarNavItem[] = [
   { href: "/workforce", label: "Overview", Icon: NavIconLayout, activePathPrefix: "/workforce" },
   { href: "/workforce/my-day", label: "My day", Icon: NavIconSun },
+  { href: "/workforce/chat", label: "Team chat", Icon: NavIconChat, activePathPrefix: "/workforce/chat" },
   { href: "/workforce/time", label: "Time & attendance", Icon: NavIconTimeList },
   { href: "/workforce/schedule", label: "Schedule", Icon: NavIconCalendar },
   { href: "/workforce/time-off", label: "Time off", Icon: NavIconClock },

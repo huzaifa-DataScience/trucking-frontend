@@ -1,0 +1,119 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkforce } from "@/contexts/WorkforceContext";
+import { useWorkforceChat } from "@/hooks/useWorkforceChat";
+import { useToast } from "@/components/ui/ToastProvider";
+import { WorkforceGate } from "@/components/workforce/WorkforceGate";
+import { ChatCreateChannelModal } from "@/components/workforce/chat/ChatCreateChannelModal";
+import { ChatInboxPanel } from "@/components/workforce/chat/ChatInboxPanel";
+import { ChatThreadPanel } from "@/components/workforce/chat/ChatThreadPanel";
+import { getApiErrorMessage } from "@/lib/api/client";
+import { chatConversationIdFromPath } from "@/lib/workforce/chat-utils";
+
+const BASE_HREF = "/workforce/chat";
+
+/** Mounted once in chat layout — survives thread navigation without remounting. */
+export function ChatShell() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, isAdmin } = useAuth();
+  const { me } = useWorkforce();
+  const { showToast } = useToast();
+
+  const conversationId = chatConversationIdFromPath(pathname);
+  const chat = useWorkforceChat(conversationId);
+  const [showCreate, setShowCreate] = useState(false);
+
+  const connecteamUserId = me?.connecteamUser?.userId ?? null;
+  const canSend = Boolean(me?.linked && connecteamUserId);
+  const sendDisabledReason = !me?.linked
+    ? isAdmin
+      ? "Workforce profile not linked — browse as admin, or link under Crew to send as yourself."
+      : "Workforce profile not linked — ask an admin to link your account before sending messages."
+    : undefined;
+
+  const selectConversation = useCallback(
+    (id: string) => {
+      router.push(`${BASE_HREF}/${encodeURIComponent(id)}`, { scroll: false });
+    },
+    [router]
+  );
+
+  const clearConversation = useCallback(() => {
+    router.push(BASE_HREF, { scroll: false });
+  }, [router]);
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      try {
+        await chat.sendMessage(text, connecteamUserId ?? undefined);
+      } catch (e) {
+        showToast(getApiErrorMessage(e, "Send failed"), "error");
+      }
+    },
+    [chat, connecteamUserId, showToast]
+  );
+
+  const handleCreateChannel = useCallback(
+    async (title: string) => {
+      const conv = await chat.createChannel(title);
+      router.push(`${BASE_HREF}/${encodeURIComponent(conv.conversationId)}`, { scroll: false });
+      return conv;
+    },
+    [chat, router]
+  );
+
+  const showInboxOnMobile = !conversationId;
+  const showThreadOnMobile = Boolean(conversationId);
+
+  return (
+    <WorkforceGate>
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 flex-1 overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+          <ChatInboxPanel
+            conversations={chat.conversations}
+            total={chat.inboxTotal}
+            loading={chat.inboxLoading}
+            error={chat.inboxError}
+            activeId={conversationId}
+            filter={chat.filter}
+            search={chat.search}
+            isPolling={chat.isPolling}
+            onFilterChange={chat.setFilter}
+            onSearchChange={chat.setSearch}
+            onNewChannel={() => setShowCreate(true)}
+            onSelectConversation={selectConversation}
+            showOnMobile={showInboxOnMobile}
+          />
+
+          <ChatThreadPanel
+            conversation={conversationId ? chat.activeConversation : null}
+            messages={chat.messages}
+            loading={chat.threadLoading}
+            loadingOlder={chat.loadingOlder}
+            hasOlderMessages={chat.hasOlderMessages}
+            error={chat.threadError}
+            sending={chat.sending}
+            canSend={canSend}
+            sendDisabledReason={sendDisabledReason}
+            connecteamUserId={connecteamUserId}
+            appUserId={user?.id ?? null}
+            onSend={handleSend}
+            onLoadOlder={() => void chat.loadOlderMessages()}
+            onBack={clearConversation}
+            showOnMobile={showThreadOnMobile}
+          />
+        </div>
+      </div>
+
+      <ChatCreateChannelModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={handleCreateChannel}
+      />
+    </WorkforceGate>
+  );
+}
