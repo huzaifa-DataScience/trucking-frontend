@@ -9,6 +9,9 @@ import {
   parseLaborBuildUp,
   parseSystemsComputed,
 } from "@/lib/bidding/parse-computed";
+import { usePermission } from "@/hooks/usePermission";
+import { PERMISSIONS } from "@/lib/auth/permissions";
+import { RestrictedState } from "@/components/ui/RestrictedState";
 
 function HeroEstimate({
   label,
@@ -48,6 +51,8 @@ export function BidSheetResultsRail({
   hoursPerWeek: number | null;
 }) {
   const { insights } = useBidSheet();
+  const { can } = usePermission();
+  const canViewSummary = can(PERMISSIONS.biddingSummary);
   const laborBuildUp = parseLaborBuildUp(computed);
   const systemsComputed = parseSystemsComputed(computed).filter((r) => r.used);
 
@@ -63,6 +68,15 @@ export function BidSheetResultsRail({
       }`}
       aria-label="Bid calculation results"
     >
+      {!canViewSummary ? (
+        <RestrictedState
+          title="Totals restricted"
+          message="MIKE/PJ totals and calculation detail require additional access."
+          permission="bidding:summary"
+        />
+      ) : null}
+
+      {canViewSummary ? (
       <div className="overflow-hidden rounded-2xl border border-ink/[0.08] bg-gradient-to-br from-ink via-ink to-ink/95 shadow-[0_8px_32px_rgba(1,1,1,0.12)]">
         <div className="border-b border-white/10 px-4 py-3">
           <div className="flex items-center justify-between gap-2">
@@ -127,7 +141,9 @@ export function BidSheetResultsRail({
           </div>
         </div>
       </div>
+      ) : null}
 
+      {canViewSummary ? (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.05)]">
         <div className="border-b border-ink/[0.06] px-4 py-3">
           <h2 className="text-sm font-semibold text-ink">Calculation detail</h2>
@@ -255,6 +271,7 @@ export function BidSheetResultsRail({
           )}
         </div>
       </div>
+      ) : null}
     </aside>
   );
 }

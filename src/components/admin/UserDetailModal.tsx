@@ -2,24 +2,57 @@
 
 import { useState, useEffect } from "react";
 import type { AdminUser, UserRole, UserStatus } from "@/lib/admin/types";
+import { UserBiddingPermissions } from "@/components/admin/UserBiddingPermissions";
+import * as adminApi from "@/lib/api/endpoints/admin";
+import { PERMISSIONS } from "@/lib/auth/permissions";
 
 interface UserDetailModalProps {
   user: AdminUser | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: number, role: UserRole, status: UserStatus) => Promise<void>;
+  onSave: (
+    id: number,
+    role: UserRole,
+    status: UserStatus,
+    permissions?: string[]
+  ) => Promise<void>;
 }
 
 export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailModalProps) {
   const [role, setRole] = useState<UserRole>("user");
   const [status, setStatus] = useState<UserStatus>("pending");
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      setRole(user.role);
-      setStatus(user.status);
+    if (!user) return;
+    setRole(user.role);
+    setStatus(user.status);
+    if (user.permissions) {
+      setPermissions(user.permissions);
+      return;
     }
+    let cancelled = false;
+    setPermissionsLoading(true);
+    adminApi
+      .getUserById(user.id)
+      .then((full) => {
+        if (!cancelled) {
+          setPermissions(full.permissions ?? []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPermissions([PERMISSIONS.biddingRead, PERMISSIONS.biddingWrite]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setPermissionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   if (!isOpen || !user) return null;
@@ -27,7 +60,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave(user.id, role, status);
+      await onSave(user.id, role, status, role === "admin" ? undefined : permissions);
       onClose();
     } catch (error) {
       // Error handled by parent via toast
@@ -110,6 +143,13 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
               <dt className="text-xs font-medium text-stone-500 dark:text-stone-400">Last Login</dt>
               <dd className="mt-1 text-sm text-stone-900 dark:text-stone-100">{formatDate(user.lastLoginAt)}</dd>
             </div>
+            {role !== "admin" && (
+              <UserBiddingPermissions
+                permissions={permissions}
+                disabled={saving || permissionsLoading}
+                onChange={setPermissions}
+              />
+            )}
           </dl>
         </div>
         <div className="flex justify-end gap-3 border-t border-stone-200 px-6 py-4 dark:border-stone-700">

@@ -14,7 +14,10 @@ import {
   EMAIL_PURPOSE_OVERDUE_LEAD_PM,
 } from "@/lib/admin/types";
 import { EmailTemplateEditor } from "@/components/admin/EmailTemplateEditor";
+import { BiddingRbacSettings } from "@/components/admin/BiddingRbacSettings";
+import { BiddingLookupsAdmin } from "@/components/admin/BiddingLookupsAdmin";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { StatusPill } from "@/components/ui/StatusPill";
 
 function StatusPills({
   envOn,
@@ -27,39 +30,31 @@ function StatusPills({
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <span
-        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-          envOn
-            ? "bg-green-50 text-green-900 dark:bg-green-950/30 dark:text-green-200"
-            : "bg-red-50 text-red-900 dark:bg-red-950/30 dark:text-red-200"
-        }`}
-      >
-        Env master: {envOn ? "on" : "off"}
-      </span>
-      <span
-        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-          adminOn
-            ? "bg-green-50 text-green-900 dark:bg-green-950/30 dark:text-green-200"
-            : "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300"
-        }`}
-      >
-        Admin toggle: {adminOn ? "on" : "off"}
-      </span>
-      <span
-        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-          effective
-            ? "bg-emerald-50 text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"
-            : "bg-brand/8 text-ink dark:bg-brand/10 dark:text-white"
-        }`}
-      >
-        Effective sending: {effective ? "yes" : "no"}
-      </span>
+      <StatusPill tone={envOn ? "success" : "danger"} label={`Env master: ${envOn ? "on" : "off"}`} />
+      <StatusPill
+        tone={adminOn ? "success" : "neutral"}
+        label={`Admin toggle: ${adminOn ? "on" : "off"}`}
+      />
+      <StatusPill
+        tone={effective ? "success" : "neutral"}
+        label={`Effective sending: ${effective ? "yes" : "no"}`}
+      />
     </div>
   );
 }
 
+type SettingsTab = "access" | "email" | "templates" | "diagnostics";
+
+const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
+  { id: "access", label: "Access control" },
+  { id: "email", label: "Email & jobs" },
+  { id: "templates", label: "Templates" },
+  { id: "diagnostics", label: "Diagnostics" },
+];
+
 export default function AdminSettingsPage() {
   const { showToast } = useToast();
+  const [tab, setTab] = useState<SettingsTab>("access");
 
   const [overdueSending, setOverdueSending] = useState<OverdueEmailSendingSettings | null>(null);
   const [overdueSendingLoading, setOverdueSendingLoading] = useState(false);
@@ -189,10 +184,42 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold text-stone-900 dark:text-stone-100">Settings</h1>
         <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-          Siteline PM overdue mail, Siteline ↔ Clearstory gap alerts, and SMTP diagnostics.
+          Bidding access, Siteline PM overdue mail, Siteline ↔ Clearstory gap alerts, and SMTP
+          diagnostics.
         </p>
       </div>
 
+      <div
+        role="tablist"
+        aria-label="Settings sections"
+        className="flex flex-wrap gap-1 rounded-xl border border-ink/[0.08] bg-surface p-1"
+      >
+        {SETTINGS_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+              tab === t.id
+                ? "bg-ink text-white"
+                : "text-ink/55 hover:bg-ink/[0.04] hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "access" && (
+        <>
+          <BiddingRbacSettings />
+          <BiddingLookupsAdmin />
+        </>
+      )}
+
+      {tab === "email" && (
       <Card>
         <div className="space-y-5">
           <div>
@@ -233,7 +260,9 @@ export default function AdminSettingsPage() {
           )}
         </div>
       </Card>
+      )}
 
+      {tab === "email" && (
       <Card>
         <div className="space-y-5">
           <div>
@@ -292,23 +321,29 @@ export default function AdminSettingsPage() {
           )}
         </div>
       </Card>
+      )}
 
-      <Card>
-        <EmailTemplateEditor
-          purpose={EMAIL_PURPOSE_OVERDUE_LEAD_PM}
-          title="Template: PM overdue"
-          description="Email sent to each lead PM with an HTML table of overdue pay apps."
-        />
-      </Card>
+      {tab === "templates" && (
+        <>
+          <Card>
+            <EmailTemplateEditor
+              purpose={EMAIL_PURPOSE_OVERDUE_LEAD_PM}
+              title="Template: PM overdue"
+              description="Email sent to each lead PM with an HTML table of overdue pay apps."
+            />
+          </Card>
 
-      <Card>
-        <EmailTemplateEditor
-          purpose={EMAIL_PURPOSE_CLEARSTORY_GAP}
-          title="Template: Siteline / Clearstory gap"
-          description="Email sent to operations when Siteline billing exists without a Clearstory comparison."
-        />
-      </Card>
+          <Card>
+            <EmailTemplateEditor
+              purpose={EMAIL_PURPOSE_CLEARSTORY_GAP}
+              title="Template: Siteline / Clearstory gap"
+              description="Email sent to operations when Siteline billing exists without a Clearstory comparison."
+            />
+          </Card>
+        </>
+      )}
 
+      {tab === "diagnostics" && (
       <Card>
         <div className="space-y-4">
           <div>
@@ -344,6 +379,7 @@ export default function AdminSettingsPage() {
           </div>
         </div>
       </Card>
+      )}
     </div>
   );
 }

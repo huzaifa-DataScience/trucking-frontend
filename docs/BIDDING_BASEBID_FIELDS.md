@@ -13,7 +13,7 @@ Legend for **Backend status**:
 
 ## 1. Inputs (build form fields for these)
 
-These are user-entered. They are stored in `baseBid` / `systems` (see `BIDDING_FRONTEND_API.md`).
+These are user-entered. They are stored in `baseBid` / `systems` (see `docs/BIDDING_FRONTEND_API.md`).
 
 ### Header / project
 | Cell | Label | Input type | API field |

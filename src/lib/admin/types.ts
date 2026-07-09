@@ -10,6 +10,8 @@ export interface AdminUser {
   email: string;
   role: UserRole;
   status: UserStatus;
+  /** Present when backend includes permissions on user admin APIs. */
+  permissions?: string[];
   createdAt: string; // ISO datetime
   lastLoginAt: string | null; // ISO datetime or null
 }
@@ -34,6 +36,12 @@ export interface UserFilters {
 export interface UpdateUserPayload {
   role?: UserRole;
   status?: UserStatus;
+  permissions?: string[];
+}
+
+/** GET/PATCH /admin/settings/rbac-user-defaults (see docs/BACKEND_RBAC_ADMIN.md). */
+export interface RbacUserDefaultsSettings {
+  permissions: string[];
 }
 
 export interface BulkActionResponse {
