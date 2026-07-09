@@ -8,17 +8,22 @@ import { useWorkforce } from "@/contexts/WorkforceContext";
 import * as connecteamApi from "@/lib/api/endpoints/connecteam";
 import { jobLabel } from "@/lib/api/endpoints/connecteam";
 import { getApiErrorMessage } from "@/lib/api/client";
-import type { ConnecteamJob, TimeActivity, TimeClock } from "@/lib/workforce/types";
+import type { ConnecteamJob, ScheduledShift, TimeActivity, TimeClock } from "@/lib/workforce/types";
 import {
   DEFAULT_TIMEZONE,
   connecteamUserName,
-  elapsedSince,
-  formatWorkforceTime,
   getStoredLastJobId,
   getStoredTimeClockId,
   setStoredLastJobId,
   setStoredTimeClockId,
 } from "@/lib/workforce/format";
+import {
+  activityElapsedDisplay,
+  activityStartDisplay,
+  shiftDisplayTitle,
+  shiftEndDisplay,
+  shiftStartDisplay,
+} from "@/lib/workforce/display";
 
 export function MyDayClock() {
   const { showToast } = useToast();
@@ -28,9 +33,7 @@ export function MyDayClock() {
   const [clocks, setClocks] = useState<TimeClock[]>([]);
   const [timeClockId, setTimeClockId] = useState<number | null>(null);
   const [openShift, setOpenShift] = useState<TimeActivity | null>(null);
-  const [todayShifts, setTodayShifts] = useState<
-    { shiftId: string; startTime: string | number; endTime: string | number; title?: string | null }[]
-  >([]);
+  const [todayShifts, setTodayShifts] = useState<ScheduledShift[]>([]);
   const [jobs, setJobs] = useState<ConnecteamJob[]>([]);
   const [jobSearch, setJobSearch] = useState("");
   const [selectedJobId, setSelectedJobId] = useState<string | null>(() => getStoredLastJobId());
@@ -65,8 +68,10 @@ export function MyDayClock() {
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
       const today = sched.shifts.filter((s) => {
-        const start = Number(s.startTime) * 1000;
-        return start >= todayStart.getTime() && start <= todayEnd.getTime();
+        const startMs = s.startAt
+          ? new Date(s.startAt).getTime()
+          : Number(s.startTime) * 1000;
+        return startMs >= todayStart.getTime() && startMs <= todayEnd.getTime();
       });
       setTodayShifts(today);
     } catch (e) {
@@ -171,10 +176,10 @@ export function MyDayClock() {
           <div className="mt-6 rounded-xl border border-success-border bg-success-tint px-4 py-3">
             <p className="text-sm font-semibold text-success">On the clock</p>
             <p className="ui-num mt-1 text-2xl font-bold text-ink">
-              {elapsedSince(openShift.startTimestamp)}
+              {activityElapsedDisplay(openShift)}
             </p>
             <p className="mt-1 text-xs text-ink/45">
-              Since {formatWorkforceTime(openShift.startTimestamp)}
+              Since {activityStartDisplay(openShift)}
             </p>
           </div>
         ) : (
@@ -244,9 +249,9 @@ export function MyDayClock() {
                 key={s.shiftId}
                 className="rounded-lg border border-ink/[0.06] bg-canvas px-3 py-2 text-sm"
               >
-                <p className="font-medium text-ink">{s.title ?? "Shift"}</p>
+                <p className="font-medium text-ink">{shiftDisplayTitle(s)}</p>
                 <p className="text-xs text-ink/45">
-                  {formatWorkforceTime(s.startTime)} – {formatWorkforceTime(s.endTime)}
+                  {shiftStartDisplay(s)} – {shiftEndDisplay(s)}
                 </p>
               </li>
             ))}

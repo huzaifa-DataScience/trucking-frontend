@@ -8,14 +8,20 @@ export interface ConnecteamStatus {
   message?: string;
 }
 
-export interface ConnecteamUser {
+export interface WorkforceUserSummary {
   userId: number;
-  firstName: string;
-  lastName: string;
-  email: string;
+  displayName?: string;
+  initials?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  employeeId?: string | null;
   phoneNumber?: string | null;
   userType?: string;
-  employeeId?: string | null;
+  profilePictureUrl?: string | null;
+}
+
+export interface ConnecteamUser extends WorkforceUserSummary {
   isArchived: boolean;
   appUserId?: number | null;
 }
@@ -32,14 +38,28 @@ export interface PaginatedUsers {
   users: ConnecteamUser[];
 }
 
-export interface ConnecteamJob {
+export interface RefJobSummary {
+  id: number;
+  jobNumber?: string;
+  name?: string;
+  jobAddress?: string;
+  city?: string;
+  isActive?: boolean;
+}
+
+export interface WorkforceJobSummary {
   jobId: string;
+  jobLabel?: string;
+  title?: string | null;
   code?: string | null;
   normalizedJobNumber?: string | null;
-  title?: string | null;
-  refJobId?: number | null;
   companyLabel?: string | null;
   gpsAddress?: string | null;
+  refJobId?: number | null;
+  refJob?: RefJobSummary | null;
+}
+
+export interface ConnecteamJob extends WorkforceJobSummary {
   isDeleted?: boolean;
 }
 
@@ -64,22 +84,31 @@ export type RecordSource = "sync" | "native";
 
 export interface TimeActivity {
   shiftId: string;
-  timeClockId: number;
+  shiftLabel?: string;
+  timeClockId?: number;
+  timeClockName?: string | null;
   userId: number;
   jobId?: string | null;
-  startTimestamp: string | number;
+  startTimestamp?: string | number;
   endTimestamp?: string | number | null;
+  startAt?: string | null;
+  endAt?: string | null;
   durationMinutes?: number | null;
+  durationHours?: number | null;
+  isOpen?: boolean;
   employeeNote?: string | null;
   managerNote?: string | null;
   recordSource?: RecordSource;
+  user?: WorkforceUserSummary | null;
+  job?: WorkforceJobSummary | null;
 }
 
 export interface PaginatedTimeActivities {
   page: number;
   pageSize: number;
   total: number;
-  activities: TimeActivity[];
+  activities?: TimeActivity[];
+  timeActivities?: TimeActivity[];
 }
 
 export interface OpenShiftResponse {
@@ -124,15 +153,23 @@ export interface Scheduler {
 
 export interface ScheduledShift {
   shiftId: string;
+  shiftLabel?: string;
   schedulerId: number;
-  startTime: string | number;
-  endTime: string | number;
+  schedulerName?: string | null;
+  startTime?: string | number;
+  endTime?: string | number;
+  startAt?: string | null;
+  endAt?: string | null;
+  durationHours?: number | null;
   title?: string | null;
   jobId?: string | null;
+  job?: WorkforceJobSummary | null;
   timezone?: string | null;
   isPublished?: boolean;
   isOpenShift?: boolean;
   assignedUserIdsJson?: string | null;
+  assignedUserNames?: string[];
+  assignedUsers?: WorkforceUserSummary[];
   locationAddress?: string | null;
 }
 
@@ -162,10 +199,13 @@ export interface TimeOffRequest {
   userId: number;
   startDate: string;
   endDate: string;
+  dateRangeLabel?: string;
+  durationLabel?: string | null;
   isAllDay?: boolean;
   status: TimeOffStatus;
   employeeNote?: string | null;
   managerNote?: string | null;
+  user?: WorkforceUserSummary | null;
 }
 
 export interface PaginatedTimeOff {
@@ -186,10 +226,14 @@ export interface CreateTimeOffBody {
 
 export interface HoursByJobRow {
   jobId?: string;
+  jobLabel?: string;
   normalizedJobNumber?: string | null;
   title?: string | null;
+  companyLabel?: string | null;
   totalHours?: number | null;
+  totalMinutes?: number | null;
   shiftCount?: number | null;
+  refJob?: RefJobSummary | null;
 }
 
 export interface HoursByJobReport {
@@ -198,10 +242,14 @@ export interface HoursByJobReport {
 
 export interface HoursByUserRow {
   userId: number;
+  displayName?: string;
+  initials?: string;
+  employeeId?: string | null;
   firstName?: string;
   lastName?: string;
-  totalHours: number;
-  shiftCount: number;
+  totalHours?: number | null;
+  totalMinutes?: number | null;
+  shiftCount?: number | null;
 }
 
 export interface HoursByUserReport {

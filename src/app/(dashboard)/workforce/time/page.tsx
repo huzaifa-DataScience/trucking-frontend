@@ -7,12 +7,23 @@ import { WorkforceGate } from "@/components/workforce/WorkforceGate";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { WorkforcePagination } from "@/components/workforce/WorkforcePagination";
+import { WorkforceScrollPanel } from "@/components/workforce/WorkforceScrollPanel";
 import { useWorkforce } from "@/contexts/WorkforceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import * as connecteamApi from "@/lib/api/endpoints/connecteam";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { TimeActivity } from "@/lib/workforce/types";
-import { formatDurationMinutes, formatWorkforceDateTime } from "@/lib/workforce/format";
+import {
+  activityDurationDisplay,
+  activityEndDisplay,
+  activityStartDisplay,
+  extractTimeActivities,
+  isActivityOpen,
+  jobDisplayLabel,
+  userDisplayName,
+  WORKFORCE_PAGE_SIZE,
+} from "@/lib/workforce/display";
 
 function sourceTone(source?: string): "info" | "neutral" {
   return source === "native" ? "info" : "neutral";
@@ -46,17 +57,15 @@ function TimePageContent() {
       const res = await connecteamApi.listTimeActivities({
         jobId,
         page,
-        pageSize: 50,
+        pageSize: WORKFORCE_PAGE_SIZE,
       });
-      const rows =
-        (res as { activities?: TimeActivity[] }).activities ??
-        (res as { timeActivities?: TimeActivity[] }).timeActivities ??
-        [];
+      const rows = extractTimeActivities(res);
       setActivities(rows);
       setTotal(res.total ?? rows.length);
     } catch (e) {
       setError(getApiErrorMessage(e, "Failed to load time activities"));
       setActivities([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -72,7 +81,7 @@ function TimePageContent() {
       <div className="flex min-h-0 flex-1 flex-col gap-6 ui-animate-in">
         <PageHeader
           title="Time & attendance"
-          subtitle={`${syncSubtitle} · Mirror data; filter by job #.`}
+          subtitle={`${syncSubtitle} · Mirror data; filter by job # or name.`}
         />
 
         <div className="flex flex-wrap items-end gap-3">
@@ -113,77 +122,75 @@ function TimePageContent() {
           ) : activities.length === 0 ? (
             <p className="text-sm text-ink/45">No time activities match this filter.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead>
-                  <tr className="border-b border-ink/10 text-left text-xs text-ink/45">
-                    <th className="py-2 pr-3 font-medium">User</th>
-                    <th className="py-2 pr-3 font-medium">Job</th>
-                    <th className="py-2 pr-3 font-medium">In</th>
-                    <th className="py-2 pr-3 font-medium">Out</th>
-                    <th className="py-2 pr-3 font-medium">Hours</th>
-                    <th className="py-2 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activities.map((a) => {
-                    const open = a.endTimestamp == null || a.endTimestamp === "";
-                    return (
-                      <tr key={a.shiftId} className="border-b border-ink/[0.05]">
-                        <td className="py-2.5 pr-3 font-medium">#{a.userId}</td>
-                        <td className="py-2.5 pr-3 font-mono text-xs text-ink/60">
-                          {a.jobId ? a.jobId.slice(0, 12) : "—"}
-                        </td>
-                        <td className="py-2.5 pr-3 text-xs">
-                          {formatWorkforceDateTime(a.startTimestamp)}
-                        </td>
-                        <td className="py-2.5 pr-3 text-xs">
-                          {open ? "—" : formatWorkforceDateTime(a.endTimestamp)}
-                        </td>
-                        <td className="ui-num py-2.5 pr-3">
-                          {open ? "—" : formatDurationMinutes(a.durationMinutes ?? undefined)}
-                        </td>
-                        <td className="py-2.5">
-                          <div className="flex flex-wrap gap-1">
-                            {open ? (
-                              <StatusPill tone="warning" label="On clock" />
-                            ) : (
-                              <StatusPill tone="success" label="Closed" />
-                            )}
-                            <StatusPill
-                              tone={sourceTone(a.recordSource)}
-                              label={a.recordSource === "native" ? "App" : "Sync"}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <WorkforceScrollPanel maxHeightClass="max-h-[min(560px,65vh)]">
+                <table className="w-full min-w-[800px] text-sm">
+                  <thead className="sticky top-0 z-10 bg-surface">
+                    <tr className="border-b border-ink/10 text-left text-xs text-ink/45">
+                      <th className="py-2 pl-3 pr-3 font-medium">Employee</th>
+                      <th className="py-2 pr-3 font-medium">Job</th>
+                      <th className="py-2 pr-3 font-medium">Clock</th>
+                      <th className="py-2 pr-3 font-medium">In</th>
+                      <th className="py-2 pr-3 font-medium">Out</th>
+                      <th className="py-2 pr-3 font-medium">Hours</th>
+                      <th className="py-2 pr-3 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activities.map((a) => {
+                      const open = isActivityOpen(a);
+                      return (
+                        <tr key={a.shiftId} className="border-b border-ink/[0.05]">
+                          <td className="py-2.5 pl-3 pr-3 font-medium">
+                            {userDisplayName(a.user, a.userId)}
+                          </td>
+                          <td className="max-w-[200px] py-2.5 pr-3 text-xs text-ink/70">
+                            <span className="line-clamp-2">
+                              {jobDisplayLabel(a.job, { jobId: a.jobId })}
+                            </span>
+                          </td>
+                          <td className="py-2.5 pr-3 text-xs text-ink/50">
+                            {a.timeClockName ?? "—"}
+                          </td>
+                          <td className="py-2.5 pr-3 text-xs whitespace-nowrap">
+                            {activityStartDisplay(a)}
+                          </td>
+                          <td className="py-2.5 pr-3 text-xs whitespace-nowrap">
+                            {activityEndDisplay(a)}
+                          </td>
+                          <td className="ui-num py-2.5 pr-3 whitespace-nowrap">
+                            {activityDurationDisplay(a)}
+                          </td>
+                          <td className="py-2.5 pr-3">
+                            <div className="flex flex-wrap gap-1">
+                              {open ? (
+                                <StatusPill tone="warning" label="On clock" />
+                              ) : (
+                                <StatusPill tone="success" label="Closed" />
+                              )}
+                              {a.recordSource ? (
+                                <StatusPill
+                                  tone={sourceTone(a.recordSource)}
+                                  label={a.recordSource === "native" ? "App" : "Sync"}
+                                />
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </WorkforceScrollPanel>
+              <WorkforcePagination
+                page={page}
+                pageSize={WORKFORCE_PAGE_SIZE}
+                total={total}
+                onPageChange={setPage}
+                className="mt-3"
+              />
+            </>
           )}
-          {total > 50 ? (
-            <div className="mt-4 flex justify-center gap-2">
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-                className="rounded-lg border border-ink/10 px-3 py-1.5 text-sm disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <span className="px-2 py-1.5 text-sm text-ink/45">Page {page}</span>
-              <button
-                type="button"
-                disabled={page * 50 >= total}
-                onClick={() => setPage((p) => p + 1)}
-                className="rounded-lg border border-ink/10 px-3 py-1.5 text-sm disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          ) : null}
         </Card>
       </div>
     </WorkforceGate>

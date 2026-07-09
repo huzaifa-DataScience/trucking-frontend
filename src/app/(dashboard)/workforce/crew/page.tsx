@@ -6,13 +6,16 @@ import { WorkforceGate } from "@/components/workforce/WorkforceGate";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { UserAvatar } from "@/components/workforce/UserAvatar";
+import { WorkforcePagination } from "@/components/workforce/WorkforcePagination";
+import { WorkforceScrollPanel } from "@/components/workforce/WorkforceScrollPanel";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useWorkforce } from "@/contexts/WorkforceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import * as connecteamApi from "@/lib/api/endpoints/connecteam";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { ConnecteamUser } from "@/lib/workforce/types";
-import { connecteamUserName } from "@/lib/workforce/format";
+import { userDisplayName, WORKFORCE_PAGE_SIZE } from "@/lib/workforce/display";
 
 export default function WorkforceCrewPage() {
   const { syncSubtitle } = useWorkforce();
@@ -21,6 +24,8 @@ export default function WorkforceCrewPage() {
 
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState<ConnecteamUser[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [linkingId, setLinkingId] = useState<number | null>(null);
   const [appUserIdInput, setAppUserIdInput] = useState("");
@@ -30,16 +35,19 @@ export default function WorkforceCrewPage() {
     try {
       const res = await connecteamApi.listConnecteamUsers({
         search: search.trim() || undefined,
-        pageSize: 50,
+        page,
+        pageSize: WORKFORCE_PAGE_SIZE,
       });
-      setUsers(res.users);
+      setUsers(res.users ?? []);
+      setTotal(res.total ?? res.users?.length ?? 0);
     } catch (e) {
       showToast(getApiErrorMessage(e, "Failed to load crew"), "error");
       setUsers([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [search, showToast]);
+  }, [search, page, showToast]);
 
   useEffect(() => {
     const t = setTimeout(() => void load(), search ? 300 : 0);
@@ -78,12 +86,15 @@ export default function WorkforceCrewPage() {
           type="search"
           placeholder="Search name or email…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           className="max-w-md rounded-xl border border-ink/10 bg-surface px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
         />
 
         <Card>
-          <CardHeader title="Roster" subtitle={`${users.length} shown`} />
+          <CardHeader title="Roster" subtitle={`${total} total`} />
           {loading ? (
             <div className="flex justify-center py-12">
               <LogoLoader />
@@ -91,72 +102,86 @@ export default function WorkforceCrewPage() {
           ) : users.length === 0 ? (
             <p className="text-sm text-ink/45">No crew members match your search.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-sm">
-                <thead>
-                  <tr className="border-b border-ink/10 text-left text-xs text-ink/45">
-                    <th className="py-2 pr-3 font-medium">Name</th>
-                    <th className="py-2 pr-3 font-medium">Email</th>
-                    <th className="py-2 pr-3 font-medium">Employee ID</th>
-                    <th className="py-2 pr-3 font-medium">Portal</th>
-                    {isAdmin ? <th className="py-2 font-medium">Link</th> : null}
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.userId} className="border-b border-ink/[0.05]">
-                      <td className="py-2.5 pr-3 font-medium">{connecteamUserName(u)}</td>
-                      <td className="py-2.5 pr-3 text-ink/60">{u.email}</td>
-                      <td className="py-2.5 pr-3 font-mono text-xs">{u.employeeId ?? "—"}</td>
-                      <td className="py-2.5 pr-3">
-                        {u.appUserId ? (
-                          <StatusPill tone="success" label={`Linked #${u.appUserId}`} />
-                        ) : (
-                          <StatusPill tone="warning" label="Not linked" />
-                        )}
-                      </td>
-                      {isAdmin ? (
-                        <td className="py-2.5">
-                          {!u.appUserId && linkingId === u.userId ? (
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                placeholder="App user ID"
-                                value={appUserIdInput}
-                                onChange={(e) => setAppUserIdInput(e.target.value)}
-                                className="w-28 rounded-lg border border-ink/10 px-2 py-1 text-xs"
-                              />
+            <>
+              <WorkforceScrollPanel>
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead className="sticky top-0 z-10 bg-surface">
+                    <tr className="border-b border-ink/10 text-left text-xs text-ink/45">
+                      <th className="py-2 pl-3 pr-3 font-medium">Name</th>
+                      <th className="py-2 pr-3 font-medium">Email</th>
+                      <th className="py-2 pr-3 font-medium">Employee ID</th>
+                      <th className="py-2 pr-3 font-medium">Portal</th>
+                      {isAdmin ? <th className="py-2 pr-3 font-medium">Link</th> : null}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.userId} className="border-b border-ink/[0.05]">
+                        <td className="py-2.5 pl-3 pr-3">
+                          <div className="flex items-center gap-2.5">
+                            <UserAvatar user={u} size={28} />
+                            <span className="font-medium">{userDisplayName(u)}</span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 pr-3 text-ink/60">{u.email ?? "—"}</td>
+                        <td className="py-2.5 pr-3 font-mono text-xs">{u.employeeId ?? "—"}</td>
+                        <td className="py-2.5 pr-3">
+                          {u.appUserId ? (
+                            <StatusPill tone="success" label="Linked" />
+                          ) : (
+                            <StatusPill tone="warning" label="Not linked" />
+                          )}
+                        </td>
+                        {isAdmin ? (
+                          <td className="py-2.5 pr-3">
+                            {!u.appUserId && linkingId === u.userId ? (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  placeholder="App user ID"
+                                  value={appUserIdInput}
+                                  onChange={(e) => setAppUserIdInput(e.target.value)}
+                                  className="w-28 rounded-lg border border-ink/10 px-2 py-1 text-xs"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => void handleLink(u.userId)}
+                                  className="text-xs font-semibold text-brand hover:underline"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setLinkingId(null)}
+                                  className="text-xs text-ink/40"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : !u.appUserId ? (
                               <button
                                 type="button"
-                                onClick={() => void handleLink(u.userId)}
+                                onClick={() => setLinkingId(u.userId)}
                                 className="text-xs font-semibold text-brand hover:underline"
                               >
-                                Save
+                                Link…
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setLinkingId(null)}
-                                className="text-xs text-ink/40"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : !u.appUserId ? (
-                            <button
-                              type="button"
-                              onClick={() => setLinkingId(u.userId)}
-                              className="text-xs font-semibold text-brand hover:underline"
-                            >
-                              Link…
-                            </button>
-                          ) : null}
-                        </td>
-                      ) : null}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                            ) : null}
+                          </td>
+                        ) : null}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </WorkforceScrollPanel>
+              <WorkforcePagination
+                page={page}
+                pageSize={WORKFORCE_PAGE_SIZE}
+                total={total}
+                onPageChange={setPage}
+                className="mt-3"
+              />
+            </>
           )}
         </Card>
 

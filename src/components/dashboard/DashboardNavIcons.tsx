@@ -135,3 +135,16 @@ export function NavIconSun({ className = "h-4 w-4 shrink-0" }: { className?: str
     </svg>
   );
 }
+
+/** Team chat / messages */
+export function NavIconChat({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+      <path
+        d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

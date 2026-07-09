@@ -10,6 +10,7 @@ import type {
   ConnecteamStatus,
   ConnecteamUser,
   ConnecteamUsersMe,
+  WorkforceJobSummary,
   CreateScheduledShiftBody,
   CreateTimeOffBody,
   HoursByJobReport,
@@ -27,6 +28,15 @@ import type {
   TimeClocksResponse,
   TimeOffRequest,
 } from "@/lib/workforce/types";
+import type {
+  ChatConversation,
+  CreateConversationBody,
+  CreateConversationResponse,
+  PaginatedConversations,
+  PaginatedMessages,
+  SendMessageBody,
+  SendMessageResponse,
+} from "@/lib/workforce/chat-types";
 
 const BASE = "/connecteam";
 
@@ -225,10 +235,67 @@ export async function getHoursByUser(params?: {
   });
 }
 
-/** Resolve job label for display */
-export function jobLabel(job: ConnecteamJob): string {
+/** Resolve job label for display — prefers API `jobLabel`. */
+export function jobLabel(job: ConnecteamJob | WorkforceJobSummary): string {
+  if (job.jobLabel) return job.jobLabel;
   const num = job.normalizedJobNumber ? `#${job.normalizedJobNumber}` : null;
   const title = job.title?.trim();
   if (num && title) return `${num} · ${title}`;
   return num || title || job.code || job.jobId;
+}
+
+// ——— Live chat (docs/FRONTEND_CONNECTEAM_CHAT.md) ———
+
+export async function listConversations(params?: {
+  search?: string;
+  type?: string;
+  page?: number;
+  pageSize?: number;
+  includeDeleted?: boolean;
+}): Promise<PaginatedConversations> {
+  return get<PaginatedConversations>(`${BASE}/conversations`, {
+    search: params?.search,
+    type: params?.type,
+    page: params?.page,
+    pageSize: params?.pageSize,
+    includeDeleted: params?.includeDeleted ? "true" : undefined,
+  });
+}
+
+export async function getConversation(
+  conversationId: string
+): Promise<{ conversation: ChatConversation | null }> {
+  return get<{ conversation: ChatConversation | null }>(
+    `${BASE}/conversations/${encodeURIComponent(conversationId)}`
+  );
+}
+
+export async function listConversationMessages(
+  conversationId: string,
+  params?: { page?: number; pageSize?: number; includeDeleted?: boolean }
+): Promise<PaginatedMessages> {
+  return get<PaginatedMessages>(
+    `${BASE}/conversations/${encodeURIComponent(conversationId)}/messages`,
+    {
+      page: params?.page,
+      pageSize: params?.pageSize,
+      includeDeleted: params?.includeDeleted ? "true" : undefined,
+    }
+  );
+}
+
+export async function sendConversationMessage(
+  conversationId: string,
+  body: SendMessageBody
+): Promise<SendMessageResponse> {
+  return post<SendMessageResponse>(
+    `${BASE}/conversations/${encodeURIComponent(conversationId)}/messages`,
+    body
+  );
+}
+
+export async function createConversation(
+  body: CreateConversationBody
+): Promise<CreateConversationResponse> {
+  return post<CreateConversationResponse>(`${BASE}/conversations`, body);
 }
