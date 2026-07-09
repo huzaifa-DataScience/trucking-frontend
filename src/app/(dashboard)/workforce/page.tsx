@@ -10,16 +10,22 @@ import { KpiStat } from "@/components/ui/KpiStat";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { SkeletonStatRow } from "@/components/ui/Skeleton";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { UserAvatar } from "@/components/workforce/UserAvatar";
+import { WorkforceScrollPanel } from "@/components/workforce/WorkforceScrollPanel";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import * as connecteamApi from "@/lib/api/endpoints/connecteam";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { HoursByJobRow, TimeActivity } from "@/lib/workforce/types";
+import { formatHours, formatSyncAge } from "@/lib/workforce/format";
 import {
-  formatHours,
-  formatSyncAge,
-  formatWorkforceTime,
-} from "@/lib/workforce/format";
+  activityStartDisplay,
+  extractTimeActivities,
+  hoursByJobDisplayLabel,
+  isActivityOpen,
+  jobDisplayLabel,
+  userDisplayName,
+} from "@/lib/workforce/display";
 
 function OverviewContent() {
   const { syncSubtitle, status } = useWorkforce();
@@ -39,14 +45,8 @@ function OverviewContent() {
         connecteamApi.listTimeOff({ status: "pending", pageSize: 1 }),
       ]);
       setHoursRows(hours.rows ?? []);
-      const activityList =
-        (activities as { activities?: TimeActivity[]; timeActivities?: TimeActivity[] })
-          .activities ??
-        (activities as { timeActivities?: TimeActivity[] }).timeActivities ??
-        [];
-      setOpenShifts(
-        activityList.filter((a) => a.endTimestamp == null || a.endTimestamp === "")
-      );
+      const activityList = extractTimeActivities(activities);
+      setOpenShifts(activityList.filter(isActivityOpen));
       setPendingPto(pto.total ?? 0);
     } catch (e) {
       setError(getApiErrorMessage(e, "Failed to load overview"));
@@ -77,9 +77,7 @@ function OverviewContent() {
         </div>
       )}
 
-      {error ? (
-        <p className="text-sm text-danger">{error}</p>
-      ) : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -91,40 +89,49 @@ function OverviewContent() {
           ) : hoursRows.length === 0 ? (
             <p className="text-sm text-ink/45">No hours reported yet.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <WorkforceScrollPanel maxHeightClass="max-h-[min(400px,50vh)]">
               <table className="w-full min-w-[320px] text-sm">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-surface">
                   <tr className="border-b border-ink/10 text-left text-xs text-ink/45">
-                    <th className="py-2 pr-3 font-medium">Job #</th>
+                    <th className="py-2 pl-3 pr-3 font-medium">Job</th>
                     <th className="py-2 pr-3 font-medium">Hours</th>
-                    <th className="py-2 font-medium">Shifts</th>
+                    <th className="py-2 pr-3 font-medium">Shifts</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {hoursRows.map((row) => (
-                    <tr key={row.jobId ?? row.normalizedJobNumber ?? "unknown"} className="border-b border-ink/[0.05]">
-                      <td className="py-2.5 pr-3">
-                        {row.normalizedJobNumber ?? row.jobId ? (
-                          <Link
-                            href={`/workforce/time?job=${encodeURIComponent(row.normalizedJobNumber ?? row.jobId ?? "")}`}
-                            className="font-mono font-medium text-brand hover:underline"
-                          >
-                            {row.normalizedJobNumber ?? row.jobId?.slice(0, 8) ?? "—"}
-                          </Link>
-                        ) : (
-                          <span className="font-mono text-ink/45">—</span>
-                        )}
-                        {row.title ? (
-                          <p className="text-xs text-ink/45">{row.title}</p>
-                        ) : null}
-                      </td>
-                      <td className="ui-num py-2.5 pr-3 font-medium">{formatHours(row.totalHours)}</td>
-                      <td className="ui-num py-2.5">{row.shiftCount ?? 0}</td>
-                    </tr>
-                  ))}
+                  {hoursRows.map((row) => {
+                    const label = hoursByJobDisplayLabel(row);
+                    const filterKey = row.normalizedJobNumber ?? row.jobId ?? "";
+                    return (
+                      <tr
+                        key={row.jobId ?? row.normalizedJobNumber ?? label}
+                        className="border-b border-ink/[0.05]"
+                      >
+                        <td className="py-2.5 pl-3 pr-3">
+                          {filterKey ? (
+                            <Link
+                              href={`/workforce/time?job=${encodeURIComponent(filterKey)}`}
+                              className="font-medium text-brand hover:underline"
+                            >
+                              {label}
+                            </Link>
+                          ) : (
+                            <span className="text-ink/45">{label}</span>
+                          )}
+                          {row.companyLabel ? (
+                            <p className="text-xs text-ink/45">{row.companyLabel}</p>
+                          ) : null}
+                        </td>
+                        <td className="ui-num py-2.5 pr-3 font-medium">
+                          {formatHours(row.totalHours)}
+                        </td>
+                        <td className="ui-num py-2.5 pr-3">{row.shiftCount ?? 0}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-            </div>
+            </WorkforceScrollPanel>
           )}
         </Card>
 
@@ -137,26 +144,39 @@ function OverviewContent() {
           ) : openShifts.length === 0 ? (
             <p className="text-sm text-ink/45">No one clocked in.</p>
           ) : (
-            <ul className="space-y-2">
-              {openShifts.slice(0, 12).map((s) => (
-                <li
-                  key={s.shiftId}
-                  className="flex items-center justify-between rounded-lg border border-ink/[0.06] px-3 py-2 text-sm"
-                >
-                  <span className="font-medium text-ink">User #{s.userId}</span>
-                  <span className="text-xs text-ink/45">
-                    since {formatWorkforceTime(s.startTimestamp)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <WorkforceScrollPanel maxHeightClass="max-h-[min(400px,50vh)]">
+              <ul className="divide-y divide-ink/[0.06]">
+                {openShifts.map((s) => (
+                  <li
+                    key={s.shiftId}
+                    className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm"
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <UserAvatar user={s.user} size={28} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-ink">
+                          {userDisplayName(s.user, s.userId)}
+                        </p>
+                        <p className="truncate text-xs text-ink/45">
+                          {jobDisplayLabel(s.job, { jobId: s.jobId })}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-xs text-ink/45 whitespace-nowrap">
+                      since {activityStartDisplay(s)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </WorkforceScrollPanel>
           )}
         </Card>
       </div>
 
       {status?.lastSyncAt ? (
         <p className="text-xs text-ink/40">
-          Last mirror sync: {formatSyncAge(status.lastSyncAt)} ({new Date(status.lastSyncAt).toLocaleString()})
+          Last mirror sync: {formatSyncAge(status.lastSyncAt)} (
+          {new Date(status.lastSyncAt).toLocaleString()})
         </p>
       ) : null}
     </div>
