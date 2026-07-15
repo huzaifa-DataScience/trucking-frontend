@@ -30,26 +30,50 @@ export function messagesChronological(messages: ChatMessage[]): ChatMessage[] {
 }
 
 export function messageDedupKey(m: ChatMessage): string {
-  return m.messageId || m.externalMessageId || `${m.conversationId}-${m.sentAt}-${m.body}`;
+  if (m.messageId) return `id:${m.messageId}`;
+  if (m.externalMessageId) return `ext:${m.externalMessageId}`;
+  const sender = m.userId ?? m.appUserId ?? "unknown";
+  return `fb:${m.conversationId}:${m.sentAt ?? ""}:${sender}:${m.body}`;
 }
 
-/** Merge polled messages into existing list by messageId / externalMessageId. */
+/** True when two rows represent the same chat message (WS vs REST ids may differ). */
+export function messagesSame(a: ChatMessage, b: ChatMessage): boolean {
+  if (a.messageId && b.messageId && a.messageId === b.messageId) return true;
+  if (
+    a.externalMessageId &&
+    b.externalMessageId &&
+    a.externalMessageId === b.externalMessageId
+  ) {
+    return true;
+  }
+  if (a.messageId || b.messageId || a.externalMessageId || b.externalMessageId) {
+    return false;
+  }
+  return (
+    a.conversationId === b.conversationId &&
+    a.body === b.body &&
+    messageSentAt(a) === messageSentAt(b) &&
+    (a.userId ?? a.appUserId) === (b.userId ?? b.appUserId)
+  );
+}
+
+/** Merge polled / WS messages — never collapse different senders or missing ids. */
 export function mergeChatMessages(
   existing: ChatMessage[],
   incoming: ChatMessage[]
 ): ChatMessage[] {
-  const map = new Map<string, ChatMessage>();
-  for (const m of existing) {
-    map.set(messageDedupKey(m), m);
-  }
+  const list = [...existing];
   for (const m of incoming) {
     if (m.isDeleted) {
-      map.delete(messageDedupKey(m));
+      const idx = list.findIndex((x) => messagesSame(x, m));
+      if (idx >= 0) list.splice(idx, 1);
       continue;
     }
-    map.set(messageDedupKey(m), m);
+    const idx = list.findIndex((x) => messagesSame(x, m));
+    if (idx >= 0) list[idx] = { ...list[idx], ...m };
+    else list.push(m);
   }
-  return messagesChronological([...map.values()]);
+  return messagesChronological(list);
 }
 
 export function inboxPreview(c: ChatConversation): string {
@@ -136,6 +160,39 @@ export function sortConversationsByRecent(
   return [...conversations].sort(
     (a, b) => conversationLastMessageTime(b) - conversationLastMessageTime(a)
   );
+}
+
+export function mergeInboxFromApi(
+  existing: ChatConversation[],
+  fromApi: ChatConversation[]
+): ChatConversation[] {
+  const byId = new Map<string, ChatConversation>();
+  for (const c of existing) byId.set(c.conversationId, c);
+  for (const c of fromApi) {
+    const prev = byId.get(c.conversationId);
+    if (!prev || conversationLastMessageTime(c) >= conversationLastMessageTime(prev)) {
+      byId.set(c.conversationId, c);
+    }
+  }
+  return sortConversationsByRecent([...byId.values()]);
+}
+
+export function conversationFromMessage(
+  message: ChatMessage,
+  existing?: ChatConversation | null
+): ChatConversation {
+  return {
+    conversationId: message.conversationId,
+    type: existing?.type ?? "team",
+    title: existing?.title,
+    conversationLabel: existing?.conversationLabel,
+    typeLabel: existing?.typeLabel,
+    lastMessagePreview: message.body,
+    lastMessageSenderName: message.senderName ?? undefined,
+    lastMessageAtIso: message.sentAtIso ?? message.sentAt ?? undefined,
+    messageCount: (existing?.messageCount ?? 0) + 1,
+    recordSource: existing?.recordSource,
+  };
 }
 
 export function upsertConversationInInbox(

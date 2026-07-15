@@ -9,12 +9,14 @@ import type {
   ChatMessageDeletedSocketPayload,
   ChatMessageSocketPayload,
   ChatSocketStatus,
+  ChatUnreadUpdatedSocketPayload,
 } from "@/lib/workforce/chat-types";
 
 export interface ConnecteamChatSocketHandlers {
   onMessage: (payload: ChatMessageSocketPayload) => void;
   onMessageDeleted: (payload: ChatMessageDeletedSocketPayload) => void;
   onConversationUpdated: (payload: ChatConversationUpdatedSocketPayload) => void;
+  onUnreadUpdated?: (payload: ChatUnreadUpdatedSocketPayload) => void;
 }
 
 /**
@@ -66,6 +68,9 @@ export function useConnecteamChatSocket(
     });
     socket.on("chat.conversation_updated", (payload: ChatConversationUpdatedSocketPayload) => {
       handlersRef.current.onConversationUpdated(payload);
+    });
+    socket.on("chat.unread_updated", (payload: ChatUnreadUpdatedSocketPayload) => {
+      handlersRef.current.onUnreadUpdated?.(payload);
     });
 
     return () => {

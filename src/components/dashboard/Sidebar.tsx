@@ -23,6 +23,8 @@ import {
   NavIconChat,
 } from "@/components/dashboard/DashboardNavIcons";
 import type { AuthUser } from "@/lib/auth/types";
+import { useChatUnreadTotal } from "@/hooks/useChatUnreadTotal";
+import { ChatUnreadBadge } from "@/components/workforce/chat/ChatUnreadBadge";
 
 type ViewMode = "operations" | "billings" | "bidding" | "workforce";
 
@@ -124,6 +126,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isAdmin, user, logout } = useAuth();
+  const chatUnreadTotal = useChatUnreadTotal();
 
   const currentView: ViewMode = viewFromPathname(pathname);
 
@@ -254,7 +257,10 @@ export function Sidebar() {
                   <Icon
                     className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/35"}`}
                   />
-                  <span className="hidden lg:inline">{label}</span>
+                  <span className="hidden flex-1 lg:inline">{label}</span>
+                  {href === "/workforce/chat" && chatUnreadTotal > 0 ? (
+                    <ChatUnreadBadge count={chatUnreadTotal} className="hidden lg:inline-flex" />
+                  ) : null}
                 </Link>
               );
             })}

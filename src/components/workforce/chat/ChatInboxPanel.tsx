@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { LogoLoader } from "@/components/ui/LogoLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { ChatConversation, ChatSocketStatus, ConversationFilter } from "@/lib/workforce/chat-types";
@@ -9,6 +10,7 @@ import {
   inboxPreview,
 } from "@/lib/workforce/chat-utils";
 import { ChatTypeIcon } from "./ChatTypeIcon";
+import { ChatUnreadBadge } from "./ChatUnreadBadge";
 
 const FILTERS: { id: ConversationFilter; label: string }[] = [
   { id: "all", label: "All" },
@@ -21,6 +23,8 @@ export function ChatInboxPanel({
   conversations,
   total,
   loading,
+  loadingMore,
+  hasMore,
   error,
   activeId,
   filter,
@@ -31,11 +35,14 @@ export function ChatInboxPanel({
   onSearchChange,
   onNewChannel,
   onSelectConversation,
+  onLoadMore,
   showOnMobile,
 }: {
   conversations: ChatConversation[];
   total: number;
   loading: boolean;
+  loadingMore: boolean;
+  hasMore: boolean;
   error: string | null;
   activeId: string | null;
   filter: ConversationFilter;
@@ -46,8 +53,31 @@ export function ChatInboxPanel({
   onSearchChange: (s: string) => void;
   onNewChannel: () => void;
   onSelectConversation: (conversationId: string) => void;
+  onLoadMore: () => void;
   showOnMobile: boolean;
 }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const onLoadMoreRef = useRef(onLoadMore);
+  onLoadMoreRef.current = onLoadMore;
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el || !hasMore || loadingMore) return;
+
+    const onScroll = () => {
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (dist < 120) onLoadMoreRef.current();
+    };
+
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [hasMore, loadingMore]);
+
+  const loadedLabel =
+    conversations.length < total
+      ? `${conversations.length} of ${total} loaded`
+      : `${total} conversation${total === 1 ? "" : "s"}`;
+
   return (
     <aside
       className={`flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden border-ink/[0.06] bg-surface lg:w-[340px] lg:border-r ${
@@ -59,7 +89,7 @@ export function ChatInboxPanel({
           <div>
             <h1 className="text-lg font-semibold text-ink">Team chat</h1>
             <p className="flex items-center gap-1.5 text-xs text-ink/45">
-              {total} conversation{total === 1 ? "" : "s"}
+              {loadedLabel}
               {socketStatus === "connected" ? (
                 <span className="inline-flex items-center gap-1 text-brand">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
@@ -110,9 +140,31 @@ export function ChatInboxPanel({
             </button>
           ))}
         </div>
+
+        {filter !== "all" || search.trim() ? (
+          <div className="mt-3 rounded-lg border border-warning-border bg-warning-tint px-3 py-2 text-xs text-warning">
+            <span>
+              {filter !== "all"
+                ? `Inbox filtered to ${FILTERS.find((f) => f.id === filter)?.label ?? filter} only. `
+                : ""}
+              {search.trim() ? `Search active — other chats hidden. ` : ""}
+              Some conversations or messages may not appear.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                onFilterChange("all");
+                onSearchChange("");
+              }}
+              className="ml-1 font-semibold underline underline-offset-2"
+            >
+              Show all
+            </button>
+          </div>
+        ) : null}
       </div>
 
-      <div className="ui-scroll-light min-h-0 flex-1 overflow-y-auto">
+      <div ref={listRef} className="ui-scroll-light min-h-0 flex-1 overflow-y-auto">
         {loading && conversations.length === 0 ? (
           <div className="flex justify-center py-16">
             <LogoLoader size={28} />
@@ -133,6 +185,7 @@ export function ChatInboxPanel({
           <ul className="divide-y divide-ink/[0.05]">
             {conversations.map((c) => {
               const active = c.conversationId === activeId;
+              const unread = c.unreadCount ?? 0;
               return (
                 <li key={c.conversationId}>
                   <button
@@ -154,9 +207,12 @@ export function ChatInboxPanel({
                         <p className={`truncate text-sm font-semibold ${active ? "text-brand" : "text-ink"}`}>
                           {conversationDisplayLabel(c)}
                         </p>
-                        <span className="shrink-0 text-[10px] text-ink/35">
-                          {formatChatRelativeTime(c.lastMessageAtIso ?? c.lastMessageAt)}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          {unread > 0 ? <ChatUnreadBadge count={unread} /> : null}
+                          <span className="text-[10px] text-ink/35">
+                            {formatChatRelativeTime(c.lastMessageAtIso ?? c.lastMessageAt)}
+                          </span>
+                        </div>
                       </div>
                       <p className="mt-0.5 truncate text-xs text-ink/45">{inboxPreview(c)}</p>
                       {c.recordSource === "native" ? (
@@ -169,6 +225,21 @@ export function ChatInboxPanel({
                 </li>
               );
             })}
+            {hasMore ? (
+              <li className="px-4 py-4">
+                <button
+                  type="button"
+                  onClick={onLoadMore}
+                  disabled={loadingMore}
+                  className="w-full rounded-xl border border-ink/10 bg-canvas px-4 py-2 text-xs font-semibold text-ink/55 transition hover:bg-ink/[0.04] disabled:opacity-50"
+                >
+                  {loadingMore ? "Loading more…" : "Load more conversations"}
+                </button>
+                <p className="mt-1.5 text-center text-[10px] text-ink/35">
+                  Scroll down or tap to load older chats
+                </p>
+              </li>
+            ) : null}
           </ul>
         )}
       </div>
