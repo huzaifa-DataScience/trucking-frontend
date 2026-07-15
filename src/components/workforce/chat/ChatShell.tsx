@@ -49,7 +49,14 @@ export function ChatShell() {
   const handleSend = useCallback(
     async (text: string) => {
       try {
-        await chat.sendMessage(text, connecteamUserId ?? undefined);
+        const res = await chat.sendMessage(text, connecteamUserId ?? undefined);
+        if (res?.connecteam && res.connecteam.sent === false) {
+          showToast(
+            res.connecteam.error ??
+              "Saved on portal only — Connecteam outbound sync is not configured.",
+            "info"
+          );
+        }
       } catch (e) {
         showToast(getApiErrorMessage(e, "Send failed"), "error");
       }
@@ -81,7 +88,8 @@ export function ChatShell() {
             activeId={conversationId}
             filter={chat.filter}
             search={chat.search}
-            isPolling={chat.isPolling}
+            socketStatus={chat.socketStatus}
+            isFallbackPolling={chat.isFallbackPolling}
             onFilterChange={chat.setFilter}
             onSearchChange={chat.setSearch}
             onNewChannel={() => setShowCreate(true)}

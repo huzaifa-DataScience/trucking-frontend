@@ -122,3 +122,45 @@ export function chatConversationIdFromPath(pathname: string): string | null {
   const segment = pathname.slice(prefix.length).split("/")[0];
   return segment ? decodeURIComponent(segment) : null;
 }
+
+export function conversationLastMessageTime(c: ChatConversation): number {
+  const iso = c.lastMessageAtIso ?? c.lastMessageAt;
+  if (!iso) return 0;
+  const t = new Date(iso).getTime();
+  return Number.isNaN(t) ? 0 : t;
+}
+
+export function sortConversationsByRecent(
+  conversations: ChatConversation[]
+): ChatConversation[] {
+  return [...conversations].sort(
+    (a, b) => conversationLastMessageTime(b) - conversationLastMessageTime(a)
+  );
+}
+
+export function upsertConversationInInbox(
+  list: ChatConversation[],
+  conversation: ChatConversation
+): ChatConversation[] {
+  const next = list.filter((c) => c.conversationId !== conversation.conversationId);
+  next.push(conversation);
+  return sortConversationsByRecent(next);
+}
+
+export function messageMatchesDeleteTarget(
+  m: ChatMessage,
+  messageId?: string,
+  externalMessageId?: string | null
+): boolean {
+  if (messageId && m.messageId === messageId) return true;
+  if (externalMessageId && m.externalMessageId === externalMessageId) return true;
+  return false;
+}
+
+export function removeDeletedChatMessage(
+  messages: ChatMessage[],
+  messageId?: string,
+  externalMessageId?: string | null
+): ChatMessage[] {
+  return messages.filter((m) => !messageMatchesDeleteTarget(m, messageId, externalMessageId));
+}

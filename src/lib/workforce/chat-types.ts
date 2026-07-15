@@ -66,9 +66,16 @@ export interface SendMessageBody {
   userId?: number;
 }
 
+export interface ConnecteamSendResult {
+  sent: boolean;
+  externalMessageId?: string | null;
+  error?: string | null;
+}
+
 export interface SendMessageResponse {
   ok: boolean;
   message: ChatMessage;
+  connecteam?: ConnecteamSendResult;
 }
 
 export interface CreateConversationBody {
@@ -80,10 +87,29 @@ export interface CreateConversationResponse {
   ok: boolean;
   conversation: ChatConversation;
   createdByAppUserId?: number;
+  connecteam?: ConnecteamSendResult;
 }
+
+/** Socket.IO — server → client (docs/FRONTEND_CONNECTEAM_CHAT.md §2.1) */
+export interface ChatMessageSocketPayload {
+  message: ChatMessage;
+  conversation: ChatConversation;
+}
+
+export interface ChatMessageDeletedSocketPayload {
+  conversationId: string;
+  messageId?: string;
+  externalMessageId?: string | null;
+}
+
+export interface ChatConversationUpdatedSocketPayload {
+  conversation: ChatConversation;
+}
+
+export type ChatSocketStatus = "connecting" | "connected" | "disconnected";
 
 export type ConversationFilter = "all" | ConversationType;
 
-export const CHAT_POLL_INTERVAL_MS = 12_000;
+export const CHAT_FALLBACK_POLL_INTERVAL_MS = 30_000;
 export const CHAT_PAGE_SIZE = 50;
 export const CHAT_MAX_BODY_LENGTH = 1000;
