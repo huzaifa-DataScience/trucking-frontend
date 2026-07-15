@@ -12,6 +12,7 @@ import { ChatBubbleIcon } from "./ChatTypeIcon";
 export function ChatThreadPanel({
   conversation,
   messages,
+  messagesTotal,
   loading,
   loadingOlder,
   hasOlderMessages,
@@ -25,9 +26,12 @@ export function ChatThreadPanel({
   onLoadOlder,
   onBack,
   showOnMobile,
+  threadPendingNew = 0,
+  onThreadAtBottom,
 }: {
   conversation: ChatConversation | null;
   messages: ChatMessage[];
+  messagesTotal: number;
   loading: boolean;
   loadingOlder: boolean;
   hasOlderMessages: boolean;
@@ -41,10 +45,14 @@ export function ChatThreadPanel({
   onLoadOlder: () => void;
   onBack: () => void;
   showOnMobile: boolean;
+  threadPendingNew?: number;
+  onThreadAtBottom?: (atBottom: boolean) => void;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
   const wasAtBottomRef = useRef(true);
+  const onThreadAtBottomRef = useRef(onThreadAtBottom);
+  onThreadAtBottomRef.current = onThreadAtBottom;
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const el = listRef.current;
@@ -57,7 +65,11 @@ export function ChatThreadPanel({
     if (!el) return;
     const onScroll = () => {
       const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-      wasAtBottomRef.current = dist < 80;
+      const atBottom = dist < 80;
+      if (wasAtBottomRef.current !== atBottom) {
+        wasAtBottomRef.current = atBottom;
+        onThreadAtBottomRef.current?.(atBottom);
+      }
     };
     el.addEventListener("scroll", onScroll);
     return () => el.removeEventListener("scroll", onScroll);
@@ -70,10 +82,17 @@ export function ChatThreadPanel({
     if (loading || next === 0) return;
     if (prev === 0 || wasAtBottomRef.current) {
       scrollToBottom(prev === 0 ? "auto" : "smooth");
+      if (wasAtBottomRef.current) onThreadAtBottomRef.current?.(true);
     }
   }, [messages.length, loading, scrollToBottom]);
 
-  if (!conversation) {
+  const jumpToLatest = useCallback(() => {
+    scrollToBottom("smooth");
+    wasAtBottomRef.current = true;
+    onThreadAtBottomRef.current?.(true);
+  }, [scrollToBottom]);
+
+  if (!conversation && !loading) {
     return (
       <section
         className={`h-full min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-canvas/50 ${
@@ -109,18 +128,32 @@ export function ChatThreadPanel({
             <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-          <ChatTypeIcon type={conversation.type} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base font-semibold text-ink">
-            {conversationDisplayLabel(conversation)}
-          </h2>
-          <p className="truncate text-xs capitalize text-ink/45">
-            {conversation.typeLabel ?? conversation.type}
-            {conversation.messageCount != null ? ` · ${conversation.messageCount} messages` : ""}
-          </p>
-        </div>
+        {loading && !conversation ? (
+          <div className="flex flex-1 items-center gap-3 py-1">
+            <LogoLoader size={24} />
+            <span className="text-sm text-ink/45">Loading conversation…</span>
+          </div>
+        ) : conversation ? (
+          <>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+              <ChatTypeIcon type={conversation.type} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-base font-semibold text-ink">
+                {conversationDisplayLabel(conversation)}
+              </h2>
+              <p className="truncate text-xs text-ink/45">
+                {conversation.typeLabel ?? conversation.type}
+                {messagesTotal > 0
+                  ? ` · showing ${messages.length} of ${messagesTotal} messages`
+                  : conversation.messageCount != null
+                    ? ` · ${conversation.messageCount} messages`
+                    : ""}
+                {hasOlderMessages ? " · older available" : ""}
+              </p>
+            </div>
+          </>
+        ) : null}
       </header>
 
       {error ? (
@@ -144,7 +177,7 @@ export function ChatThreadPanel({
               </div>
             ) : null}
             {hasOlderMessages ? (
-              <div className="mb-4 flex justify-center">
+              <div className="mb-4 flex flex-col items-center gap-1">
                 <button
                   type="button"
                   onClick={onLoadOlder}
@@ -153,30 +186,47 @@ export function ChatThreadPanel({
                 >
                   {loadingOlder ? "Loading…" : "Load older messages"}
                 </button>
+                <p className="text-[10px] text-ink/35">
+                  Only the most recent {messages.length} loaded — tap to load more
+                </p>
               </div>
             ) : null}
 
-            {messages.length === 0 ? (
+            {messages.length === 0 && !loading ? (
               <p className="py-12 text-center text-sm text-ink/45">
                 No messages yet. Say hello — only messages after chat mirroring was enabled will
                 appear here.
               </p>
-            ) : (
+            ) : messages.length > 0 ? (
               <div className="space-y-4">
                 {messages.map((m) => (
                   <ChatMessageBubble
                     key={m.messageId}
                     message={m}
-                    conversationType={conversation.type}
+                    conversationType={conversation?.type}
                     connecteamUserId={connecteamUserId}
                     appUserId={appUserId}
                   />
                 ))}
               </div>
-            )}
+            ) : null}
           </>
         )}
       </div>
+
+      {threadPendingNew > 0 ? (
+        <div className="relative z-10 -mt-10 flex shrink-0 justify-center px-4 pb-2">
+          <button
+            type="button"
+            onClick={jumpToLatest}
+            className="rounded-full border border-brand/25 bg-surface px-4 py-1.5 text-xs font-semibold text-brand shadow-sm transition hover:bg-brand/5"
+          >
+            {threadPendingNew === 1
+              ? "1 new message ↓"
+              : `${threadPendingNew} new messages ↓`}
+          </button>
+        </div>
+      ) : null}
 
       <ChatComposer
         disabled={!canSend}

@@ -32,6 +32,8 @@ import type {
   ChatConversation,
   CreateConversationBody,
   CreateConversationResponse,
+  MarkConversationReadBody,
+  MarkConversationReadResponse,
   PaginatedConversations,
   PaginatedMessages,
   SendMessageBody,
@@ -298,4 +300,14 @@ export async function createConversation(
   body: CreateConversationBody
 ): Promise<CreateConversationResponse> {
   return post<CreateConversationResponse>(`${BASE}/conversations`, body);
+}
+
+export async function markConversationRead(
+  conversationId: string,
+  body?: MarkConversationReadBody
+): Promise<MarkConversationReadResponse> {
+  return post<MarkConversationReadResponse>(
+    `${BASE}/conversations/${encodeURIComponent(conversationId)}/read`,
+    body ?? {}
+  );
 }

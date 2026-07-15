@@ -24,10 +24,13 @@ export function ChatShell() {
   const { showToast } = useToast();
 
   const conversationId = chatConversationIdFromPath(pathname);
-  const chat = useWorkforceChat(conversationId);
+  const connecteamUserId = me?.connecteamUser?.userId ?? null;
+  const chat = useWorkforceChat(conversationId, {
+    connecteamUserId,
+    appUserId: user?.id ?? null,
+  });
   const [showCreate, setShowCreate] = useState(false);
 
-  const connecteamUserId = me?.connecteamUser?.userId ?? null;
   const canSend = Boolean(me?.linked && connecteamUserId);
   const sendDisabledReason = !me?.linked
     ? isAdmin
@@ -84,6 +87,8 @@ export function ChatShell() {
             conversations={chat.conversations}
             total={chat.inboxTotal}
             loading={chat.inboxLoading}
+            loadingMore={chat.loadingMoreInbox}
+            hasMore={chat.hasMoreInbox}
             error={chat.inboxError}
             activeId={conversationId}
             filter={chat.filter}
@@ -94,12 +99,14 @@ export function ChatShell() {
             onSearchChange={chat.setSearch}
             onNewChannel={() => setShowCreate(true)}
             onSelectConversation={selectConversation}
+            onLoadMore={() => void chat.loadMoreInbox()}
             showOnMobile={showInboxOnMobile}
           />
 
           <ChatThreadPanel
             conversation={conversationId ? chat.activeConversation : null}
             messages={chat.messages}
+            messagesTotal={chat.messagesTotal}
             loading={chat.threadLoading}
             loadingOlder={chat.loadingOlder}
             hasOlderMessages={chat.hasOlderMessages}
@@ -113,6 +120,8 @@ export function ChatShell() {
             onLoadOlder={() => void chat.loadOlderMessages()}
             onBack={clearConversation}
             showOnMobile={showThreadOnMobile}
+            threadPendingNew={chat.threadPendingNew}
+            onThreadAtBottom={chat.handleThreadAtBottom}
           />
         </div>
       </div>

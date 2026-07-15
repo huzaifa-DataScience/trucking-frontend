@@ -19,12 +19,14 @@ export interface ChatConversation {
   conversationLabel?: string;
   typeLabel?: string;
   lastMessageAtIso?: string | null;
+  unreadCount?: number;
 }
 
 export interface PaginatedConversations {
   page: number;
   pageSize: number;
   total: number;
+  totalUnread?: number;
   conversations: ChatConversation[];
 }
 
@@ -106,10 +108,32 @@ export interface ChatConversationUpdatedSocketPayload {
   conversation: ChatConversation;
 }
 
+export interface ChatUnreadUpdatedSocketPayload {
+  conversationId: string;
+  unreadCount: number;
+  totalUnread: number;
+}
+
+export interface MarkConversationReadBody {
+  lastReadMessageId?: string;
+  lastReadAt?: string;
+}
+
+export interface MarkConversationReadResponse {
+  ok: boolean;
+  unreadCount: number;
+  totalUnread: number;
+}
+
 export type ChatSocketStatus = "connecting" | "connected" | "disconnected";
 
 export type ConversationFilter = "all" | ConversationType;
 
 export const CHAT_FALLBACK_POLL_INTERVAL_MS = 30_000;
+/** Background inbox refresh while WS is connected (safety net) */
+export const CHAT_INBOX_SYNC_INTERVAL_MS = 45_000;
+/** Inbox list page size */
 export const CHAT_PAGE_SIZE = 50;
+/** Thread fetch — API allows up to 200; load more via "Load older" */
+export const CHAT_THREAD_PAGE_SIZE = 200;
 export const CHAT_MAX_BODY_LENGTH = 1000;
