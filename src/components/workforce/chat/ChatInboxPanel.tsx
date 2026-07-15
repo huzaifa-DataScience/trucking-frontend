@@ -2,7 +2,7 @@
 
 import { LogoLoader } from "@/components/ui/LogoLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { ChatConversation, ConversationFilter } from "@/lib/workforce/chat-types";
+import type { ChatConversation, ChatSocketStatus, ConversationFilter } from "@/lib/workforce/chat-types";
 import {
   conversationDisplayLabel,
   formatChatRelativeTime,
@@ -25,7 +25,8 @@ export function ChatInboxPanel({
   activeId,
   filter,
   search,
-  isPolling,
+  socketStatus,
+  isFallbackPolling,
   onFilterChange,
   onSearchChange,
   onNewChannel,
@@ -39,7 +40,8 @@ export function ChatInboxPanel({
   activeId: string | null;
   filter: ConversationFilter;
   search: string;
-  isPolling: boolean;
+  socketStatus: ChatSocketStatus;
+  isFallbackPolling: boolean;
   onFilterChange: (f: ConversationFilter) => void;
   onSearchChange: (s: string) => void;
   onNewChannel: () => void;
@@ -58,11 +60,17 @@ export function ChatInboxPanel({
             <h1 className="text-lg font-semibold text-ink">Team chat</h1>
             <p className="flex items-center gap-1.5 text-xs text-ink/45">
               {total} conversation{total === 1 ? "" : "s"}
-              {isPolling ? (
+              {socketStatus === "connected" ? (
                 <span className="inline-flex items-center gap-1 text-brand">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
                   live
                 </span>
+              ) : socketStatus === "connecting" ? (
+                <span className="inline-flex items-center gap-1 text-warning">connecting…</span>
+              ) : isFallbackPolling ? (
+                <span className="inline-flex items-center gap-1 text-ink/40">syncing…</span>
+              ) : socketStatus === "disconnected" ? (
+                <span className="text-ink/35">offline — retrying</span>
               ) : null}
             </p>
           </div>

@@ -1,15 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as connecteamApi from "@/lib/api/endpoints/connecteam";
 import { getApiErrorMessage } from "@/lib/api/client";
+import { useConnecteamChatSocket } from "@/hooks/useConnecteamChatSocket";
 import type {
   ChatConversation,
   ChatMessage,
   ConversationFilter,
+  SendMessageResponse,
 } from "@/lib/workforce/chat-types";
-import { CHAT_PAGE_SIZE, CHAT_POLL_INTERVAL_MS } from "@/lib/workforce/chat-types";
-import { mergeChatMessages, messagesChronological } from "@/lib/workforce/chat-utils";
+import { CHAT_FALLBACK_POLL_INTERVAL_MS, CHAT_PAGE_SIZE } from "@/lib/workforce/chat-types";
+import {
+  mergeChatMessages,
+  messagesChronological,
+  removeDeletedChatMessage,
+  upsertConversationInInbox,
+} from "@/lib/workforce/chat-utils";
 
 export function useWorkforceChat(activeConversationId: string | null) {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -25,13 +32,13 @@ export function useWorkforceChat(activeConversationId: string | null) {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [threadError, setThreadError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [isPolling, setIsPolling] = useState(false);
+  const [isFallbackPolling, setIsFallbackPolling] = useState(false);
 
   const [filter, setFilter] = useState<ConversationFilter>("all");
   const [search, setSearch] = useState("");
 
-  const messagesRef = useRef(messages);
-  messagesRef.current = messages;
+  const activeConversationIdRef = useRef(activeConversationId);
+  activeConversationIdRef.current = activeConversationId;
   const searchRef = useRef(search);
   searchRef.current = search;
   const filterRef = useRef(filter);
@@ -59,37 +66,34 @@ export function useWorkforceChat(activeConversationId: string | null) {
     }
   }, []);
 
-  const fetchThread = useCallback(
-    async (conversationId: string, silent = false) => {
-      if (!silent) setThreadLoading(true);
-      try {
-        const [convRes, msgRes] = await Promise.all([
-          connecteamApi.getConversation(conversationId),
-          connecteamApi.listConversationMessages(conversationId, {
-            page: 1,
-            pageSize: CHAT_PAGE_SIZE,
-          }),
-        ]);
-        setActiveConversation(convRes.conversation);
-        if (!convRes.conversation) {
-          setThreadError("Conversation not found.");
-          setMessages([]);
-          setMessagesTotal(0);
-          return;
-        }
-        const chronological = messagesChronological(msgRes.messages ?? []);
-        setMessages(chronological);
-        setMessagesPage(1);
-        setMessagesTotal(msgRes.total ?? chronological.length);
-        setThreadError(null);
-      } catch (e) {
-        if (!silent) setThreadError(getApiErrorMessage(e, "Failed to load messages"));
-      } finally {
-        if (!silent) setThreadLoading(false);
+  const fetchThread = useCallback(async (conversationId: string, silent = false) => {
+    if (!silent) setThreadLoading(true);
+    try {
+      const [convRes, msgRes] = await Promise.all([
+        connecteamApi.getConversation(conversationId),
+        connecteamApi.listConversationMessages(conversationId, {
+          page: 1,
+          pageSize: CHAT_PAGE_SIZE,
+        }),
+      ]);
+      setActiveConversation(convRes.conversation);
+      if (!convRes.conversation) {
+        setThreadError("Conversation not found.");
+        setMessages([]);
+        setMessagesTotal(0);
+        return;
       }
-    },
-    []
-  );
+      const chronological = messagesChronological(msgRes.messages ?? []);
+      setMessages(chronological);
+      setMessagesPage(1);
+      setMessagesTotal(msgRes.total ?? chronological.length);
+      setThreadError(null);
+    } catch (e) {
+      if (!silent) setThreadError(getApiErrorMessage(e, "Failed to load messages"));
+    } finally {
+      if (!silent) setThreadLoading(false);
+    }
+  }, []);
 
   const pollThread = useCallback(async (conversationId: string) => {
     try {
@@ -100,9 +104,45 @@ export function useWorkforceChat(activeConversationId: string | null) {
       setMessages((prev) => mergeChatMessages(prev, msgRes.messages ?? []));
       setMessagesTotal(msgRes.total ?? msgRes.messages?.length ?? 0);
     } catch {
-      /* silent poll failure */
+      /* silent */
     }
   }, []);
+
+  const socketHandlers = useMemo(
+    () => ({
+      onMessage: ({ message, conversation }: { message: ChatMessage; conversation: ChatConversation }) => {
+        setConversations((prev) => upsertConversationInInbox(prev, conversation));
+        setInboxTotal((prev) => Math.max(prev, conversationsRef.current.length));
+
+        if (activeConversationIdRef.current === conversation.conversationId) {
+          setActiveConversation(conversation);
+          setMessages((prev) => mergeChatMessages(prev, [message]));
+        }
+      },
+      onMessageDeleted: ({
+        conversationId,
+        messageId,
+        externalMessageId,
+      }: {
+        conversationId: string;
+        messageId?: string;
+        externalMessageId?: string | null;
+      }) => {
+        if (activeConversationIdRef.current === conversationId) {
+          setMessages((prev) => removeDeletedChatMessage(prev, messageId, externalMessageId));
+        }
+      },
+      onConversationUpdated: ({ conversation }: { conversation: ChatConversation }) => {
+        setConversations((prev) => upsertConversationInInbox(prev, conversation));
+        if (activeConversationIdRef.current === conversation.conversationId) {
+          setActiveConversation(conversation);
+        }
+      },
+    }),
+    []
+  );
+
+  const socketStatus = useConnecteamChatSocket(socketHandlers);
 
   const loadOlderMessages = useCallback(async () => {
     if (!activeConversationId || loadingOlder) return;
@@ -126,7 +166,7 @@ export function useWorkforceChat(activeConversationId: string | null) {
   }, [activeConversationId, loadingOlder, messagesPage, messagesTotal]);
 
   const sendMessage = useCallback(
-    async (body: string, userId?: number) => {
+    async (body: string, userId?: number): Promise<SendMessageResponse | null> => {
       if (!activeConversationId || !body.trim()) return null;
       setSending(true);
       try {
@@ -148,7 +188,7 @@ export function useWorkforceChat(activeConversationId: string | null) {
           )
         );
         setThreadError(null);
-        return res.message;
+        return res;
       } catch (e) {
         const msg = getApiErrorMessage(e, "Failed to send message");
         setThreadError(msg);
@@ -160,19 +200,22 @@ export function useWorkforceChat(activeConversationId: string | null) {
     [activeConversationId]
   );
 
-  const createChannel = useCallback(async (title: string) => {
-    const res = await connecteamApi.createConversation({ title, type: "team" });
-    await fetchInbox(true);
-    return res.conversation;
-  }, [fetchInbox]);
+  const createChannel = useCallback(
+    async (title: string) => {
+      const res = await connecteamApi.createConversation({ title, type: "team" });
+      await fetchInbox(true);
+      return res.conversation;
+    },
+    [fetchInbox]
+  );
 
-  // Inbox load on filter/search change
+  // Initial inbox + filter/search
   useEffect(() => {
     const t = setTimeout(() => void fetchInbox(), search ? 300 : 0);
     return () => clearTimeout(t);
   }, [fetchInbox, search, filter]);
 
-  // Thread load when conversation changes — inbox stays mounted; only thread refetches.
+  // Thread load on conversation change
   useEffect(() => {
     if (!activeConversationId) {
       prevConversationIdRef.current = null;
@@ -203,20 +246,33 @@ export function useWorkforceChat(activeConversationId: string | null) {
     void fetchThread(activeConversationId);
   }, [activeConversationId, fetchThread]);
 
-  // Polling while chat is visible
+  // Resync once when socket (re)connects
   useEffect(() => {
+    if (socketStatus !== "connected") return;
+    void fetchInbox(true);
+    if (activeConversationId) void pollThread(activeConversationId);
+  }, [socketStatus, activeConversationId, fetchInbox, pollThread]);
+
+  // Fallback poll only when WebSocket is down
+  useEffect(() => {
+    if (socketStatus === "connected" || socketStatus === "connecting") {
+      setIsFallbackPolling(false);
+      return;
+    }
+
     let timer: ReturnType<typeof setInterval> | null = null;
 
     const tick = () => {
       if (document.visibilityState !== "visible") return;
-      setIsPolling(true);
-      void fetchInbox(true).finally(() => setIsPolling(false));
-      if (activeConversationId) void pollThread(activeConversationId);
+      setIsFallbackPolling(true);
+      void fetchInbox(true).finally(() => setIsFallbackPolling(false));
+      if (activeConversationIdRef.current) void pollThread(activeConversationIdRef.current);
     };
 
     const start = () => {
       if (timer) return;
-      timer = setInterval(tick, CHAT_POLL_INTERVAL_MS);
+      tick();
+      timer = setInterval(tick, CHAT_FALLBACK_POLL_INTERVAL_MS);
     };
 
     const stop = () => {
@@ -224,26 +280,21 @@ export function useWorkforceChat(activeConversationId: string | null) {
         clearInterval(timer);
         timer = null;
       }
+      setIsFallbackPolling(false);
     };
 
     const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        tick();
-        start();
-      } else {
-        stop();
-      }
+      if (document.visibilityState === "visible") start();
+      else stop();
     };
 
-    if (document.visibilityState === "visible") {
-      start();
-    }
+    if (document.visibilityState === "visible") start();
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [activeConversationId, fetchInbox, pollThread]);
+  }, [socketStatus, fetchInbox, pollThread]);
 
   const hasOlderMessages = messagesPage * CHAT_PAGE_SIZE < messagesTotal;
 
@@ -260,7 +311,8 @@ export function useWorkforceChat(activeConversationId: string | null) {
     hasOlderMessages,
     threadError,
     sending,
-    isPolling,
+    socketStatus,
+    isFallbackPolling,
     filter,
     setFilter,
     search,

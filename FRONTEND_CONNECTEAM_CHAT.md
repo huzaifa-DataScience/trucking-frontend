@@ -34,7 +34,73 @@ Our backend stores those events in SQL. Your frontend reads from **our REST API*
 
 **Messages sent from our website** are saved in SQL immediately. If `CONNECTEAM_WRITE_THROUGH=true` on the server, the backend also forwards them to Connecteam so mobile app users see them too.
 
-**Bottom line for frontend:** Live chat on the website = **poll our API** (v1) or **subscribe to our WebSocket** (future). You do not integrate Connecteam webhooks directly.
+**Bottom line for frontend:** Live chat on the website = **Socket.IO** on `/connecteam-chat` (preferred) or **poll our REST API** (fallback). You do not integrate Connecteam webhooks directly.
+
+---
+
+## 1.1 Bidirectional sync (Connecteam ↔ our site)
+
+**Goal:** Messages typed in Connecteam app appear on our website, and messages sent on our website appear in Connecteam.
+
+| Direction | Mechanism | Server config |
+|-----------|-----------|---------------|
+| **Connecteam → our site** | Chat webhook → SQL | `CONNECTEAM_WEBHOOK_PUBLIC_URL`, `CONNECTEAM_WEBHOOK_SECRET`, register webhook |
+| **Our site → Connecteam** | Write-through on `POST .../messages` | `CONNECTEAM_WRITE_THROUGH=true`, `CONNECTEAM_CHAT_PUBLISHER_ID` |
+
+```
+Connecteam app ──webhook──► Our SQL ◄──POST send── Our website
+                ◄──write-through── (outbound)
+```
+
+**Check if sync is ready (any authenticated user):**
+
+```
+GET /connecteam/chat/sync-status
+```
+
+```json
+{
+  "bidirectionalReady": true,
+  "inbound": {
+    "ready": true,
+    "apiKeyConfigured": true,
+    "webhookUrlConfigured": true,
+    "webhookSecretConfigured": true,
+    "steps": ["..."]
+  },
+  "outbound": {
+    "ready": true,
+    "writeThroughEnabled": true,
+    "publisherIdConfigured": true,
+    "steps": ["..."]
+  },
+  "history": {
+    "backfillAvailable": false,
+    "note": "Only messages after webhook is live are mirrored inbound."
+  }
+}
+```
+
+Also included on `GET /connecteam/status` as `chatSync`.
+
+**Ops setup (one time on production server):**
+
+1. `.env`:
+   ```env
+   CONNECTEAM_API_KEY=...
+   CONNECTEAM_WEBHOOK_PUBLIC_URL=https://api.yoursite.com/connecteam/webhooks/inbound
+   CONNECTEAM_WEBHOOK_SECRET=<long-random-string>
+   CONNECTEAM_WRITE_THROUGH=true
+   CONNECTEAM_CHAT_PUBLISHER_ID=<custom-publisher-id>
+   ```
+2. Connecteam UI → **Settings → Feed settings** → create **Custom Publisher** → copy id into `CONNECTEAM_CHAT_PUBLISHER_ID`
+3. `npm run connecteam-migrate`
+4. Admin: `POST /connecteam/webhooks/register-chat`
+5. Ask Connecteam support to enable **chat webhooks (Beta)** on your company
+
+**Frontend:** After send, check `connecteam.sent` in the response. If `false`, message is on our site only — show ops that outbound sync is not configured.
+
+**Not synced:** Old message history before webhook went live; `app-*` native-only channels.
 
 ---
 
@@ -42,21 +108,57 @@ Our backend stores those events in SQL. Your frontend reads from **our REST API*
 
 | Option | How it works | Latency | Status | When to use |
 |--------|----------------|---------|--------|-------------|
-| **A. HTTP polling** | `GET` inbox + thread every N seconds while chat is open | ~5–30s delay | ✅ **Use now** | MVP live chat; simplest |
-| **B. Short polling + optimistic send** | Poll + immediately show own message after `POST` succeeds | Send feels instant; receive still polled | ✅ **Recommended MVP** | Best UX without WebSocket |
-| **C. Our WebSocket / SSE** | Backend pushes `message_created` to browser after webhook or send | Near instant | 🔜 **Not built yet** | Phase 2 — ask backend when ready |
+| **C. Our WebSocket (Socket.IO)** | Backend pushes after webhook or send | Near instant | ✅ **Recommended** | Default for live inbox + thread |
+| **B. Optimistic send + WS** | Show own message after `POST`; rely on WS for inbound | Instant send + receive | ✅ **Best UX** | Production chat |
+| **A. HTTP polling** | `GET` inbox + thread every N seconds | ~5–30s delay | Fallback | If WS blocked by proxy |
 | **D. Connecteam WebSocket** | Direct browser ↔ Connecteam | — | ❌ **Does not exist** | Do not plan for this |
 | **E. Connecteam webhook in browser** | Frontend receives Connecteam POST | — | ❌ **Wrong layer** | Webhooks are server-to-server only |
 
-### Recommended approach (v1)
+### Recommended approach (v1 — WebSocket)
 
-1. On chat screen mount: load conversation list + open thread.
-2. Start interval: **poll every 10–15s** while tab/screen is visible.
-3. On send: `POST` message → append to UI from response (optimistic or server-confirmed).
-4. On poll: merge new messages by `messageId` / `externalMessageId`; update inbox previews.
-5. Pause polling when chat screen unmounts or tab is hidden (`document.visibilityState`).
+1. On chat screen mount: load conversation list + open thread via REST.
+2. Connect Socket.IO to namespace `/connecteam-chat` with JWT (see §2.1).
+3. On `chat.message` / `chat.conversation_updated`: merge inbox (sort by `lastMessageAtIso` desc) and append/update thread.
+4. On send: `POST` message → append from response (optimistic or server-confirmed); WS will also fire for other tabs/users.
+5. On disconnect: optional light poll (30s) as fallback until reconnect.
 
-### Polling pattern (pseudo-code)
+### 2.1 Socket.IO client (official)
+
+```typescript
+import { io, Socket } from 'socket.io-client';
+
+const socket: Socket = io(`${API_ORIGIN}/connecteam-chat`, {
+  auth: { token: accessToken }, // same JWT as REST Bearer
+  transports: ['websocket', 'polling'],
+});
+
+socket.on('chat.message', ({ message, conversation }) => {
+  // Upsert conversation at top of inbox (by lastMessageAtIso)
+  // If open thread matches conversation.conversationId, append/dedup message
+});
+
+socket.on('chat.message_deleted', ({ conversationId, messageId, externalMessageId }) => {
+  // Soft-remove from open thread; refresh preview from next conversation_updated if any
+});
+
+socket.on('chat.conversation_updated', ({ conversation }) => {
+  // Upsert inbox row; re-sort by lastMessageAtIso desc
+});
+```
+
+**Auth alternatives (any one):** `auth.token`, query `?token=`, or `Authorization: Bearer` handshake header.
+
+**Events (server → client):**
+
+| Event | Payload |
+|-------|---------|
+| `chat.message` | `{ message, conversation }` — same enriched shapes as REST list/thread |
+| `chat.message_deleted` | `{ conversationId, messageId, externalMessageId }` |
+| `chat.conversation_updated` | `{ conversation }` — enriched inbox row |
+
+**Proxy note:** TLS terminators / nginx must allow WebSocket upgrade to the API host. Same port as HTTP API (no separate WS port).
+
+### Polling fallback (pseudo-code)
 
 ```typescript
 // Inbox
@@ -87,10 +189,12 @@ await fetch(`/connecteam/conversations/${id}/messages`, {
 |---------|--------|
 | Team chat inbox | `type: team` — synced from Connecteam + webhook updates |
 | Channels | `type: channel` — broadcast-style groups |
-| Private DMs | `type: private` — appear via **webhook** (may not be in first sync list) |
+| Private DMs | `type: private` — start with `POST /connecteam/conversations/dm/:userId`; thread id is `dm-<userId>` |
+| Start a DM from a user picker | `GET /connecteam/users?search=` → `POST /connecteam/conversations/dm/:userId` |
 | App-native channels | `conversationId` starts with `app-` — created on our site only |
 | Send text messages | `POST .../messages` |
-| Create app channel | `POST /connecteam/conversations` |
+| Create app channel | `POST /connecteam/conversations` (no members) |
+| Create real Connecteam group | `POST /connecteam/conversations` with `assignedUserIds` (+ write-through) |
 | Show sender names | `senderName`, nested `user` object |
 | Attachments (display) | From webhook mirror — show link or `[file: name]` placeholder |
 | Deleted messages | Hidden by default; `includeDeleted=true` for admin/debug |
@@ -103,9 +207,7 @@ await fetch(`/connecteam/conversations/${id}/messages`, {
 | Message history before webhook went live | Connecteam has **no GET message-history API** — only messages after webhook registration are mirrored |
 | Connecteam WebSocket | Not in their API |
 | Upload attachments from our site | `POST` send accepts **text only** today (`body` string) |
-| Start DM by user picker API | No `POST privateMessage` wrapper yet — DMs appear when someone messages in Connecteam |
 | Read receipts / typing indicators | Not exposed |
-| Create Connecteam team chat via our API | Only **app-native** `app-*` channels via our `POST /conversations` |
 | System / help-desk messages | Skipped server-side (`helpDesk`, `connecteamTips`, system messages) |
 
 ---
@@ -116,7 +218,7 @@ await fetch(`/connecteam/conversations/${id}/messages`, {
 |--------|---------|----------------------------------|-----------------|
 | `team` | Group chat | ✅ Yes (after sync) | Webhook + send |
 | `channel` | Announcement channel | ✅ Yes | Webhook + send |
-| `private` | Direct message | ⚠️ Often webhook-only | Webhook + send |
+| `private` | Direct message (`dm-<userId>`) | Via `POST /conversations/dm/:userId` or webhook | privateMessage + webhook |
 | (app-native) | Our website channel | ✅ After `POST /conversations` | Our SQL only* |
 
 \* If write-through enabled, outbound messages may also appear in Connecteam.
@@ -337,18 +439,28 @@ POST /connecteam/conversations/:conversationId/messages
     "senderName": "Jane Doe",
     "sentAtIso": "2026-06-20T15:31:00.000Z",
     "recordSource": "native",
-    "user": { "displayName": "Jane Doe", "...": "..." }
+    "user": { "displayName": "Jane Doe" }
+  },
+  "connecteam": {
+    "sent": true,
+    "externalMessageId": "ct-msg-99",
+    "error": null
   }
 }
 ```
 
+| `connecteam.sent` | Meaning |
+|-------------------|---------|
+| `true` | Message was forwarded to Connecteam app (team/channel conversations only) |
+| `false` | Saved on our site only — check `connecteam.error` or `GET /connecteam/chat/sync-status` |
+
 **UX:** Append `message` to thread immediately after success. Do not wait for next poll.
 
-**Write-through:** When server has `CONNECTEAM_WRITE_THROUGH=true`, message also goes to Connecteam app. Failures there are logged server-side; our SQL row is still created.
+**Write-through:** Requires `CONNECTEAM_WRITE_THROUGH=true` + `CONNECTEAM_CHAT_PUBLISHER_ID`. Failures are logged server-side; our SQL row is still created.
 
 ---
 
-### 6.5 Create app-native conversation
+### 6.5 Create a conversation / group
 
 ```
 POST /connecteam/conversations
@@ -357,9 +469,25 @@ POST /connecteam/conversations
 ```json
 {
   "title": "Job 2768 Crew",
-  "type": "team"
+  "type": "team",
+  "assignedUserIds": [8793726, 8835901],
+  "adminUserIds": [8793726]
 }
 ```
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `title` | Yes | Group title |
+| `type` | No | `team` (all can post) or `channel` (admins post). Default `team`. |
+| `assignedUserIds` | No | Connecteam user ids to add as members. **If provided + write-through on → a real Connecteam group is created.** |
+| `adminUserIds` | No | Subset of members granted admin rights |
+
+**Two modes:**
+
+| Input | Result | `conversationId` | Reaches Connecteam app? |
+|-------|--------|------------------|--------------------------|
+| No `assignedUserIds` | App-only channel | `app-<uuid>` | No (our site only) |
+| `assignedUserIds` + write-through | **Real Connecteam group** | Connecteam id | Yes — members see it in the app |
 
 **Response:**
 
@@ -367,18 +495,60 @@ POST /connecteam/conversations
 {
   "ok": true,
   "conversation": {
-    "conversationId": "app-a1b2c3d4-...",
+    "conversationId": "1a2b3c4d-...",
     "title": "Job 2768 Crew",
     "type": "team",
-    "recordSource": "native",
+    "recordSource": "sync",
     "conversationLabel": "Job 2768 Crew",
     "messageCount": 0
   },
-  "createdByAppUserId": 42
+  "createdByAppUserId": 42,
+  "connecteam": { "sent": true, "error": null }
 }
 ```
 
-Use `conversationId` for subsequent message calls. These channels exist only in our system unless product later adds Connecteam write-through for conversation creation.
+- `connecteam.sent = true` → real Connecteam group created; members get it in the app.
+- `connecteam.sent = false` → app-only channel (check `connecteam.error`; e.g. write-through off).
+- Pick members via `GET /connecteam/users?search=` → collect `userId`s → send as `assignedUserIds`.
+- Use the returned `conversationId` for `POST .../messages`.
+
+---
+
+### 6.6 Start / send a direct message (1:1)
+
+```
+POST /connecteam/conversations/dm/:userId
+```
+
+`:userId` is the **Connecteam** user id (from `GET /connecteam/users?search=`). If a DM with that user already exists it is reused; otherwise a new thread is created.
+
+**Body:** same as send message — `{ "body": "Hi Omar" }`.
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "conversation": {
+    "conversationId": "dm-8793726",
+    "title": "Omar Campos",
+    "type": "private",
+    "recordSource": "native",
+    "conversationLabel": "Omar Campos"
+  },
+  "message": { "messageId": "1010", "body": "Hi Omar", "sentAtIso": "..." },
+  "connecteam": { "sent": true, "externalMessageId": null, "error": null }
+}
+```
+
+**Key points:**
+
+- DM threads use the id **`dm-<connecteamUserId>`** — stable per person, both directions land here.
+- To keep chatting, use the normal send endpoint with that id: `POST /connecteam/conversations/dm-8793726/messages`.
+- Requires `CONNECTEAM_WRITE_THROUGH=true` + `CONNECTEAM_CHAT_PUBLISHER_ID` to reach Connecteam. Without it the message is saved locally and `connecteam.sent` is `false`.
+- Connecteam's private-message API returns no message id, so `externalMessageId` is usually `null` — this is **not** a failure; rely on `connecteam.sent`.
+
+**Roster picker flow:** `GET /connecteam/users?search=name` → pick user → `POST /connecteam/conversations/dm/:userId` with first message.
 
 ---
 
@@ -462,7 +632,7 @@ Use `user.initials` for avatars when no `profilePictureUrl`.
 
 | Scenario | What user sees |
 |----------|----------------|
-| Someone chats in **Connecteam mobile app** | Appears on our site after webhook (~seconds) + next poll |
+| Someone chats in **Connecteam mobile app** | Appears on our site via webhook → Socket.IO `chat.message` (~1–2s) |
 | Someone chats on **our website** | Immediate in our UI; Connecteam app users see it if write-through on |
 | **Before webhook was enabled** | Old messages **never** appear — only new traffic |
 | **helpDesk / system tips** | Filtered out server-side — will not appear |
@@ -510,24 +680,15 @@ type ChatState = {
 
 ---
 
-## 13. Phase 2 (coordinate with backend)
+## 13. Roadmap (beyond live push)
 
 | Item | Benefit |
 |------|---------|
-| WebSocket gateway (`message_created`, `conversation_updated`) | Replace polling; instant receive |
-| `POST` private message by `userId` | Start DM from roster picker |
 | Attachment upload | Send files from our site |
 | Unread counts / last-read cursor | Inbox badges |
+| Per-conversation WS rooms | Smaller payloads for huge fleets |
 
-When WebSocket ships, expected client flow:
-
-```typescript
-// Future — not available yet
-socket.on('chat:message', (msg) => appendIfNew(msg));
-socket.emit('chat:join', { conversationId });
-```
-
-Until then, **polling is the official v1 approach**.
+**WebSocket is live.** Use §2.1. Keep a rare poll only if the socket is down.
 
 ---
 
@@ -535,12 +696,16 @@ Until then, **polling is the official v1 approach**.
 
 | Method | Path | Purpose |
 |--------|------|---------|
+| WS | `/connecteam-chat` (Socket.IO) | Live `chat.message` / `chat.conversation_updated` / `chat.message_deleted` |
+| GET | `/connecteam/chat/sync-status` | Bidirectional sync readiness |
 | GET | `/connecteam/users/me` | Link status + workforce profile |
 | GET | `/connecteam/conversations` | Inbox |
 | GET | `/connecteam/conversations/:id` | Thread header |
 | GET | `/connecteam/conversations/:id/messages` | Message list |
 | POST | `/connecteam/conversations/:id/messages` | Send text |
-| POST | `/connecteam/conversations` | Create app-native channel |
+| POST | `/connecteam/conversations` | Create app channel, or real Connecteam group with `assignedUserIds` |
+| POST | `/connecteam/conversations/dm/:userId` | Start / send a 1:1 direct message |
+| GET | `/connecteam/users?search=` | Find a user to DM or add to a group |
 
 ---
 
@@ -548,7 +713,7 @@ Until then, **polling is the official v1 approach**.
 
 - Do not call `api.connecteam.com` or store `CONNECTEAM_API_KEY` in the browser.
 - Do not register Connecteam webhooks from the frontend.
-- Do not assume WebSocket exists — use polling until backend announces otherwise.
+- Do not skip JWT on the Socket.IO handshake — unauthenticated sockets are disconnected.
 - Do not show raw Connecteam IDs as the main user-visible text.
 - Do not implement “load full history” for pre-webhook era — data does not exist.
 
@@ -557,7 +722,7 @@ Until then, **polling is the official v1 approach**.
 ## 16. FAQ
 
 **Q: Is this “live” chat?**  
-A: Yes, with polling (10–15s). Connecteam → our server is push (webhook). Our server → browser is poll today, WebSocket later.
+A: Yes. Connecteam → our server is webhook push. Our server → browser is **Socket.IO** (`/connecteam-chat`). Poll only as fallback.
 
 **Q: Why are some DMs missing from the inbox?**  
 A: Connecteam does not list private conversations in their GET API. They appear when the first webhook event arrives.
