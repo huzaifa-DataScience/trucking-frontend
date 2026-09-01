@@ -20,6 +20,7 @@ import {
   type ProcessParty,
 } from "@/lib/bidding/process-types";
 import type { BidListItem } from "@/lib/bidding/types";
+import { newId } from "@/lib/bidding/newId";
 
 function party(p: ProcessParty | null | undefined): ProcessParty {
   return {
@@ -42,7 +43,7 @@ function emptyAddendum(): ProcessInvitationAddendum {
 
 function emptyInvitation(): ProcessInvitation {
   return {
-    id: crypto.randomUUID(),
+    id: newId(),
     receivedAt: null,
     contact: { name: null, email: null, phone: null, company: null },
     links: [],
@@ -156,7 +157,7 @@ export function BidIntakeStage() {
       : draft.invitationReceivedAt || draft.inviteContact
         ? [
             {
-              id: crypto.randomUUID(),
+              id: newId(),
               receivedAt: draft.invitationReceivedAt ?? null,
               contact: draft.inviteContact ?? null,
               links: [],

@@ -1,10 +1,12 @@
 # Bidding frontend — context for the FE agent
 
 **Who:** Frontend (human or AI). Read this **before** any other bidding doc.  
-**Last updated:** 2026-08-23  
+**Last updated:** 2026-08-25  
 **Backend:** live NestJS. JWT on every call.
 
 You are building the **bidding UI**. Backend already computes Specs, production hours, and workflow gates. **Do not rebuild those engines.** Wrap existing screens in the PDF stage chrome. Incomplete save is allowed.
+
+**Hand FE these two files:** [FRONTEND_SPEC_SHEET.md](./FRONTEND_SPEC_SHEET.md) (Setup cascade — 25 Aug) and [FRONTEND_INTAKE.md](./FRONTEND_INTAKE.md) (Stage 1).
 
 Repo of truth is this backend `docs/` folder — not an old chat, not FortuneSheet screenshots.
 
@@ -80,9 +82,21 @@ Setup → Takeoff blocked until `process.technicalReview.approvedForTakeoff === 
 Outcome tab: `canComplete` is false. Change outcome there; do not hand off off that tab.  
 Assignment “no bid” jumps to Outcome with `no_bid` pre-selected; user can still change it.
 
-Mint unique `id`s on array items (`crypto.randomUUID()`). Do not keep template id `new-duct`.
+Mint unique `id`s on array items (`newId()` below — do **not** call `crypto.randomUUID()` raw; it throws on HTTP / non-secure origins). Do not keep template id `new-duct`.
 
-**Stage 1 (Intake + Assignment):** bid name = `process.drawingName` (drawings, not invitation). Two project #s. `bidKind` includes `budget` (no extra checkbox). Second invitation → `invitations[]` on the **same** bid. Typeahead `GET /bids?search=&ownerProjectNumber=&mechanicalEngineerProjectNumber=`. Tiers sketched on intake (`lessee`, `hasTheJob`, `invitedUs`). Assignment: Nick + PJ, `assignment.teamId` from `GET /lookups/bidding/teams`. Full contract: [FRONTEND_INTAKE.md](./FRONTEND_INTAKE.md).
+```ts
+function newId(): string {
+  const c = globalThis.crypto;
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+    const r = (Math.random() * 16) | 0;
+    const v = ch === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+```
+
+**Stage 1 (Intake + Assignment):** bid name **locked** to `drawingName`. Two project #s (`#` stripped). `bidKind` includes `budget`. Second invitation → `invitations[]` (plus `addenda` per inviter). One invite → `whoElseBidding.researched` required to hand off. Drawings attachment required for build-to-print / design-assist. Mistake second bid: `POST /bids/:id/link-duplicate`. Typeahead `GET /bids?search=&ownerProjectNumber=&mechanicalEngineerProjectNumber=`. Tiers on intake. Assignment: Nick + PJ, `assignment.teamId`. Party typeahead: `GET /lookups/bidding/parties?role=&q=`. Full contract: [FRONTEND_INTAKE.md](./FRONTEND_INTAKE.md).
 
 ---
 
@@ -98,24 +112,15 @@ There is **no** `GET /bids/:id/specs`. Qty grid is **`/spec-lines`**.
 
 ### Spec sheet (Setup) — not a spreadsheet
 
-PJ: pick from existing Mike/Specs lists. **FortuneSheet / Handsontable / free-text grid is out.** CSV auto-fail vs takeoff is **later**. Day 1 = dropdowns + save.
+PJ (2026-08-23): family → product → layer 1 factory jacket → layer 2 field cover. **FortuneSheet is out.** CSV auto-fail vs takeoff is **later**. Day 1 = dropdowns + save.
 
-Each sheet: `kind: 'duct' | 'hydronic' | 'plumbing'`. Rows:
+Each sheet: `kind: 'duct' | 'hydronic' | 'plumbing' | 'equipment'`.
 
-`systemName` + **`systemCode`/`unit` (unit always shown)**, `areaName` + **`areaCode`**, `sizeMin`/`sizeMax` (Trimble or blank), `materialName` + **`materialCode`**, `thicknessIn` (Trimble or blank), `weight`, `facing`, `jacket`, `notes`
+Buy American: `process.buyAmerican` on Setup **before** the table (with OCIP). Project-level.
 
-Save **display names**; codes auto-fill (GET/PATCH). Show code next to the name. Do **not** let PJ type codes.
+Row extras: `insulationFamily`, `ductShape`, `sizeMode`, `manufacturersAllowed`, `manufacturerPreferred`, `accessories`, `specSection`, `specParagraph`. Facing = layer 1. Jacket = layer 2. Duct size = circumference, not pipe NPS.
 
-Lookups (reuse, do not clone):
-
-- `GET /lookups/bidding/spec-systems?kind=duct|hydronic|plumbing` — List systems + **code** + unit
-- `GET /lookups/bidding/spec-areas` — one shared area list + **code** (not per system)
-- `GET /lookups/bidding/spec-materials` — Specs Plumb Insulation (same on every sheet). On pick: Trimble `sizes`/`thicknesses` if any; empty = leave blank. **Unit** always from `spec-systems[].unit`.
-- `GET /lookups/bidding/spec-sizes?code=` / `spec-thicknesses?code=` — that type’s Trimble dims. Empty `[]` = do not select size/thick. Do not omit `code` after a pick.
-- `GET /lookups/bidding/spec-facings` — override only
-- `GET /lookups/bidding/process-meta` → `specSheetTemplates`, `specSheetEditor.cascade`
-
-Filter **systems** by `kind`. Insulation is one shared list. **Do not** substring-filter names. Caps: 12 sheets, 60 rows, 20 images. Images: `POST /bids/:id/attachments` `label=spec-sheet-image`, then ids on `imageAttachmentIds`.
+Estimators may type the Mike code (`GET spec-materials?code=FGA`). Do **not** put codes in a dropdown.
 
 Full contract: [FRONTEND_SPEC_SHEET.md](./FRONTEND_SPEC_SHEET.md).
 
