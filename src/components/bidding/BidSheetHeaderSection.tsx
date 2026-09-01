@@ -53,7 +53,7 @@ export function BidSheetHeaderSection({
         <BidFormField
           label="Linked job"
           htmlFor="job"
-          hint="Optional — links Ref_Jobs for company prefill."
+          hint="Change anytime while draft — Trimble / Qty Received follow the new job."
         >
           <BidSelect
             id="job"

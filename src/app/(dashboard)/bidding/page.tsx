@@ -26,11 +26,44 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: "archived", label: "Archived" },
 ];
 
+const WORK_TYPE_FILTERS = [
+  { value: "", label: "All work types" },
+  { value: "insulation", label: "Insulation" },
+  { value: "demo", label: "Demo" },
+  { value: "gc", label: "GC" },
+  { value: "masonry", label: "Masonry" },
+  { value: "other", label: "Other" },
+];
+
+const STAGE_FILTERS = [
+  { value: "", label: "All stages" },
+  { value: "intake", label: "Intake" },
+  { value: "assignment", label: "Assignment" },
+  { value: "estimating_setup", label: "Setup" },
+  { value: "takeoff", label: "Takeoff" },
+  { value: "proposal", label: "Proposal" },
+  { value: "post_bid", label: "Post-Bid" },
+  { value: "result", label: "Outcome" },
+];
+
+const OUTCOME_FILTERS = [
+  { value: "", label: "All outcomes" },
+  { value: "open", label: "Open" },
+  { value: "awarded", label: "Awarded" },
+  { value: "lost", label: "Lost" },
+  { value: "no_bid", label: "No bid" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "postponed", label: "Postponed" },
+];
+
 export default function BiddingListPage() {
   const { companyId } = useCompany();
   const { canRead, canWrite } = useBiddingAccess();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
+  const [workType, setWorkType] = useState("");
+  const [processStage, setProcessStage] = useState("");
+  const [outcome, setOutcome] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
   const [bids, setBids] = useState<BidListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +79,9 @@ export default function BiddingListPage() {
       const list = await biddingApi.listBids({
         entityId: entityId && !Number.isNaN(entityId) ? entityId : undefined,
         search: search.trim() || undefined,
+        workType: workType || undefined,
+        processStage: processStage || undefined,
+        outcome: outcome || undefined,
       });
       setBids(list);
     } catch (e) {
@@ -54,7 +90,7 @@ export default function BiddingListPage() {
     } finally {
       setLoading(false);
     }
-  }, [entityId, search]);
+  }, [entityId, search, workType, processStage, outcome]);
 
   useEffect(() => {
     const t = setTimeout(() => void loadBids(), search ? 300 : 0);
@@ -105,15 +141,15 @@ export default function BiddingListPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 ui-animate-in">
       <PageHeader
-        title="Bidding sheet"
-        subtitle="Base Bid estimator — team, wage rates, systems, and live MIKE/PJ totals."
+        title="Bidding"
+        subtitle="Pre: Intake → … → Outcome. Post Awarded/Lost follow the current outcome."
         action={
           canWrite ? (
             <Link href="/bidding/new" className={buttonClasses("secondary")}>
               <span className="text-lg leading-none" aria-hidden>
                 +
               </span>
-              New estimate
+              New bid
             </Link>
           ) : undefined
         }
@@ -168,7 +204,49 @@ export default function BiddingListPage() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-xs font-medium text-ink/45">
+            Work type
+            <select
+              value={workType}
+              onChange={(e) => setWorkType(e.target.value)}
+              className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm font-medium text-ink outline-none focus:border-brand"
+            >
+              {WORK_TYPE_FILTERS.map((f) => (
+                <option key={f.value || "all"} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs font-medium text-ink/45">
+            Stage
+            <select
+              value={processStage}
+              onChange={(e) => setProcessStage(e.target.value)}
+              className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm font-medium text-ink outline-none focus:border-brand"
+            >
+              {STAGE_FILTERS.map((f) => (
+                <option key={f.value || "all"} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs font-medium text-ink/45">
+            Outcome
+            <select
+              value={outcome}
+              onChange={(e) => setOutcome(e.target.value)}
+              className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm font-medium text-ink outline-none focus:border-brand"
+            >
+              {OUTCOME_FILTERS.map((f) => (
+                <option key={f.value || "all"} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="flex items-center gap-2 text-xs font-medium text-ink/45">
             Sort
             <select

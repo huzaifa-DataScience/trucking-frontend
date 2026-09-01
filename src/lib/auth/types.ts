@@ -1,8 +1,12 @@
 /**
- * Auth types per FRONTEND_AUTH.md (backend login/signup contract).
+ * Auth types per FRONTEND_AUTH.md + FRONTEND_RBAC.md.
  */
 
-export type AuthRole = "user" | "admin";
+import type { AppRoleId } from "./roles";
+
+export type { AppRoleId };
+/** @deprecated Use AppRoleId */
+export type AuthRole = AppRoleId;
 
 export type UserStatus = "pending" | "active" | "inactive" | "rejected";
 
@@ -18,7 +22,7 @@ export interface AuthUser {
   phone: string | null;
   company: string | null;
   displayName?: string;
-  role: AuthRole;
+  role: AppRoleId;
   status: UserStatus;
   permissions: string[];
 }

@@ -5,6 +5,7 @@
  */
 
 import type { AuthUser, UserStatus } from "./types";
+import { normalizeAppRole } from "./roles";
 
 const TOKEN_KEY = "construction-logistics-access-token";
 const USER_KEY = "construction-logistics-user";
@@ -55,7 +56,7 @@ function normalizeStoredUser(raw: Record<string, unknown>): AuthUser {
     phone: u.phone != null ? String(u.phone) : null,
     company: u.company != null ? String(u.company) : null,
     displayName: typeof u.displayName === "string" ? u.displayName : undefined,
-    role: u.role === "admin" ? "admin" : "user",
+    role: normalizeAppRole(u.role),
     status: normalizeStoredStatus(u.status),
     permissions: Array.isArray(u.permissions) ? (u.permissions as string[]) : [],
   };

@@ -17,3 +17,6 @@ export * as tickets from "./endpoints/tickets";
 export * as admin from "./endpoints/admin";
 export * as siteline from "./endpoints/siteline";
 export * as bidding from "./endpoints/bidding";
+export * as biddingSpecs from "./endpoints/biddingSpecs";
+export * as biddingProduction from "./endpoints/biddingProduction";
+export * as biddingParties from "./endpoints/biddingParties";

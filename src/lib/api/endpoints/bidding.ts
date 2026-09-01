@@ -22,6 +22,10 @@ import type {
   UpdatePayrollBurdenBody,
   UpdateWageRateBody,
 } from "@/lib/bidding/types";
+import type {
+  ProcessMeta,
+  WageDecision,
+} from "@/lib/bidding/process-types";
 import { getApiUrl } from "../config";
 import { getAccessToken } from "@/lib/auth/store";
 
@@ -29,11 +33,21 @@ export async function listBids(params?: {
   status?: string;
   entityId?: number;
   search?: string;
+  processStage?: string;
+  workType?: string;
+  outcome?: string;
+  ownerProjectNumber?: string;
+  mechanicalEngineerProjectNumber?: string;
 }): Promise<BidListItem[]> {
   return get<BidListItem[]>("/bids", {
     status: params?.status,
     entityId: params?.entityId,
     search: params?.search,
+    processStage: params?.processStage,
+    workType: params?.workType,
+    outcome: params?.outcome,
+    ownerProjectNumber: params?.ownerProjectNumber,
+    mechanicalEngineerProjectNumber: params?.mechanicalEngineerProjectNumber,
   });
 }
 
@@ -53,6 +67,43 @@ export async function deleteBid(id: string): Promise<void> {
   await del(`/bids/${id}`);
 }
 
+/** Complete or return a workflow stage — BIDDING_FRONTEND_API §0 */
+export async function handoffBid(
+  id: string,
+  body: { action: "complete" | "return"; notes?: string }
+): Promise<BidDetail> {
+  return post<BidDetail>(`/bids/${id}/handoff`, body);
+}
+
+/** Set awarded / lost / no_bid / cancelled / postponed */
+export async function setBidOutcome(
+  id: string,
+  body: { outcome: string }
+): Promise<BidDetail> {
+  return post<BidDetail>(`/bids/${id}/outcome`, body);
+}
+
+export interface BidActivityEntry {
+  id?: number;
+  at?: string;
+  createdAt?: string;
+  /** Prefer for who — FRONTEND_INTAKE.md */
+  userEmail?: string;
+  byEmail?: string;
+  actorEmail?: string;
+  area?: string;
+  summary?: string;
+  message?: string;
+  changedFields?: string[] | Record<string, unknown> | string | null;
+  [key: string]: unknown;
+}
+
+export async function getBidActivity(
+  id: string
+): Promise<{ entries?: BidActivityEntry[]; items?: BidActivityEntry[] } | BidActivityEntry[]> {
+  return get(`/bids/${id}/activity`);
+}
+
 /** Deprecated for normal saves — echoes stored client snapshot unless `forceServerCalc`. */
 export async function calculateBid(
   id: string,
@@ -65,6 +116,18 @@ export async function calculateBid(
 
 export async function getBiddingTeams(): Promise<BidTeam[]> {
   return get<BidTeam[]>("/lookups/bidding/teams");
+}
+
+/** Lifecycle enums + attachment labels — BIDDING_FRONTEND_API §0 */
+export async function getProcessMeta(): Promise<ProcessMeta> {
+  return get<ProcessMeta>("/lookups/bidding/process-meta");
+}
+
+export async function getWageDecisions(): Promise<WageDecision[]> {
+  const raw = await get<WageDecision[] | { items?: WageDecision[] }>(
+    "/lookups/bidding/wage-decisions"
+  );
+  return Array.isArray(raw) ? raw : (raw.items ?? []);
 }
 
 export async function getBiddingWageRates(): Promise<BidWageRate[]> {

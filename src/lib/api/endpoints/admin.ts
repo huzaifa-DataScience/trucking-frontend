@@ -21,6 +21,7 @@ import type {
   OverdueEmailSendingSettings,
   SitelineClearstoryGapAlertSettings,
   RbacUserDefaultsSettings,
+  RbacMatrixResponse,
 } from "@/lib/admin/types";
 
 export async function getUsers(filters: UserFilters): Promise<AdminUsersResponse> {
@@ -173,11 +174,26 @@ export async function postRunSitelineClearstoryGapAlertJob(): Promise<{
   );
 }
 
-/** Default permissions for newly approved / registered users (docs/BACKEND_RBAC_ADMIN.md). */
+/** Default role for newly approved / registered users (FRONTEND_RBAC.md). */
 export async function getRbacUserDefaults(): Promise<RbacUserDefaultsSettings> {
   return get<RbacUserDefaultsSettings>("/admin/settings/rbac-user-defaults");
 }
 
-export async function patchRbacUserDefaults(permissions: string[]): Promise<void> {
-  await patch<unknown>("/admin/settings/rbac-user-defaults", { permissions });
+export async function patchRbacUserDefaults(role: string): Promise<void> {
+  await patch<unknown>("/admin/settings/rbac-user-defaults", { role });
+}
+
+/** Full role × permission matrix. */
+export async function getRbacMatrix(): Promise<RbacMatrixResponse> {
+  return get<RbacMatrixResponse>("/admin/rbac");
+}
+
+export async function patchRbacRolePermissions(
+  roleName: string,
+  permissions: string[]
+): Promise<{ role: string; permissions: string[] }> {
+  return patch<{ role: string; permissions: string[] }>(
+    `/admin/rbac/roles/${encodeURIComponent(roleName)}`,
+    { permissions }
+  );
 }

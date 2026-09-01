@@ -14,10 +14,13 @@ import {
   EMAIL_PURPOSE_OVERDUE_LEAD_PM,
 } from "@/lib/admin/types";
 import { EmailTemplateEditor } from "@/components/admin/EmailTemplateEditor";
-import { BiddingRbacSettings } from "@/components/admin/BiddingRbacSettings";
+import { AccessControlSettings } from "@/components/admin/AccessControlSettings";
 import { BiddingLookupsAdmin } from "@/components/admin/BiddingLookupsAdmin";
 import { LogoLoader } from "@/components/ui/LogoLoader";
 import { StatusPill } from "@/components/ui/StatusPill";
+import { useAuth } from "@/contexts/AuthContext";
+import { can } from "@/lib/auth/permissions";
+import { PERMISSIONS } from "@/lib/auth/permissions";
 
 function StatusPills({
   envOn,
@@ -54,7 +57,12 @@ const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
 
 export default function AdminSettingsPage() {
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const canSeeAccess =
+    can(user, PERMISSIONS.adminRbac) || user?.role === "super_admin";
   const [tab, setTab] = useState<SettingsTab>("access");
+  const activeTab: SettingsTab =
+    tab === "access" && !canSeeAccess ? "email" : tab;
 
   const [overdueSending, setOverdueSending] = useState<OverdueEmailSendingSettings | null>(null);
   const [overdueSendingLoading, setOverdueSendingLoading] = useState(false);
@@ -194,15 +202,16 @@ export default function AdminSettingsPage() {
         aria-label="Settings sections"
         className="flex flex-wrap gap-1 rounded-xl border border-ink/[0.08] bg-surface p-1"
       >
-        {SETTINGS_TABS.map((t) => (
+        {SETTINGS_TABS.filter((t) => t.id !== "access" || canSeeAccess).map(
+          (t) => (
           <button
             key={t.id}
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
+            aria-selected={activeTab === t.id}
             onClick={() => setTab(t.id)}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-              tab === t.id
+              activeTab === t.id
                 ? "bg-ink text-white"
                 : "text-ink/55 hover:bg-ink/[0.04] hover:text-ink"
             }`}
@@ -212,14 +221,14 @@ export default function AdminSettingsPage() {
         ))}
       </div>
 
-      {tab === "access" && (
+      {activeTab === "access" && canSeeAccess && (
         <>
-          <BiddingRbacSettings />
+          <AccessControlSettings />
           <BiddingLookupsAdmin />
         </>
       )}
 
-      {tab === "email" && (
+      {activeTab === "email" && (
       <Card>
         <div className="space-y-5">
           <div>
@@ -262,7 +271,7 @@ export default function AdminSettingsPage() {
       </Card>
       )}
 
-      {tab === "email" && (
+      {activeTab === "email" && (
       <Card>
         <div className="space-y-5">
           <div>
@@ -323,7 +332,7 @@ export default function AdminSettingsPage() {
       </Card>
       )}
 
-      {tab === "templates" && (
+      {activeTab === "templates" && (
         <>
           <Card>
             <EmailTemplateEditor
@@ -343,7 +352,7 @@ export default function AdminSettingsPage() {
         </>
       )}
 
-      {tab === "diagnostics" && (
+      {activeTab === "diagnostics" && (
       <Card>
         <div className="space-y-4">
           <div>

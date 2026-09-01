@@ -1,8 +1,9 @@
 "use client";
 
-import { use } from "react";
+import { Suspense, use } from "react";
 import { BidSheetProvider } from "@/contexts/BidSheetContext";
 import { BidSheetLayout } from "@/components/bidding/BidSheetLayout";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 
 export default function BidSheetRootLayout({
   children,
@@ -15,7 +16,15 @@ export default function BidSheetRootLayout({
 
   return (
     <BidSheetProvider bidId={id}>
-      <BidSheetLayout>{children}</BidSheetLayout>
+      <Suspense
+        fallback={
+          <div className="flex flex-1 items-center justify-center py-24">
+            <LogoLoader />
+          </div>
+        }
+      >
+        <BidSheetLayout>{children}</BidSheetLayout>
+      </Suspense>
     </BidSheetProvider>
   );
 }

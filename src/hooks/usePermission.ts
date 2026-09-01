@@ -1,15 +1,17 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { hasPermission, type Permission } from "@/lib/auth/permissions";
+import { can, canBidding, type Permission } from "@/lib/auth/permissions";
 
 export function usePermission() {
-  const { permissions, isAdmin } = useAuth();
+  const { user, permissions, isAdmin } = useAuth();
 
   return {
-    can: (permission: Permission) =>
-      hasPermission(permissions, permission, { isAdmin }),
+    can: (permission: Permission) => can(user, permission),
+    canBidding: (key: "bidding:read" | "bidding:write" | "bidding:summary") =>
+      canBidding(user, key),
     isAdmin,
     permissions,
+    user,
   };
 }

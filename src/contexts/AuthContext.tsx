@@ -19,10 +19,12 @@ import {
 } from "@/lib/auth/store";
 import type { AuthUser } from "@/lib/auth/types";
 import type { LoginResponse } from "@/lib/auth/types";
+import { isAdminPanelRole } from "@/lib/auth/roles";
 
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
+  /** Admin layout access: `admin` | `super_admin`. */
   isAdmin: boolean;
   /** Current user's permissions (e.g. tickets:read, admin:users). Empty when not logged in. */
   permissions: string[];
@@ -82,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
-      isAdmin: user?.role === "admin",
+      isAdmin: isAdminPanelRole(user?.role),
       permissions: user?.permissions ?? [],
       loginSuccess,
       logout,

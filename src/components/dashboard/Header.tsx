@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { roleLabel } from "@/lib/auth/roles";
 
 function userInitialsFromAuth(user: ReturnType<typeof useAuth>["user"]): string {
   if (!user) return "?";
@@ -17,7 +18,7 @@ function userInitialsFromAuth(user: ReturnType<typeof useAuth>["user"]): string 
 
 export function Header() {
   const { companyId, company, setCompanyId, companies } = useCompany();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
   const searchRef = useRef<HTMLInputElement>(null);
 
   const focusSearch = useCallback(() => {
@@ -102,7 +103,9 @@ export function Header() {
                     [user.firstName, user.lastName].filter(Boolean).join(" ") ||
                     user.email}
                 </span>
-                <span className="text-xs text-ink/40">{isAdmin ? "Admin" : "Member"}</span>
+                <span className="text-xs text-ink/40">
+                  {roleLabel(user.role)}
+                </span>
               </div>
               <button
                 type="button"
