@@ -1,16 +1,18 @@
 /**
- * Admin panel types per ADMIN_PANEL_SPEC.md
+ * Admin panel types per ADMIN_PANEL_SPEC.md + FRONTEND_RBAC.md
  */
 
+import type { AppRoleId } from "@/lib/auth/roles";
+
 export type UserStatus = "pending" | "active" | "inactive" | "rejected";
-export type UserRole = "user" | "admin";
+export type UserRole = AppRoleId;
 
 export interface AdminUser {
   id: number;
   email: string;
   role: UserRole;
   status: UserStatus;
-  /** Present when backend includes permissions on user admin APIs. */
+  /** Present when backend includes permissions on user admin APIs. Read-only in UI. */
   permissions?: string[];
   createdAt: string; // ISO datetime
   lastLoginAt: string | null; // ISO datetime or null
@@ -33,15 +35,41 @@ export interface UserFilters {
   endDate?: string;
 }
 
+/** PATCH /admin/users/:id — do not send permissions (FRONTEND_RBAC.md). */
 export interface UpdateUserPayload {
   role?: UserRole;
   status?: UserStatus;
+}
+
+/** GET/PATCH /admin/settings/rbac-user-defaults */
+export interface RbacUserDefaultsSettings {
+  role: AppRoleId | string;
   permissions?: string[];
 }
 
-/** GET/PATCH /admin/settings/rbac-user-defaults (see docs/BACKEND_RBAC_ADMIN.md). */
-export interface RbacUserDefaultsSettings {
-  permissions: string[];
+export interface RbacRoleMeta {
+  id: AppRoleId | string;
+  label: string;
+  note?: string | null;
+  locked?: boolean;
+}
+
+export interface RbacPermissionMeta {
+  key: string;
+  label: string;
+  description?: string | null;
+  group?: string | null;
+}
+
+/** GET /admin/rbac */
+export interface RbacMatrixResponse {
+  roles: RbacRoleMeta[];
+  permissions: RbacPermissionMeta[];
+  matrix: Record<string, string[]>;
+  defaults?: {
+    role: string;
+    permissions?: string[];
+  };
 }
 
 export interface BulkActionResponse {

@@ -1,5 +1,21 @@
 /** API-aligned types — see docs/BIDDING_FRONTEND_API.md */
 
+import type {
+  BidProcess,
+  BidWorkflow,
+  ProcessOutcome,
+  ProcessStage,
+  WorkType,
+} from "./process-types";
+
+export type {
+  BidProcess,
+  BidWorkflow,
+  ProcessOutcome,
+  ProcessStage,
+  WorkType,
+} from "./process-types";
+
 export type BidStatus = "draft" | "submitted" | "archived";
 
 export type BidSystemKey =
@@ -26,6 +42,17 @@ export interface BidListItem {
   submitDate?: string | null;
   timeEstimate?: number | null;
   updatedAt: string;
+  /** Lifecycle list filters — BIDDING_FRONTEND_API §0 */
+  processStage?: ProcessStage | string | null;
+  outcomeStatus?: ProcessOutcome | string | null;
+  workType?: WorkType | string | null;
+  /** Intake duplicate typeahead — FRONTEND_INTAKE.md */
+  drawingName?: string | null;
+  ownerProjectNumber?: string | null;
+  mechanicalEngineerProjectNumber?: string | null;
+  relatedBidId?: number | null;
+  bidKind?: string | null;
+  dueDate?: string | null;
 }
 
 export interface BidCompanyInfo {
@@ -114,6 +141,18 @@ export interface BidDetail extends BidListItem {
   baseBid: BaseBidInput;
   systems: BidSystemRow[];
   computed: BidComputed;
+  /** StructShare / Trimble project for Specs Qty Received — FRONTEND_BIDDING_SPECS.md */
+  trimbleProjectId?: number | null;
+  /** Lifecycle JSON — editable after submit until archived */
+  process?: BidProcess | null;
+  /** Gates — read from GET; do not invent */
+  workflow?: BidWorkflow | null;
+  activitySummary?: {
+    attendeeCount?: number;
+    changeCount?: number;
+    lastActivityAt?: string | null;
+    lastActivityByEmail?: string | null;
+  } | null;
 }
 
 export interface CalcResult {
@@ -127,6 +166,7 @@ export interface BidTeam {
   id: number;
   teamName: string;
   captain: string | null;
+  assistantEstimator?: string | null;
   bidClerk: string | null;
   duct1: string | null;
   duct2: string | null;
@@ -174,6 +214,8 @@ export interface CreateBidBody {
   submitDate?: string | null;
   timeEstimate?: number | null;
   companyInfo?: BidCompanyInfo;
+  trimbleProjectId?: number | null;
+  process?: Partial<BidProcess> | null;
 }
 
 export interface PatchBidBody {
@@ -190,6 +232,9 @@ export interface PatchBidBody {
   systems?: BidSystemRow[];
   /** Client Excel engine snapshot; stored verbatim (source: client). */
   computed?: BidComputed;
+  trimbleProjectId?: number | null;
+  /** Lifecycle — objects merge; arrays replace */
+  process?: Partial<BidProcess> | null;
 }
 
 export interface CalculateBidBody {

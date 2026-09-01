@@ -11,6 +11,7 @@ import type {
   LoginResponse,
   RegisterRequest,
 } from "@/lib/auth/types";
+import { normalizeAppRole } from "@/lib/auth/roles";
 
 const BASE = () => getBaseUrl();
 
@@ -32,7 +33,7 @@ function normalizeUser(raw: Record<string, unknown>): AuthUser {
     phone: u.phone != null ? String(u.phone) : null,
     company: u.company != null ? String(u.company) : null,
     displayName: typeof u.displayName === "string" ? u.displayName : undefined,
-    role: u.role === "admin" ? "admin" : "user",
+    role: normalizeAppRole(u.role),
     status: normalizeStatus(u.status),
     permissions: Array.isArray(u.permissions) ? (u.permissions as string[]) : [],
   };

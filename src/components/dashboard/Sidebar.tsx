@@ -4,6 +4,8 @@ import type { ComponentType } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { roleLabel, isAdminPanelRole } from "@/lib/auth/roles";
+import { can, canBidding, PERMISSIONS } from "@/lib/auth/permissions";
 import { AppLogo } from "@/components/ui/AppLogo";
 import {
   NavIconLayout,
@@ -21,17 +23,27 @@ import {
   NavIconTimeList,
   NavIconSun,
   NavIconChat,
+  NavIconTable,
+  NavIconChart,
 } from "@/components/dashboard/DashboardNavIcons";
 import type { AuthUser } from "@/lib/auth/types";
 import { useChatUnreadTotal } from "@/hooks/useChatUnreadTotal";
 import { ChatUnreadBadge } from "@/components/workforce/chat/ChatUnreadBadge";
 
-type ViewMode = "operations" | "billings" | "bidding" | "workforce";
+type ViewMode = "operations" | "billings" | "bidding" | "mike" | "workforce";
 
 const WORKSPACE_STORAGE_KEY = "construction-logistics-workspace";
 
 function viewFromPathname(pathname: string): ViewMode {
   if (pathname.startsWith("/workforce")) return "workforce";
+  if (
+    pathname.startsWith("/mike") ||
+    pathname.startsWith("/estimation-files") ||
+    pathname.startsWith("/production") ||
+    pathname.startsWith("/specs")
+  ) {
+    return "mike";
+  }
   if (pathname.startsWith("/bidding")) return "bidding";
   if (pathname.startsWith("/billings") || pathname.startsWith("/clearstory")) return "billings";
   return "operations";
@@ -40,6 +52,7 @@ function viewFromPathname(pathname: string): ViewMode {
 function defaultHrefForView(view: ViewMode): string {
   if (view === "billings") return "/billings";
   if (view === "bidding") return "/bidding";
+  if (view === "mike") return "/estimation-files";
   if (view === "workforce") return "/workforce";
   return "/job";
 }
@@ -49,6 +62,10 @@ type SidebarNavItem = {
   label: string;
   Icon: ComponentType<{ className?: string }>;
   activePathPrefix?: string;
+  /** If set, item is hidden when `can(user, permission)` is false. */
+  permission?: string;
+  /** Bidding keys use legacy canBidding fallback. */
+  biddingPermission?: "bidding:read" | "bidding:write" | "bidding:summary";
 };
 
 function userInitials(user: AuthUser | null): string {
@@ -72,15 +89,63 @@ function displayName(user: AuthUser | null): string {
 }
 
 const operationsNavItems: SidebarNavItem[] = [
-  { href: "/job", label: "Job Dashboard", Icon: NavIconLayout },
-  { href: "/material", label: "Material Dashboard", Icon: NavIconCube },
-  { href: "/hauler", label: "Hauler Dashboard", Icon: NavIconTruck },
-  { href: "/forensic", label: "Forensic & Audit", Icon: NavIconShield },
+  {
+    href: "/job",
+    label: "Job Dashboard",
+    Icon: NavIconLayout,
+    permission: PERMISSIONS.jobDashboardRead,
+  },
+  {
+    href: "/material",
+    label: "Material Dashboard",
+    Icon: NavIconCube,
+    permission: PERMISSIONS.materialDashboardRead,
+  },
+  {
+    href: "/hauler",
+    label: "Hauler Dashboard",
+    Icon: NavIconTruck,
+    permission: PERMISSIONS.haulerDashboardRead,
+  },
+  {
+    href: "/forensic",
+    label: "Forensic & Audit",
+    Icon: NavIconShield,
+    permission: PERMISSIONS.forensicRead,
+  },
 ];
 
 const biddingNavItems: SidebarNavItem[] = [
-  { href: "/bidding", label: "Bidding sheet", Icon: NavIconProposal, activePathPrefix: "/bidding" },
-  { href: "/bidding/new", label: "New estimate", Icon: NavIconPlus },
+  {
+    href: "/bidding",
+    label: "Bidding sheet",
+    Icon: NavIconProposal,
+    activePathPrefix: "/bidding",
+    biddingPermission: "bidding:read",
+  },
+  {
+    href: "/bidding/new",
+    label: "New bid",
+    Icon: NavIconPlus,
+    biddingPermission: "bidding:write",
+  },
+];
+
+const mikeNavItems: SidebarNavItem[] = [
+  {
+    href: "/estimation-files",
+    label: "Estimation files",
+    Icon: NavIconTable,
+    activePathPrefix: "/estimation-files",
+    biddingPermission: "bidding:read",
+  },
+  {
+    href: "/production",
+    label: "Production",
+    Icon: NavIconChart,
+    activePathPrefix: "/production",
+    biddingPermission: "bidding:read",
+  },
 ];
 
 const clearstorySubItems: { href: string; label: string }[] = [
@@ -94,24 +159,87 @@ const clearstorySubItems: { href: string; label: string }[] = [
 ];
 
 const workforceNavItems: SidebarNavItem[] = [
-  { href: "/workforce", label: "Overview", Icon: NavIconLayout, activePathPrefix: "/workforce" },
-  { href: "/workforce/my-day", label: "My day", Icon: NavIconSun },
-  { href: "/workforce/chat", label: "Team chat", Icon: NavIconChat, activePathPrefix: "/workforce/chat" },
-  { href: "/workforce/time", label: "Time & attendance", Icon: NavIconTimeList },
-  { href: "/workforce/schedule", label: "Schedule", Icon: NavIconCalendar },
-  { href: "/workforce/time-off", label: "Time off", Icon: NavIconClock },
-  { href: "/workforce/crew", label: "Crew", Icon: NavIconUsers },
+  {
+    href: "/workforce",
+    label: "Overview",
+    Icon: NavIconLayout,
+    activePathPrefix: "/workforce",
+    permission: PERMISSIONS.connecteamRead,
+  },
+  {
+    href: "/workforce/my-day",
+    label: "My day",
+    Icon: NavIconSun,
+    permission: PERMISSIONS.connecteamRead,
+  },
+  {
+    href: "/workforce/chat",
+    label: "Team chat",
+    Icon: NavIconChat,
+    activePathPrefix: "/workforce/chat",
+    permission: PERMISSIONS.connecteamRead,
+  },
+  {
+    href: "/workforce/time",
+    label: "Time & attendance",
+    Icon: NavIconTimeList,
+    permission: PERMISSIONS.connecteamRead,
+  },
+  {
+    href: "/workforce/schedule",
+    label: "Schedule",
+    Icon: NavIconCalendar,
+    permission: PERMISSIONS.connecteamRead,
+  },
+  {
+    href: "/workforce/time-off",
+    label: "Time off",
+    Icon: NavIconClock,
+    permission: PERMISSIONS.connecteamRead,
+  },
+  {
+    href: "/workforce/crew",
+    label: "Crew",
+    Icon: NavIconUsers,
+    permission: PERMISSIONS.connecteamWrite,
+  },
 ];
 
 const adminNavItems: SidebarNavItem[] = [
-  { href: "/admin/users", label: "User Management", Icon: NavIconUsers },
+  {
+    href: "/admin/users",
+    label: "User Management",
+    Icon: NavIconUsers,
+    permission: PERMISSIONS.adminUsers,
+  },
   { href: "/admin/settings", label: "Settings", Icon: NavIconCog },
 ];
+
+/**
+ * FRONTEND_RBAC.md — admin / super_admin see every workspace item;
+ * do not hide chrome on missing permission keys.
+ */
+function navItemVisible(
+  user: AuthUser | null,
+  item: Pick<SidebarNavItem, "permission" | "biddingPermission">
+): boolean {
+  if (isAdminPanelRole(user?.role)) return true;
+  if (item.biddingPermission) {
+    return canBidding(user, item.biddingPermission);
+  }
+  if (item.permission) {
+    // Empty permissions = pre-RBAC JWT → keep ops/workforce visible.
+    if (!user?.permissions?.length) return true;
+    return can(user, item.permission);
+  }
+  return true;
+}
 
 const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ className?: string }> }[] = [
   { value: "operations", label: "Ops", Icon: NavIconTruck },
   { value: "billings", label: "Billing", Icon: NavIconInvoice },
   { value: "bidding", label: "Bidding", Icon: NavIconProposal },
+  { value: "mike", label: "Mike", Icon: NavIconTable },
   { value: "workforce", label: "Workforce", Icon: NavIconClock },
 ];
 
@@ -119,6 +247,7 @@ const WORKSPACE_FULL_LABELS: Record<ViewMode, string> = {
   operations: "Operations & reporting",
   billings: "Billing",
   bidding: "Bidding sheet",
+  mike: "Mike",
   workforce: "Workforce",
 };
 
@@ -129,6 +258,29 @@ export function Sidebar() {
   const chatUnreadTotal = useChatUnreadTotal();
 
   const currentView: ViewMode = viewFromPathname(pathname);
+  const seesAllChrome = isAdminPanelRole(user?.role);
+
+  const canSeeBillings =
+    seesAllChrome ||
+    !user?.permissions?.length ||
+    can(user, PERMISSIONS.clearstoryRead) ||
+    can(user, PERMISSIONS.sitelineRead);
+
+  const visibleWorkspaces = seesAllChrome
+    ? WORKSPACES
+    : WORKSPACES.filter(({ value }) => {
+        if (value === "operations") {
+          return operationsNavItems.some((i) => navItemVisible(user, i));
+        }
+        if (value === "billings") return canSeeBillings;
+        if (value === "bidding" || value === "mike") {
+          return canBidding(user, "bidding:read");
+        }
+        if (value === "workforce") {
+          return workforceNavItems.some((i) => navItemVisible(user, i));
+        }
+        return true;
+      });
 
   const handleViewChange = (value: ViewMode) => {
     if (value === currentView) return;
@@ -140,23 +292,36 @@ export function Sidebar() {
     router.push(defaultHrefForView(value));
   };
 
-  const navItems =
+  const rawNavItems =
     currentView === "workforce"
       ? workforceNavItems
-      : currentView === "billings"
-        ? [{ href: "/billings", label: "Billings", Icon: NavIconInvoice } as SidebarNavItem]
-        : currentView === "bidding"
-          ? biddingNavItems
-          : operationsNavItems;
+      : currentView === "mike"
+        ? mikeNavItems
+        : currentView === "billings"
+          ? canSeeBillings
+            ? [{ href: "/billings", label: "Billings", Icon: NavIconInvoice } as SidebarNavItem]
+            : []
+          : currentView === "bidding"
+            ? biddingNavItems
+            : operationsNavItems;
+
+  const navItems = rawNavItems.filter((i) => navItemVisible(user, i));
+
+  // Admin layout roles always get System links (Users + Settings).
+  const visibleAdminNav = isAdmin
+    ? adminNavItems
+    : [];
 
   const navSectionLabel =
     currentView === "workforce"
       ? "Workforce"
-      : currentView === "billings"
-        ? "Billing"
-        : currentView === "bidding"
-          ? "Bidding"
-          : "Overview";
+      : currentView === "mike"
+        ? "Mike"
+        : currentView === "billings"
+          ? "Billing"
+          : currentView === "bidding"
+            ? "Bidding"
+            : "Overview";
 
   const logoHref =
     currentView === "billings"
@@ -212,9 +377,19 @@ export function Sidebar() {
           <div
             role="tablist"
             aria-label="Workspace"
-            className="grid grid-cols-2 gap-1 rounded-xl border border-white/[0.08] bg-white/[0.04] p-1 lg:grid-cols-4"
+            className={`grid gap-1 rounded-xl border border-white/[0.08] bg-white/[0.04] p-1 ${
+              visibleWorkspaces.length >= 5
+                ? "grid-cols-5"
+                : visibleWorkspaces.length === 4
+                  ? "grid-cols-4"
+                  : visibleWorkspaces.length === 3
+                    ? "grid-cols-3"
+                    : visibleWorkspaces.length === 2
+                      ? "grid-cols-2"
+                      : "grid-cols-1"
+            }`}
           >
-            {WORKSPACES.map(({ value, label, Icon }) => {
+            {visibleWorkspaces.map(({ value, label, Icon }) => {
               const active = currentView === value;
               return (
                 <button
@@ -224,14 +399,14 @@ export function Sidebar() {
                   aria-selected={active}
                   title={WORKSPACE_FULL_LABELS[value]}
                   onClick={() => handleViewChange(value)}
-                  className={`flex flex-col items-center gap-1 rounded-lg px-1 py-2 text-[11px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand ${
+                  className={`flex flex-col items-center gap-1 rounded-lg px-0.5 py-2 text-[10px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand lg:text-[11px] ${
                     active
                       ? "bg-white/[0.09] text-white shadow-[0_2px_8px_rgba(0,0,0,0.35)] ring-1 ring-brand/40"
                       : "text-white/40 hover:bg-white/[0.05] hover:text-white"
                   }`}
                 >
                   <Icon className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/35"}`} />
-                  <span className="hidden lg:block">{label}</span>
+                  <span className="max-w-full truncate px-0.5">{label}</span>
                 </button>
               );
             })}
@@ -250,7 +425,8 @@ export function Sidebar() {
                 href === "/workforce"
                   ? pathname === "/workforce"
                   : activePathPrefix
-                    ? pathname === activePathPrefix || pathname.startsWith(`${activePathPrefix}/`)
+                    ? pathname === activePathPrefix ||
+                      pathname.startsWith(`${activePathPrefix}/`)
                     : pathname === href || pathname.startsWith(`${href}/`);
               return (
                 <Link key={href} href={href} className={navLinkClass(active)} title={label}>
@@ -265,7 +441,7 @@ export function Sidebar() {
               );
             })}
 
-            {currentView === "billings" && (
+            {currentView === "billings" && canSeeBillings && (
               <div>
                 <Link
                   href="/clearstory/projects"
@@ -305,13 +481,13 @@ export function Sidebar() {
           </div>
         </div>
 
-        {isAdmin && (
+        {visibleAdminNav.length > 0 && (
           <div>
             <p className="mb-2 hidden px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30 lg:block">
               System
             </p>
             <div className="space-y-0.5">
-              {adminNavItems.map(({ href, label, Icon }) => {
+              {visibleAdminNav.map(({ href, label, Icon }) => {
                 const active = pathname === href || pathname.startsWith(`${href}/`);
                 return (
                   <Link key={href} href={href} className={navLinkClass(active)} title={label}>
@@ -340,7 +516,7 @@ export function Sidebar() {
           <div className="hidden min-w-0 flex-1 lg:block">
             <p className="truncate text-sm font-semibold text-white/90">{displayName(user)}</p>
             <p className="truncate text-xs text-white/40">
-              {isAdmin ? "Administrator" : "Team member"}
+              {roleLabel(user?.role ?? "user")}
             </p>
           </div>
           <button

@@ -51,8 +51,8 @@ export function BidSheetResultsRail({
   hoursPerWeek: number | null;
 }) {
   const { insights } = useBidSheet();
-  const { can } = usePermission();
-  const canViewSummary = can(PERMISSIONS.biddingSummary);
+  const { canBidding } = usePermission();
+  const canViewSummary = canBidding(PERMISSIONS.biddingSummary);
   const laborBuildUp = parseLaborBuildUp(computed);
   const systemsComputed = parseSystemsComputed(computed).filter((r) => r.used);
 

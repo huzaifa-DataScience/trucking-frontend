@@ -148,3 +148,21 @@ export function NavIconChat({ className = "h-4 w-4 shrink-0" }: { className?: st
     </svg>
   );
 }
+
+export function NavIconTable({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+      <path d="M4 5h16v14H4V5z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 10h16M4 15h16M10 5v14" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function NavIconChart({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+      <path d="M4 19V5M4 19h16" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 16V10M12 16V7M16 16v-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

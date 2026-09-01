@@ -7,6 +7,7 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { UserDetailModal } from "@/components/admin/UserDetailModal";
 import * as adminApi from "@/lib/api/endpoints/admin";
 import type { AdminUser, UserFilters, UserStatus, UserRole } from "@/lib/admin/types";
+import { APP_ROLE_IDS, APP_ROLE_LABELS } from "@/lib/auth/roles";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogoLoader } from "@/components/ui/LogoLoader";
 import { StatusPill, type StatusTone } from "@/components/ui/StatusPill";
@@ -156,13 +157,9 @@ export default function AdminUsersPage() {
   );
 
   const handleUpdate = useCallback(
-    async (id: number, role: UserRole, status: UserStatus, permissions?: string[]) => {
+    async (id: number, role: UserRole, status: UserStatus) => {
       try {
-        await adminApi.updateUser(id, {
-          role,
-          status,
-          ...(permissions !== undefined ? { permissions } : {}),
-        });
+        await adminApi.updateUser(id, { role, status });
         showToast("User updated successfully", "success");
         loadUsers();
       } catch (err) {
@@ -256,7 +253,12 @@ export default function AdminUsersPage() {
   };
 
   const getRoleBadge = (role: UserRole) => (
-    <StatusPill tone={role === "admin" ? "info" : "neutral"} label={role === "admin" ? "Admin" : "User"} />
+    <StatusPill
+      tone={
+        role === "super_admin" || role === "admin" ? "info" : "neutral"
+      }
+      label={APP_ROLE_LABELS[role] ?? role}
+    />
   );
 
   const formatDate = (dateStr: string) => {
@@ -369,8 +371,11 @@ export default function AdminUsersPage() {
               className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
             >
               <option value="all">All</option>
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
+              {APP_ROLE_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {APP_ROLE_LABELS[id]}
+                </option>
+              ))}
             </select>
           </label>
           <label className="flex flex-col gap-1">
@@ -717,8 +722,8 @@ export default function AdminUsersPage() {
         user={detailUser}
         isOpen={!!detailUser}
         onClose={() => setDetailUser(null)}
-        onSave={async (id, role, status, permissions) => {
-          await handleUpdate(id, role, status, permissions);
+        onSave={async (id, role, status) => {
+          await handleUpdate(id, role, status);
           setDetailUser(null);
         }}
       />

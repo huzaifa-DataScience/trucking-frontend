@@ -68,6 +68,8 @@ type BidSheetContextValue = {
   previewCalculate: () => void;
   verifyServerCalc: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** Quiet merge after process PATCH — no full reload */
+  applyBidDetail: (detail: BidDetail) => void;
   saveNow: () => Promise<void>;
   saveCoverSheet: () => Promise<void>;
   markSubmitted: () => Promise<void>;
@@ -343,7 +345,16 @@ export function BidSheetProvider({
       setBid((prev) => (prev ? { ...prev, jobId } : prev));
       if (bidRef.current?.status === "draft" && canWriteRef.current) {
         try {
-          await biddingApi.patchBid(bidId, { jobId });
+          const updated = await biddingApi.patchBid(bidId, { jobId });
+          setBid((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  jobId: updated.jobId ?? jobId,
+                  trimbleProjectId: updated.trimbleProjectId ?? null,
+                }
+              : prev
+          );
         } catch (e) {
           setError(getApiErrorMessage(e, "Failed to link job"));
           return;
@@ -530,8 +541,9 @@ export function BidSheetProvider({
 
   const uploadAttachment = useCallback(
     async (file: File, label?: string) => {
-      if (bidRef.current?.status !== "draft") {
-        setError("Attachments can only be added on draft bids.");
+      // Attachments until archived (API) — process/spec photos after submit OK
+      if (bidRef.current?.status === "archived") {
+        setError("Attachments cannot be added on an archived bid.");
         return;
       }
       setSaving(true);
@@ -551,8 +563,8 @@ export function BidSheetProvider({
 
   const deleteAttachment = useCallback(
     async (attachmentId: number) => {
-      if (bidRef.current?.status !== "draft") {
-        setError("Attachments can only be removed on draft bids.");
+      if (bidRef.current?.status === "archived") {
+        setError("Attachments cannot be removed on an archived bid.");
         return;
       }
       setSaving(true);
@@ -592,6 +604,31 @@ export function BidSheetProvider({
     [bid, saving]
   );
 
+  const applyBidDetail = useCallback((detail: BidDetail) => {
+    const normalized = {
+      ...detail,
+      systems: normalizeSystems(detail.systems),
+      companyInfo: detail.companyInfo ?? {},
+      attachments: detail.attachments ?? [],
+    };
+    setBid((prev) => {
+      if (!prev) return normalized;
+      return {
+        ...prev,
+        ...normalized,
+        computed: normalized.computed ?? prev.computed,
+        baseBid: normalized.baseBid ?? prev.baseBid,
+        systems: normalized.systems ?? prev.systems,
+        // Prefer incoming process wholesale when provided (specSheets live here)
+        process: normalized.process ?? prev.process,
+        processStage: normalized.processStage ?? prev.processStage,
+        workType: normalized.workType ?? prev.workType,
+        outcomeStatus: normalized.outcomeStatus ?? prev.outcomeStatus,
+        workflow: normalized.workflow ?? prev.workflow,
+      };
+    });
+  }, []);
+
   const value: BidSheetContextValue = {
     bid,
     insights,
@@ -619,6 +656,7 @@ export function BidSheetProvider({
     previewCalculate,
     verifyServerCalc,
     refresh: () => loadBid({ silent: true }),
+    applyBidDetail,
     saveNow,
     saveCoverSheet,
     markSubmitted,

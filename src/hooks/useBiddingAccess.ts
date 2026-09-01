@@ -5,25 +5,23 @@ import { usePermission } from "@/hooks/usePermission";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 
 /**
- * Bidding RBAC — legacy users with no `bidding:*` keys keep full access until backend assigns roles.
+ * Bidding RBAC — FRONTEND_RBAC.md.
+ * Legacy: if JWT has no `bidding:*` keys, allow all bidding UI.
  */
 export function useBiddingAccess() {
-  const { can, isAdmin, permissions } = usePermission();
+  const { canBidding, permissions } = usePermission();
 
   return useMemo(() => {
     const hasBiddingKeys = permissions.some((p) => p.startsWith("bidding:"));
 
     const canRead =
-      isAdmin ||
-      !hasBiddingKeys ||
-      can(PERMISSIONS.biddingRead) ||
-      can(PERMISSIONS.biddingWrite) ||
-      can(PERMISSIONS.biddingSummary);
+      canBidding(PERMISSIONS.biddingRead) ||
+      canBidding(PERMISSIONS.biddingWrite) ||
+      canBidding(PERMISSIONS.biddingSummary);
 
-    const canWrite = isAdmin || !hasBiddingKeys || can(PERMISSIONS.biddingWrite);
-
-    const canSummary = can(PERMISSIONS.biddingSummary);
+    const canWrite = canBidding(PERMISSIONS.biddingWrite);
+    const canSummary = canBidding(PERMISSIONS.biddingSummary);
 
     return { canRead, canWrite, canSummary, hasBiddingKeys };
-  }, [can, isAdmin, permissions]);
+  }, [canBidding, permissions]);
 }
