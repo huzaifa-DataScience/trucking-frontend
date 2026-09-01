@@ -13,6 +13,7 @@ import type {
   SpecSheetSizeMode,
   SpecSheetTemplateMeta,
 } from "@/lib/bidding/process-types";
+import { newId } from "@/lib/bidding/newId";
 
 export const MAX_SPEC_SHEETS = 12;
 export const MAX_SPEC_ROWS = 60;
@@ -112,7 +113,7 @@ export function defaultSizeModeForKind(kind: SpecSheetKind): SpecSheetSizeMode {
 
 export function emptyInsulationLayer(): SpecSheetInsulationLayer {
   return {
-    id: crypto.randomUUID(),
+    id: newId(),
     materialName: null,
     materialCode: null,
     thicknessIn: null,
@@ -160,7 +161,7 @@ export function emptySpecSheetRow(
   kind?: SpecSheetKind | null
 ): SpecSheetRow {
   return {
-    id: crypto.randomUUID(),
+    id: newId(),
     systemName: null,
     systemCode: null,
     unit: null,
@@ -443,7 +444,7 @@ function normalizeInsulationLayers(
           id:
             typeof o.id === "string" && o.id
               ? o.id
-              : crypto.randomUUID(),
+              : newId(),
           materialName: asNullableString(o.materialName),
           materialCode: asNullableString(o.materialCode),
           thicknessIn: asNullableNumber(o.thicknessIn),
@@ -497,7 +498,7 @@ export function normalizeSpecSheetRow(
   );
   const primary = syncPrimaryMaterialFields(insulationLayers);
   return {
-    id: typeof o.id === "string" && o.id ? o.id : crypto.randomUUID(),
+    id: typeof o.id === "string" && o.id ? o.id : newId(),
     systemName: asNullableString(o.systemName),
     systemCode: asNullableString(o.systemCode),
     unit: asNullableString(o.unit),
@@ -546,7 +547,7 @@ export function normalizeSpecSheet(raw: unknown): SpecSheet {
     : [];
 
   return {
-    id: typeof o.id === "string" && o.id ? o.id : crypto.randomUUID(),
+    id: typeof o.id === "string" && o.id ? o.id : newId(),
     kind,
     title:
       asNullableString(o.title) ??
@@ -601,13 +602,13 @@ export function mintSpecSheet(
   const resolvedKind = asKind(tpl?.id ?? kind);
   return {
     ...base,
-    id: crypto.randomUUID(),
+    id: newId(),
     kind: resolvedKind,
     title: base.title || KIND_TITLES[resolvedKind],
     rows: (base.rows.length ? base.rows : blankRows(6, resolvedKind)).map(
       (r) => ({
         ...r,
-        id: crypto.randomUUID(),
+        id: newId(),
         sizeMode: r.sizeMode ?? defaultSizeModeForKind(resolvedKind),
       })
     ),
