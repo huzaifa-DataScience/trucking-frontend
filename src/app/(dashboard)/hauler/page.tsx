@@ -43,7 +43,13 @@ export default function HaulerDashboardPage() {
     page,
     pageSize,
     setPage,
+    sortBy,
+    sortDir,
+    onSortChange,
+    search,
+    onSearchChange,
     loading: dataLoading,
+    initialLoading: dataInitialLoading,
     error: dataError,
   } = useHaulerDashboard({
     companyId: companyId ?? undefined,
@@ -87,7 +93,7 @@ export default function HaulerDashboardPage() {
     });
   }, [companyId, filters]);
 
-  const loading = lookupsLoading || dataLoading;
+  const loading = lookupsLoading || dataInitialLoading;
   const error = lookupsError ?? dataError;
 
   return (
@@ -148,6 +154,7 @@ export default function HaulerDashboardPage() {
           </div>
 
           <TicketGrid
+            refreshing={dataLoading}
             tickets={tickets}
             total={totalTickets}
             page={page}
@@ -158,6 +165,11 @@ export default function HaulerDashboardPage() {
             detailTicket={detailTicket}
             onCloseDetail={closeDetail}
             onExportClick={handleExportClick}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSortChange={onSortChange}
+            search={search}
+            onSearchChange={onSearchChange}
           />
         </>
       )}

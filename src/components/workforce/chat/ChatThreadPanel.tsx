@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { SkeletonChatBubbles } from "@/components/ui/Skeleton";
 import { ChatComposer } from "./ChatComposer";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { ChatTypeIcon } from "./ChatTypeIcon";
@@ -164,9 +165,7 @@ export function ChatThreadPanel({
 
       <div ref={listRef} className="ui-scroll-light relative min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {loading && messages.length === 0 ? (
-          <div className="flex justify-center py-16">
-            <LogoLoader />
-          </div>
+          <SkeletonChatBubbles rows={6} />
         ) : (
           <>
             {loading && messages.length > 0 ? (

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useWorkforce } from "@/contexts/WorkforceContext";
 import * as connecteamApi from "@/lib/api/endpoints/connecteam";
@@ -153,8 +153,12 @@ export function MyDayClock() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
-        <LogoLoader />
+      <div className="mx-auto flex w-full max-w-md flex-col gap-4">
+        <Card className="p-6 text-center">
+          <Skeleton className="mx-auto h-5 w-40" />
+          <Skeleton className="mx-auto mt-2 h-3 w-24" />
+          <Skeleton className="mx-auto mt-6 h-12 w-full max-w-[220px] rounded-full" />
+        </Card>
       </div>
     );
   }

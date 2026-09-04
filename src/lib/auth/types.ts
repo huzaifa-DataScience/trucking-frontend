@@ -25,6 +25,8 @@ export interface AuthUser {
   role: AppRoleId;
   status: UserStatus;
   permissions: string[];
+  /** Relative path (e.g. /auth/avatar/12); resolve against the API base URL. Null when no photo set. */
+  avatarUrl: string | null;
 }
 
 export interface LoginResponse {
