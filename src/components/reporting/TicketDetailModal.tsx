@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { TicketDetail } from "@/lib/types";
+import { formatDate, formatDateTime } from "@/lib/tickets/format";
 
 interface TicketDetailModalProps {
   ticket: TicketDetail | null;
@@ -8,60 +10,119 @@ interface TicketDetailModalProps {
 }
 
 export function TicketDetailModal({ ticket, onClose }: TicketDetailModalProps) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!ticket) return;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [ticket, onClose]);
+
   if (!ticket) return null;
+
+  const isImport = ticket.direction === "Import";
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="ticket-detail-title"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-      <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-xl dark:border-stone-700 dark:bg-stone-900">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-stone-200 bg-white px-6 py-4 dark:border-stone-700 dark:bg-stone-900">
-          <h2 id="ticket-detail-title" className="text-lg font-semibold text-stone-900 dark:text-stone-100">
-            Ticket {ticket.ticketNumber}
-          </h2>
+      <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_24px_64px_-12px_rgba(1,1,1,0.35)]">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 border-b border-ink/[0.07] bg-[#f8f9fb] px-6 py-5">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink/40">Ticket</p>
+            <div className="mt-0.5 flex flex-wrap items-center gap-2.5">
+              <h2 id="ticket-detail-title" className="truncate text-xl font-bold text-ink">
+                {ticket.ticketNumber}
+              </h2>
+            </div>
+          </div>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+            aria-label="Close"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink/45 transition hover:bg-ink/[0.06] hover:text-ink"
           >
-            Close
+            <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
-        <div className="p-6">
-          <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <DetailItem label="Ticket Date" value={ticket.ticketDate} />
-            <DetailItem label="Created At" value={ticket.createdAt} />
-            <DetailItem label="Job" value={ticket.jobName} />
-            <DetailItem label="Direction" value={ticket.direction} />
-            <DetailItem label="Destination / Origin" value={ticket.destinationOrigin} />
-            <DetailItem label="Hauling Company" value={ticket.haulingCompany} />
-            <DetailItem label="Material" value={ticket.material} />
-            <DetailItem label="Truck Number" value={ticket.truckNumber} />
-            <DetailItem label="Truck Type" value={ticket.truckType} />
-            <DetailItem label="Driver" value={ticket.driverName} />
-            <DetailItem label="Hauler Ticket #" value={ticket.haulerTicketNumber} />
-            <DetailItem label="Signed By" value={ticket.signedBy} />
-          </dl>
+
+        {/* Body */}
+        <div className="overflow-y-auto px-6 py-5">
+          <Section title="Shipment">
+            <Field label="Job" value={ticket.jobName} />
+            <Field label="Company" value={ticket.companyName} />
+            <Field
+              label="Direction"
+              value={
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    isImport ? "bg-info-tint text-info" : "bg-brand/10 text-brand-secondary"
+                  }`}
+                >
+                  {ticket.direction}
+                </span>
+              }
+            />
+            <Field label="Ticket Date" value={formatDate(ticket.ticketDate)} />
+            <Field label="Created At" value={formatDateTime(ticket.createdAt)} />
+          </Section>
+
+          <Section title="Route & load">
+            <Field label="Destination / Origin" value={ticket.destinationOrigin} />
+            <Field label="Hauling Company" value={ticket.haulingCompany} />
+            <Field label="Material" value={ticket.material} />
+            <Field label="Truck Number" value={ticket.truckNumber} />
+            <Field label="Truck Type" value={ticket.truckType} />
+            <Field label="Driver" value={ticket.driverName} />
+          </Section>
+
+          <Section title="Verification" last={!ticket.photos || ticket.photos.length === 0}>
+            <Field
+              label="Hauler Ticket #"
+              value={
+                ticket.haulerTicketNumber === "MISSING" ? (
+                  <span className="font-medium text-danger">MISSING</span>
+                ) : (
+                  ticket.haulerTicketNumber
+                )
+              }
+            />
+            <Field label="Signed By" value={ticket.signedBy} />
+          </Section>
 
           {ticket.photos && ticket.photos.length > 0 && (
-            <div className="mt-8">
-              <h3 className="mb-3 text-sm font-semibold text-stone-700 dark:text-stone-300">
+            <div>
+              <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-ink/40">
                 Photo gallery
-              </h3>
-              <div className="flex flex-wrap gap-3">
+              </p>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {ticket.photos.map((p) => (
                   <a
                     key={p.id}
                     href={p.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-brand-secondary hover:bg-brand/10 dark:border-stone-700 dark:bg-stone-800 dark:text-brand dark:hover:bg-stone-700"
+                    className="flex items-center gap-2 rounded-xl border border-ink/[0.08] bg-[#f8f9fb] px-3 py-2.5 text-sm font-medium text-ink/75 transition hover:border-brand/30 hover:bg-brand/[0.06] hover:text-brand-secondary"
                   >
-                    <span aria-hidden>📷</span>
-                    {p.type}
+                    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden>
+                      <path d="M4 8a2 2 0 012-2h1l1.2-1.6A2 2 0 019.8 3.6h4.4a2 2 0 011.6.8L17 6h1a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="12" cy="13" r="3.2" />
+                    </svg>
+                    <span className="truncate">{p.type}</span>
                   </a>
                 ))}
               </div>
@@ -73,11 +134,32 @@ export function TicketDetailModal({ ticket, onClose }: TicketDetailModalProps) {
   );
 }
 
-function DetailItem({ label, value }: { label: string; value: string }) {
+function Section({
+  title,
+  children,
+  last,
+}: {
+  title: string;
+  children: React.ReactNode;
+  last?: boolean;
+}) {
   return (
-    <div>
-      <dt className="text-xs font-medium text-stone-500 dark:text-stone-400">{label}</dt>
-      <dd className="mt-0.5 text-sm text-stone-900 dark:text-stone-100">{value ?? "—"}</dd>
+    <div className={last ? "mb-1" : "mb-5"}>
+      <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-ink/40">{title}</p>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-ink/[0.07] bg-[#fbfbfc] p-4 sm:grid-cols-3">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] font-medium text-ink/40">{label}</dt>
+      <dd className="mt-0.5 truncate text-sm font-medium text-ink" title={typeof value === "string" ? value : undefined}>
+        {value ?? "—"}
+      </dd>
     </div>
   );
 }

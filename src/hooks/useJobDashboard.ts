@@ -29,7 +29,7 @@ export interface JobDashboardState {
 
 const defaultKpis = { totalTickets: 0, flowBalance: "0 Imports / 0 Exports", lastActive: "—" };
 
-export function useJobDashboard(filters: JobDashboardFilters) {
+export function useJobDashboard(filters: JobDashboardFilters, opts: { initialSearch?: string } = {}) {
   const [kpis, setKpis] = useState(defaultKpis);
   const [vendorTable, setVendorTable] = useState<{ companyName: string; truckType: string; totalTickets: number }[]>([]);
   const [materialTable, setMaterialTable] = useState<{ materialName: string; totalTickets: number }[]>([]);
@@ -37,8 +37,25 @@ export function useJobDashboard(filters: JobDashboardFilters) {
   const [totalTickets, setTotalTickets] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
+  const [sort, setSort] = useState<{ by?: string; dir: "ASC" | "DESC" }>({ by: undefined, dir: "DESC" });
+  const [search, setSearch] = useState(opts.initialSearch ?? "");
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const sortBy = sort.by;
+  const sortDir = sort.dir;
+
+  const changeSort = useCallback((column: string) => {
+    setPage(1);
+    setSort((prev) =>
+      prev.by === column ? { by: column, dir: prev.dir === "ASC" ? "DESC" : "ASC" } : { by: column, dir: "ASC" }
+    );
+  }, []);
+
+  const changeSearch = useCallback((value: string) => {
+    setPage(1);
+    setSearch(value);
+  }, []);
 
   const load = useCallback(() => {
     const apiFilters = {
@@ -57,7 +74,7 @@ export function useJobDashboard(filters: JobDashboardFilters) {
       jobApi.getJobKpis(apiFilters),
       jobApi.getJobVendorSummary(apiFilters),
       jobApi.getJobMaterialSummary(apiFilters),
-      jobApi.getJobTickets(apiFilters, page, pageSize),
+      jobApi.getJobTickets(apiFilters, { page, pageSize, sortBy, sortDir, search }),
     ])
       .then(([k, v, m, t]) => {
         setKpis(k);
@@ -67,8 +84,23 @@ export function useJobDashboard(filters: JobDashboardFilters) {
         setTotalTickets(t.total);
       })
       .catch((e) => setError(e instanceof Error ? e : new Error(String(e))))
-      .finally(() => setLoading(false));
-  }, [filters.companyId, filters.startDate, filters.endDate, filters.jobId, filters.direction, filters.entityId, page, pageSize]);
+      .finally(() => {
+        setLoading(false);
+        setInitialLoading(false);
+      });
+  }, [
+    filters.companyId,
+    filters.startDate,
+    filters.endDate,
+    filters.jobId,
+    filters.direction,
+    filters.entityId,
+    page,
+    pageSize,
+    sortBy,
+    sortDir,
+    search,
+  ]);
 
   useEffect(() => {
     load();
@@ -83,7 +115,13 @@ export function useJobDashboard(filters: JobDashboardFilters) {
     page,
     pageSize,
     setPage,
+    sortBy,
+    sortDir,
+    onSortChange: changeSort,
+    search,
+    onSearchChange: changeSearch,
     loading,
+    initialLoading,
     error,
     refetch: load,
   };

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { FilterConfig } from "@/components/reporting/ReportFilters";
 import { ReportFilters } from "@/components/reporting/ReportFilters";
 import { KPICards } from "@/components/reporting/KPICards";
@@ -14,16 +15,16 @@ import { DashboardSkeleton } from "@/components/reporting/DashboardSkeleton";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import * as materialApi from "@/lib/api/endpoints/material-dashboard";
 
-function createDefaultFilters(): FilterConfig {
+function createDefaultFilters(initialMaterialId?: string | null): FilterConfig {
   // Use local machine date for default end date
   const today = new Date().toISOString().split("T")[0]!;
   return {
     startDate: "2025-01-01",
     endDate: today,
     jobId: "all",
-    materialId: "all",
+    materialId: initialMaterialId || "all",
     haulerId: "all",
-    
+
     truckTypeId: "all",
     direction: "Both",
   };
@@ -31,7 +32,22 @@ function createDefaultFilters(): FilterConfig {
 
 export default function MaterialDashboardPage() {
   const { companyId } = useCompany();
-  const [filters, setFilters] = useState<FilterConfig>(() => createDefaultFilters());
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialMaterialId = searchParams.get("materialId");
+  const [filters, setFilters] = useState<FilterConfig>(() => createDefaultFilters(initialMaterialId));
+
+  // Header global search deep-links here with ?materialId=. Track the last-consumed value
+  // (not just "used once") so a second search while already on this page still applies —
+  // useState's lazy initializer only runs on mount, not on re-render.
+  const consumedMaterialIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (initialMaterialId && consumedMaterialIdRef.current !== initialMaterialId) {
+      consumedMaterialIdRef.current = initialMaterialId;
+      setFilters((f) => ({ ...f, materialId: initialMaterialId }));
+      router.replace("/material");
+    }
+  }, [initialMaterialId, router]);
 
   const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId ?? undefined);
 
@@ -44,7 +60,13 @@ export default function MaterialDashboardPage() {
     page,
     pageSize,
     setPage,
+    sortBy,
+    sortDir,
+    onSortChange,
+    search,
+    onSearchChange,
     loading: dataLoading,
+    initialLoading: dataInitialLoading,
     error: dataError,
   } = useMaterialDashboard({
     companyId: companyId ?? undefined,
@@ -84,7 +106,7 @@ export default function MaterialDashboardPage() {
     });
   }, [companyId, filters.startDate, filters.endDate, filters.jobId, filters.materialId, filters.direction]);
 
-  const loading = lookupsLoading || dataLoading;
+  const loading = lookupsLoading || dataInitialLoading;
   const error = lookupsError ?? dataError;
 
   return (
@@ -146,6 +168,7 @@ export default function MaterialDashboardPage() {
           </div>
 
           <TicketGrid
+            refreshing={dataLoading}
             tickets={tickets}
             total={totalTickets}
             page={page}
@@ -156,6 +179,11 @@ export default function MaterialDashboardPage() {
             detailTicket={detailTicket}
             onCloseDetail={closeDetail}
             onExportClick={handleExportClick}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSortChange={onSortChange}
+            search={search}
+            onSearchChange={onSearchChange}
           />
         </>
       )}

@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { WorkforceGate } from "@/components/workforce/WorkforceGate";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { StatusPill } from "@/components/ui/StatusPill";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { WorkforcePagination } from "@/components/workforce/WorkforcePagination";
 import { WorkforceScrollPanel } from "@/components/workforce/WorkforceScrollPanel";
 import { useWorkforce } from "@/contexts/WorkforceContext";
@@ -116,9 +116,7 @@ export default function WorkforceSchedulePage() {
         {error ? <p className="text-sm text-danger">{error}</p> : null}
 
         {loading ? (
-          <div className="flex justify-center py-16">
-            <LogoLoader />
-          </div>
+          <TableSkeleton rows={8} toolbar={false} />
         ) : shifts.length === 0 ? (
           <Card className="p-8 text-center text-sm text-ink/45">
             No scheduled shifts in this view.

@@ -2,7 +2,7 @@
 
 import type { SitelineContract, SitelinePayApp } from "@/lib/api/endpoints/siteline";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { FormSkeleton } from "@/components/ui/Skeleton";
 
 const formatCurrency = (value: number | undefined) =>
   value != null
@@ -48,11 +48,7 @@ export function ContractDetailModal({
           </button>
         </div>
         <div className="p-6 space-y-6">
-          {loading && (
-            <div className="flex justify-center py-8">
-              <LogoLoader size={32} />
-            </div>
-          )}
+          {loading && <FormSkeleton fields={5} />}
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
               {error}

@@ -7,6 +7,7 @@ import { WorkforceGate } from "@/components/workforce/WorkforceGate";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { WorkforcePagination } from "@/components/workforce/WorkforcePagination";
 import { WorkforceScrollPanel } from "@/components/workforce/WorkforceScrollPanel";
 import { useWorkforce } from "@/contexts/WorkforceContext";
@@ -116,9 +117,7 @@ function TimePageContent() {
             }
           />
           {loading ? (
-            <div className="flex justify-center py-12">
-              <LogoLoader />
-            </div>
+            <TableSkeleton rows={6} toolbar={false} />
           ) : activities.length === 0 ? (
             <p className="text-sm text-ink/45">No time activities match this filter.</p>
           ) : (
