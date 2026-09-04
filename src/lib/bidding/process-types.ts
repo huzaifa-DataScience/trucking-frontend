@@ -437,6 +437,8 @@ export interface BidProcess {
   insulationSpecs?: Record<string, unknown> | null;
   /** Project-level Buy American — FRONTEND_SPEC_SHEET.md */
   buyAmerican?: boolean | null;
+  /** Bid-level A+ — Setup only, not a spec-sheet column. FRONTEND_SPEC_SHEET.md */
+  aPlus?: boolean | null;
   /** Client insulation schedules (Setup) — FRONTEND_SPEC_SHEET.md */
   specSheets?: SpecSheet[];
   technicalReview?: ProcessTechnicalReview | null;

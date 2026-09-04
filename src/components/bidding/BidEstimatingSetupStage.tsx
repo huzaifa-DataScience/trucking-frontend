@@ -178,6 +178,20 @@ export function BidEstimatingSetupStage() {
             <span className="text-ink/45">(project-level · federal)</span>
           </span>
         </label>
+        <label className="flex items-center gap-2 sm:col-span-2">
+          <input
+            type="checkbox"
+            disabled={!editable}
+            checked={draft.aPlus === true}
+            onChange={(e) =>
+              setField("aPlus", e.target.checked ? true : null)
+            }
+          />
+          <span className="text-sm text-ink/80">
+            A+{" "}
+            <span className="text-ink/45">(bid-level · Setup)</span>
+          </span>
+        </label>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"

@@ -395,22 +395,26 @@ export function BidSpecSheetsSection({
   sheets: sheetsProp,
   insulationSpecs,
   buyAmerican,
+  aPlus,
   meta,
   editable,
   showInsulationSpecs = true,
   onSheetsChange,
   onInsulationSpecsChange,
   onBuyAmericanChange,
+  onAPlusChange,
 }: {
   sheets: SpecSheet[];
   insulationSpecs: Record<string, unknown> | null | undefined;
   buyAmerican?: boolean | null;
+  aPlus?: boolean | null;
   meta: ProcessMeta | null;
   editable: boolean;
   showInsulationSpecs?: boolean;
   onSheetsChange: (next: SpecSheet[]) => void;
   onInsulationSpecsChange: (next: Record<string, unknown>) => void;
   onBuyAmericanChange?: (next: boolean | null) => void;
+  onAPlusChange?: (next: boolean | null) => void;
 }) {
   const { bid, uploadAttachment, deleteAttachment, applyBidDetail } =
     useBidSheet();
@@ -1041,6 +1045,7 @@ export function BidSpecSheetsSection({
   const attachments = bid?.attachments ?? [];
   const showDuctShape = active?.kind === "duct";
   const buyAmericanChecked = buyAmerican === true;
+  const aPlusChecked = aPlus === true;
 
   return (
     <div className="flex flex-col gap-4">
@@ -1074,24 +1079,44 @@ export function BidSpecSheetsSection({
         </section>
       ) : null}
 
-      {onBuyAmericanChange ? (
-        <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4">
-          <label className="inline-flex items-center gap-2 text-sm text-ink/80">
-            <input
-              type="checkbox"
-              disabled={!editable}
-              checked={buyAmericanChecked}
-              onChange={(e) =>
-                onBuyAmericanChange(e.target.checked ? true : null)
-              }
-            />
-            <span>
-              <span className="font-semibold text-ink">Buy American?</span>
-              <span className="ml-1.5 text-ink/45">
-                Project-level · federal work
+      {onBuyAmericanChange || onAPlusChange ? (
+        <section className="flex flex-wrap gap-x-6 gap-y-3 rounded-2xl border border-ink/[0.08] bg-surface p-4">
+          {onBuyAmericanChange ? (
+            <label className="inline-flex items-center gap-2 text-sm text-ink/80">
+              <input
+                type="checkbox"
+                disabled={!editable}
+                checked={buyAmericanChecked}
+                onChange={(e) =>
+                  onBuyAmericanChange(e.target.checked ? true : null)
+                }
+              />
+              <span>
+                <span className="font-semibold text-ink">Buy American?</span>
+                <span className="ml-1.5 text-ink/45">
+                  Project-level · federal work
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+          ) : null}
+          {onAPlusChange ? (
+            <label className="inline-flex items-center gap-2 text-sm text-ink/80">
+              <input
+                type="checkbox"
+                disabled={!editable}
+                checked={aPlusChecked}
+                onChange={(e) =>
+                  onAPlusChange(e.target.checked ? true : null)
+                }
+              />
+              <span>
+                <span className="font-semibold text-ink">A+</span>
+                <span className="ml-1.5 text-ink/45">
+                  Bid-level · Setup only
+                </span>
+              </span>
+            </label>
+          ) : null}
         </section>
       ) : null}
 

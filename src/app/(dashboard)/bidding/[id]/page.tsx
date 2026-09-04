@@ -46,8 +46,9 @@ function BidWorkspaceInner() {
     if (stage === "lost" && !bid.workflow.showLost) {
       router.replace(`/bidding/${bidId}?stage=result`);
     }
-    if (stage === "production" && !bid.workflow.showAward) {
-      router.replace(`/bidding/${bidId}?stage=result`);
+    // Production detail lives at /production/[id]; don't dump users into Outcome.
+    if (stage === "production") {
+      router.replace(`/production/${bidId}`);
     }
   }, [bid, bidId, router, stage]);
 

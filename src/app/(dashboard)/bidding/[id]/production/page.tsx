@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 
-/** Alias → bid Production tab — BIDDING_FRONTEND_API §0 */
+/** Alias → standalone Production detail (not bid estimate chrome). */
 export default async function BiddingProductionAlias({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  redirect(`/bidding/${encodeURIComponent(id)}?stage=production`);
+  redirect(`/production/${encodeURIComponent(id)}`);
 }
