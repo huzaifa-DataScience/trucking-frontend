@@ -156,3 +156,22 @@ export async function deleteAvatar(): Promise<AuthUser> {
   }
   return normalizeUser(data);
 }
+
+/** Changes the current user's password. Throws with a user-facing message on failure. */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const token = getAccessToken();
+  if (!token) throw new Error("Not signed in");
+
+  const res = await fetch(`${BASE()}/auth/change-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
+    message?: string | string[];
+  };
+  if (!res.ok) {
+    const msg = Array.isArray(data.message) ? data.message.join(" ") : data.message;
+    throw new Error(msg || "Couldn't change password. Please try again.");
+  }
+}
