@@ -54,12 +54,14 @@ export function BidSpecSheetsStage() {
         sheets={sheets}
         insulationSpecs={draft.insulationSpecs}
         buyAmerican={draft.buyAmerican}
+        aPlus={draft.aPlus}
         meta={meta}
         editable={editable}
         showInsulationSpecs
         onSheetsChange={setSpecSheets}
         onInsulationSpecsChange={(next) => setField("insulationSpecs", next)}
         onBuyAmericanChange={(next) => setField("buyAmerican", next)}
+        onAPlusChange={(next) => setField("aPlus", next)}
       />
     </div>
   );

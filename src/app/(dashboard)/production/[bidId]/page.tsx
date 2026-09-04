@@ -1,11 +1,17 @@
-import { redirect } from "next/navigation";
+"use client";
 
-/** Prefer bid Production tab — BIDDING_FRONTEND_API §0 */
-export default async function ProductionDetailRedirect({
+import { use } from "react";
+import { ProductionPage } from "@/components/bidding/production/ProductionPage";
+
+/**
+ * Production detail stays under /production/[bidId].
+ * Do not redirect into the bid estimate chrome — FRONTEND_PRODUCTION_REPORT.md list → detail.
+ */
+export default function ProductionDetailPage({
   params,
 }: {
   params: Promise<{ bidId: string }>;
 }) {
-  const { bidId } = await params;
-  redirect(`/bidding/${encodeURIComponent(bidId)}?stage=production`);
+  const { bidId } = use(params);
+  return <ProductionPage bidId={bidId} />;
 }

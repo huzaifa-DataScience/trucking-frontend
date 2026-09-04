@@ -77,7 +77,7 @@ export function BidStageStrip({
                   Awarded / startup
                 </Link>
                 <Link
-                  href={`/bidding/${bidId}?stage=production`}
+                  href={`/production/${bidId}`}
                   className={
                     active === "production"
                       ? "font-semibold text-brand"
@@ -143,7 +143,7 @@ export function BidStageStrip({
               Awarded
             </Link>
             <Link
-              href={`/bidding/${bidId}?stage=production`}
+              href={`/production/${bidId}`}
               role="tab"
               aria-selected={active === "production"}
               className={`rounded-xl px-3 py-2 text-sm transition ${

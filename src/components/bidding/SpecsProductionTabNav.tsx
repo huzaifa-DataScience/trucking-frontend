@@ -16,7 +16,8 @@ export function SpecsProductionTabNav({
   productionEnabled?: boolean;
 }) {
   const specsHref = `/bidding/${bidId}?stage=takeoff`;
-  const productionHref = `/bidding/${bidId}?stage=production`;
+  /** Standalone Mike Production detail — not the bid estimate chrome. */
+  const productionHref = `/production/${bidId}`;
 
   const tabClass = (on: boolean, disabled = false) =>
     `inline-flex items-center rounded-xl px-4 py-2.5 text-sm transition ${
