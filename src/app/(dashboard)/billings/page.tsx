@@ -29,7 +29,7 @@ import type {
 } from "@/lib/api/endpoints/siteline";
 import { ContractDetailModal } from "@/components/billings/ContractDetailModal";
 import { PayAppDetailModal } from "@/components/billings/PayAppDetailModal";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useCompany } from "@/contexts/CompanyContext";
 import { sitelineEntityIdFromContext } from "@/lib/siteline-entity";
 import { SitelineClearstoryGapsBanner } from "@/components/billings/SitelineClearstoryGapsBanner";
@@ -380,11 +380,7 @@ export default function BillingsPage() {
         <SitelineClearstoryGapsBanner entityId={sitelineEntityId} className="shrink-0" />
       ) : null}
 
-      {initialLoading && (
-        <div className="flex justify-center py-8">
-          <LogoLoader size={32} />
-        </div>
-      )}
+      {initialLoading && <TableSkeleton rows={6} />}
 
       {!statusLoading && !configured && (
         <Card className="border-brand/30 bg-brand/5 dark:border-brand/40 dark:bg-brand/10">
@@ -867,11 +863,7 @@ export default function BillingsPage() {
                 </div>
               </div>
               </div>
-              {agingLoading && (
-                <div className="flex shrink-0 justify-center py-8">
-                  <LogoLoader size={32} />
-                </div>
-              )}
+              {agingLoading && <TableSkeleton rows={8} toolbar={false} />}
               {agingError && (
                 <div className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
                   {agingError}
@@ -1147,11 +1139,7 @@ export default function BillingsPage() {
                 </div>
               </div>
               </div>
-              {agingOverdueLoading && (
-                <div className="flex shrink-0 justify-center py-8">
-                  <LogoLoader size={32} />
-                </div>
-              )}
+              {agingOverdueLoading && <TableSkeleton rows={8} toolbar={false} />}
               {agingOverdueError && (
                 <div className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
                   {agingOverdueError}

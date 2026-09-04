@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useClearstoryStatus } from "@/hooks/useClearstory";
 import { getClearstoryApiPayload, postClearstorySync } from "@/lib/api/endpoints/clearstory";
 import { getApiErrorMessage } from "@/lib/api/client";
@@ -87,8 +87,13 @@ export default function ClearstoryOpsPage() {
             }
           />
           {statusLoading ? (
-            <div className="flex justify-center py-8">
-              <LogoLoader size={32} />
+            <div className="space-y-2.5">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="flex justify-between gap-4">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              ))}
             </div>
           ) : statusError ? (
             <p className="text-sm text-red-600">{statusError}</p>
@@ -167,8 +172,10 @@ export default function ClearstoryOpsPage() {
           </p>
         ) : null}
         {overviewLoading ? (
-          <div className="mt-4 flex justify-center py-8">
-            <LogoLoader size={32} />
+          <div className="mt-4 space-y-2 rounded-xl bg-[#0d1117] p-4">
+            {[100, 88, 92, 70, 96, 60, 84, 40].map((w, i) => (
+              <Skeleton key={i} className="h-3 bg-white/10" style={{ width: `${w}%` }} />
+            ))}
           </div>
         ) : overviewJson ? (
           <pre className="mt-4 max-h-[min(50dvh,400px)] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-[#0d1117] p-4 text-xs text-[#e6edf3]">

@@ -166,3 +166,28 @@ export function NavIconChart({ className = "h-4 w-4 shrink-0" }: { className?: s
     </svg>
   );
 }
+
+export function NavIconTag({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+      <path
+        d="M9.57 3H5.25A2.25 2.25 0 003 5.25v4.32c0 .6.24 1.17.66 1.59l9.58 9.58c.7.7 1.78.87 2.61.33a18.1 18.1 0 005.22-5.22c.54-.83.37-1.91-.33-2.61L11.16 3.66A2.25 2.25 0 009.57 3z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M6 6.75h.008v.008H6V6.75z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function NavIconBell({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+      <path
+        d="M14.86 17.08a23.85 23.85 0 005.45-1.31A9 9 0 0118 9.75V9a6 6 0 10-12 0v.75a9 9 0 01-2.31 6.02c1.73.64 3.56 1.09 5.45 1.31m5.72 0a24.26 24.26 0 01-5.72 0m5.72 0a2.86 2.86 0 01-5.72 0"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { WorkforceGate } from "@/components/workforce/WorkforceGate";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { StatusPill } from "@/components/ui/StatusPill";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { UserAvatar } from "@/components/workforce/UserAvatar";
 import { WorkforcePagination } from "@/components/workforce/WorkforcePagination";
 import { WorkforceScrollPanel } from "@/components/workforce/WorkforceScrollPanel";
@@ -195,9 +195,7 @@ export default function WorkforceTimeOffPage() {
             subtitle={`${total} total`}
           />
           {loading ? (
-            <div className="flex justify-center py-12">
-              <LogoLoader />
-            </div>
+            <TableSkeleton rows={6} toolbar={false} />
           ) : requests.length === 0 ? (
             <p className="text-sm text-ink/45">No requests.</p>
           ) : (

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Card } from "@/components/ui/Card";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useBiddingLookups } from "@/hooks/useBiddingLookups";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
@@ -322,9 +322,7 @@ export function BiddingLookupsAdmin() {
   if (loading) {
     return (
       <Card>
-        <div className="flex justify-center py-8">
-          <LogoLoader size={28} />
-        </div>
+        <TableSkeleton rows={6} toolbar={false} />
       </Card>
     );
   }

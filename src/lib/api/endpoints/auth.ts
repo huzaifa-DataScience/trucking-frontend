@@ -36,6 +36,7 @@ function normalizeUser(raw: Record<string, unknown>): AuthUser {
     role: normalizeAppRole(u.role),
     status: normalizeStatus(u.status),
     permissions: Array.isArray(u.permissions) ? (u.permissions as string[]) : [],
+    avatarUrl: typeof u.avatarUrl === "string" ? u.avatarUrl : null,
   };
 }
 
@@ -112,4 +113,46 @@ export async function getProfile(): Promise<AuthUser | null> {
   if (!res.ok) return null;
   const raw = (await res.json()) as Record<string, unknown>;
   return normalizeUser(raw);
+}
+
+/** Uploads/replaces the current user's profile photo. Throws with a user-facing message on failure. */
+export async function uploadAvatar(file: File): Promise<AuthUser> {
+  const token = getAccessToken();
+  if (!token) throw new Error("Not signed in");
+
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await fetch(`${BASE()}/auth/avatar`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
+    message?: string | string[];
+  };
+  if (!res.ok) {
+    const msg = Array.isArray(data.message) ? data.message.join(" ") : data.message;
+    throw new Error(msg || "Couldn't upload photo. Please try again.");
+  }
+  return normalizeUser(data);
+}
+
+/** Removes the current user's profile photo (reverts to initials). */
+export async function deleteAvatar(): Promise<AuthUser> {
+  const token = getAccessToken();
+  if (!token) throw new Error("Not signed in");
+
+  const res = await fetch(`${BASE()}/auth/avatar`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
+    message?: string | string[];
+  };
+  if (!res.ok) {
+    const msg = Array.isArray(data.message) ? data.message.join(" ") : data.message;
+    throw new Error(msg || "Couldn't remove photo. Please try again.");
+  }
+  return normalizeUser(data);
 }

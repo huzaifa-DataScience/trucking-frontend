@@ -59,6 +59,7 @@ function normalizeStoredUser(raw: Record<string, unknown>): AuthUser {
     role: normalizeAppRole(u.role),
     status: normalizeStoredStatus(u.status),
     permissions: Array.isArray(u.permissions) ? (u.permissions as string[]) : [],
+    avatarUrl: typeof u.avatarUrl === "string" ? u.avatarUrl : null,
   };
 }
 

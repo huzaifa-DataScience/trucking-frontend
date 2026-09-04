@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/ToastProvider";
 import * as adminApi from "@/lib/api/endpoints/admin";
 import { getApiErrorMessage } from "@/lib/api/client";
@@ -140,9 +140,7 @@ export function AccessControlSettings() {
   if (loading) {
     return (
       <Card>
-        <div className="flex justify-center py-10">
-          <LogoLoader size={28} />
-        </div>
+        <TableSkeleton rows={6} toolbar={false} />
       </Card>
     );
   }

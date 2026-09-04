@@ -26,8 +26,25 @@ export function useHaulerDashboard(filters: HaulerDashboardFilters) {
   const [totalTickets, setTotalTickets] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
+  const [sort, setSort] = useState<{ by?: string; dir: "ASC" | "DESC" }>({ by: undefined, dir: "DESC" });
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const sortBy = sort.by;
+  const sortDir = sort.dir;
+
+  const changeSort = useCallback((column: string) => {
+    setPage(1);
+    setSort((prev) =>
+      prev.by === column ? { by: column, dir: prev.dir === "ASC" ? "DESC" : "ASC" } : { by: column, dir: "ASC" }
+    );
+  }, []);
+
+  const changeSearch = useCallback((value: string) => {
+    setPage(1);
+    setSearch(value);
+  }, []);
 
   const load = useCallback(() => {
     const apiFilters = {
@@ -49,7 +66,7 @@ export function useHaulerDashboard(filters: HaulerDashboardFilters) {
       haulerApi.getHaulerKpis(apiFilters),
       haulerApi.getHaulerBillableUnits(apiFilters),
       haulerApi.getHaulerCostCenter(apiFilters),
-      haulerApi.getHaulerTickets(apiFilters, page, pageSize),
+      haulerApi.getHaulerTickets(apiFilters, { page, pageSize, sortBy, sortDir, search }),
     ])
       .then(([k, b, c, t]) => {
         setKpis(k);
@@ -59,7 +76,10 @@ export function useHaulerDashboard(filters: HaulerDashboardFilters) {
         setTotalTickets(t.total);
       })
       .catch((e) => setError(e instanceof Error ? e : new Error(String(e))))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setInitialLoading(false);
+      });
   }, [
     filters.companyId,
     filters.startDate,
@@ -72,6 +92,9 @@ export function useHaulerDashboard(filters: HaulerDashboardFilters) {
     filters.entityId,
     page,
     pageSize,
+    sortBy,
+    sortDir,
+    search,
   ]);
 
   useEffect(() => {
@@ -87,7 +110,13 @@ export function useHaulerDashboard(filters: HaulerDashboardFilters) {
     page,
     pageSize,
     setPage,
+    sortBy,
+    sortDir,
+    onSortChange: changeSort,
+    search,
+    onSearchChange: changeSearch,
     loading,
+    initialLoading,
     error,
     refetch: load,
   };

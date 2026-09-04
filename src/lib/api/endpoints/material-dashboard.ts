@@ -20,7 +20,15 @@ export interface MaterialDashboardFilters {
   entityId?: string;
 }
 
-const toParams = (f: MaterialDashboardFilters, page?: number, pageSize?: number) => {
+export interface TicketListOptions {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: "ASC" | "DESC";
+  search?: string;
+}
+
+const toParams = (f: MaterialDashboardFilters, opts?: TicketListOptions) => {
   const p: Record<string, string | number | undefined> = {
     startDate: f.startDate,
     endDate: f.endDate,
@@ -31,8 +39,11 @@ const toParams = (f: MaterialDashboardFilters, page?: number, pageSize?: number)
     // Our internal company filter (Ref_OurEntities)
     entityId: f.entityId ? Number(f.entityId) : undefined,
   };
-  if (page != null) p.page = page;
-  if (pageSize != null) p.pageSize = pageSize;
+  if (opts?.page != null) p.page = opts.page;
+  if (opts?.pageSize != null) p.pageSize = opts.pageSize;
+  if (opts?.sortBy) p.sortBy = opts.sortBy;
+  if (opts?.sortDir) p.sortDir = opts.sortDir;
+  if (opts?.search) p.search = opts.search;
   return p;
 };
 
@@ -50,10 +61,9 @@ export async function getMaterialJobsSummary(filters: MaterialDashboardFilters):
 
 export async function getMaterialTickets(
   filters: MaterialDashboardFilters,
-  page = 1,
-  pageSize = 50
+  opts: TicketListOptions = {}
 ): Promise<PagedResult<ApiTicketRow>> {
-  return get<PagedResult<ApiTicketRow>>("/material-dashboard/tickets", toParams(filters, page, pageSize));
+  return get<PagedResult<ApiTicketRow>>("/material-dashboard/tickets", toParams(filters, opts));
 }
 
 export async function getMaterialTicketDetail(ticketNumber: string): Promise<ApiTicketDetail | null> {
