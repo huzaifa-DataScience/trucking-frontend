@@ -1,68 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { roleLabel } from "@/lib/auth/roles";
-import { getBaseUrl } from "@/lib/api/config";
-import { uploadAvatar, deleteAvatar } from "@/lib/api/endpoints/auth";
 import { getJobTickets } from "@/lib/api/endpoints/job-dashboard";
 import type { ApiTicketRow } from "@/lib/api/types";
 import { useLookups } from "@/hooks/useLookups";
-
-function userInitialsFromAuth(user: ReturnType<typeof useAuth>["user"]): string {
-  if (!user) return "?";
-  const f = user.firstName?.[0];
-  const l = user.lastName?.[0];
-  if (f && l) return `${f}${l}`.toUpperCase();
-  const parts = user.displayName?.split(/\s+/).filter(Boolean) ?? [];
-  if (parts.length >= 2) return `${parts[0]![0]}${parts[1]![0]}`.toUpperCase();
-  if (parts[0]) return parts[0].slice(0, 2).toUpperCase();
-  return user.email.slice(0, 2).toUpperCase();
-}
-
-function AvatarCircle({
-  user,
-  size = "sm",
-}: {
-  user: ReturnType<typeof useAuth>["user"];
-  size?: "sm" | "lg";
-}) {
-  const dims = size === "lg" ? "h-14 w-14 text-base" : "h-9 w-9 text-[11px] sm:h-10 sm:w-10 sm:text-xs";
-  if (user?.avatarUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={`${getBaseUrl()}${user.avatarUrl}`}
-        alt=""
-        className={`${dims} shrink-0 rounded-full object-cover ring-2 ring-white/80`}
-      />
-    );
-  }
-  return (
-    <div
-      className={`flex ${dims} shrink-0 items-center justify-center rounded-full font-bold text-white`}
-      style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%)" }}
-      aria-hidden
-    >
-      {userInitialsFromAuth(user)}
-    </div>
-  );
-}
+import { AvatarCircle } from "@/components/ui/AvatarCircle";
 
 export function Header() {
   const { companyId, company, setCompanyId, companies } = useCompany();
-  const { user, logout, refreshUser } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
   const searchBoxRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [photoBusy, setPhotoBusy] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
 
   const { jobs: allJobs, materials: allMaterials } = useLookups(companyId ?? undefined);
 
@@ -176,43 +133,6 @@ export function Header() {
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [menuOpen]);
-
-  const handlePickPhoto = useCallback(() => {
-    setPhotoError(null);
-    fileInputRef.current?.click();
-  }, []);
-
-  const handlePhotoSelected = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      e.target.value = "";
-      if (!file) return;
-      setPhotoBusy(true);
-      setPhotoError(null);
-      try {
-        await uploadAvatar(file);
-        await refreshUser();
-      } catch (err) {
-        setPhotoError(err instanceof Error ? err.message : "Couldn't upload photo.");
-      } finally {
-        setPhotoBusy(false);
-      }
-    },
-    [refreshUser]
-  );
-
-  const handleRemovePhoto = useCallback(async () => {
-    setPhotoBusy(true);
-    setPhotoError(null);
-    try {
-      await deleteAvatar();
-      await refreshUser();
-    } catch (err) {
-      setPhotoError(err instanceof Error ? err.message : "Couldn't remove photo.");
-    } finally {
-      setPhotoBusy(false);
-    }
-  }, [refreshUser]);
 
   return (
     <header className="sticky top-0 z-30 border-b border-ink/[0.06] bg-surface/75 shadow-[0_1px_0_rgba(255,255,255,0.6)_inset] backdrop-blur-xl">
@@ -405,35 +325,17 @@ export function Header() {
                   </div>
 
                   <div className="p-2">
-                    <button
-                      type="button"
-                      onClick={handlePickPhoto}
-                      disabled={photoBusy}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-ink transition hover:bg-ink/[0.05] disabled:opacity-50"
+                    <Link
+                      href="/account"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-ink transition hover:bg-ink/[0.05]"
                     >
                       <svg className="h-4 w-4 text-ink/45" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden>
-                        <rect x="3" y="5" width="18" height="14" rx="2" />
-                        <circle cx="9" cy="11" r="2" />
-                        <path d="M21 16l-5.2-5.2a2 2 0 00-2.8 0L5 19" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="12" cy="8" r="3.5" />
+                        <path d="M4.5 20c1.4-3.5 4.3-5.5 7.5-5.5s6.1 2 7.5 5.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
-                      {photoBusy ? "Uploading…" : user.avatarUrl ? "Change photo" : "Add photo"}
-                    </button>
-                    {user.avatarUrl ? (
-                      <button
-                        type="button"
-                        onClick={handleRemovePhoto}
-                        disabled={photoBusy}
-                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-ink/60 transition hover:bg-ink/[0.05] hover:text-ink disabled:opacity-50"
-                      >
-                        <svg className="h-4 w-4 text-ink/45" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden>
-                          <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        Remove photo
-                      </button>
-                    ) : null}
-                    {photoError ? (
-                      <p className="px-3 py-1.5 text-xs text-danger">{photoError}</p>
-                    ) : null}
+                      Manage account
+                    </Link>
                   </div>
 
                   <div className="border-t border-ink/[0.06] p-2">
@@ -454,14 +356,6 @@ export function Header() {
                   </div>
                 </div>
               ) : null}
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={handlePhotoSelected}
-              />
               </div>
             </>
           ) : null}
