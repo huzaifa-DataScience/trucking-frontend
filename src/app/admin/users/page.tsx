@@ -9,7 +9,7 @@ import * as adminApi from "@/lib/api/endpoints/admin";
 import type { AdminUser, UserFilters, UserStatus, UserRole } from "@/lib/admin/types";
 import { APP_ROLE_IDS, APP_ROLE_LABELS } from "@/lib/auth/roles";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { StatusPill, type StatusTone } from "@/components/ui/StatusPill";
 
 const PAGE_SIZE = 25;
@@ -448,11 +448,7 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {loading && (
-        <div className="flex justify-center py-8">
-          <LogoLoader size={32} />
-        </div>
-      )}
+      {loading && <TableSkeleton rows={8} />}
 
       {!loading && users.length === 0 && (
         <div className="rounded-lg border border-stone-200 bg-white px-6 py-12 text-center dark:border-stone-800 dark:bg-stone-900/50">

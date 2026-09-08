@@ -6,7 +6,7 @@ import { useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { BidFormField, BidSelect, BidTextInput } from "@/components/bidding/BidFormField";
 import { Card } from "@/components/ui/Card";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { FormSkeleton } from "@/components/ui/Skeleton";
 import { RestrictedState } from "@/components/ui/RestrictedState";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useBiddingLookups } from "@/hooks/useBiddingLookups";
@@ -114,8 +114,8 @@ export default function NewBidPage() {
 
   if (lookups.loading) {
     return (
-      <div className="flex flex-1 items-center justify-center py-24">
-        <LogoLoader />
+      <div className="mx-auto max-w-2xl">
+        <FormSkeleton fields={6} />
       </div>
     );
   }

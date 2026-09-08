@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useClearstoryProjects, useClearstoryStatus } from "@/hooks/useClearstory";
 import {
   formatUsdWhole,
@@ -259,9 +259,7 @@ export default function ClearstoryProjectsPage() {
           />
 
           {loading ? (
-            <div className="flex flex-1 items-center justify-center py-16">
-              <LogoLoader size={32} />
-            </div>
+            <TableSkeleton rows={8} />
           ) : error ? (
             <p className="text-sm text-red-600" role="alert">
               {error}

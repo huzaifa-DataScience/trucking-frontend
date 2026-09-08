@@ -11,7 +11,7 @@ import { useLookups } from "@/hooks/useLookups";
 import { useForensic } from "@/hooks/useForensic";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { SkeletonStatRow, TableSkeleton } from "@/components/ui/Skeleton";
 
 // Default to last 7 days for Efficiency Outlier Report (per spec)
 function getDefaultFilters(): FilterConfig {
@@ -64,7 +64,7 @@ export default function ForensicAuditPage() {
   const error = lookupsError ?? dataError;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-8">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 sm:gap-8">
       <PageHeader
         title="Forensic & audit"
         subtitle="Late submission audit and efficiency outlier analysis for compliance reviews."
@@ -88,8 +88,9 @@ export default function ForensicAuditPage() {
       )}
 
       {loading && (
-        <div className="flex justify-center py-8">
-          <LogoLoader size={32} />
+        <div className="space-y-6">
+          <SkeletonStatRow count={1} />
+          <TableSkeleton rows={8} toolbar={false} />
         </div>
       )}
 

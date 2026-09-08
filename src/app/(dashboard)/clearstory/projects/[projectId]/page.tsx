@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { SkeletonStatRow, TableSkeleton } from "@/components/ui/Skeleton";
 import { CorPayloadModal, ProjectPayloadModal } from "@/components/clearstory/ApiPayloadFetchModal";
 import { useClearstoryCors, useClearstoryProjectSummary } from "@/hooks/useClearstory";
 import {
@@ -129,9 +129,7 @@ export default function ClearstoryProjectDetailPage() {
       <PageHeader title={title} subtitle={subtitle} />
 
       {summaryLoading ? (
-        <div className="flex justify-center py-12">
-          <LogoLoader size={32} />
-        </div>
+        <SkeletonStatRow count={7} />
       ) : summaryError ? (
         <p className="text-sm text-red-600" role="alert">
           {summaryError}
@@ -202,9 +200,7 @@ export default function ClearstoryProjectDetailPage() {
         </div>
 
         {corsLoading ? (
-          <div className="flex flex-1 items-center justify-center py-12">
-            <LogoLoader size={32} />
-          </div>
+          <TableSkeleton rows={6} toolbar={false} />
         ) : corsError ? (
           <p className="text-sm text-red-600" role="alert">
             {corsError}

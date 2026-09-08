@@ -38,15 +38,15 @@ export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
   }, [rows]);
 
   return (
-    <div className="rounded-xl border border-stone-200/80 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900/50">
-      <div className="flex flex-col gap-3 border-b border-stone-200/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-stone-800">
-        <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
+    <div className="min-w-0 rounded-xl border border-stone-200/80 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900/50">
+      <div className="flex min-w-0 flex-col gap-3 border-b border-stone-200/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-stone-800">
+        <span className="block min-w-0 flex-1 truncate text-sm font-medium text-stone-700 dark:text-stone-300">
           By Date + Job + Destination (Route); compare truck vs fleet average ({rows.length} rows)
         </span>
         <button
           type="button"
           onClick={exportExcel}
-          className="w-full rounded-lg bg-brand/80 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-secondary sm:w-auto"
+          className="w-full shrink-0 rounded-lg bg-brand/80 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-secondary sm:w-auto"
         >
           Export to Excel
         </button>

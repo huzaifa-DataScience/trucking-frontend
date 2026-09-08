@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { JsonPayloadModal } from "@/components/clearstory/JsonPayloadModal";
 import { ClearstoryTablePagination } from "@/components/clearstory/ClearstoryTablePagination";
 import type { ClearstoryTableRow } from "@/lib/api/endpoints/clearstory";
@@ -124,9 +124,7 @@ export function ClearstorySwaggerTable({
       />
 
       {loading ? (
-        <div className="flex flex-1 justify-center py-16">
-          <LogoLoader size={32} />
-        </div>
+        <TableSkeleton rows={8} />
       ) : error ? (
         <p className="text-sm text-red-600" role="alert">
           {error}

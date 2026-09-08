@@ -2,7 +2,7 @@
 
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { ClearstorySwaggerTable } from "@/components/clearstory/ClearstorySwaggerTable";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { useClearstoryCompany } from "@/hooks/useClearstoryCompany";
 
@@ -26,9 +26,7 @@ export default function ClearstoryCompanyPage() {
       />
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <LogoLoader size={32} />
-        </div>
+        <TableSkeleton rows={1} toolbar={false} />
       ) : error ? (
         <p className="text-sm text-red-600" role="alert">
           {error}

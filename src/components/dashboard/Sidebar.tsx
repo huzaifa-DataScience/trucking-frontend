@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType } from "react";
+import { useEffect, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,9 +13,7 @@ import {
   NavIconTruck,
   NavIconShield,
   NavIconProposal,
-  NavIconPlus,
   NavIconInvoice,
-  NavIconLayers,
   NavIconUsers,
   NavIconCog,
   NavIconClock,
@@ -24,7 +22,6 @@ import {
   NavIconSun,
   NavIconChat,
   NavIconTable,
-  NavIconChart,
 } from "@/components/dashboard/DashboardNavIcons";
 import type { AuthUser } from "@/lib/auth/types";
 import { useChatUnreadTotal } from "@/hooks/useChatUnreadTotal";
@@ -113,49 +110,6 @@ const operationsNavItems: SidebarNavItem[] = [
     Icon: NavIconShield,
     permission: PERMISSIONS.forensicRead,
   },
-];
-
-const biddingNavItems: SidebarNavItem[] = [
-  {
-    href: "/bidding",
-    label: "Bidding sheet",
-    Icon: NavIconProposal,
-    activePathPrefix: "/bidding",
-    biddingPermission: "bidding:read",
-  },
-  {
-    href: "/bidding/new",
-    label: "New bid",
-    Icon: NavIconPlus,
-    biddingPermission: "bidding:write",
-  },
-];
-
-const mikeNavItems: SidebarNavItem[] = [
-  {
-    href: "/estimation-files",
-    label: "Estimation files",
-    Icon: NavIconTable,
-    activePathPrefix: "/estimation-files",
-    biddingPermission: "bidding:read",
-  },
-  {
-    href: "/production",
-    label: "Production",
-    Icon: NavIconChart,
-    activePathPrefix: "/production",
-    biddingPermission: "bidding:read",
-  },
-];
-
-const clearstorySubItems: { href: string; label: string }[] = [
-  { href: "/clearstory/projects", label: "Projects" },
-  { href: "/clearstory/cor", label: "CORs" },
-  { href: "/clearstory/rates", label: "Rates" },
-  { href: "/clearstory/directory", label: "Directory" },
-  { href: "/clearstory/tags", label: "Tags" },
-  { href: "/clearstory/notifications", label: "Notifications" },
-  { href: "/clearstory/settings", label: "Settings" },
 ];
 
 const workforceNavItems: SidebarNavItem[] = [
@@ -251,11 +205,22 @@ const WORKSPACE_FULL_LABELS: Record<ViewMode, string> = {
   workforce: "Workforce",
 };
 
-export function Sidebar() {
+export function Sidebar({
+  mobileOpen = false,
+  onMobileClose,
+}: {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAdmin, user, logout } = useAuth();
   const chatUnreadTotal = useChatUnreadTotal();
+
+  useEffect(() => {
+    onMobileClose?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const currentView: ViewMode = viewFromPathname(pathname);
   const seesAllChrome = isAdminPanelRole(user?.role);
@@ -283,7 +248,6 @@ export function Sidebar() {
       });
 
   const handleViewChange = (value: ViewMode) => {
-    if (value === currentView) return;
     try {
       localStorage.setItem(WORKSPACE_STORAGE_KEY, value);
     } catch {
@@ -292,36 +256,10 @@ export function Sidebar() {
     router.push(defaultHrefForView(value));
   };
 
-  const rawNavItems =
-    currentView === "workforce"
-      ? workforceNavItems
-      : currentView === "mike"
-        ? mikeNavItems
-        : currentView === "billings"
-          ? canSeeBillings
-            ? [{ href: "/billings", label: "Billings", Icon: NavIconInvoice } as SidebarNavItem]
-            : []
-          : currentView === "bidding"
-            ? biddingNavItems
-            : operationsNavItems;
-
-  const navItems = rawNavItems.filter((i) => navItemVisible(user, i));
-
   // Admin layout roles always get System links (Users + Settings).
   const visibleAdminNav = isAdmin
     ? adminNavItems
     : [];
-
-  const navSectionLabel =
-    currentView === "workforce"
-      ? "Workforce"
-      : currentView === "mike"
-        ? "Mike"
-        : currentView === "billings"
-          ? "Billing"
-          : currentView === "bidding"
-            ? "Bidding"
-            : "Overview";
 
   const logoHref =
     currentView === "billings"
@@ -330,160 +268,91 @@ export function Sidebar() {
         : "/billings"
       : defaultHrefForView(currentView);
 
-  const inClearstory = pathname.startsWith("/clearstory");
-
   const navLinkClass = (active: boolean) =>
-    `flex items-center justify-center gap-3 rounded-xl px-2 py-2.5 text-sm font-medium transition-colors lg:justify-start lg:px-3 ${
+    `flex items-center justify-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:justify-start lg:px-2.5 ${
       active
-        ? "bg-brand/15 text-white shadow-[inset_3px_0_0_0_var(--brand)]"
-        : "text-white/50 hover:bg-white/[0.05] hover:text-white"
-    }`;
-
-  const subLinkClass = (active: boolean) =>
-    `flex items-center gap-2.5 rounded-lg py-2 pl-9 pr-3 text-[13px] font-medium transition-colors ${
-      active
-        ? "bg-brand/15 text-white shadow-[inset_3px_0_0_0_var(--brand)]"
-        : "text-white/45 hover:bg-white/[0.05] hover:text-white"
+        ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
+        : "text-white/65 hover:bg-white/[0.05] hover:text-white"
     }`;
 
   return (
-    <aside
-      className="fixed left-0 top-0 z-40 flex h-screen w-16 flex-col border-r border-white/[0.06] lg:w-64"
-      style={{
-        background: "linear-gradient(180deg, #0c0c0d 0%, #111013 70%, #16120d 100%)",
-      }}
-    >
-      <div className="border-b border-white/[0.07] px-2 pb-4 pt-5 lg:px-4">
+    <>
+      {mobileOpen ? (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 sm:hidden"
+          onClick={onMobileClose}
+          aria-hidden
+        />
+      ) : null}
+      <aside
+        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-white/[0.06] bg-[#0a0a0c] transition-transform duration-200 sm:w-16 sm:translate-x-0 lg:w-64 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+      <div className="flex h-16 items-center justify-between border-b border-white/[0.07] px-3 lg:px-4">
         <Link
           href={logoHref}
-          className="flex flex-col items-center gap-2.5 rounded-xl outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
+          className="flex min-w-0 items-center gap-2.5 rounded-lg outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
           aria-label="Home"
         >
-          <span className="hidden rounded-2xl bg-white/95 px-3 py-2 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] lg:block">
-            <AppLogo height={36} />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/95 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.5)]">
+            <AppLogo height={20} />
           </span>
-          <span className="rounded-xl bg-white/95 p-1.5 lg:hidden">
-            <AppLogo height={24} />
-          </span>
-          <span className="hidden text-center text-xs font-semibold tracking-tight text-white/85 lg:block">
-            Construction Logistics
+          <span className="flex min-w-0 flex-col lg:flex sm:hidden">
+            <span className="truncate text-[13px] font-semibold leading-tight text-white/95">
+              Construction Logistics
+            </span>
+            <span className="text-[10.5px] leading-tight text-white/50">GOEL Services</span>
           </span>
         </Link>
+        <button
+          type="button"
+          onClick={onMobileClose}
+          className="flex shrink-0 items-center justify-center rounded-lg p-1.5 text-white/60 transition hover:bg-white/[0.08] hover:text-white sm:hidden"
+          aria-label="Close navigation menu"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
 
-        <div className="mt-4">
-          <p className="mb-1.5 hidden px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30 lg:block">
+      <nav className="ui-scroll-dark flex-1 space-y-6 overflow-y-auto px-2 py-4 lg:px-3">
+        <div>
+          <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 sm:hidden lg:block">
             Workspace
           </p>
-          <div
-            role="tablist"
-            aria-label="Workspace"
-            className={`grid gap-1 rounded-xl border border-white/[0.08] bg-white/[0.04] p-1 ${
-              visibleWorkspaces.length >= 5
-                ? "grid-cols-5"
-                : visibleWorkspaces.length === 4
-                  ? "grid-cols-4"
-                  : visibleWorkspaces.length === 3
-                    ? "grid-cols-3"
-                    : visibleWorkspaces.length === 2
-                      ? "grid-cols-2"
-                      : "grid-cols-1"
-            }`}
-          >
-            {visibleWorkspaces.map(({ value, label, Icon }) => {
-              const active = currentView === value;
+          <div className="space-y-1">
+            {visibleWorkspaces.map(({ value, Icon }) => {
+              const isActiveWorkspace = currentView === value;
               return (
                 <button
                   key={value}
                   type="button"
-                  role="tab"
-                  aria-selected={active}
-                  title={WORKSPACE_FULL_LABELS[value]}
                   onClick={() => handleViewChange(value)}
-                  className={`flex flex-col items-center gap-1 rounded-lg px-0.5 py-2 text-[10px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand lg:text-[11px] ${
-                    active
-                      ? "bg-white/[0.09] text-white shadow-[0_2px_8px_rgba(0,0,0,0.35)] ring-1 ring-brand/40"
-                      : "text-white/40 hover:bg-white/[0.05] hover:text-white"
+                  title={WORKSPACE_FULL_LABELS[value]}
+                  className={`flex w-full items-center justify-center gap-3 rounded-lg px-2 py-2 text-sm font-semibold transition-colors lg:justify-start lg:px-2.5 ${
+                    isActiveWorkspace
+                      ? "bg-white/[0.06] text-white"
+                      : "text-white/65 hover:bg-white/[0.05] hover:text-white"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/35"}`} />
-                  <span className="max-w-full truncate px-0.5">{label}</span>
+                  <Icon className={`h-[1.15rem] w-[1.15rem] shrink-0 ${isActiveWorkspace ? "text-brand" : "text-white/50"}`} />
+                  <span className="flex-1 truncate text-left sm:hidden lg:inline">
+                    {WORKSPACE_FULL_LABELS[value]}
+                  </span>
+                  {value === "workforce" && chatUnreadTotal > 0 ? (
+                    <ChatUnreadBadge count={chatUnreadTotal} />
+                  ) : null}
                 </button>
               );
             })}
           </div>
         </div>
-      </div>
-
-      <nav className="ui-scroll-dark flex-1 space-y-6 overflow-y-auto px-2 py-4 lg:px-3">
-        <div>
-          <p className="mb-2 hidden px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30 lg:block">
-            {navSectionLabel}
-          </p>
-          <div className="space-y-0.5">
-            {navItems.map(({ href, label, Icon, activePathPrefix }) => {
-              const active =
-                href === "/workforce"
-                  ? pathname === "/workforce"
-                  : activePathPrefix
-                    ? pathname === activePathPrefix ||
-                      pathname.startsWith(`${activePathPrefix}/`)
-                    : pathname === href || pathname.startsWith(`${href}/`);
-              return (
-                <Link key={href} href={href} className={navLinkClass(active)} title={label}>
-                  <Icon
-                    className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/35"}`}
-                  />
-                  <span className="hidden flex-1 lg:inline">{label}</span>
-                  {href === "/workforce/chat" && chatUnreadTotal > 0 ? (
-                    <ChatUnreadBadge count={chatUnreadTotal} className="hidden lg:inline-flex" />
-                  ) : null}
-                </Link>
-              );
-            })}
-
-            {currentView === "billings" && canSeeBillings && (
-              <div>
-                <Link
-                  href="/clearstory/projects"
-                  className={navLinkClass(inClearstory)}
-                  aria-expanded={inClearstory}
-                  title="Clearstory"
-                >
-                  <NavIconLayers
-                    className={`h-4 w-4 shrink-0 ${inClearstory ? "text-brand" : "text-white/35"}`}
-                  />
-                  <span className="hidden flex-1 lg:inline">Clearstory</span>
-                  <svg
-                    className={`hidden h-3.5 w-3.5 shrink-0 text-white/30 transition-transform lg:block ${inClearstory ? "rotate-90" : ""}`}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden
-                  >
-                    <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </Link>
-                {inClearstory && (
-                  <div className="mt-0.5 hidden space-y-0.5 lg:block">
-                    {clearstorySubItems.map(({ href, label }) => {
-                      const active = pathname === href || pathname.startsWith(`${href}/`);
-                      return (
-                        <Link key={href} href={href} className={subLinkClass(active)}>
-                          {label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
 
         {visibleAdminNav.length > 0 && (
           <div>
-            <p className="mb-2 hidden px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30 lg:block">
+            <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 sm:hidden lg:block">
               System
             </p>
             <div className="space-y-0.5">
@@ -492,9 +361,9 @@ export function Sidebar() {
                 return (
                   <Link key={href} href={href} className={navLinkClass(active)} title={label}>
                     <Icon
-                      className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/35"}`}
+                      className={`h-[1.15rem] w-[1.15rem] shrink-0 ${active ? "text-brand" : "text-white/50"}`}
                     />
-                    <span className="hidden lg:inline">{label}</span>
+                    <span className="sm:hidden lg:inline">{label}</span>
                   </Link>
                 );
               })}
@@ -513,9 +382,9 @@ export function Sidebar() {
           >
             {userInitials(user)}
           </div>
-          <div className="hidden min-w-0 flex-1 lg:block">
+          <div className="min-w-0 flex-1 sm:hidden lg:block">
             <p className="truncate text-sm font-semibold text-white/90">{displayName(user)}</p>
-            <p className="truncate text-xs text-white/40">
+            <p className="truncate text-xs text-white/55">
               {roleLabel(user?.role ?? "user")}
             </p>
           </div>
@@ -536,6 +405,7 @@ export function Sidebar() {
           </button>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

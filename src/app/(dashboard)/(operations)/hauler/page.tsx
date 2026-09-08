@@ -8,11 +8,11 @@ import { SummaryTable } from "@/components/reporting/SummaryTable";
 import { TicketGrid } from "@/components/reporting/TicketGrid";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useLookups } from "@/hooks/useLookups";
-import { useJobDashboard } from "@/hooks/useJobDashboard";
+import { useHaulerDashboard } from "@/hooks/useHaulerDashboard";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { DashboardSkeleton } from "@/components/reporting/DashboardSkeleton";
-import * as jobApi from "@/lib/api/endpoints/job-dashboard";
+import * as haulerApi from "@/lib/api/endpoints/hauler-dashboard";
 
 function createDefaultFilters(): FilterConfig {
   // Use local machine date for default end date
@@ -25,11 +25,10 @@ function createDefaultFilters(): FilterConfig {
     haulerId: "all",
     truckTypeId: "all",
     direction: "Both",
-    entityId: undefined,
   };
 }
 
-export default function JobDashboardPage() {
+export default function HaulerDashboardPage() {
   const { companyId } = useCompany();
   const [filters, setFilters] = useState<FilterConfig>(() => createDefaultFilters());
 
@@ -37,31 +36,38 @@ export default function JobDashboardPage() {
 
   const {
     kpis,
-    vendorTable,
-    materialTable,
+    billableUnits,
+    costCenter,
     tickets,
     totalTickets,
     page,
     pageSize,
     setPage,
+    sortBy,
+    sortDir,
+    onSortChange,
+    search,
+    onSearchChange,
     loading: dataLoading,
+    initialLoading: dataInitialLoading,
     error: dataError,
-  } = useJobDashboard({
+  } = useHaulerDashboard({
     companyId: companyId ?? undefined,
     startDate: filters.startDate,
     endDate: filters.endDate,
     jobId: filters.jobId,
+    materialId: filters.materialId,
+    haulerId: filters.haulerId,
+    truckTypeId: filters.truckTypeId,
     direction: filters.direction,
-    // Use the top-level Company selector as Our company (entityId) filter for the job dashboard.
+    // Global Our company filter from the top Company selector.
     entityId: companyId ?? undefined,
   });
 
   const { ticket: detailTicket, fetchDetail, clear: closeDetail } = useTicketDetail();
 
   const handleOpenDetail = useCallback(
-    (ticketNumber: string) => {
-      fetchDetail(ticketNumber, companyId ?? undefined);
-    },
+    (ticketNumber: string) => fetchDetail(ticketNumber, companyId ?? undefined),
     [fetchDetail, companyId]
   );
 
@@ -71,28 +77,30 @@ export default function JobDashboardPage() {
       startDate: filters.startDate,
       endDate: filters.endDate,
       jobId: filters.jobId === "all" ? undefined : filters.jobId,
+      materialId: filters.materialId === "all" ? undefined : filters.materialId,
+      haulerId: filters.haulerId === "all" ? undefined : filters.haulerId,
+      truckTypeId: filters.truckTypeId === "all" ? undefined : filters.truckTypeId,
       direction: filters.direction === "Both" ? undefined : filters.direction,
-      // Match the main dashboards: use the selected Company as entityId filter.
       entityId: companyId ?? undefined,
     };
-    jobApi.getJobTicketsExportBlob(apiFilters).then((blob) => {
+    haulerApi.getHaulerTicketsExportBlob(apiFilters).then((blob) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "job-dashboard-tickets.xlsx";
+      a.download = "hauler-dashboard-tickets.xlsx";
       a.click();
       URL.revokeObjectURL(url);
     });
-  }, [companyId, filters.startDate, filters.endDate, filters.jobId, filters.direction]);
+  }, [companyId, filters]);
 
-  const loading = lookupsLoading || dataLoading;
+  const loading = lookupsLoading || dataInitialLoading;
   const error = lookupsError ?? dataError;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-8">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 sm:gap-8">
       <PageHeader
-        title="Job Dashboard"
-        subtitle="Supply chain visibility, disposal limits, and compliance in one place."
+        title="Hauler (vendor) dashboard"
+        subtitle="Fraud detection and efficiency analysis — Created At helps surface late or backdated entries."
       />
 
       <ReportFilters
@@ -100,10 +108,11 @@ export default function JobDashboardPage() {
         options={filterOptions}
         onChange={setFilters}
         showJob
+        showMaterial
+        showHauler
+        showTruckType
         showDirection
       />
-
-     
 
       {error && (
         <div className="rounded-2xl border border-danger-border bg-danger-tint px-4 py-3 text-sm text-danger">
@@ -118,34 +127,34 @@ export default function JobDashboardPage() {
           <KPICards
             items={[
               { label: "Total Tickets", value: kpis.totalTickets },
-              { label: "Flow Balance", value: kpis.flowBalance },
-              { label: "Last Active", value: kpis.lastActive },
+              { label: "Unique Trucks", value: kpis.uniqueTrucks },
+              { label: "Active Jobs", value: kpis.activeJobs },
             ]}
           />
 
           <div className="grid gap-6 lg:grid-cols-2">
             <SummaryTable
-              title="Vendor summary"
-              subtitle="By company and truck type"
+              title="Billable units"
+              subtitle="By truck type (verify vendor invoices)"
               columns={[
-                { key: "companyName", label: "Company Name" },
                 { key: "truckType", label: "Truck Type" },
                 { key: "totalTickets", label: "Total Tickets" },
               ]}
-              rows={vendorTable}
+              rows={billableUnits}
             />
             <SummaryTable
-              title="Material summary"
-              subtitle="By material"
+              title="Cost center"
+              subtitle="By job"
               columns={[
-                { key: "materialName", label: "Material Name" },
+                { key: "jobName", label: "Job Name" },
                 { key: "totalTickets", label: "Total Tickets" },
               ]}
-              rows={materialTable}
+              rows={costCenter}
             />
           </div>
 
           <TicketGrid
+            refreshing={dataLoading}
             tickets={tickets}
             total={totalTickets}
             page={page}
@@ -156,6 +165,11 @@ export default function JobDashboardPage() {
             detailTicket={detailTicket}
             onCloseDetail={closeDetail}
             onExportClick={handleExportClick}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSortChange={onSortChange}
+            search={search}
+            onSearchChange={onSearchChange}
           />
         </>
       )}
