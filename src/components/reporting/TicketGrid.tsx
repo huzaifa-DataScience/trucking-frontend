@@ -138,14 +138,14 @@ export function TicketGrid({
             <div className="h-full w-1/3 animate-[ticket-grid-loading_1s_ease-in-out_infinite] bg-brand" />
           </div>
         ) : null}
-        <div className="flex flex-col gap-3 border-b border-ink/[0.08] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div>
-            <span className="text-sm font-semibold text-ink">Detailed ticket grid ({total} rows)</span>
-            <p className="mt-0.5 text-xs text-ink/45">Click any row to see driver, signature, and photos.</p>
+        <div className="flex min-w-0 flex-col gap-3 border-b border-ink/[0.08] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-ink">Detailed ticket grid ({total} rows)</span>
+            <p className="mt-0.5 truncate text-xs text-ink/45">Click any row to see driver, signature, and photos.</p>
           </div>
-          <div className="flex w-full gap-2 sm:w-auto">
+          <div className="flex min-w-0 w-full gap-2 sm:w-auto sm:shrink-0">
             {onSearchChange ? (
-              <div className="relative flex-1 sm:w-64 sm:flex-none">
+              <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" aria-hidden>
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                     <circle cx="11" cy="11" r="7" />

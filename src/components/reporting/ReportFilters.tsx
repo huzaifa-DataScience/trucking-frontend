@@ -42,7 +42,7 @@ const DIRECTION_OPTIONS: { value: Direction; label: string }[] = [
 ];
 
 const fieldClass =
-  "rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
+  "min-h-11 w-full min-w-0 max-w-full rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
 const labelClass = "text-xs font-medium text-ink/45";
 
 export function ReportFilters({
@@ -61,12 +61,12 @@ export function ReportFilters({
   };
 
   return (
-    <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.06)]">
-      <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-wider text-ink/40">
+    <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.06)] sm:p-5">
+      <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-ink/40 sm:mb-4">
         Filters
       </h2>
-      <div className="flex flex-wrap items-end gap-x-5 gap-y-4">
-        <label className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3 sm:gap-x-5 sm:gap-y-4">
+        <label className="flex min-w-0 w-full flex-col gap-1.5 sm:w-56">
           <span className={labelClass}>Start date</span>
           <input
             type="date"
@@ -75,7 +75,7 @@ export function ReportFilters({
             className={fieldClass}
           />
         </label>
-        <label className="flex flex-col gap-1.5">
+        <label className="flex min-w-0 w-full flex-col gap-1.5 sm:w-56">
           <span className={labelClass}>End date</span>
           <input
             type="date"
@@ -85,7 +85,7 @@ export function ReportFilters({
           />
         </label>
         {showJob && (
-          <label className="flex flex-col gap-1.5">
+          <label className="flex min-w-0 w-full flex-col gap-1.5 sm:w-56">
             <span className={labelClass}>Job</span>
             <select
               value={filters.jobId}
@@ -102,7 +102,7 @@ export function ReportFilters({
           </label>
         )}
         {showMaterial && (
-          <label className="flex flex-col gap-1.5">
+          <label className="flex min-w-0 w-full flex-col gap-1.5 sm:w-56">
             <span className={labelClass}>Material</span>
             <select
               value={filters.materialId}
@@ -119,7 +119,7 @@ export function ReportFilters({
           </label>
         )}
         {showHauler && (
-          <label className="flex flex-col gap-1.5">
+          <label className="flex min-w-0 w-full flex-col gap-1.5 sm:w-56">
             <span className={labelClass}>Hauler</span>
             <select
               value={filters.haulerId}
@@ -136,7 +136,7 @@ export function ReportFilters({
           </label>
         )}
         {showTruckType && (
-          <label className="flex flex-col gap-1.5">
+          <label className="flex min-w-0 w-full flex-col gap-1.5 sm:w-56">
             <span className={labelClass}>Truck type</span>
             <select
               value={filters.truckTypeId}
@@ -153,7 +153,7 @@ export function ReportFilters({
           </label>
         )}
         {showDirection && (
-          <label className="flex flex-col gap-1.5">
+          <label className="flex min-w-0 w-full flex-col gap-1.5 sm:w-56">
             <span className={labelClass}>Direction</span>
             <select
               value={filters.direction}
@@ -169,7 +169,7 @@ export function ReportFilters({
           </label>
         )}
         {showOurCompany && (
-          <label className="flex flex-col gap-1.5">
+          <label className="flex min-w-0 w-full flex-col gap-1.5 sm:w-56">
             <span className={labelClass}>Our company</span>
             <select
               value={filters.entityId ?? "all"}
