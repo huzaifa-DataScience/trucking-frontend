@@ -22,7 +22,15 @@ export interface HaulerDashboardFilters {
   entityId?: string;
 }
 
-const toParams = (f: HaulerDashboardFilters, page?: number, pageSize?: number) => {
+export interface TicketListOptions {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: "ASC" | "DESC";
+  search?: string;
+}
+
+const toParams = (f: HaulerDashboardFilters, opts?: TicketListOptions) => {
   const p: Record<string, string | number | undefined> = {
     startDate: f.startDate,
     endDate: f.endDate,
@@ -35,8 +43,11 @@ const toParams = (f: HaulerDashboardFilters, page?: number, pageSize?: number) =
     // Our internal company filter (Ref_OurEntities)
     entityId: f.entityId ? Number(f.entityId) : undefined,
   };
-  if (page != null) p.page = page;
-  if (pageSize != null) p.pageSize = pageSize;
+  if (opts?.page != null) p.page = opts.page;
+  if (opts?.pageSize != null) p.pageSize = opts.pageSize;
+  if (opts?.sortBy) p.sortBy = opts.sortBy;
+  if (opts?.sortDir) p.sortDir = opts.sortDir;
+  if (opts?.search) p.search = opts.search;
   return p;
 };
 
@@ -54,10 +65,9 @@ export async function getHaulerCostCenter(filters: HaulerDashboardFilters): Prom
 
 export async function getHaulerTickets(
   filters: HaulerDashboardFilters,
-  page = 1,
-  pageSize = 50
+  opts: TicketListOptions = {}
 ): Promise<PagedResult<ApiTicketRow>> {
-  return get<PagedResult<ApiTicketRow>>("/hauler-dashboard/tickets", toParams(filters, page, pageSize));
+  return get<PagedResult<ApiTicketRow>>("/hauler-dashboard/tickets", toParams(filters, opts));
 }
 
 export async function getHaulerTicketDetail(ticketNumber: string): Promise<ApiTicketDetail | null> {

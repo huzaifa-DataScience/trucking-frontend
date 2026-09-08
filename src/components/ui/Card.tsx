@@ -8,7 +8,7 @@ interface CardProps {
 export function Card({ children, className = "" }: CardProps) {
   return (
     <div
-      className={`ui-shadow-card rounded-2xl border border-ink/[0.06] bg-surface p-5 ${className}`}
+      className={`ui-shadow-card min-w-0 rounded-2xl border border-ink/[0.06] bg-surface p-5 ${className}`}
     >
       {children}
     </div>
@@ -23,8 +23,8 @@ interface CardHeaderProps {
 
 export function CardHeader({ title, subtitle, action }: CardHeaderProps) {
   return (
-    <div className="mb-4 flex items-start justify-between gap-4">
-      <div>
+    <div className="mb-4 flex min-w-0 items-start justify-between gap-4">
+      <div className="min-w-0">
         <h3 className="text-sm font-semibold text-ink dark:text-white">
           {title}
         </h3>

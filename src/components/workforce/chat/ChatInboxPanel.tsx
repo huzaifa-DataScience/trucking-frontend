@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { SkeletonListRows } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { ChatConversation, ChatSocketStatus, ConversationFilter } from "@/lib/workforce/chat-types";
 import {
@@ -166,9 +166,7 @@ export function ChatInboxPanel({
 
       <div ref={listRef} className="ui-scroll-light min-h-0 flex-1 overflow-y-auto">
         {loading && conversations.length === 0 ? (
-          <div className="flex justify-center py-16">
-            <LogoLoader size={28} />
-          </div>
+          <SkeletonListRows rows={7} />
         ) : error ? (
           <p className="px-4 py-8 text-sm text-danger">{error}</p>
         ) : conversations.length === 0 ? (

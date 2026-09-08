@@ -16,7 +16,7 @@ import {
 import { EmailTemplateEditor } from "@/components/admin/EmailTemplateEditor";
 import { AccessControlSettings } from "@/components/admin/AccessControlSettings";
 import { BiddingLookupsAdmin } from "@/components/admin/BiddingLookupsAdmin";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { useAuth } from "@/contexts/AuthContext";
 import { can } from "@/lib/auth/permissions";
@@ -241,8 +241,9 @@ export default function AdminSettingsPage() {
           </div>
 
           {overdueSendingLoading ? (
-            <div className="flex justify-center py-6">
-              <LogoLoader size={28} />
+            <div className="space-y-3 py-1">
+              <Skeleton className="h-4 w-56" />
+              <Skeleton className="h-10 w-full" />
             </div>
           ) : overdueSending ? (
             <div className="space-y-4">
@@ -285,8 +286,9 @@ export default function AdminSettingsPage() {
           </div>
 
           {gapAlertLoading ? (
-            <div className="flex justify-center py-6">
-              <LogoLoader size={28} />
+            <div className="space-y-3 py-1">
+              <Skeleton className="h-4 w-56" />
+              <Skeleton className="h-10 w-full" />
             </div>
           ) : gapAlert ? (
             <div className="space-y-4">

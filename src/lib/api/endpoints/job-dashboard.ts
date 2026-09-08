@@ -11,15 +11,24 @@ import type { Direction } from "@/lib/types";
 
 export interface JobDashboardFilters {
   companyId?: string;
-  startDate: string;
-  endDate: string;
+  /** Optional — omit for an unbounded date range (e.g. global search across all tickets). */
+  startDate?: string;
+  endDate?: string;
   jobId?: string;
   direction?: Direction;
   /** Our internal company (Ref_OurEntities). */
   entityId?: string;
 }
 
-const toParams = (f: JobDashboardFilters, page?: number, pageSize?: number) => {
+export interface TicketListOptions {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: "ASC" | "DESC";
+  search?: string;
+}
+
+const toParams = (f: JobDashboardFilters, opts?: TicketListOptions) => {
   const p: Record<string, string | number | undefined> = {
     startDate: f.startDate,
     endDate: f.endDate,
@@ -29,8 +38,11 @@ const toParams = (f: JobDashboardFilters, page?: number, pageSize?: number) => {
     // Our internal company filter (Ref_OurEntities)
     entityId: f.entityId ? Number(f.entityId) : undefined,
   };
-  if (page != null) p.page = page;
-  if (pageSize != null) p.pageSize = pageSize;
+  if (opts?.page != null) p.page = opts.page;
+  if (opts?.pageSize != null) p.pageSize = opts.pageSize;
+  if (opts?.sortBy) p.sortBy = opts.sortBy;
+  if (opts?.sortDir) p.sortDir = opts.sortDir;
+  if (opts?.search) p.search = opts.search;
   return p;
 };
 
@@ -48,10 +60,9 @@ export async function getJobMaterialSummary(filters: JobDashboardFilters): Promi
 
 export async function getJobTickets(
   filters: JobDashboardFilters,
-  page = 1,
-  pageSize = 50
+  opts: TicketListOptions = {}
 ): Promise<PagedResult<ApiTicketRow>> {
-  return get<PagedResult<ApiTicketRow>>("/job-dashboard/tickets", toParams(filters, page, pageSize));
+  return get<PagedResult<ApiTicketRow>>("/job-dashboard/tickets", toParams(filters, opts));
 }
 
 export async function getJobTicketDetail(ticketNumber: string): Promise<ApiTicketDetail | null> {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import * as adminApi from "@/lib/api/endpoints/admin";
 import { getApiErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/components/ui/ToastProvider";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { FormSkeleton } from "@/components/ui/Skeleton";
 
 type EmailTemplateEditorProps = {
   purpose: string;
@@ -58,11 +58,7 @@ export function EmailTemplateEditor({ purpose, title, description }: EmailTempla
   }, [purpose, name, title, subjectTemplate, bodyHtmlTemplate, load, showToast]);
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <LogoLoader size={28} />
-      </div>
-    );
+    return <FormSkeleton fields={4} />;
   }
 
   return (

@@ -21,7 +21,7 @@ import { BidSystemsInputTable } from "@/components/bidding/BidSystemsInputTable"
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { formatMoneyPrecise, formatPercentDecimal } from "@/lib/bidding/format";
 import { parseSystemsComputed, parseWarnings } from "@/lib/bidding/parse-computed";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { FormSkeleton } from "@/components/ui/Skeleton";
 import { RestrictedState } from "@/components/ui/RestrictedState";
 import { useBiddingAccess } from "@/hooks/useBiddingAccess";
 import { PERMISSIONS } from "@/lib/auth/permissions";
@@ -93,8 +93,8 @@ export function BidSheetForm() {
 
   if (initialLoading || !bid) {
     return (
-      <div className="flex flex-1 items-center justify-center py-24">
-        <LogoLoader />
+      <div className="mx-auto w-full max-w-3xl py-6">
+        <FormSkeleton fields={8} />
       </div>
     );
   }

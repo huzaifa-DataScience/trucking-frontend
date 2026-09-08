@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { getClearstoryApiPayload } from "@/lib/api/endpoints/clearstory";
 import { getApiErrorMessage } from "@/lib/api/client";
 
@@ -121,8 +121,10 @@ export default function ClearstoryChangeNotificationsPage() {
           </p>
         ) : null}
         {loading ? (
-          <div className="mt-6 flex justify-center py-8">
-            <LogoLoader size={32} />
+          <div className="mt-4 space-y-2 rounded-xl bg-[#0d1117] p-4">
+            {[100, 88, 92, 70, 96, 60, 84, 40].map((w, i) => (
+              <Skeleton key={i} className="h-3 bg-white/10" style={{ width: `${w}%` }} />
+            ))}
           </div>
         ) : json ? (
           <pre className="mt-4 max-h-[min(60dvh,480px)] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-[#0d1117] p-4 text-xs text-[#e6edf3]">
