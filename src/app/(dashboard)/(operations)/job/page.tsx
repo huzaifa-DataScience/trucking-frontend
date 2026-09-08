@@ -9,52 +9,42 @@ import { SummaryTable } from "@/components/reporting/SummaryTable";
 import { TicketGrid } from "@/components/reporting/TicketGrid";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useLookups } from "@/hooks/useLookups";
-import { useMaterialDashboard } from "@/hooks/useMaterialDashboard";
+import { useJobDashboard } from "@/hooks/useJobDashboard";
+import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { DashboardSkeleton } from "@/components/reporting/DashboardSkeleton";
-import { useTicketDetail } from "@/hooks/useTicketDetail";
-import * as materialApi from "@/lib/api/endpoints/material-dashboard";
+import * as jobApi from "@/lib/api/endpoints/job-dashboard";
 
-function createDefaultFilters(initialMaterialId?: string | null): FilterConfig {
+function createDefaultFilters(initialJobId?: string | null): FilterConfig {
   // Use local machine date for default end date
   const today = new Date().toISOString().split("T")[0]!;
   return {
     startDate: "2025-01-01",
     endDate: today,
-    jobId: "all",
-    materialId: initialMaterialId || "all",
+    jobId: initialJobId || "all",
+    materialId: "all",
     haulerId: "all",
-
     truckTypeId: "all",
     direction: "Both",
+    entityId: undefined,
   };
 }
 
-export default function MaterialDashboardPage() {
+export default function JobDashboardPage() {
   const { companyId } = useCompany();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialMaterialId = searchParams.get("materialId");
-  const [filters, setFilters] = useState<FilterConfig>(() => createDefaultFilters(initialMaterialId));
-
-  // Header global search deep-links here with ?materialId=. Track the last-consumed value
-  // (not just "used once") so a second search while already on this page still applies —
-  // useState's lazy initializer only runs on mount, not on re-render.
-  const consumedMaterialIdRef = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    if (initialMaterialId && consumedMaterialIdRef.current !== initialMaterialId) {
-      consumedMaterialIdRef.current = initialMaterialId;
-      setFilters((f) => ({ ...f, materialId: initialMaterialId }));
-      router.replace("/material");
-    }
-  }, [initialMaterialId, router]);
+  const initialSearchQ = searchParams.get("q") ?? undefined;
+  const initialTicket = searchParams.get("ticket");
+  const initialJobId = searchParams.get("jobId");
+  const [filters, setFilters] = useState<FilterConfig>(() => createDefaultFilters(initialJobId));
 
   const { filterOptions, loading: lookupsLoading, error: lookupsError } = useLookups(companyId ?? undefined);
 
   const {
     kpis,
-    sitesTable,
-    jobsTable,
+    vendorTable,
+    materialTable,
     tickets,
     totalTickets,
     page,
@@ -68,23 +58,47 @@ export default function MaterialDashboardPage() {
     loading: dataLoading,
     initialLoading: dataInitialLoading,
     error: dataError,
-  } = useMaterialDashboard({
-    companyId: companyId ?? undefined,
-    startDate: filters.startDate,
-    endDate: filters.endDate,
-    jobId: filters.jobId,
-    materialId: filters.materialId,
-    direction: filters.direction,
-    // Global Our company filter from the top Company selector.
-    entityId: companyId ?? undefined,
-  });
+  } = useJobDashboard(
+    {
+      companyId: companyId ?? undefined,
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      jobId: filters.jobId,
+      direction: filters.direction,
+      // Use the top-level Company selector as Our company (entityId) filter for the job dashboard.
+      entityId: companyId ?? undefined,
+    },
+    { initialSearch: initialSearchQ }
+  );
 
   const { ticket: detailTicket, fetchDetail, clear: closeDetail } = useTicketDetail();
 
   const handleOpenDetail = useCallback(
-    (ticketNumber: string) => fetchDetail(ticketNumber, companyId ?? undefined),
+    (ticketNumber: string) => {
+      fetchDetail(ticketNumber, companyId ?? undefined);
+    },
     [fetchDetail, companyId]
   );
+
+  // Header global search deep-links here with ?ticket=/?jobId=/?q=. Track the last-consumed
+  // value per field (not just "used once") so a second search while already on this page
+  // still applies — useState's lazy initializer only runs on mount, not on re-render.
+  const consumedRef = useRef<{ ticket?: string; jobId?: string; q?: string }>({});
+  useEffect(() => {
+    if (initialTicket && consumedRef.current.ticket !== initialTicket) {
+      consumedRef.current.ticket = initialTicket;
+      handleOpenDetail(initialTicket);
+      router.replace("/job");
+    } else if (initialJobId && consumedRef.current.jobId !== initialJobId) {
+      consumedRef.current.jobId = initialJobId;
+      setFilters((f) => ({ ...f, jobId: initialJobId }));
+      router.replace("/job");
+    } else if (initialSearchQ && consumedRef.current.q !== initialSearchQ) {
+      consumedRef.current.q = initialSearchQ;
+      onSearchChange(initialSearchQ);
+      router.replace("/job");
+    }
+  }, [initialTicket, initialJobId, initialSearchQ, handleOpenDetail, onSearchChange, router]);
 
   const handleExportClick = useCallback(() => {
     const apiFilters = {
@@ -92,28 +106,28 @@ export default function MaterialDashboardPage() {
       startDate: filters.startDate,
       endDate: filters.endDate,
       jobId: filters.jobId === "all" ? undefined : filters.jobId,
-      materialId: filters.materialId === "all" ? undefined : filters.materialId,
       direction: filters.direction === "Both" ? undefined : filters.direction,
+      // Match the main dashboards: use the selected Company as entityId filter.
       entityId: companyId ?? undefined,
     };
-    materialApi.getMaterialTicketsExportBlob(apiFilters).then((blob) => {
+    jobApi.getJobTicketsExportBlob(apiFilters).then((blob) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "material-dashboard-tickets.xlsx";
+      a.download = "job-dashboard-tickets.xlsx";
       a.click();
       URL.revokeObjectURL(url);
     });
-  }, [companyId, filters.startDate, filters.endDate, filters.jobId, filters.materialId, filters.direction]);
+  }, [companyId, filters.startDate, filters.endDate, filters.jobId, filters.direction]);
 
   const loading = lookupsLoading || dataInitialLoading;
   const error = lookupsError ?? dataError;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-8">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 sm:gap-8">
       <PageHeader
-        title="Material Dashboard"
-        subtitle="Billing reconciliation, sources and destinations, and ticket-level audit."
+        title="Job Dashboard"
+        subtitle="Supply chain visibility, disposal limits, and compliance in one place."
       />
 
       <ReportFilters
@@ -121,9 +135,10 @@ export default function MaterialDashboardPage() {
         options={filterOptions}
         onChange={setFilters}
         showJob
-        showMaterial
         showDirection
       />
+
+     
 
       {error && (
         <div className="rounded-2xl border border-danger-border bg-danger-tint px-4 py-3 text-sm text-danger">
@@ -131,39 +146,37 @@ export default function MaterialDashboardPage() {
         </div>
       )}
 
-      {loading && <DashboardSkeleton kpiCount={4} />}
+      {loading && <DashboardSkeleton kpiCount={3} />}
 
       {!loading && (
         <>
           <KPICards
             items={[
               { label: "Total Tickets", value: kpis.totalTickets },
-              { label: "Top Source", value: kpis.topSource },
-              { label: "Top Destination", value: kpis.topDestination },
-              { label: "Active Jobs", value: kpis.activeJobs },
+              { label: "Flow Balance", value: kpis.flowBalance },
+              { label: "Last Active", value: kpis.lastActive },
             ]}
           />
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-2">
             <SummaryTable
-              title="Sites summary"
-              subtitle="External site by direction"
+              title="Vendor summary"
+              subtitle="By company and truck type"
               columns={[
-                { key: "externalSiteName", label: "External Site Name" },
-                { key: "direction", label: "Direction" },
+                { key: "companyName", label: "Company Name" },
+                { key: "truckType", label: "Truck Type" },
                 { key: "totalTickets", label: "Total Tickets" },
               ]}
-              rows={sitesTable}
+              rows={vendorTable}
             />
             <SummaryTable
-              title="Jobs summary"
-              subtitle="Job by direction"
+              title="Material summary"
+              subtitle="By material"
               columns={[
-                { key: "jobName", label: "Job Name" },
-                { key: "direction", label: "Direction" },
+                { key: "materialName", label: "Material Name" },
                 { key: "totalTickets", label: "Total Tickets" },
               ]}
-              rows={jobsTable}
+              rows={materialTable}
             />
           </div>
 
