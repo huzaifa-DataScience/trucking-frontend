@@ -13,7 +13,9 @@ import {
   NavIconTruck,
   NavIconShield,
   NavIconProposal,
+  NavIconPlus,
   NavIconInvoice,
+  NavIconLayers,
   NavIconUsers,
   NavIconCog,
   NavIconClock,
@@ -22,6 +24,9 @@ import {
   NavIconSun,
   NavIconChat,
   NavIconTable,
+  NavIconChart,
+  NavIconTag,
+  NavIconBell,
 } from "@/components/dashboard/DashboardNavIcons";
 import type { AuthUser } from "@/lib/auth/types";
 import { useChatUnreadTotal } from "@/hooks/useChatUnreadTotal";
@@ -110,6 +115,49 @@ const operationsNavItems: SidebarNavItem[] = [
     Icon: NavIconShield,
     permission: PERMISSIONS.forensicRead,
   },
+];
+
+const biddingNavItems: SidebarNavItem[] = [
+  {
+    href: "/bidding",
+    label: "Bidding sheet",
+    Icon: NavIconProposal,
+    activePathPrefix: "/bidding",
+    biddingPermission: "bidding:read",
+  },
+  {
+    href: "/bidding/new",
+    label: "New bid",
+    Icon: NavIconPlus,
+    biddingPermission: "bidding:write",
+  },
+];
+
+const mikeNavItems: SidebarNavItem[] = [
+  {
+    href: "/estimation-files",
+    label: "Estimation files",
+    Icon: NavIconTable,
+    activePathPrefix: "/estimation-files",
+    biddingPermission: "bidding:read",
+  },
+  {
+    href: "/production",
+    label: "Production",
+    Icon: NavIconChart,
+    activePathPrefix: "/production",
+    biddingPermission: "bidding:read",
+  },
+];
+
+const clearstorySubItems: { href: string; label: string; Icon: ComponentType<{ className?: string }> }[] = [
+  { href: "/clearstory/projects", label: "Projects", Icon: NavIconLayout },
+  { href: "/clearstory/cor", label: "CORs", Icon: NavIconProposal },
+  { href: "/clearstory/rates", label: "Rates", Icon: NavIconInvoice },
+  { href: "/clearstory/directory", label: "Directory", Icon: NavIconUsers },
+  { href: "/clearstory/tags", label: "Tags", Icon: NavIconTag },
+  { href: "/clearstory/notifications", label: "Notifications", Icon: NavIconBell },
+  { href: "/clearstory/settings", label: "Settings", Icon: NavIconCog },
 ];
 
 const workforceNavItems: SidebarNavItem[] = [
@@ -208,14 +256,25 @@ const WORKSPACE_FULL_LABELS: Record<ViewMode, string> = {
 export function Sidebar({
   mobileOpen = false,
   onMobileClose,
+  collapsed = false,
+  onToggleCollapsed,
 }: {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  /** Desktop-only (lg+) manual collapse to an icon-only rail; unrelated to the mobile drawer. */
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAdmin, user, logout } = useAuth();
   const chatUnreadTotal = useChatUnreadTotal();
+  /** The mobile drawer always shows full labels regardless of the persisted desktop collapse preference. */
+  const iconOnly = collapsed && !mobileOpen;
+  /** Visible everywhere except when manually collapsed (sm+), where labels hide entirely. */
+  const lgLabel = collapsed ? "sm:hidden" : "";
+  const lgLabelInline = collapsed ? "sm:hidden" : "";
+  const lgLabelFlex = `flex ${collapsed ? "sm:hidden" : ""}`;
 
   useEffect(() => {
     onMobileClose?.();
@@ -248,6 +307,7 @@ export function Sidebar({
       });
 
   const handleViewChange = (value: ViewMode) => {
+    if (value === currentView) return;
     try {
       localStorage.setItem(WORKSPACE_STORAGE_KEY, value);
     } catch {
@@ -255,6 +315,18 @@ export function Sidebar({
     }
     router.push(defaultHrefForView(value));
   };
+
+  function itemsForView(view: ViewMode): SidebarNavItem[] {
+    if (view === "workforce") return workforceNavItems;
+    if (view === "mike") return mikeNavItems;
+    if (view === "billings") {
+      return canSeeBillings
+        ? [{ href: "/billings", label: "Billings", Icon: NavIconInvoice } as SidebarNavItem]
+        : [];
+    }
+    if (view === "bidding") return biddingNavItems;
+    return operationsNavItems;
+  }
 
   // Admin layout roles always get System links (Users + Settings).
   const visibleAdminNav = isAdmin
@@ -268,11 +340,24 @@ export function Sidebar({
         : "/billings"
       : defaultHrefForView(currentView);
 
+  const inClearstory = pathname.startsWith("/clearstory");
+
   const navLinkClass = (active: boolean) =>
-    `flex items-center justify-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:justify-start lg:px-2.5 ${
+    `flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition-colors ${
+      iconOnly ? "justify-center" : "justify-start px-2.5"
+    } ${
       active
         ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
         : "text-white/65 hover:bg-white/[0.05] hover:text-white"
+    }`;
+
+  const subLinkClass = (active: boolean) =>
+    `flex items-center gap-2.5 rounded-lg py-1.5 text-[13px] font-medium transition-colors ${
+      iconOnly ? "justify-center px-2" : "pl-9 pr-3"
+    } ${
+      active
+        ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
+        : "text-white/60 hover:bg-white/[0.05] hover:text-white"
     }`;
 
   return (
@@ -285,11 +370,15 @@ export function Sidebar({
         />
       ) : null}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-white/[0.06] bg-[#0a0a0c] transition-transform duration-200 sm:w-16 sm:translate-x-0 lg:w-64 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-white/[0.06] bg-[#0a0a0c] transition-[width,transform] duration-200 sm:translate-x-0 ${
+          collapsed ? "sm:w-16" : "sm:w-64"
+        } ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+      <div
+        className={`flex items-center justify-between border-b border-white/[0.07] px-3 lg:px-4 ${
+          collapsed ? "h-16 sm:h-auto sm:flex-col sm:justify-center sm:gap-1.5 sm:py-3" : "h-16"
         }`}
       >
-      <div className="flex h-16 items-center justify-between border-b border-white/[0.07] px-3 lg:px-4">
         <Link
           href={logoHref}
           className="flex min-w-0 items-center gap-2.5 rounded-lg outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
@@ -298,13 +387,31 @@ export function Sidebar({
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/95 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.5)]">
             <AppLogo height={20} />
           </span>
-          <span className="flex min-w-0 flex-col lg:flex sm:hidden">
+          <span className={`min-w-0 flex-col ${lgLabelFlex}`}>
             <span className="truncate text-[13px] font-semibold leading-tight text-white/95">
               Construction Logistics
             </span>
             <span className="text-[10.5px] leading-tight text-white/50">GOEL Services</span>
           </span>
         </Link>
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="hidden shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] p-1.5 text-white/55 transition hover:border-white/[0.14] hover:bg-white/[0.09] hover:text-white sm:flex"
+        >
+          <svg
+            className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.25}
+            aria-hidden
+          >
+            <path d="M14 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
         <button
           type="button"
           onClick={onMobileClose}
@@ -319,32 +426,118 @@ export function Sidebar({
 
       <nav className="ui-scroll-dark flex-1 space-y-6 overflow-y-auto px-2 py-4 lg:px-3">
         <div>
-          <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 sm:hidden lg:block">
+          <p className={`mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 ${lgLabel}`}>
             Workspace
           </p>
           <div className="space-y-1">
             {visibleWorkspaces.map(({ value, Icon }) => {
               const isActiveWorkspace = currentView === value;
+              /** "Operations & reporting" stays expanded at all times; other workspaces expand only when active. */
+              const isExpanded = isActiveWorkspace || value === "operations";
+              const items = itemsForView(value).filter((i) => navItemVisible(user, i));
               return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => handleViewChange(value)}
-                  title={WORKSPACE_FULL_LABELS[value]}
-                  className={`flex w-full items-center justify-center gap-3 rounded-lg px-2 py-2 text-sm font-semibold transition-colors lg:justify-start lg:px-2.5 ${
-                    isActiveWorkspace
-                      ? "bg-white/[0.06] text-white"
-                      : "text-white/65 hover:bg-white/[0.05] hover:text-white"
-                  }`}
-                >
-                  <Icon className={`h-[1.15rem] w-[1.15rem] shrink-0 ${isActiveWorkspace ? "text-brand" : "text-white/50"}`} />
-                  <span className="flex-1 truncate text-left sm:hidden lg:inline">
-                    {WORKSPACE_FULL_LABELS[value]}
-                  </span>
-                  {value === "workforce" && chatUnreadTotal > 0 ? (
-                    <ChatUnreadBadge count={chatUnreadTotal} />
+                <div key={value}>
+                  <button
+                    type="button"
+                    onClick={() => handleViewChange(value)}
+                    title={WORKSPACE_FULL_LABELS[value]}
+                    aria-expanded={isExpanded}
+                    className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm font-semibold transition-colors ${
+                      iconOnly ? "justify-center" : "justify-start px-2.5"
+                    } ${
+                      isActiveWorkspace
+                        ? "bg-white/[0.06] text-white"
+                        : "text-white/65 hover:bg-white/[0.05] hover:text-white"
+                    }`}
+                  >
+                    <Icon className={`h-[1.15rem] w-[1.15rem] shrink-0 ${isActiveWorkspace ? "text-brand" : "text-white/50"}`} />
+                    <span className={`flex-1 truncate text-left ${lgLabelInline}`}>
+                      {WORKSPACE_FULL_LABELS[value]}
+                    </span>
+                    <svg
+                      className={`h-3.5 w-3.5 shrink-0 text-white/40 transition-transform ${lgLabel} ${isExpanded ? "rotate-90" : ""}`}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      aria-hidden
+                    >
+                      <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+
+                  {isExpanded && (items.length > 0 || value === "billings") ? (
+                    <div className="mt-0.5 space-y-0.5">
+                      {items.map(({ href, label, Icon: ItemIcon, activePathPrefix }) => {
+                        const active =
+                          href === "/workforce"
+                            ? pathname === "/workforce"
+                            : activePathPrefix
+                              ? pathname === activePathPrefix ||
+                                pathname.startsWith(`${activePathPrefix}/`)
+                              : pathname === href || pathname.startsWith(`${href}/`);
+                        return (
+                          <Link key={href} href={href} className={subLinkClass(active)} title={label}>
+                            <ItemIcon className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/55"}`} />
+                            <span className={`flex-1 ${lgLabelInline}`}>{label}</span>
+                            {href === "/workforce/chat" && chatUnreadTotal > 0 ? (
+                              <ChatUnreadBadge count={chatUnreadTotal} />
+                            ) : null}
+                          </Link>
+                        );
+                      })}
+
+                      {value === "billings" && canSeeBillings && (
+                        <div>
+                          <Link
+                            href="/clearstory/projects"
+                            className={subLinkClass(inClearstory)}
+                            aria-expanded={inClearstory}
+                            title="Clearstory"
+                          >
+                            <NavIconLayers
+                              className={`h-4 w-4 shrink-0 ${inClearstory ? "text-brand" : "text-white/55"}`}
+                            />
+                            <span className={`flex-1 ${lgLabelInline}`}>Clearstory</span>
+                            <svg
+                              className={`h-3.5 w-3.5 shrink-0 text-white/40 transition-transform ${lgLabel} ${inClearstory ? "rotate-90" : ""}`}
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              aria-hidden
+                            >
+                              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </Link>
+                          {inClearstory && (
+                            <div className={`mt-0.5 ${lgLabel}`}>
+                              <div className="ml-[1.15rem] space-y-0.5 border-l border-white/[0.08] pl-3">
+                                {clearstorySubItems.map(({ href, label, Icon }) => {
+                                  const active = pathname === href || pathname.startsWith(`${href}/`);
+                                  return (
+                                    <Link
+                                      key={href}
+                                      href={href}
+                                      className={`flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-3 text-[12.5px] font-medium transition-colors ${
+                                        active
+                                          ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
+                                          : "text-white/55 hover:bg-white/[0.05] hover:text-white"
+                                      }`}
+                                    >
+                                      <Icon className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/50"}`} />
+                                      <span className="flex-1">{label}</span>
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   ) : null}
-                </button>
+                </div>
               );
             })}
           </div>
@@ -352,7 +545,7 @@ export function Sidebar({
 
         {visibleAdminNav.length > 0 && (
           <div>
-            <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 sm:hidden lg:block">
+            <p className={`mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 ${lgLabel}`}>
               System
             </p>
             <div className="space-y-0.5">
@@ -363,7 +556,7 @@ export function Sidebar({
                     <Icon
                       className={`h-[1.15rem] w-[1.15rem] shrink-0 ${active ? "text-brand" : "text-white/50"}`}
                     />
-                    <span className="sm:hidden lg:inline">{label}</span>
+                    <span className={lgLabelInline}>{label}</span>
                   </Link>
                 );
               })}
@@ -372,17 +565,23 @@ export function Sidebar({
         )}
       </nav>
 
-      <div className="border-t border-white/[0.07] p-2 lg:p-3">
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] p-2 lg:flex-row lg:gap-3 lg:p-3">
+      <div className={`border-t border-white/[0.07] p-2 ${collapsed ? "" : "sm:p-3"}`}>
+        <div
+          className={`flex flex-col items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] p-2 ${
+            collapsed ? "" : "sm:flex-row sm:gap-3 sm:p-3"
+          }`}
+        >
           <div
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-[0_4px_12px_rgba(255,123,17,0.35)] lg:h-10 lg:w-10"
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-[0_4px_12px_rgba(255,123,17,0.35)] ${
+              collapsed ? "" : "sm:h-10 sm:w-10"
+            }`}
             style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%)" }}
             title={displayName(user)}
             aria-hidden
           >
             {userInitials(user)}
           </div>
-          <div className="min-w-0 flex-1 sm:hidden lg:block">
+          <div className={`min-w-0 flex-1 ${lgLabel}`}>
             <p className="truncate text-sm font-semibold text-white/90">{displayName(user)}</p>
             <p className="truncate text-xs text-white/55">
               {roleLabel(user?.role ?? "user")}
@@ -406,6 +605,33 @@ export function Sidebar({
         </div>
       </div>
       </aside>
+
+      {/* Collapsed + inside Clearstory: a persistent second rail for its modules — more reliable
+          than a hover flyout, and mirrors a dedicated-workspace pattern (icon rail + module list). */}
+      {iconOnly && inClearstory ? (
+        <aside className="fixed left-16 top-0 z-30 hidden h-dvh w-48 flex-col overflow-y-auto border-r border-white/[0.06] bg-[#111114] px-2 py-4 sm:flex">
+          <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">Clearstory</p>
+          <div className="space-y-0.5">
+            {clearstorySubItems.map(({ href, label, Icon }) => {
+              const active = pathname === href || pathname.startsWith(`${href}/`);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
+                    active
+                      ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
+                      : "text-white/65 hover:bg-white/[0.06] hover:text-white"
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/50"}`} />
+                  <span>{label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </aside>
+      ) : null}
     </>
   );
 }

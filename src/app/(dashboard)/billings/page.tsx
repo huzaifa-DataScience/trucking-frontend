@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
+import { KPICards } from "@/components/reporting/KPICards";
 import {
   useSitelineStatus,
   useSitelineCompany,
@@ -47,6 +48,22 @@ const formatAgingCurrency = (value: number | undefined) =>
 const formatPercent = (value: number | undefined) =>
   value != null ? `${(value * 100).toFixed(1)}%` : "—";
 
+/**
+ * Full text color/weight class for an aging bucket cell, given the caller's own default
+ * (body row vs. bold totals row). Only overrides the default when the bucket carries a
+ * balance in a past-due-enough range — combining two conflicting `text-*` utilities on one
+ * element relies on Tailwind's generated CSS order rather than className order, so we pick
+ * exactly one final class instead.
+ */
+const agingBucketCellClass = (bucket: string, value: number | undefined, defaultClass: string): string => {
+  if (value) {
+    if (bucket === ">120 Days") return "font-semibold text-red-700 dark:text-red-400";
+    if (bucket === "91-120 Days") return "font-medium text-red-600 dark:text-red-400";
+    if (bucket === "61-90 Days") return "font-medium text-amber-700 dark:text-amber-400";
+  }
+  return defaultClass;
+};
+
 const formatInvoiceNumber = (value: number | null | undefined) =>
   value != null ? `${value}` : "—";
 
@@ -84,6 +101,74 @@ const formatMonth = (date: Date) => {
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   return `${year}-${month}`;
 };
+
+interface SortState {
+  by: string | null;
+  dir: "ASC" | "DESC";
+}
+
+function toggleSort(current: SortState, key: string): SortState {
+  if (current.by !== key) return { by: key, dir: "ASC" };
+  return { by: key, dir: current.dir === "ASC" ? "DESC" : "ASC" };
+}
+
+function compareValues(a: unknown, b: unknown, dir: "ASC" | "DESC"): number {
+  const mul = dir === "ASC" ? 1 : -1;
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  if (typeof a === "number" && typeof b === "number") return (a - b) * mul;
+  return String(a).localeCompare(String(b), undefined, { numeric: true }) * mul;
+}
+
+function SortableTh({
+  label,
+  sortKey,
+  sort,
+  onSort,
+  align = "left",
+  className = "",
+}: {
+  label: string;
+  sortKey: string;
+  sort: SortState;
+  onSort: (key: string) => void;
+  align?: "left" | "right";
+  className?: string;
+}) {
+  const active = sort.by === sortKey;
+  return (
+    <th
+      className={`whitespace-nowrap px-3 py-2 text-xs font-medium text-stone-600 dark:text-stone-400 ${
+        align === "right" ? "text-right" : "text-left"
+      } ${className}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex items-center gap-1 transition hover:text-stone-900 dark:hover:text-stone-100 ${
+          align === "right" ? "flex-row-reverse" : ""
+        } ${active ? "text-stone-900 dark:text-stone-100" : ""}`}
+      >
+        {label}
+        <svg
+          className={`h-3 w-3 shrink-0 transition ${active ? "text-brand" : "text-stone-400/60 dark:text-stone-500/60"}`}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          aria-hidden
+        >
+          {active && sort.dir === "ASC" ? (
+            <path d="M6 15l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+          ) : (
+            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          )}
+        </svg>
+      </button>
+    </th>
+  );
+}
 
 // Siteline-style threshold labels for aging columns.
 const SITELINE_AGING_DISPLAY_MAP: Record<string, string> = {
@@ -345,6 +430,54 @@ export default function BillingsPage() {
     }
   }, [configured, activeTab, companyId, loadAgingReport, loadAgingOverdue]);
 
+  // Keep the past-due exposure KPI fresh regardless of which tab is active.
+  useEffect(() => {
+    if (!configured) return;
+    loadAgingOverdue();
+  }, [configured, companyId, loadAgingOverdue]);
+
+  const pastDueTotal = useMemo(
+    () => agingOverdue?.items.reduce((sum, item) => sum + (item.netDollars || 0), 0) ?? 0,
+    [agingOverdue]
+  );
+  const pastDueCount = agingOverdue?.items.length ?? 0;
+
+  const [agingSort, setAgingSort] = useState<SortState>({ by: null, dir: "ASC" });
+  const onAgingSort = useCallback((key: string) => setAgingSort((s) => toggleSort(s, key)), []);
+  const sortedAgingRows = useMemo(() => {
+    const rows = agingReport?.rows ?? [];
+    if (!agingSort.by) return rows;
+    const key = agingSort.by;
+    const copy = [...rows];
+    copy.sort((a, b) => {
+      const va = key.startsWith("bucket:")
+        ? a.buckets[key.slice(7) as keyof typeof a.buckets]
+        : (a as unknown as Record<string, unknown>)[key];
+      const vb = key.startsWith("bucket:")
+        ? b.buckets[key.slice(7) as keyof typeof b.buckets]
+        : (b as unknown as Record<string, unknown>)[key];
+      return compareValues(va, vb, agingSort.dir);
+    });
+    return copy;
+  }, [agingReport, agingSort]);
+
+  const [overdueSort, setOverdueSort] = useState<SortState>({ by: null, dir: "ASC" });
+  const onOverdueSort = useCallback((key: string) => setOverdueSort((s) => toggleSort(s, key)), []);
+  const sortedOverdueItems = useMemo(() => {
+    const items = agingOverdue?.items ?? [];
+    if (!overdueSort.by) return items;
+    const key = overdueSort.by;
+    const copy = [...items];
+    copy.sort((a, b) =>
+      compareValues(
+        (a as unknown as Record<string, unknown>)[key],
+        (b as unknown as Record<string, unknown>)[key],
+        overdueSort.dir
+      )
+    );
+    return copy;
+  }, [agingOverdue, overdueSort]);
+
   const initialLoading =
     statusLoading ||
     (CONTRACTS_PAYAPPS_TAB_ENABLED &&
@@ -411,6 +544,15 @@ export default function BillingsPage() {
               Company: <span className="font-medium text-stone-700 dark:text-stone-300">{company.name}</span>
             </p>
           )}
+
+          <div className="shrink-0">
+            <KPICards
+              items={[
+                { label: "Past Due Exposure", value: formatAgingCurrency(pastDueTotal) },
+                { label: "Past Due Contracts", value: pastDueCount },
+              ]}
+            />
+          </div>
 
           <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
           <div className="shrink-0 flex w-full min-w-0 gap-1 border-b border-stone-200 dark:border-stone-700">
@@ -886,33 +1028,43 @@ export default function BillingsPage() {
                   <table className="min-w-full text-sm">
                     <thead>
                       <tr className="border-b border-stone-200 dark:border-stone-700">
-                        <th className="sticky left-0 z-20 bg-stone-50 px-3 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400">
-                          Project
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
-                          PM
-                        </th>
-                        <th className="whitespace-nowrap px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
-                          Invoice #
-                        </th>
-                        <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
-                          Invoice date
-                        </th>
+                        <SortableTh
+                          label="Project"
+                          sortKey="projectName"
+                          sort={agingSort}
+                          onSort={onAgingSort}
+                          className="sticky left-0 z-20 bg-stone-50 dark:bg-stone-800/50"
+                        />
+                        <SortableTh label="PM" sortKey="leadPmName" sort={agingSort} onSort={onAgingSort} />
+                        <SortableTh
+                          label="Invoice #"
+                          sortKey="invoiceNumber"
+                          sort={agingSort}
+                          onSort={onAgingSort}
+                          align="right"
+                        />
+                        <SortableTh label="Invoice date" sortKey="invoiceDate" sort={agingSort} onSort={onAgingSort} />
                         {agingDisplayBuckets.map((b) => (
-                          <th
+                          <SortableTh
                             key={b}
-                            className="whitespace-nowrap px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400"
-                          >
-                            {SITELINE_AGING_DISPLAY_MAP[b] ?? b}
-                          </th>
+                            label={SITELINE_AGING_DISPLAY_MAP[b] ?? b}
+                            sortKey={`bucket:${b}`}
+                            sort={agingSort}
+                            onSort={onAgingSort}
+                            align="right"
+                          />
                         ))}
-                        <th className="whitespace-nowrap px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
-                          Project Total
-                        </th>
+                        <SortableTh
+                          label="Project Total"
+                          sortKey="projectTotal"
+                          sort={agingSort}
+                          onSort={onAgingSort}
+                          align="right"
+                        />
                       </tr>
                     </thead>
                     <tbody>
-                      {agingReport.rows.map((row, i) => (
+                      {sortedAgingRows.map((row, i) => (
                         <tr
                           key={i}
                           className="border-b border-stone-100 last:border-0 dark:border-stone-800"
@@ -939,14 +1091,17 @@ export default function BillingsPage() {
                           <td className="whitespace-nowrap px-3 py-2 text-left text-stone-800 dark:text-stone-200">
                             {formatInvoiceDate(row.invoiceDate)}
                           </td>
-                          {agingDisplayBuckets.map((b) => (
-                            <td
-                              key={b}
-                              className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums"
-                            >
-                              {formatAgingCurrency(row.buckets[b as keyof typeof row.buckets])}
-                            </td>
-                          ))}
+                          {agingDisplayBuckets.map((b) => {
+                            const bucketValue = row.buckets[b as keyof typeof row.buckets];
+                            return (
+                              <td
+                                key={b}
+                                className={`px-3 py-2 text-right tabular-nums ${agingBucketCellClass(b, bucketValue, "text-stone-800 dark:text-stone-200")}`}
+                              >
+                                {formatAgingCurrency(bucketValue)}
+                              </td>
+                            );
+                          })}
                           <td className="px-3 py-2 text-right font-medium text-stone-800 dark:text-stone-200 tabular-nums">
                             {formatAgingCurrency(row.projectTotal)}
                           </td>
@@ -965,16 +1120,17 @@ export default function BillingsPage() {
                         <td className="px-3 py-2 text-stone-900 dark:text-stone-100">
                           {/* Invoice date column has no totals */}
                         </td>
-                        {agingDisplayBuckets.map((b) => (
-                          <td
-                            key={b}
-                            className="px-3 py-2 text-right text-stone-900 dark:text-stone-100 tabular-nums"
-                          >
-                            {formatAgingCurrency(
-                              agingReport.totals[b as keyof typeof agingReport.totals]
-                            )}
-                          </td>
-                        ))}
+                        {agingDisplayBuckets.map((b) => {
+                          const bucketTotal = agingReport.totals[b as keyof typeof agingReport.totals];
+                          return (
+                            <td
+                              key={b}
+                              className={`px-3 py-2 text-right tabular-nums ${agingBucketCellClass(b, bucketTotal, "text-stone-900 dark:text-stone-100")}`}
+                            >
+                              {formatAgingCurrency(bucketTotal)}
+                            </td>
+                          );
+                        })}
                         <td className="px-3 py-2 text-right text-stone-900 dark:text-stone-100 tabular-nums">
                           {formatAgingCurrency(agingReport.totals.projectTotal)}
                         </td>
@@ -1168,37 +1324,47 @@ export default function BillingsPage() {
                     <table className="min-w-full text-sm">
                       <thead>
                         <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
-                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
-                            Project
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
-                            GC / Project #
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
-                            PM
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
-                            Due date
-                          </th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
-                            Days past due
-                          </th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
-                            Invoice #
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
-                            Invoice date
-                          </th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-stone-600 dark:text-stone-400">
-                            Net amount
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-stone-600 dark:text-stone-400">
-                            Status
-                          </th>
+                          <SortableTh label="Project" sortKey="projectName" sort={overdueSort} onSort={onOverdueSort} />
+                          <SortableTh
+                            label="GC / Project #"
+                            sortKey="projectNumber"
+                            sort={overdueSort}
+                            onSort={onOverdueSort}
+                          />
+                          <SortableTh label="PM" sortKey="leadPmName" sort={overdueSort} onSort={onOverdueSort} />
+                          <SortableTh label="Due date" sortKey="dueDate" sort={overdueSort} onSort={onOverdueSort} />
+                          <SortableTh
+                            label="Days past due"
+                            sortKey="daysPastDue"
+                            sort={overdueSort}
+                            onSort={onOverdueSort}
+                            align="right"
+                          />
+                          <SortableTh
+                            label="Invoice #"
+                            sortKey="invoiceNumber"
+                            sort={overdueSort}
+                            onSort={onOverdueSort}
+                            align="right"
+                          />
+                          <SortableTh
+                            label="Invoice date"
+                            sortKey="invoiceDate"
+                            sort={overdueSort}
+                            onSort={onOverdueSort}
+                          />
+                          <SortableTh
+                            label="Net amount"
+                            sortKey="netDollars"
+                            sort={overdueSort}
+                            onSort={onOverdueSort}
+                            align="right"
+                          />
+                          <SortableTh label="Status" sortKey="status" sort={overdueSort} onSort={onOverdueSort} />
                         </tr>
                       </thead>
                       <tbody>
-                        {agingOverdue.items.map((item: AgingOverdueItem, idx: number) => {
+                        {sortedOverdueItems.map((item: AgingOverdueItem, idx: number) => {
                           const due = item.dueDate
                             ? new Date(item.dueDate).toLocaleDateString("en-US", {
                                 year: "numeric",
