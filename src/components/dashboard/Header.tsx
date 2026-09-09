@@ -152,19 +152,31 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
             <span className="hidden text-xs font-medium uppercase tracking-wide text-ink/40 sm:inline">
               Company
             </span>
-            <select
-              value={companyId ?? "all"}
-              onChange={(e) => setCompanyId(e.target.value === "all" ? null : e.target.value)}
-              className="min-h-11 min-w-0 max-w-full flex-1 rounded-xl border border-ink/10 bg-[#f8f9fb] px-3 py-2 text-sm font-medium text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 sm:max-w-[220px] sm:flex-none"
-              aria-label="Select company or branch"
-            >
-              <option value="all">All companies</option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <span className="relative inline-block min-w-0 max-w-full flex-1 sm:max-w-[220px] sm:flex-none">
+              <select
+                value={companyId ?? "all"}
+                onChange={(e) => setCompanyId(e.target.value === "all" ? null : e.target.value)}
+                className="min-h-11 w-full min-w-0 max-w-full appearance-none rounded-xl border border-ink/10 bg-[#f8f9fb] py-2 pl-3 pr-7 text-sm font-medium text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 sm:w-auto"
+                aria-label="Select company or branch"
+              >
+                <option value="all">All companies</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <svg
+                className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink/45"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                aria-hidden
+              >
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
           </label>
           {company ? (
             <span className="hidden truncate text-xs text-ink/45 lg:inline lg:max-w-[200px]" title={company.name}>
