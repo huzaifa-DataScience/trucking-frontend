@@ -90,6 +90,9 @@ export default function AccountPage() {
     [currentPassword, newPassword, confirmPassword]
   );
 
+  const canSubmitPassword =
+    currentPassword.length > 0 && newPassword.length >= 6 && confirmPassword.length >= 6;
+
   if (!user) return null;
 
   return (
@@ -196,8 +199,8 @@ export default function AccountPage() {
           <div>
             <button
               type="submit"
-              disabled={passwordBusy}
-              className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary disabled:opacity-50"
+              disabled={passwordBusy || !canSubmitPassword}
+              className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary disabled:cursor-not-allowed disabled:opacity-50"
             >
               {passwordBusy ? "Updating…" : "Update password"}
             </button>
