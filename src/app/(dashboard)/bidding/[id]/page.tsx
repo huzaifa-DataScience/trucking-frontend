@@ -13,7 +13,7 @@ import { BidAwardTab } from "@/components/bidding/BidAwardTab";
 import { BidLostStage } from "@/components/bidding/BidLostStage";
 import { SpecsPage } from "@/components/bidding/specs/SpecsPage";
 import { ProductionPage } from "@/components/bidding/production/ProductionPage";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { FormSkeleton } from "@/components/ui/Skeleton";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { parseChromeStage } from "@/lib/bidding/process-types";
 
@@ -54,8 +54,8 @@ function BidWorkspaceInner() {
 
   if (!bidId) {
     return (
-      <div className="flex flex-1 items-center justify-center py-16">
-        <LogoLoader />
+      <div className="flex-1 py-2">
+        <FormSkeleton fields={5} />
       </div>
     );
   }
@@ -93,8 +93,8 @@ export default function BidSheetPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex flex-1 items-center justify-center py-16">
-          <LogoLoader />
+        <div className="flex-1 py-2">
+          <FormSkeleton fields={5} />
         </div>
       }
     >

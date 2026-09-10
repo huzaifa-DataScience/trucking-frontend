@@ -40,7 +40,7 @@ export function ProductionDetailSkeleton() {
       <Skeleton className="h-12 w-full rounded-xl" />
 
       {/* Chart A */}
-      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
         <div className="mb-3 flex justify-between gap-3">
           <div>
             <Skeleton className="h-4 w-56" />
@@ -55,7 +55,7 @@ export function ProductionDetailSkeleton() {
       </section>
 
       {/* Chart B */}
-      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
         <Skeleton className="mb-3 h-4 w-48" />
         <Skeleton className="h-56 w-full rounded-xl" />
       </section>

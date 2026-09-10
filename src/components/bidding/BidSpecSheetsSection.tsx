@@ -1050,7 +1050,7 @@ export function BidSpecSheetsSection({
   return (
     <div className="flex flex-col gap-4">
       {showInsulationSpecs ? (
-        <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4">
+        <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
           <h3 className="text-sm font-semibold text-ink">Spec PDFs that apply</h3>
           <p className="mt-0.5 mb-3 text-xs text-ink/45">
             Which client spec books apply — separate from the rules table below.
@@ -1080,7 +1080,7 @@ export function BidSpecSheetsSection({
       ) : null}
 
       {onBuyAmericanChange || onAPlusChange ? (
-        <section className="flex flex-wrap gap-x-6 gap-y-3 rounded-2xl border border-ink/[0.08] bg-surface p-4">
+        <section className="flex flex-wrap gap-x-6 gap-y-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
           {onBuyAmericanChange ? (
             <label className="inline-flex items-center gap-2 text-sm text-ink/80">
               <input
@@ -1120,7 +1120,7 @@ export function BidSpecSheetsSection({
         </section>
       ) : null}
 
-      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4">
+      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-ink">Spec sheets</h3>

@@ -33,7 +33,7 @@ export function BidLostStage() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="text-base font-semibold text-ink">Lost / no-bid</h2>
         <p className="mt-0.5 text-sm text-ink/50">
@@ -47,7 +47,7 @@ export function BidLostStage() {
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-4 sm:grid-cols-2">
+      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Date</span>
           <input
