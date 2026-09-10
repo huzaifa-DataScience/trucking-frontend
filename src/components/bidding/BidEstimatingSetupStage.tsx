@@ -45,7 +45,7 @@ export function BidEstimatingSetupStage() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="text-base font-semibold text-ink">Estimating Setup</h2>
         <p className="mt-0.5 text-sm text-ink/50">
@@ -71,7 +71,7 @@ export function BidEstimatingSetupStage() {
         </p>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-4 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Construction type</span>
           <input
@@ -160,7 +160,7 @@ export function BidEstimatingSetupStage() {
         </label>
       </section>
 
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-4 sm:grid-cols-2">
+      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
         <h3 className="sm:col-span-2 text-sm font-semibold text-ink">
           OCIP / lifts / parking
         </h3>
@@ -278,7 +278,7 @@ export function BidEstimatingSetupStage() {
         </label>
       </section>
 
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-4 sm:grid-cols-2">
+      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
         <h3 className="sm:col-span-2 text-sm font-semibold text-ink">
           Technical review
         </h3>

@@ -4,9 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { BidListCard } from "@/components/bidding/BidListCard";
-import { KpiStat } from "@/components/ui/KpiStat";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { SkeletonCardGrid, SkeletonStatRow } from "@/components/ui/Skeleton";
+import { Skeleton, SkeletonCardGrid } from "@/components/ui/Skeleton";
 import { buttonClasses } from "@/components/ui/Button";
 import { RestrictedState } from "@/components/ui/RestrictedState";
 import { useBiddingAccess } from "@/hooks/useBiddingAccess";
@@ -27,7 +26,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
 ];
 
 const WORK_TYPE_FILTERS = [
-  { value: "", label: "All work types" },
+  { value: "", label: "All" },
   { value: "insulation", label: "Insulation" },
   { value: "demo", label: "Demo" },
   { value: "gc", label: "GC" },
@@ -36,7 +35,7 @@ const WORK_TYPE_FILTERS = [
 ];
 
 const STAGE_FILTERS = [
-  { value: "", label: "All stages" },
+  { value: "", label: "All" },
   { value: "intake", label: "Intake" },
   { value: "assignment", label: "Assignment" },
   { value: "estimating_setup", label: "Setup" },
@@ -47,7 +46,7 @@ const STAGE_FILTERS = [
 ];
 
 const OUTCOME_FILTERS = [
-  { value: "", label: "All outcomes" },
+  { value: "", label: "All" },
   { value: "open", label: "Open" },
   { value: "awarded", label: "Awarded" },
   { value: "lost", label: "Lost" },
@@ -55,6 +54,43 @@ const OUTCOME_FILTERS = [
   { value: "cancelled", label: "Cancelled" },
   { value: "postponed", label: "Postponed" },
 ];
+
+/** Underline-only filter select — gray bottom line on all of them, brand orange (matching the tabs) on the focused one. */
+function FilterSelect({
+  prefix,
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: {
+  prefix: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  ariaLabel?: string;
+}) {
+  return (
+    <div className="group relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={ariaLabel ?? prefix}
+        className="h-10 w-full appearance-none border-0 border-b border-ink/15 bg-transparent pr-6 text-sm font-medium text-ink outline-none transition focus:border-brand"
+      >
+        {options.map((o) => (
+          <option key={o.value || "all"} value={o.value}>
+            {prefix}: {o.label}
+          </option>
+        ))}
+      </select>
+      <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-ink/40" aria-hidden>
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+    </div>
+  );
+}
 
 export default function BiddingListPage() {
   const { companyId } = useCompany();
@@ -126,11 +162,11 @@ export default function BiddingListPage() {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-6">
         <PageHeader
-          title="Bidding sheet"
+          title="Estimates"
           subtitle="Base Bid estimator — team, wage rates, systems, and live MIKE/PJ totals."
         />
         <RestrictedState
-          title="Bidding access required"
+          title="Estimates access required"
           message="You do not have permission to view the bidding list."
           permission={PERMISSIONS.biddingRead}
         />
@@ -141,8 +177,8 @@ export default function BiddingListPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 ui-animate-in">
       <PageHeader
-        title="Bidding"
-        subtitle="Pre: Intake → … → Outcome. Post Awarded/Lost follow the current outcome."
+        title="Estimates"
+        subtitle="Track each estimate from Intake through Outcome. Awarded or Lost bids continue on from their final outcome."
         action={
           canWrite ? (
             <Link href="/bidding/new" className={buttonClasses("secondary")}>
@@ -155,117 +191,82 @@ export default function BiddingListPage() {
         }
       />
 
-      {loading && bids.length === 0 ? (
-        <SkeletonStatRow count={4} />
-      ) : (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiStat
-            label="Estimates"
-            value={counts.total}
-            active={status === "all"}
-            onClick={() => setStatus("all")}
-          />
-          <KpiStat
-            label="Drafts"
-            value={counts.draft}
-            active={status === "draft"}
-            onClick={() => toggleStatus("draft")}
-          />
-          <KpiStat
-            label="Submitted"
-            value={counts.submitted}
-            active={status === "submitted"}
-            onClick={() => toggleStatus("submitted")}
-          />
-          <KpiStat
-            label="Archived"
-            value={counts.archived}
-            active={status === "archived"}
-            onClick={() => toggleStatus("archived")}
-          />
-        </div>
-      )}
+      <div className="w-fit rounded-2xl border border-ink/[0.08] bg-surface px-5 py-4 shadow-[0_1px_2px_rgba(1,1,1,0.04)]">
+        {loading && bids.length === 0 ? (
+          <Skeleton className="h-9 w-24" />
+        ) : (
+          <div>
+            <p className="text-2xl font-semibold leading-none text-ink">{counts.total}</p>
+            <p className="mt-1.5 text-xs font-medium uppercase tracking-wide text-ink/40">Total estimates</p>
+          </div>
+        )}
+      </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-1 rounded-xl border border-ink/[0.08] bg-surface p-1">
-          {STATUS_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setStatus(f.value)}
-              aria-pressed={status === f.value}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                status === f.value
-                  ? "bg-ink text-white"
-                  : "text-ink/55 hover:bg-ink/[0.04] hover:text-ink"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]">
+          {STATUS_FILTERS.map((f) => {
+            const active = status === f.value;
+            const count = f.value === "all" ? counts.total : counts[f.value];
+            return (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => (f.value === "all" ? setStatus("all") : toggleStatus(f.value))}
+                aria-pressed={active}
+                className={`relative pb-2.5 text-sm transition focus-visible:outline-none ${
+                  active ? "font-semibold text-ink" : "font-medium text-ink/55 hover:text-ink"
+                }`}
+              >
+                {f.label}{" "}
+                <span className={count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
+                  {count}
+                </span>
+                {active && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />}
+              </button>
+            );
+          })}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-xs font-medium text-ink/45">
-            Work type
-            <select
-              value={workType}
-              onChange={(e) => setWorkType(e.target.value)}
-              className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm font-medium text-ink outline-none focus:border-brand"
-            >
-              {WORK_TYPE_FILTERS.map((f) => (
-                <option key={f.value || "all"} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-xs font-medium text-ink/45">
-            Stage
-            <select
-              value={processStage}
-              onChange={(e) => setProcessStage(e.target.value)}
-              className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm font-medium text-ink outline-none focus:border-brand"
-            >
-              {STAGE_FILTERS.map((f) => (
-                <option key={f.value || "all"} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-xs font-medium text-ink/45">
-            Outcome
-            <select
-              value={outcome}
-              onChange={(e) => setOutcome(e.target.value)}
-              className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm font-medium text-ink outline-none focus:border-brand"
-            >
-              {OUTCOME_FILTERS.map((f) => (
-                <option key={f.value || "all"} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-xs font-medium text-ink/45">
-            Sort
-            <select
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="w-36">
+            <FilterSelect prefix="Work type" value={workType} onChange={setWorkType} options={WORK_TYPE_FILTERS} />
+          </div>
+          <div className="w-32">
+            <FilterSelect prefix="Stage" value={processStage} onChange={setProcessStage} options={STAGE_FILTERS} />
+          </div>
+          <div className="w-36">
+            <FilterSelect prefix="Outcome" value={outcome} onChange={setOutcome} options={OUTCOME_FILTERS} />
+          </div>
+          <div className="w-40">
+            <FilterSelect
+              prefix="Sort"
               value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm font-medium text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
-              aria-label="Sort bids"
-            >
-              <option value="updated">Last updated</option>
-              <option value="estimate">Estimate #</option>
-            </select>
-          </label>
-          <input
-            type="search"
-            placeholder="Search estimate #, job, company…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full max-w-md rounded-xl border border-ink/10 bg-surface px-4 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 sm:w-72"
-          />
+              onChange={(v) => setSortKey(v as SortKey)}
+              ariaLabel="Sort bids"
+              options={[
+                { value: "updated", label: "Last updated" },
+                { value: "estimate", label: "Estimate #" },
+              ]}
+            />
+          </div>
+
+          <div className="w-full sm:ml-auto sm:w-[320px]">
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" aria-hidden>
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+                </svg>
+              </span>
+              <input
+                type="search"
+                placeholder="Search estimate #, job, company…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-10 w-full rounded-lg border border-ink/10 bg-surface pl-9 pr-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -288,7 +289,7 @@ export default function BiddingListPage() {
       ) : (
         <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {visibleBids.map((bid) => (
-            <BidListCard key={bid.id} bid={bid} />
+            <BidListCard key={bid.id} bid={bid} hideDraftChip={status === "draft"} />
           ))}
         </div>
       )}

@@ -115,12 +115,6 @@ export default function ClearstoryOpsPage() {
                 <dt className="text-ink/45">lastSuccessfulRunAt</dt>
                 <dd className="text-ink">{formatDataAsOf(statusData?.lastSuccessfulRunAt ?? null)}</dd>
               </div>
-              {typeof statusData?.message === "string" && statusData.message ? (
-                <div className="flex flex-col gap-1 border-t border-ink/[0.06] pt-2">
-                  <dt className="text-ink/45">message</dt>
-                  <dd className="text-xs text-ink/70">{statusData.message}</dd>
-                </div>
-              ) : null}
             </dl>
           )}
         </Card>

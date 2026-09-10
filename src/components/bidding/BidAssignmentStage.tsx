@@ -128,7 +128,7 @@ export function BidAssignmentStage() {
     rows.find((r) => r.role === role)?.assigneeName ?? "";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="text-base font-semibold text-ink">Assignment</h2>
         <p className="mt-0.5 text-sm text-ink/50">
@@ -146,7 +146,7 @@ export function BidAssignmentStage() {
         </p>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-4 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
         <label className="flex items-center gap-2 sm:col-span-2">
           <input
             type="checkbox"
@@ -239,7 +239,7 @@ export function BidAssignmentStage() {
         </label>
       </section>
 
-      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4">
+      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
         <h3 className="text-sm font-semibold text-ink">Takeoff assignments</h3>
         <p className="mt-0.5 mb-3 text-xs text-ink/45">
           1 or 2 people per scope. Team pick prefills blank roles.

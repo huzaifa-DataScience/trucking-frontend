@@ -4,56 +4,60 @@ import { useEffect, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import type { BidActivityEntry } from "@/lib/api/endpoints/bidding";
 import { useBidSheet } from "@/contexts/BidSheetContext";
+import { SkeletonListRows } from "@/components/ui/Skeleton";
 
-function formatChangedFields(
-  fields: BidActivityEntry["changedFields"]
-): string | null {
-  if (fields == null) return null;
-  if (typeof fields === "string") {
-    const t = fields.trim();
-    return t || null;
-  }
-  if (Array.isArray(fields)) {
-    const parts = fields.map((f) => String(f).trim()).filter(Boolean);
-    return parts.length ? parts.join(", ") : null;
-  }
-  try {
-    const s = JSON.stringify(fields);
-    return s && s !== "{}" ? s : null;
-  } catch {
-    return null;
-  }
-}
+/**
+ * Backend summaries can carry a raw field-by-field dump, e.g.
+ * "Process updated (stage, outcome, workType, …)" plus a `changedFields`
+ * array of dotted paths duplicating the same list. Neither is readable as
+ * prose, so collapse both down to a short lead phrase + a field count.
+ */
+function formatActivityWhat(e: BidActivityEntry): { lead: string; fieldCount: number | null } {
+  const rawSummary = String(e.summary || e.message || e.area || "").trim();
+  const match = rawSummary.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
+  const lead = (match ? match[1] : rawSummary).trim() || "Update";
 
-function formatActivityWhat(e: BidActivityEntry): string {
-  const summary = String(e.summary || e.message || e.area || "").trim();
-  const changed = formatChangedFields(e.changedFields);
-  if (summary && changed) return `${summary} (${changed})`;
-  if (summary) return summary;
-  if (changed) return changed;
-  return "change";
+  let fieldCount: number | null = null;
+  if (Array.isArray(e.changedFields)) {
+    fieldCount = e.changedFields.filter(Boolean).length || null;
+  } else if (match) {
+    const count = match[2]
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean).length;
+    fieldCount = count || null;
+  }
+
+  return { lead, fieldCount };
 }
 
 function formatActivityWho(e: BidActivityEntry): string {
   const who = e.userEmail || e.byEmail || e.actorEmail;
-  return who ? String(who) : "—";
+  return who ? String(who) : "Unknown";
 }
 
 function formatActivityWhen(e: BidActivityEntry): string {
   return String(e.createdAt || e.at || "");
 }
 
-/** Activity log — who / what / when (FRONTEND_INTAKE.md). */
-export function BidActivityPanel() {
+function initialsFor(who: string): string {
+  const name = who.includes("@") ? who.split("@")[0] : who;
+  const parts = name.split(/[._\s-]+/).filter(Boolean);
+  const letters = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "");
+  return letters.join("") || "?";
+}
+
+/** Activity log content — rendered inside the bid sheet's "Activity" sidebar drawer. */
+export function BidActivityPanel({ open }: { open: boolean }) {
   const { bid } = useBidSheet();
-  const [open, setOpen] = useState(false);
   const [lines, setLines] = useState<
-    { when: string; who: string; what: string }[]
+    { when: string; who: string; what: { lead: string; fieldCount: number | null } }[]
   >([]);
   const [loading, setLoading] = useState(false);
+  const [loadedOnce, setLoadedOnce] = useState(false);
 
   useEffect(() => {
-    if (!open || !bid) return;
+    if (!open || !bid || loadedOnce) return;
     setLoading(true);
     void biddingApi
       .getBidActivity(bid.id)
@@ -70,56 +74,54 @@ export function BidActivityPanel() {
         );
       })
       .catch(() => setLines([]))
-      .finally(() => setLoading(false));
-  }, [open, bid]);
+      .finally(() => {
+        setLoading(false);
+        setLoadedOnce(true);
+      });
+  }, [open, bid, loadedOnce]);
 
   if (!bid) return null;
 
-  const summary = bid.activitySummary;
-
   return (
-    <div className="rounded-2xl border border-ink/[0.08] bg-surface/80">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-medium text-ink/70 hover:text-ink"
-      >
-        <span>
-          Activity
-          {summary?.changeCount != null ? (
-            <span className="ml-2 text-xs font-normal text-ink/40">
-              {summary.changeCount} changes
-            </span>
-          ) : null}
-        </span>
-        <span className="text-xs text-ink/40">{open ? "Hide" : "Show"}</span>
-      </button>
-      {open ? (
-        <div className="max-h-48 overflow-auto border-t border-ink/[0.06] px-4 py-2">
-          {loading ? (
-            <p className="text-xs text-ink/40">Loading…</p>
-          ) : lines.length === 0 ? (
-            <p className="text-xs text-ink/40">No activity yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {lines.slice(0, 40).map((l, i) => (
-                <li key={`${l.when}-${i}`} className="text-xs text-ink/60">
-                  <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
-                    <span className="font-medium text-ink/80">{l.who}</span>
-                    <span className="text-ink/35">·</span>
-                    <span>{l.what}</span>
-                  </div>
-                  {l.when ? (
-                    <div className="mt-0.5 text-ink/35">
-                      {new Date(l.when).toLocaleString()}
-                    </div>
+    <div>
+      {loading ? (
+        <SkeletonListRows rows={6} />
+      ) : lines.length === 0 ? (
+        <p className="text-sm text-ink/50">No activity yet.</p>
+      ) : (
+        <ul className="space-y-4">
+          {lines.slice(0, 40).map((l, i) => (
+            <li key={`${l.when}-${i}`} className="flex gap-3">
+              <span
+                aria-hidden
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-bold text-brand"
+              >
+                {initialsFor(l.who)}
+              </span>
+              <div className="min-w-0 flex-1 border-b border-ink/[0.06] pb-4">
+                <p className="text-sm font-semibold text-ink">{l.who}</p>
+                <p className="mt-0.5 text-sm leading-relaxed text-ink/80">
+                  {l.what.lead}
+                  {l.what.fieldCount ? (
+                    <span className="text-ink/40">
+                      {" "}
+                      · {l.what.fieldCount} field{l.what.fieldCount === 1 ? "" : "s"} changed
+                    </span>
                   ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ) : null}
+                </p>
+                {l.when ? (
+                  <p className="mt-1 text-xs font-medium text-ink/40">
+                    {new Date(l.when).toLocaleString(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -8,7 +8,6 @@ import {
   type SitelineError,
 } from "@/lib/api/endpoints/siteline";
 import { getApiErrorMessage } from "@/lib/api/client";
-import { LogoLoader } from "@/components/ui/LogoLoader";
 
 function isSitelineError(value: unknown): value is SitelineError {
   return (
@@ -27,11 +26,15 @@ const GAP_LABELS: Record<string, string> = {
 type SitelineClearstoryGapsBannerProps = {
   entityId: number;
   className?: string;
+  /** Reports this check's own loading state up so the page can fold it into ONE header
+   * sync indicator instead of showing a second, disconnected loading pill here. */
+  onLoadingChange?: (loading: boolean) => void;
 };
 
 export function SitelineClearstoryGapsBanner({
   entityId,
   className = "",
+  onLoadingChange,
 }: SitelineClearstoryGapsBannerProps) {
   const [items, setItems] = useState<SitelineReconciliationGapItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,15 +68,14 @@ export function SitelineClearstoryGapsBanner({
     void load();
   }, [load]);
 
+  useEffect(() => {
+    onLoadingChange?.(loading);
+  }, [loading, onLoadingChange]);
+
   if (loading) {
-    return (
-      <div
-        className={`flex items-center gap-2 rounded-lg border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100 ${className}`}
-      >
-        <LogoLoader size={20} />
-        <span>Checking Siteline vs Clearstory data…</span>
-      </div>
-    );
+    // No pill here — the page's header sync indicator (isSyncing) already covers this
+    // check via onLoadingChange, so there's exactly one "is anything syncing" signal.
+    return null;
   }
 
   if (error) {
@@ -86,11 +88,11 @@ export function SitelineClearstoryGapsBanner({
 
   return (
     <div
-      className={`rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30 ${className}`}
+      className={`animate-[fade-in_200ms_ease] rounded-r-lg rounded-l-sm border border-l-4 border-amber-200 border-l-amber-500 bg-amber-50/60 px-4 py-3.5 dark:border-amber-900/60 dark:border-l-amber-500 dark:bg-amber-950/20 ${className}`}
       role="alert"
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
             {items.length} project{items.length === 1 ? "" : "s"} with Siteline billing but no Clearstory match
           </p>
@@ -98,59 +100,64 @@ export function SitelineClearstoryGapsBanner({
             Ops is notified by email when the gap alert job runs. Review project / job numbers in Clearstory.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="shrink-0 text-xs font-medium text-amber-900 underline hover:no-underline dark:text-amber-200"
-        >
-          {expanded ? "Hide list" : "Show list"}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="rounded-lg border border-amber-300 bg-white/70 px-3 py-1.5 text-xs font-medium text-amber-900 transition hover:bg-white dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-950/70"
+          >
+            {expanded ? "Hide list" : "Show list"}
+          </button>
+          <Link
+            href="/clearstory/projects"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700"
+          >
+            Open Clearstory
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path d="M7 17L17 7M9 7h8v8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+        </div>
       </div>
 
       {expanded ? (
-        <div className="mt-3 overflow-x-auto">
+        <div className="mt-3 overflow-x-auto rounded-lg border border-amber-200/70 bg-white/50 dark:border-amber-900/50 dark:bg-transparent">
           <table className="min-w-full text-left text-xs">
             <thead>
               <tr className="border-b border-amber-200/80 text-amber-900/80 dark:border-amber-800">
-                <th className="py-1.5 pr-3 font-medium">Project</th>
-                <th className="py-1.5 pr-3 font-medium">Job #</th>
-                <th className="py-1.5 pr-3 font-medium">PM</th>
-                <th className="py-1.5 pr-3 font-medium text-right">Net $</th>
-                <th className="py-1.5 font-medium">Issue</th>
+                <th className="px-3 py-2 font-medium">Project</th>
+                <th className="px-3 py-2 font-medium">Job #</th>
+                <th className="px-3 py-2 font-medium">PM</th>
+                <th className="px-3 py-2 text-right font-medium">Net $</th>
+                <th className="px-3 py-2 font-medium">Issue</th>
               </tr>
             </thead>
             <tbody>
               {items.slice(0, 25).map((row) => (
                 <tr
                   key={`${row.contractId}-${row.internalProjectNumber ?? row.projectName}`}
-                  className="border-b border-amber-100/80 dark:border-amber-900/40"
+                  className="border-b border-amber-100/80 last:border-0 dark:border-amber-900/40"
                 >
-                  <td className="py-1.5 pr-3 max-w-[200px] truncate" title={row.projectName ?? undefined}>
+                  <td className="max-w-[200px] truncate px-3 py-2" title={row.projectName ?? undefined}>
                     {row.projectName ?? "—"}
                   </td>
-                  <td className="py-1.5 pr-3">{row.internalProjectNumber ?? row.projectNumber ?? "—"}</td>
-                  <td className="py-1.5 pr-3">{row.leadPmName ?? "—"}</td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums">
+                  <td className="px-3 py-2">{row.internalProjectNumber ?? row.projectNumber ?? "—"}</td>
+                  <td className="px-3 py-2">{row.leadPmName ?? "—"}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
                     {row.netDollars.toLocaleString("en-US", { style: "currency", currency: "USD" })}
                   </td>
-                  <td className="py-1.5">{GAP_LABELS[row.gapReason] ?? row.gapReason}</td>
+                  <td className="px-3 py-2">{GAP_LABELS[row.gapReason] ?? row.gapReason}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {items.length > 25 ? (
-            <p className="mt-2 text-[11px] text-amber-800 dark:text-amber-300">
+            <p className="px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
               Showing 25 of {items.length}.
             </p>
           ) : null}
         </div>
       ) : null}
-
-      <p className="mt-2 text-xs">
-        <Link href="/clearstory/projects" className="font-medium text-amber-900 underline dark:text-amber-200">
-          Open Clearstory projects
-        </Link>
-      </p>
     </div>
   );
 }

@@ -260,13 +260,65 @@ export function BidIntakeStage() {
     setTiers(tiers.map((t, i) => (i === index ? { ...t, ...patch } : t)));
   };
 
+  function renderPartySection(
+    key: "owner" | "architect" | "mechanicalEngineer",
+    title: string,
+    role: "owner" | "architect" | "mechanical"
+  ) {
+    const p = party(draft[key] as ProcessParty);
+    return (
+      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
+        <h3 className="sm:col-span-2 text-sm font-semibold text-ink">{title}</h3>
+        <p className="sm:col-span-2 -mt-1 text-xs text-ink/45">
+          Pick from saved list, or type a new name.
+        </p>
+        <PartyNameCombobox
+          label="Name"
+          value={p.name ?? ""}
+          options={partiesByRole[role]}
+          disabled={!editable}
+          inputClass={inputClass}
+          labelClass={labelClass}
+          onChangeName={(name) => setParty(key, "name", name)}
+          onPickExisting={(picked) =>
+            setField(key, {
+              name: picked.name ?? null,
+              company: picked.company ?? null,
+              contactName: picked.contactName ?? null,
+              email: picked.email ?? null,
+              phone: picked.phone ?? null,
+            })
+          }
+        />
+        {(
+          [
+            ["company", "Company"],
+            ["contactName", "Contact"],
+            ["email", "Email"],
+            ["phone", "Phone"],
+          ] as const
+        ).map(([f, label]) => (
+          <label key={f} className="flex flex-col gap-1">
+            <span className={labelClass}>{label}</span>
+            <input
+              className={inputClass}
+              disabled={!editable}
+              value={String(p[f] ?? "")}
+              onChange={(e) => setParty(key, f, e.target.value)}
+            />
+          </label>
+        ))}
+      </section>
+    );
+  }
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="text-base font-semibold text-ink">Intake</h2>
         <p className="mt-0.5 text-sm text-ink/50">
-          Bid clerk — architect name on the drawings, not invitation subject.
-          Incomplete is fine. Second invitation → same bid, add a row.
+          Bid clerk: use the architect name on the drawings, not the invitation subject.
+          Incomplete is fine. For a second invitation on the same bid, add a row.
         </p>
         <p className="mt-1 text-xs text-ink/40">
           {saving ? "Saving…" : editable ? "Draft autosaves" : "Read only"}
@@ -312,7 +364,7 @@ export function BidIntakeStage() {
         </div>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-4 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Bid / estimate #</span>
           <input
@@ -453,91 +505,40 @@ export function BidIntakeStage() {
         </label>
       </section>
 
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-4 sm:grid-cols-2">
-        <h3 className="sm:col-span-2 text-sm font-semibold text-ink">
-          Project address
-        </h3>
-        {(
-          [
-            ["line1", "Address line 1"],
-            ["line2", "Address line 2"],
-            ["city", "City"],
-            ["state", "State"],
-            ["zip", "ZIP"],
-          ] as const
-        ).map(([k, label]) => (
-          <label key={k} className="flex flex-col gap-1">
-            <span className={labelClass}>{label}</span>
-            <input
-              className={inputClass}
-              disabled={!editable}
-              value={String(draft.projectAddress?.[k] ?? "")}
-              onChange={(e) => setAddress(k, e.target.value)}
-            />
-          </label>
-        ))}
-      </section>
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
+          <h3 className="sm:col-span-2 text-sm font-semibold text-ink">
+            Project address
+          </h3>
+          {(
+            [
+              ["line1", "Address line 1"],
+              ["line2", "Address line 2"],
+              ["city", "City"],
+              ["state", "State"],
+              ["zip", "ZIP"],
+            ] as const
+          ).map(([k, label]) => (
+            <label key={k} className="flex flex-col gap-1">
+              <span className={labelClass}>{label}</span>
+              <input
+                className={inputClass}
+                disabled={!editable}
+                value={String(draft.projectAddress?.[k] ?? "")}
+                onChange={(e) => setAddress(k, e.target.value)}
+              />
+            </label>
+          ))}
+        </section>
+        {renderPartySection("owner", "Owner", "owner")}
+      </div>
 
-      {(
-        [
-          ["owner", "Owner", "owner"],
-          ["architect", "Architect", "architect"],
-          ["mechanicalEngineer", "Mechanical", "mechanical"],
-        ] as const
-      ).map(([key, title, role]) => {
-        const p = party(draft[key] as ProcessParty);
-        return (
-          <section
-            key={key}
-            className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-4 sm:grid-cols-2"
-          >
-            <h3 className="sm:col-span-2 text-sm font-semibold text-ink">
-              {title}
-            </h3>
-            <p className="sm:col-span-2 -mt-1 text-xs text-ink/45">
-              Pick from saved list, or type a new name.
-            </p>
-            <PartyNameCombobox
-              label="Name"
-              value={p.name ?? ""}
-              options={partiesByRole[role]}
-              disabled={!editable}
-              inputClass={inputClass}
-              labelClass={labelClass}
-              onChangeName={(name) => setParty(key, "name", name)}
-              onPickExisting={(picked) =>
-                setField(key, {
-                  name: picked.name ?? null,
-                  company: picked.company ?? null,
-                  contactName: picked.contactName ?? null,
-                  email: picked.email ?? null,
-                  phone: picked.phone ?? null,
-                })
-              }
-            />
-            {(
-              [
-                ["company", "Company"],
-                ["contactName", "Contact"],
-                ["email", "Email"],
-                ["phone", "Phone"],
-              ] as const
-            ).map(([f, label]) => (
-              <label key={f} className="flex flex-col gap-1">
-                <span className={labelClass}>{label}</span>
-                <input
-                  className={inputClass}
-                  disabled={!editable}
-                  value={String(p[f] ?? "")}
-                  onChange={(e) => setParty(key, f, e.target.value)}
-                />
-              </label>
-            ))}
-          </section>
-        );
-      })}
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        {renderPartySection("architect", "Architect", "architect")}
+        {renderPartySection("mechanicalEngineer", "Mechanical", "mechanical")}
+      </div>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-4">
+      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-ink">Invitations</h3>
@@ -826,7 +827,7 @@ export function BidIntakeStage() {
         )}
       </section>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-4">
+      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
         <div>
           <h3 className="text-sm font-semibold text-ink">
             Who else is bidding?
@@ -875,7 +876,7 @@ export function BidIntakeStage() {
         </label>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-4">
+      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-ink">
@@ -950,7 +951,7 @@ export function BidIntakeStage() {
         )}
       </section>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-4">
+      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-ink">Contract chain</h3>
