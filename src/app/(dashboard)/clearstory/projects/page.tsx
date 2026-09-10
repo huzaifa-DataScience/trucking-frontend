@@ -20,10 +20,62 @@ import {
 } from "@/lib/clearstory/swaggerTableColumns";
 import { JsonPayloadModal } from "@/components/clearstory/JsonPayloadModal";
 import { ClearstoryTablePagination } from "@/components/clearstory/ClearstoryTablePagination";
+import {
+  ColumnPickerButton,
+  STICKY_HEADER_CLASS,
+  loadHiddenColumns,
+  stickyBodyClass,
+} from "@/components/clearstory/ClearstorySwaggerTable";
 
 // Match COR tables: the table scrolls (X+Y) inside a bounded region.
 const TABLE_SCROLL =
   "min-h-0 min-w-0 w-full flex-1 overflow-x-auto overflow-y-auto max-h-[min(70dvh,calc(100dvh-14rem))]";
+
+type SortDir = "asc" | "desc";
+type SortState = { key: string; dir: SortDir } | null;
+
+function compareValues(a: unknown, b: unknown): number {
+  const aEmpty = a === null || a === undefined || a === "";
+  const bEmpty = b === null || b === undefined || b === "";
+  if (aEmpty && bEmpty) return 0;
+  if (aEmpty) return 1;
+  if (bEmpty) return -1;
+
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  if (typeof a === "boolean" && typeof b === "boolean") return Number(a) - Number(b);
+
+  const aStr = typeof a === "string" ? a : String(a);
+  const bStr = typeof b === "string" ? b : String(b);
+
+  const aNum = Number(aStr);
+  const bNum = Number(bStr);
+  if (aStr !== "" && bStr !== "" && !Number.isNaN(aNum) && !Number.isNaN(bNum)) return aNum - bNum;
+
+  const aDate = Date.parse(aStr);
+  const bDate = Date.parse(bStr);
+  if (!Number.isNaN(aDate) && !Number.isNaN(bDate)) return aDate - bDate;
+
+  return aStr.localeCompare(bStr);
+}
+
+function SortIcon({ dir }: { dir: SortDir | null }) {
+  if (!dir) {
+    return (
+      <svg className="h-3 w-3 shrink-0 text-ink/25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+        <path d="M8 9l4-4 4 4M8 15l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="h-3 w-3 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      {dir === "desc" ? (
+        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+      ) : (
+        <path d="M6 15l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+      )}
+    </svg>
+  );
+}
 
 function formatDataAsOf(iso: string | undefined): string {
   if (!iso) return "";
@@ -124,16 +176,61 @@ export default function ClearstoryProjectsPage() {
   const dataAsOf = useMemo(() => formatDataAsOf(newestUpdatedAt(projects)), [projects]);
   const columnKeys = useMemo(() => collectProjectColumnKeys(projects), [projects]);
 
+  const [sort, setSort] = useState<SortState>(null);
+  const toggleSort = (key: string) => {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "asc" };
+      if (prev.dir === "asc") return { key, dir: "desc" };
+      return null;
+    });
+  };
+  const sortedProjects = useMemo(() => {
+    if (!sort) return projects;
+    const withValues = projects.map((row) => ({
+      row,
+      value: sort.key === "baseContractValue" ? normalizeMoney(row.baseContractValue) : (row as Record<string, unknown>)[sort.key],
+    }));
+    withValues.sort((a, b) => (sort.dir === "asc" ? compareValues(a.value, b.value) : compareValues(b.value, a.value)));
+    return withValues.map((w) => w.row);
+  }, [projects, sort]);
+
+  const columnsStorageKey = "cs-table-cols-cs-projects";
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(() => loadHiddenColumns(columnsStorageKey));
+  const toggleColumn = (key: string) => {
+    if (key === "id") return;
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try {
+        window.localStorage.setItem(columnsStorageKey, JSON.stringify([...next]));
+      } catch {
+        /* ignore storage failures */
+      }
+      return next;
+    });
+  };
+  const visibleColumnKeys = useMemo(
+    () => columnKeys.filter((k) => k === "id" || !hiddenColumns.has(k)),
+    [columnKeys, hiddenColumns]
+  );
+
   // If backend clamps/normalizes pagination values, mirror them in UI state.
+  // Only reconcile once a fetch has settled (`!loading`) — reconciling against `data`
+  // while a new page/pageSize request is in flight compares the *stale* previous
+  // response to the *new* local state and snaps the page back before the fetch resolves.
   useEffect(() => {
-    if (!data) return;
+    if (!data || loading) return;
     if (!("page" in data) || !("pageSize" in data) || !("total" in data)) return;
-    if (typeof data.page === "number" && data.page !== page) setPage(data.page);
-    if (typeof data.pageSize === "number" && data.pageSize !== pageSize) setPageSize(data.pageSize);
-    // If page becomes out of range after search/pageSize change, snap back.
-    const pages = Math.max(1, Math.ceil(data.total / (data.pageSize || pageSize || 50)));
-    if (data.page > pages) setPage(pages);
-  }, [data, page, pageSize]);
+    const dPage = data.page;
+    const dPageSize = data.pageSize;
+    if (typeof dPage === "number") setPage((prev) => (dPage !== prev ? dPage : prev));
+    if (typeof dPageSize === "number") setPageSize((prev) => (dPageSize !== prev ? dPageSize : prev));
+    if (typeof dPage === "number" && typeof dPageSize === "number") {
+      const pages = Math.max(1, Math.ceil(data.total / (dPageSize || 50)));
+      if (dPage > pages) setPage(pages);
+    }
+  }, [data, loading]);
 
   const statusReady =
     statusData &&
@@ -146,8 +243,6 @@ export default function ClearstoryProjectsPage() {
   const statusHint = useMemo(() => {
     if (statusError) return statusError;
     if (!statusData) return null;
-    const m = statusData.message;
-    if (typeof m === "string" && m.trim()) return m;
     if (statusReady === true) return "Module ready.";
     if (statusReady === false) return "Clearstory reported not ready.";
     return "Module status loaded.";
@@ -271,36 +366,60 @@ export default function ClearstoryProjectsPage() {
             </p>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col">
+              <div className="mb-3 flex justify-end">
+                <ColumnPickerButton
+                  columns={columnKeys.map((k) => ({ key: k, label: humanizeColumnKey(k) }))}
+                  hidden={hiddenColumns}
+                  lockedKey="id"
+                  onToggle={toggleColumn}
+                />
+              </div>
               <div className={`${TABLE_SCROLL} rounded-xl border border-ink/[0.1] bg-[#fafbfc] shadow-inner`}>
-                <table className="w-full min-w-[980px] border-collapse text-left">
+                <table className="w-full min-w-[980px] border-separate border-spacing-0 text-left">
                   <caption className="sr-only">Clearstory projects</caption>
                   <thead>
-                    <tr className="sticky top-0 z-[1] border-b border-ink/[0.1] bg-[#f0f2f5]">
-                      {columnKeys.map((k) => (
-                        <th
-                          key={k}
-                          scope="col"
-                          className="whitespace-nowrap px-3 py-3 text-xs font-semibold tracking-wide text-ink/60"
-                        >
-                          {humanizeColumnKey(k)}
-                        </th>
-                      ))}
+                    <tr className="sticky top-0 z-20 bg-[#f0f2f5]">
+                      {visibleColumnKeys.map((k) => {
+                        const dir = sort?.key === k ? sort.dir : null;
+                        const isSticky = k === "id";
+                        return (
+                          <th
+                            key={k}
+                            scope="col"
+                            className={`whitespace-nowrap border-b border-ink/[0.1] px-0 py-0 text-xs font-semibold tracking-wide text-ink/60 ${
+                              isSticky ? STICKY_HEADER_CLASS : ""
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => toggleSort(k)}
+                              aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none"}
+                              className="flex w-full items-center gap-1 px-3 py-3 text-left transition hover:text-ink"
+                            >
+                              {humanizeColumnKey(k)}
+                              <SortIcon dir={dir} />
+                            </button>
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
-                    {projects.map((p) => {
+                    {sortedProjects.map((p, rowIdx) => {
                       const base = normalizeMoney(p.baseContractValue);
+                      const zebra = rowIdx % 2 === 1;
                       return (
                         <tr
                           key={p.id}
-                          className="border-b border-ink/[0.06] align-top transition hover:bg-brand/[0.03] odd:bg-white even:bg-ink/[0.015]"
+                          className={`align-top transition hover:bg-brand/[0.03] ${zebra ? "bg-ink/[0.015]" : "bg-white"}`}
                         >
-                          {columnKeys.map((k) => {
+                          {visibleColumnKeys.map((k) => {
                             const raw = (p as Record<string, unknown>)[k];
+                            const isSticky = k === "id";
                             // Special-case baseContractValue to use USD formatting when possible.
                             if (k === "baseContractValue") {
                               return (
-                                <td key={k} className="max-w-[16rem] px-3 py-2.5 text-sm text-ink/90 tabular-nums">
+                                <td key={k} className={`max-w-[16rem] border-b border-ink/[0.06] px-3 py-2.5 text-sm text-ink/90 tabular-nums ${isSticky ? stickyBodyClass(zebra) : ""}`}>
                                   {formatUsdWhole(base)}
                                 </td>
                               );
@@ -308,7 +427,7 @@ export default function ClearstoryProjectsPage() {
 
                             const exp = expandCellForModal(raw);
                             return (
-                              <td key={k} className="max-w-[18rem] px-3 py-2.5 text-sm text-ink/90">
+                              <td key={k} className={`max-w-[18rem] border-b border-ink/[0.06] px-3 py-2.5 text-sm text-ink/90 ${isSticky ? stickyBodyClass(zebra) : ""}`}>
                                 {"empty" in exp ? (
                                   <span className="text-ink/30">—</span>
                                 ) : "modal" in exp ? (

@@ -120,7 +120,7 @@ const operationsNavItems: SidebarNavItem[] = [
 const biddingNavItems: SidebarNavItem[] = [
   {
     href: "/bidding",
-    label: "Bidding sheet",
+    label: "Estimates",
     Icon: NavIconProposal,
     activePathPrefix: "/bidding",
     biddingPermission: "bidding:read",
@@ -240,7 +240,7 @@ function navItemVisible(
 const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ className?: string }> }[] = [
   { value: "operations", label: "Ops", Icon: NavIconTruck },
   { value: "billings", label: "Billing", Icon: NavIconInvoice },
-  { value: "bidding", label: "Bidding", Icon: NavIconProposal },
+  { value: "bidding", label: "Estimates", Icon: NavIconProposal },
   { value: "mike", label: "Mike", Icon: NavIconTable },
   { value: "workforce", label: "Workforce", Icon: NavIconClock },
 ];
@@ -248,7 +248,7 @@ const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ classN
 const WORKSPACE_FULL_LABELS: Record<ViewMode, string> = {
   operations: "Operations & reporting",
   billings: "Billing",
-  bidding: "Bidding sheet",
+  bidding: "Estimates",
   mike: "Mike",
   workforce: "Workforce",
 };
@@ -321,7 +321,7 @@ export function Sidebar({
     if (view === "mike") return mikeNavItems;
     if (view === "billings") {
       return canSeeBillings
-        ? [{ href: "/billings", label: "Billings", Icon: NavIconInvoice } as SidebarNavItem]
+        ? [{ href: "/billings", label: "Billing", Icon: NavIconInvoice } as SidebarNavItem]
         : [];
     }
     if (view === "bidding") return biddingNavItems;

@@ -40,38 +40,36 @@ export function BidHandoffActions() {
   };
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-ink/[0.08] bg-surface/90 p-3">
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-ink/55">
+        {saving ? "Saving draft…" : "Incomplete OK — draft autosaves"}
+      </p>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-ink/45">
-          {saving ? "Saving draft…" : "Incomplete OK — draft autosaves"}
-        </span>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            disabled={
-              !editable ||
-              busy !== null ||
-              (wf != null && wf.canReturn === false)
-            }
-            onClick={() => void runHandoff("return")}
-            className="rounded-xl border border-ink/10 px-3 py-2 text-sm font-medium text-ink/70 transition hover:bg-ink/[0.03] disabled:opacity-40"
-          >
-            {busy === "return" ? "Returning…" : "Return"}
-          </button>
-          <button
-            type="button"
-            disabled={
-              !editable ||
-              busy !== null ||
-              (wf != null && wf.canComplete === false)
-            }
-            title={wf?.completeBlockedReason || undefined}
-            onClick={() => void runHandoff("complete")}
-            className="rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-40"
-          >
-            {busy === "complete" ? "Handing off…" : "Complete & Hand Off"}
-          </button>
-        </div>
+        <button
+          type="button"
+          disabled={
+            !editable ||
+            busy !== null ||
+            (wf != null && wf.canReturn === false)
+          }
+          onClick={() => void runHandoff("return")}
+          className="rounded-xl border border-ink/10 px-3 py-2 text-sm font-medium text-ink/70 transition hover:bg-ink/[0.03] disabled:opacity-40"
+        >
+          {busy === "return" ? "Returning…" : "Return"}
+        </button>
+        <button
+          type="button"
+          disabled={
+            !editable ||
+            busy !== null ||
+            (wf != null && wf.canComplete === false)
+          }
+          title={wf?.completeBlockedReason || undefined}
+          onClick={() => void runHandoff("complete")}
+          className="rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-40"
+        >
+          {busy === "complete" ? "Handing off…" : "Complete & Hand Off"}
+        </button>
       </div>
 
       {wf?.completeBlockedReason && !wf.canComplete ? (

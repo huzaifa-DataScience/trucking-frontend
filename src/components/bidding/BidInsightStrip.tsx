@@ -24,7 +24,7 @@ function InsightCard({
           : "bg-ink/15";
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.05)]">
+    <div className="relative overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.05)]">
       <div className={`absolute left-0 top-0 h-full w-1 ${accentBar}`} aria-hidden />
       <p className="pl-2 text-[10px] font-semibold uppercase tracking-wider text-ink/40">{label}</p>
       <p className="pl-2 mt-2 text-xl font-bold tracking-tight text-ink sm:text-2xl">{value}</p>
@@ -68,7 +68,7 @@ export function BidInsightStrip({ insights }: { insights: BidInsights }) {
         sub="From Base Bid inputs"
         accent="neutral"
       />
-      <div className="relative overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.05)]">
+      <div className="relative overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.05)]">
         <div className="absolute left-0 top-0 h-full w-1 bg-brand/60" aria-hidden />
         <p className="pl-2 text-[10px] font-semibold uppercase tracking-wider text-ink/40">
           Bid progress

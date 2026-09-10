@@ -126,6 +126,35 @@ export function SkeletonChatBubbles({ rows = 6 }: { rows?: number }) {
   );
 }
 
+/** Shape-matched loading state for the bid-sheet chrome: back link, title/badges, stage strip, content block. */
+export function BidSheetSkeleton() {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-4 py-2" role="status" aria-label="Loading bid sheet">
+      <Skeleton className="h-4 w-16" />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="mt-2 h-4 w-56" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+        </div>
+        <div className="flex gap-2 overflow-hidden">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="h-9 w-28 shrink-0 rounded-xl" />
+          ))}
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 rounded-2xl border border-ink/[0.08] bg-surface p-5">
+        <FormSkeleton fields={5} />
+      </div>
+    </div>
+  );
+}
+
 /** Shape-matched loading state for form/wizard pages: label+field blocks. */
 export function FormSkeleton({ fields = 6 }: { fields?: number }) {
   return (
