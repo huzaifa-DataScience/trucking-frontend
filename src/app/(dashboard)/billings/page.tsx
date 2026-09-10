@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { KPICards } from "@/components/reporting/KPICards";
 import {
   useSitelineStatus,
   useSitelineCompany,
@@ -30,7 +29,6 @@ import type {
 } from "@/lib/api/endpoints/siteline";
 import { ContractDetailModal } from "@/components/billings/ContractDetailModal";
 import { PayAppDetailModal } from "@/components/billings/PayAppDetailModal";
-import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useCompany } from "@/contexts/CompanyContext";
 import { sitelineEntityIdFromContext } from "@/lib/siteline-entity";
 import { SitelineClearstoryGapsBanner } from "@/components/billings/SitelineClearstoryGapsBanner";
@@ -119,6 +117,40 @@ function compareValues(a: unknown, b: unknown, dir: "ASC" | "DESC"): number {
   if (b == null) return -1;
   if (typeof a === "number" && typeof b === "number") return (a - b) * mul;
   return String(a).localeCompare(String(b), undefined, { numeric: true }) * mul;
+}
+
+/** White card, urgent "Past Due" badge, skeleton-in-place while data loads (no layout shift). */
+function PastDueMetricCard({
+  label,
+  value,
+  icon,
+  loading,
+}: {
+  label: string;
+  value: string | number;
+  icon: ReactNode;
+  loading: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow dark:border-stone-700 dark:bg-stone-900">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300">
+          Past Due
+        </span>
+        <p className="mt-1.5 text-xs font-medium text-slate-500 dark:text-stone-400">{label}</p>
+        {loading ? (
+          <div className="mt-1.5 h-6 w-28 animate-pulse rounded bg-slate-100 dark:bg-stone-800" aria-hidden />
+        ) : (
+          <p className="mt-1 animate-[fade-in_200ms_ease] text-xl font-bold tracking-tight text-slate-900 dark:text-stone-100">
+            {value}
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function SortableTh({
@@ -229,6 +261,8 @@ export default function BillingsPage() {
   const [activeTab, setActiveTab] = useState<"contracts" | "aging" | "overdue">(
     CONTRACTS_PAYAPPS_TAB_ENABLED ? "contracts" : "aging"
   );
+  const [showSyncDetails, setShowSyncDetails] = useState(false);
+  const [gapsChecking, setGapsChecking] = useState(true);
 
   const [agingReport, setAgingReport] = useState<AgingReportResponse | null>(null);
   const [agingLoading, setAgingLoading] = useState(false);
@@ -478,42 +512,74 @@ export default function BillingsPage() {
     return copy;
   }, [agingOverdue, overdueSort]);
 
-  const initialLoading =
-    statusLoading ||
-    (CONTRACTS_PAYAPPS_TAB_ENABLED &&
-      activeTab === "contracts" &&
-      !contractsPage &&
-      contractsLoading) ||
-    (CONTRACTS_PAYAPPS_TAB_ENABLED &&
-      activeTab === "contracts" &&
-      !payAppsPage &&
-      payAppsLoading);
   const topError = statusError;
 
   const contracts = contractsPage?.contracts ?? [];
   const payApps = payAppsPage?.payApps ?? [];
+  // One combined signal for "something is fetching" — status check, aging report,
+  // overdue list, or the Clearstory gap check. Feeding statusLoading into the tab
+  // skeletons too (below) means the page goes straight from first paint to shape-matched
+  // skeletons to content, with no separate generic loading flash in between.
+  const isSyncing =
+    statusLoading ||
+    agingLoading ||
+    agingOverdueLoading ||
+    (configured && sitelineEntityId != null && gapsChecking);
+  const showAgingSkeleton = statusLoading || agingLoading;
+  const showOverdueSkeleton = statusLoading || agingOverdueLoading;
 
   return (
     <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-6">
       <div className="shrink-0">
-        <h2 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-          Billings
-        </h2>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h2 className="text-xl font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+            Billing
+          </h2>
+          <div className="flex shrink-0 items-center gap-3">
+            {isSyncing && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+                <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <circle className="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" />
+                  <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+                Syncing with Clearstory…
+              </span>
+            )}
+            {configured && sitelineEntityId != null && (
+              <button
+                type="button"
+                onClick={() => setShowSyncDetails((v) => !v)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300 dark:hover:bg-stone-800"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 16v-4M12 8h.01" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {showSyncDetails ? "Hide sync details" : "View sync details"}
+              </button>
+            )}
+          </div>
+        </div>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Siteline construction billing — contracts, schedule of values, and pay applications.
-          {ourCompany
-            ? ` Showing data for ${ourCompany.name}.`
-            : sitelineEntityId != null
-              ? " Showing data for GOEL DC (default when All companies is selected)."
-              : null}
+          Siteline construction billing, covering contracts, schedule of values, and pay applications.
+          {ourCompany ? ` Showing ${ourCompany.name}.` : null}
         </p>
       </div>
 
-      {configured && sitelineEntityId != null ? (
-        <SitelineClearstoryGapsBanner entityId={sitelineEntityId} className="shrink-0" />
-      ) : null}
+      {showSyncDetails && (
+        <div className="shrink-0 rounded-lg border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600 dark:border-stone-700 dark:bg-stone-800/50 dark:text-stone-300">
+          A/R aging data syncs from Siteline automatically every 10 minutes. Past due and Clearstory
+          reconciliation checks run in the background whenever this page is open.
+        </div>
+      )}
 
-      {initialLoading && <TableSkeleton rows={6} />}
+      {configured && sitelineEntityId != null ? (
+        <SitelineClearstoryGapsBanner
+          entityId={sitelineEntityId}
+          className="shrink-0"
+          onLoadingChange={setGapsChecking}
+        />
+      ) : null}
 
       {!statusLoading && !configured && (
         <Card className="border-brand/30 bg-brand/5 dark:border-brand/40 dark:bg-brand/10">
@@ -537,59 +603,84 @@ export default function BillingsPage() {
         </div>
       )}
 
-      {!initialLoading && configured && (
+      {(statusLoading || configured) && (
         <>
           {company && (
-            <p className="shrink-0 text-sm text-stone-500 dark:text-stone-400">
-              Company: <span className="font-medium text-stone-700 dark:text-stone-300">{company.name}</span>
-            </p>
+            <div className="shrink-0">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-300">
+                <svg className="h-3 w-3 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                  <path d="M3 21h18M6 21V7l6-4 6 4v14M10 21v-6h4v6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {company.name}
+              </span>
+            </div>
           )}
 
-          <div className="shrink-0">
-            <KPICards
-              items={[
-                { label: "Past Due Exposure", value: formatAgingCurrency(pastDueTotal) },
-                { label: "Past Due Contracts", value: pastDueCount },
-              ]}
+          <div className="grid shrink-0 grid-cols-1 gap-4 sm:grid-cols-2">
+            <PastDueMetricCard
+              label="Past Due Exposure"
+              value={formatAgingCurrency(pastDueTotal)}
+              loading={showOverdueSkeleton && !agingOverdue}
+              icon={
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75}>
+                  <path d="M12 3v18M17 7.5c0-1.93-2.24-3.5-5-3.5s-5 1.57-5 3.5 2.24 3.5 5 3.5 5 1.57 5 3.5-2.24 3.5-5 3.5-5-1.57-5-3.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              }
+            />
+            <PastDueMetricCard
+              label="Past Due Contracts"
+              value={pastDueCount}
+              loading={showOverdueSkeleton && !agingOverdue}
+              icon={
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75}>
+                  <path d="M7 3h7l4 4v14a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M9 12h6M9 16h6" strokeLinecap="round" />
+                </svg>
+              }
             />
           </div>
 
           <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
-          <div className="shrink-0 flex w-full min-w-0 gap-1 border-b border-stone-200 dark:border-stone-700">
+          <div className="shrink-0 flex w-full min-w-0 gap-5 border-b border-slate-200 dark:border-stone-700">
             {CONTRACTS_PAYAPPS_TAB_ENABLED && (
               <button
                 type="button"
                 onClick={() => setActiveTab("contracts")}
-                className={`rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+                className={`relative pb-3 text-sm font-medium transition-colors ${
                   activeTab === "contracts"
-                    ? "bg-white text-stone-900 shadow-sm dark:bg-stone-900 dark:text-stone-100 border border-stone-200 border-b-0 dark:border-stone-700"
-                    : "text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+                    ? "text-slate-900 dark:text-stone-100"
+                    : "text-slate-500 hover:text-slate-700 dark:text-stone-400 dark:hover:text-stone-200"
                 }`}
               >
                 Contracts & Pay apps
+                {activeTab === "contracts" && (
+                  <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />
+                )}
               </button>
             )}
             <button
               type="button"
               onClick={() => setActiveTab("aging")}
-              className={`rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`relative pb-3 text-sm font-medium transition-colors ${
                 activeTab === "aging"
-                  ? "bg-white text-stone-900 shadow-sm dark:bg-stone-900 dark:text-stone-100 border border-stone-200 border-b-0 dark:border-stone-700"
-                  : "text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+                  ? "text-slate-900 dark:text-stone-100"
+                  : "text-slate-500 hover:text-slate-700 dark:text-stone-400 dark:hover:text-stone-200"
               }`}
             >
               A/R Aging
+              {activeTab === "aging" && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />}
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("overdue")}
-              className={`rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`relative pb-3 text-sm font-medium transition-colors ${
                 activeTab === "overdue"
-                  ? "bg-white text-stone-900 shadow-sm dark:bg-stone-900 dark:text-stone-100 border border-stone-200 border-b-0 dark:border-stone-700"
-                  : "text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+                  ? "text-slate-900 dark:text-stone-100"
+                  : "text-slate-500 hover:text-slate-700 dark:text-stone-400 dark:hover:text-stone-200"
               }`}
             >
               Past due
+              {activeTab === "overdue" && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />}
             </button>
           </div>
 
@@ -1005,7 +1096,6 @@ export default function BillingsPage() {
                 </div>
               </div>
               </div>
-              {agingLoading && <TableSkeleton rows={8} toolbar={false} />}
               {agingError && (
                 <div className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
                   {agingError}
@@ -1018,12 +1108,12 @@ export default function BillingsPage() {
                   </button>
                 </div>
               )}
-              {!agingLoading && !agingError && agingReport && agingReport.rows.length === 0 && (
+              {!showAgingSkeleton && !agingError && agingReport && agingReport.rows.length === 0 && (
                 <p className="shrink-0 py-8 text-center text-sm text-stone-500 dark:text-stone-400">
                   No aging data yet. Data syncs every 10 minutes.
                 </p>
               )}
-              {!agingLoading && !agingError && agingReport && agingReport.rows.length > 0 && (
+              {!agingError && (showAgingSkeleton || (agingReport && agingReport.rows.length > 0)) && (
                 <div className={BILLING_TABLE_FILL_SCROLL}>
                   <table className="min-w-full text-sm">
                     <thead>
@@ -1064,7 +1154,18 @@ export default function BillingsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedAgingRows.map((row, i) => (
+                      {showAgingSkeleton &&
+                        Array.from({ length: 8 }, (_, i) => (
+                          <tr key={`skeleton-${i}`} className="border-b border-stone-100 last:border-0 dark:border-stone-800">
+                            {Array.from({ length: agingDisplayBuckets.length + 5 }, (_, j) => (
+                              <td key={j} className="px-3 py-2.5">
+                                <div className="h-3.5 w-full max-w-24 animate-pulse rounded bg-stone-200/80 dark:bg-stone-700/60" />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      {!showAgingSkeleton &&
+                        sortedAgingRows.map((row, i) => (
                         <tr
                           key={i}
                           className="border-b border-stone-100 last:border-0 dark:border-stone-800"
@@ -1107,34 +1208,36 @@ export default function BillingsPage() {
                           </td>
                         </tr>
                       ))}
-                      <tr className="border-t-2 border-stone-300 bg-stone-50 font-semibold dark:border-stone-600 dark:bg-stone-800/50">
-                        <td className="sticky left-0 z-10 bg-stone-50 px-3 py-2 dark:bg-stone-800/50">
-                          TOTALS
-                        </td>
-                        <td className="px-3 py-2 text-stone-900 dark:text-stone-100 tabular-nums">
-                          {/* PM column has no totals */}
-                        </td>
-                        <td className="px-3 py-2 text-stone-900 dark:text-stone-100 tabular-nums">
-                          {/* Invoice # column has no totals */}
-                        </td>
-                        <td className="px-3 py-2 text-stone-900 dark:text-stone-100">
-                          {/* Invoice date column has no totals */}
-                        </td>
-                        {agingDisplayBuckets.map((b) => {
-                          const bucketTotal = agingReport.totals[b as keyof typeof agingReport.totals];
-                          return (
-                            <td
-                              key={b}
-                              className={`px-3 py-2 text-right tabular-nums ${agingBucketCellClass(b, bucketTotal, "text-stone-900 dark:text-stone-100")}`}
-                            >
-                              {formatAgingCurrency(bucketTotal)}
-                            </td>
-                          );
-                        })}
-                        <td className="px-3 py-2 text-right text-stone-900 dark:text-stone-100 tabular-nums">
-                          {formatAgingCurrency(agingReport.totals.projectTotal)}
-                        </td>
-                      </tr>
+                      {!showAgingSkeleton && agingReport && (
+                        <tr className="border-t-2 border-stone-300 bg-stone-50 font-semibold dark:border-stone-600 dark:bg-stone-800/50">
+                          <td className="sticky left-0 z-10 bg-stone-50 px-3 py-2 dark:bg-stone-800/50">
+                            TOTALS
+                          </td>
+                          <td className="px-3 py-2 text-stone-900 dark:text-stone-100 tabular-nums">
+                            {/* PM column has no totals */}
+                          </td>
+                          <td className="px-3 py-2 text-stone-900 dark:text-stone-100 tabular-nums">
+                            {/* Invoice # column has no totals */}
+                          </td>
+                          <td className="px-3 py-2 text-stone-900 dark:text-stone-100">
+                            {/* Invoice date column has no totals */}
+                          </td>
+                          {agingDisplayBuckets.map((b) => {
+                            const bucketTotal = agingReport.totals[b as keyof typeof agingReport.totals];
+                            return (
+                              <td
+                                key={b}
+                                className={`px-3 py-2 text-right tabular-nums ${agingBucketCellClass(b, bucketTotal, "text-stone-900 dark:text-stone-100")}`}
+                              >
+                                {formatAgingCurrency(bucketTotal)}
+                              </td>
+                            );
+                          })}
+                          <td className="px-3 py-2 text-right text-stone-900 dark:text-stone-100 tabular-nums">
+                            {formatAgingCurrency(agingReport.totals.projectTotal)}
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1295,7 +1398,6 @@ export default function BillingsPage() {
                 </div>
               </div>
               </div>
-              {agingOverdueLoading && <TableSkeleton rows={8} toolbar={false} />}
               {agingOverdueError && (
                 <div className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
                   {agingOverdueError}
@@ -1308,7 +1410,7 @@ export default function BillingsPage() {
                   </button>
                 </div>
               )}
-              {!agingOverdueLoading &&
+              {!showOverdueSkeleton &&
                 !agingOverdueError &&
                 agingOverdue &&
                 agingOverdue.items.length === 0 && (
@@ -1316,10 +1418,8 @@ export default function BillingsPage() {
                     No pay apps at least {overdueMinDays} days past due (with current filters).
                   </p>
                 )}
-              {!agingOverdueLoading &&
-                !agingOverdueError &&
-                agingOverdue &&
-                agingOverdue.items.length > 0 && (
+              {!agingOverdueError &&
+                (showOverdueSkeleton || (agingOverdue && agingOverdue.items.length > 0)) && (
                   <div className={BILLING_TABLE_FILL_SCROLL}>
                     <table className="min-w-full text-sm">
                       <thead>
@@ -1364,7 +1464,18 @@ export default function BillingsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {sortedOverdueItems.map((item: AgingOverdueItem, idx: number) => {
+                        {showOverdueSkeleton &&
+                          Array.from({ length: 8 }, (_, i) => (
+                            <tr key={`skeleton-${i}`} className="border-b border-stone-100 last:border-0 dark:border-stone-800">
+                              {Array.from({ length: 9 }, (_, j) => (
+                                <td key={j} className="px-3 py-2.5">
+                                  <div className="h-3.5 w-full max-w-24 animate-pulse rounded bg-stone-200/80 dark:bg-stone-700/60" />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        {!showOverdueSkeleton &&
+                          sortedOverdueItems.map((item: AgingOverdueItem, idx: number) => {
                           const due = item.dueDate
                             ? new Date(item.dueDate).toLocaleDateString("en-US", {
                                 year: "numeric",

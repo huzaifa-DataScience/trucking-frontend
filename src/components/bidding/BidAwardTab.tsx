@@ -86,7 +86,7 @@ export function BidAwardTab() {
       </div>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-4 sm:grid-cols-2">
+      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
         {(
           [
             ["jobNumber", "Job number"],
@@ -113,7 +113,7 @@ export function BidAwardTab() {
         ))}
       </section>
 
-      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4">
+      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-ink/60">
             Linked job id (bid.jobId — Trimble / Connecteam)
