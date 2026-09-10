@@ -192,7 +192,16 @@ export function BidAttachmentsSection({
                   {isEditable ? (
                     <button
                       type="button"
-                      onClick={() => void onDelete(att.id)}
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            `Remove attachment “${att.fileName}”?`
+                          )
+                        ) {
+                          return;
+                        }
+                        void onDelete(att.id);
+                      }}
                       className="text-xs font-semibold text-ink/45 hover:text-danger"
                     >
                       Remove

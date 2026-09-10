@@ -36,7 +36,6 @@ export default function NewBidPage() {
   const { canWrite } = useBiddingAccess();
   const [estimateNumber, setEstimateNumber] = useState("");
   const [bidName, setBidName] = useState("");
-  const [jobId, setJobId] = useState("");
   const [workType, setWorkType] = useState("");
   const [entity, setEntity] = useState(
     companyId && companyId !== "all" ? companyId : "1"
@@ -54,14 +53,6 @@ export default function NewBidPage() {
           { value: "3", label: "DCB" },
         ];
 
-  const jobOptions = [
-    { value: "", label: "No job (optional)" },
-    ...lookups.jobs.map((j) => ({
-      value: String(j.id),
-      label: j.name || `Job #${j.id}`,
-    })),
-  ];
-
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     const est = estimateNumber.trim();
@@ -73,12 +64,10 @@ export default function NewBidPage() {
     setError(null);
     setDuplicateBidId(null);
     try {
-      const parsedJobId = jobId ? Number(jobId) : undefined;
       const created = await biddingApi.createBid({
         ourEntityId: Number(entity),
         estimateNumber: est,
         bidName: bidName.trim() || undefined,
-        jobId: parsedJobId,
         process: {
           stage: "intake",
           outcome: "open",
@@ -179,9 +168,6 @@ export default function NewBidPage() {
               onChange={setBidName}
               placeholder="Job name as it appears on the proposal"
             />
-          </BidFormField>
-          <BidFormField label="Linked job" htmlFor="job" hint="Optional — enables company prefill on the sheet.">
-            <BidSelect id="job" value={jobId} onChange={setJobId} options={jobOptions} />
           </BidFormField>
           <BidFormField label="Company bidding" htmlFor="co" hint="Matches header company when set.">
             <BidSelect id="co" value={entity} onChange={setEntity} options={entityOptions} />

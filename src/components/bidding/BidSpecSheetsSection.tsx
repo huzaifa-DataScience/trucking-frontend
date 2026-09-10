@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import * as biddingSpecsApi from "@/lib/api/endpoints/biddingSpecs";
 import { normalizeSpecDimOptions } from "@/lib/api/endpoints/biddingSpecs";
@@ -41,12 +41,14 @@ import {
   kindLabel,
   manufacturersFromMeta,
   mintSpecSheet,
+  MIKE_SIZE_MAX,
   normalizeSpecSheets,
   resizeInsulationLayers,
   SPEC_INSULATION_LAYER_COUNTS,
   syncPrimaryMaterialFields,
   specSheetsFingerprint,
 } from "@/lib/bidding/specSheetMap";
+import { newId } from "@/lib/bidding/newId";
 
 /** Prefer local row values; only take missing codes/unit from server echo. */
 function mergeIncomingSheets(
@@ -112,6 +114,99 @@ function CodeChip({ code }: { code: string | null | undefined }) {
 
 function dimLabel(opt: SpecSizeOption): string {
   return opt.label?.trim() || `${opt.value}"`;
+}
+
+type SpecColDef = { key: string; label: string; defaultWidth: number };
+
+function buildSpecColDefs(opts: {
+  maxInsulationCols: number;
+  showDuctShape: boolean;
+  editable: boolean;
+}): SpecColDef[] {
+  const cols: SpecColDef[] = [
+    { key: "system", label: "System", defaultWidth: 140 },
+    { key: "systemCode", label: "Code", defaultWidth: 56 },
+    { key: "unit", label: "Unit", defaultWidth: 48 },
+    { key: "area", label: "Area", defaultWidth: 110 },
+    { key: "areaCode", label: "Code", defaultWidth: 56 },
+    { key: "family", label: "Family", defaultWidth: 110 },
+    { key: "layers", label: "Layers", defaultWidth: 64 },
+  ];
+  for (let i = 0; i < opts.maxInsulationCols; i++) {
+    cols.push(
+      { key: `ins-${i}`, label: `Insulation ${i + 1}`, defaultWidth: 140 },
+      { key: `insCode-${i}`, label: "Code", defaultWidth: 56 }
+    );
+  }
+  cols.push(
+    { key: "mike", label: "Mike code", defaultWidth: 100 },
+    { key: "facing", label: "Facing", defaultWidth: 88 },
+    { key: "covering", label: "Covering", defaultWidth: 100 }
+  );
+  if (opts.showDuctShape) {
+    cols.push({ key: "shape", label: "Shape", defaultWidth: 88 });
+  }
+  cols.push(
+    { key: "from", label: "From", defaultWidth: 80 },
+    { key: "to", label: "To", defaultWidth: 80 },
+    { key: "width", label: 'Width"', defaultWidth: 72 },
+    { key: "thick", label: 'Thick"', defaultWidth: 72 },
+    { key: "mfr", label: "Mfr", defaultWidth: 110 },
+    { key: "preferred", label: "Preferred", defaultWidth: 100 },
+    { key: "accessories", label: "Accessories", defaultWidth: 120 },
+    { key: "section", label: "§", defaultWidth: 56 },
+    { key: "paragraph", label: "¶", defaultWidth: 56 },
+    { key: "notes", label: "Notes", defaultWidth: 140 }
+  );
+  if (opts.editable) {
+    cols.push({ key: "actions", label: "", defaultWidth: 64 });
+  }
+  return cols;
+}
+
+function ResizableTh({
+  label,
+  width,
+  onResize,
+}: {
+  label: string;
+  width: number;
+  onResize: (next: number) => void;
+}) {
+  return (
+    <th
+      className="relative whitespace-nowrap px-1 py-1.5"
+      style={{ width, minWidth: 40, maxWidth: width }}
+    >
+      {label}
+      <span
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize column"
+        title="Drag to resize column"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const startX = e.clientX;
+          const startW = width;
+          const onMove = (ev: MouseEvent) => {
+            onResize(Math.max(40, Math.round(startW + (ev.clientX - startX))));
+          };
+          const onUp = () => {
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+          };
+          document.body.style.cursor = "col-resize";
+          document.body.style.userSelect = "none";
+          window.addEventListener("mousemove", onMove);
+          window.addEventListener("mouseup", onUp);
+        }}
+        className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize hover:bg-brand/40 active:bg-brand/60"
+      />
+    </th>
+  );
 }
 
 function SpecImageThumb({
@@ -427,6 +522,24 @@ export function BidSpecSheetsSection({
     meta?.specSheetEditor?.manufacturers
   );
   const ductShapeOptions = ductShapesFromMeta(meta?.specSheetEditor?.ductShapes);
+  const mikeSizeMax =
+    typeof meta?.specSheetEditor?.mikeSizeMax === "number"
+      ? meta.specSheetEditor.mikeSizeMax
+      : MIKE_SIZE_MAX;
+  const sizeRangeMin =
+    typeof meta?.specSheetEditor?.sizeRange?.min === "number"
+      ? meta.specSheetEditor.sizeRange.min
+      : 0;
+  const sizeRangeMax =
+    typeof meta?.specSheetEditor?.sizeRange?.max === "number"
+      ? meta.specSheetEditor.sizeRange.max
+      : 999;
+  const clampInch = (n: number | null): number | null => {
+    if (n == null || !Number.isFinite(n)) return null;
+    return Math.min(sizeRangeMax, Math.max(sizeRangeMin, n));
+  };
+  const allowCopyRow = meta?.specSheetEditor?.copyRow !== false;
+  const allowStackSheets = meta?.specSheetEditor?.stackSheets !== false;
 
   const [sheets, setSheets] = useState<SpecSheet[]>(() =>
     normalizeSpecSheets(sheetsProp)
@@ -436,6 +549,9 @@ export function BidSpecSheetsSection({
   const lastEmittedFp = useRef(specSheetsFingerprint(sheets));
   const onSheetsChangeRef = useRef(onSheetsChange);
   onSheetsChangeRef.current = onSheetsChange;
+  const [stackAll, setStackAll] = useState(false);
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const [rowHeights, setRowHeights] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const incoming = normalizeSpecSheets(sheetsProp);
@@ -660,8 +776,21 @@ export function BidSpecSheetsSection({
       kind === "duct" || kind === "equipment"
         ? []
         : normalizeSpecDimOptions(mat.sizes ?? []);
+    const withMikeMax =
+      sizes.length === 0
+        ? sizes
+        : sizes.some((s) => Number(s.value) === mikeSizeMax)
+          ? sizes
+          : [
+              ...sizes,
+              {
+                value: mikeSizeMax,
+                label: `${mikeSizeMax} (and greater)`,
+                sortOrder: 9999,
+              },
+            ];
     return {
-      sizes,
+      sizes: withMikeMax,
       thicknesses: normalizeSpecDimOptions(mat.thicknesses ?? []),
     };
   };
@@ -675,6 +804,7 @@ export function BidSpecSheetsSection({
     materialCode: null,
     sizeMin: null,
     sizeMax: null,
+    widthIn: null,
     thicknessIn: null,
     facing: null,
     jacket: null,
@@ -690,6 +820,7 @@ export function BidSpecSheetsSection({
     materialCode: null,
     sizeMin: null,
     sizeMax: null,
+    widthIn: null,
     thicknessIn: null,
     facing: null,
     jacket: null,
@@ -703,6 +834,7 @@ export function BidSpecSheetsSection({
     materialCode: null,
     sizeMin: null,
     sizeMax: null,
+    widthIn: null,
     thicknessIn: null,
     facing: null,
     jacket: null,
@@ -769,6 +901,7 @@ export function BidSpecSheetsSection({
       ...primary,
       sizeMin: null,
       sizeMax: null,
+      widthIn: null,
     };
     // blanks only from first layer material defaults
     if (layerIndex === 0 && mat) {
@@ -879,6 +1012,7 @@ export function BidSpecSheetsSection({
       ...primary,
       sizeMin: null,
       sizeMax: null,
+      widthIn: null,
     });
   };
 
@@ -943,6 +1077,7 @@ export function BidSpecSheetsSection({
         ...primary,
         sizeMin: null,
         sizeMax: null,
+        widthIn: null,
       };
       if (!row.facing && mat.facing) {
         next.facing = String(mat.facing).trim() || null;
@@ -973,6 +1108,12 @@ export function BidSpecSheetsSection({
 
   const removeSheet = (id: string) => {
     if (!editable) return;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("Delete this spec sheet? This cannot be undone from here.")
+    ) {
+      return;
+    }
     const next = sheetsRef.current.filter((s) => s.id !== id);
     commitSheets(next);
     setActiveId(next[0]?.id ?? null);
@@ -985,8 +1126,29 @@ export function BidSpecSheetsSection({
     });
   };
 
+  const copyRow = (rowId: string) => {
+    if (!active || !editable || !allowCopyRow) return;
+    if (active.rows.length >= MAX_SPEC_ROWS) return;
+    const idx = active.rows.findIndex((r) => r.id === rowId);
+    if (idx < 0) return;
+    const src = active.rows[idx];
+    const clone: SpecSheetRow = {
+      ...(JSON.parse(JSON.stringify(src)) as SpecSheetRow),
+      id: newId(),
+    };
+    const rows = [...active.rows];
+    rows.splice(idx + 1, 0, clone);
+    replaceSheet(active.id, { rows });
+  };
+
   const removeRow = (rowId: string) => {
     if (!active || !editable) return;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("Delete this row?")
+    ) {
+      return;
+    }
     replaceSheet(active.id, {
       rows: active.rows.filter((r) => r.id !== rowId),
     });
@@ -1026,6 +1188,12 @@ export function BidSpecSheetsSection({
 
   const detachImage = async (attachmentId: number) => {
     if (!active || !editable) return;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("Remove this schedule photo?")
+    ) {
+      return;
+    }
     setUploadError(null);
     try {
       await deleteAttachment(attachmentId);
@@ -1046,6 +1214,37 @@ export function BidSpecSheetsSection({
   const showDuctShape = active?.kind === "duct";
   const buyAmericanChecked = buyAmerican === true;
   const aPlusChecked = aPlus === true;
+  const specColDefs = useMemo(
+    () =>
+      buildSpecColDefs({
+        maxInsulationCols: maxInsulationCols || 1,
+        showDuctShape,
+        editable,
+      }),
+    [maxInsulationCols, showDuctShape, editable]
+  );
+  const widthFor = (key: string, fallback: number) =>
+    colWidths[key] ?? fallback;
+  const setColWidth = (key: string, next: number) =>
+    setColWidths((prev) => ({ ...prev, [key]: next }));
+  const startRowResize = (rowId: string, startY: number, startH: number) => {
+    const onMove = (ev: MouseEvent) => {
+      setRowHeights((prev) => ({
+        ...prev,
+        [rowId]: Math.max(28, Math.round(startH + (ev.clientY - startY))),
+      }));
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -1154,26 +1353,133 @@ export function BidSpecSheetsSection({
         ) : (
           <>
             <div className="mt-4 flex flex-wrap gap-1.5">
-              {sheets.map((s) => {
-                const on = s.id === activeId;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setActiveId(s.id)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                      on
-                        ? "bg-brand text-white"
-                        : "bg-ink/[0.05] text-ink/70 hover:bg-ink/[0.08]"
-                    }`}
-                  >
-                    {s.title || kindLabel(s.kind)}
-                  </button>
-                );
-              })}
+              {allowStackSheets ? (
+                <button
+                  type="button"
+                  onClick={() => setStackAll((v) => !v)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                    stackAll
+                      ? "bg-ink text-white"
+                      : "bg-ink/[0.05] text-ink/70 hover:bg-ink/[0.08]"
+                  }`}
+                >
+                  {stackAll ? "Stacked view" : "Stack all"}
+                </button>
+              ) : null}
+              {!stackAll
+                ? sheets.map((s) => {
+                    const on = s.id === activeId;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setStackAll(false);
+                          setActiveId(s.id);
+                        }}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                          on
+                            ? "bg-brand text-white"
+                            : "bg-ink/[0.05] text-ink/70 hover:bg-ink/[0.08]"
+                        }`}
+                      >
+                        {s.title || kindLabel(s.kind)}
+                      </button>
+                    );
+                  })
+                : null}
             </div>
 
-            {active ? (
+            {stackAll ? (
+              <div className="mt-4 flex flex-col gap-6">
+                {sheets.map((s) => (
+                  <div
+                    key={s.id}
+                    className="rounded-xl border border-ink/[0.08] bg-canvas/20 p-3"
+                  >
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <h4 className="text-sm font-semibold text-ink">
+                        {s.title || kindLabel(s.kind)}
+                        {s.specNumber ? (
+                          <span className="ml-2 text-xs font-normal text-ink/45">
+                            § {s.specNumber}
+                          </span>
+                        ) : null}
+                      </h4>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-brand hover:underline"
+                        onClick={() => {
+                          setStackAll(false);
+                          setActiveId(s.id);
+                        }}
+                      >
+                        Edit sheet
+                      </button>
+                    </div>
+                    {s.rows.length === 0 ? (
+                      <p className="text-xs text-ink/40">No rows</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-left text-[11px]">
+                          <thead className="text-ink/45">
+                            <tr>
+                              <th className="px-1 py-1">System</th>
+                              <th className="px-1 py-1">Area</th>
+                              <th className="px-1 py-1">Family</th>
+                              <th className="px-1 py-1">Insulation</th>
+                              <th className="px-1 py-1">Size</th>
+                              <th className="px-1 py-1">Preferred</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {s.rows.map((r) => (
+                              <tr
+                                key={r.id}
+                                className="border-t border-ink/[0.04]"
+                              >
+                                <td className="px-1 py-1">
+                                  {r.systemName || "—"}
+                                </td>
+                                <td className="px-1 py-1">
+                                  {r.areaName || "—"}
+                                </td>
+                                <td className="px-1 py-1">
+                                  {r.insulationFamily || "—"}
+                                </td>
+                                <td className="px-1 py-1">
+                                  {r.materialName || "—"}
+                                </td>
+                                <td className="px-1 py-1">
+                                  {r.sizeMin === sizeRangeMin &&
+                                  r.sizeMax === mikeSizeMax
+                                    ? "All"
+                                    : [
+                                        r.sizeMin != null || r.sizeMax != null
+                                          ? `${r.sizeMin ?? "?"}–${r.sizeMax ?? "?"}`
+                                          : null,
+                                        r.widthIn != null
+                                          ? `W ${r.widthIn}"`
+                                          : null,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" · ") || "—"}
+                                </td>
+                                <td className="px-1 py-1">
+                                  {r.manufacturerPreferred || "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {!stackAll && active ? (
               <div className="mt-4 flex flex-col gap-3">
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="flex min-w-[12rem] flex-1 flex-col gap-1">
@@ -1219,46 +1525,30 @@ export function BidSpecSheetsSection({
                 </div>
 
                 <div className="overflow-x-auto rounded-xl border border-ink/[0.08]">
-                  <table className="w-max min-w-full border-collapse text-left text-xs leading-tight">
+                  <table
+                    className="w-max min-w-full border-collapse text-left text-xs leading-tight"
+                    style={{ tableLayout: "fixed" }}
+                  >
+                    <colgroup>
+                      {specColDefs.map((c) => (
+                        <col
+                          key={c.key}
+                          style={{
+                            width: widthFor(c.key, c.defaultWidth),
+                          }}
+                        />
+                      ))}
+                    </colgroup>
                     <thead className="bg-ink/[0.03] text-[11px] font-semibold text-ink/55">
                       <tr>
-                        <th className="whitespace-nowrap px-1 py-1.5">System</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Code</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Unit</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Area</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Code</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Family</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Layers</th>
-                        {Array.from({ length: maxInsulationCols }, (_, i) => (
-                          <Fragment key={`ins-h-${i}`}>
-                            <th className="whitespace-nowrap px-1 py-1.5">
-                              Insulation {i + 1}
-                            </th>
-                            <th className="whitespace-nowrap px-1 py-1.5">
-                              Code
-                            </th>
-                          </Fragment>
+                        {specColDefs.map((c) => (
+                          <ResizableTh
+                            key={c.key}
+                            label={c.label}
+                            width={widthFor(c.key, c.defaultWidth)}
+                            onResize={(next) => setColWidth(c.key, next)}
+                          />
                         ))}
-                        <th className="whitespace-nowrap px-1 py-1.5">
-                          Mike code
-                        </th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Facing</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Covering</th>
-                        {showDuctShape ? (
-                          <th className="whitespace-nowrap px-1 py-1.5">Shape</th>
-                        ) : null}
-                        <th className="whitespace-nowrap px-1 py-1.5">From</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">To</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Thick&quot;</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Mfr</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">
-                          Preferred
-                        </th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Accessories</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">§</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">¶</th>
-                        <th className="whitespace-nowrap px-1 py-1.5">Notes</th>
-                        {editable ? <th className="px-1 py-1.5" /> : null}
                       </tr>
                     </thead>
                     <tbody>
@@ -1267,12 +1557,12 @@ export function BidSpecSheetsSection({
                         const rowDims = dimsForRow(row, active.kind);
                         const rowSizes = rowDims.sizes;
                         const rowThicks = rowDims.thicknesses;
+                        const rowH = rowHeights[row.id];
                         const showPipeSizes =
                           (active.kind === "hydronic" ||
                             active.kind === "plumbing") &&
                           rowSizes.length > 0;
                         const showDuctSizeInputs = active.kind === "duct";
-                        const showOtherNote = row.insulationFamily === "other";
                         const layerCount = effectiveInsulationLayerCount(
                           row.insulationLayerCount
                         );
@@ -1299,9 +1589,31 @@ export function BidSpecSheetsSection({
                         return (
                           <tr
                             key={row.id}
-                            className="border-t border-ink/[0.06] align-middle"
+                            className="relative border-t border-ink/[0.06] align-middle"
+                            style={
+                              rowH
+                                ? { height: rowH, minHeight: rowH }
+                                : undefined
+                            }
                           >
-                            <td className="px-1 py-0.5">
+                            <td className="relative px-1 py-0.5">
+                              <span
+                                role="separator"
+                                aria-orientation="horizontal"
+                                aria-label="Resize row"
+                                title="Drag to resize row height"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  const el = e.currentTarget.closest("tr");
+                                  const startH =
+                                    rowH ||
+                                    el?.getBoundingClientRect().height ||
+                                    36;
+                                  startRowResize(row.id, e.clientY, startH);
+                                }}
+                                className="absolute inset-x-0 bottom-0 z-10 h-1 cursor-row-resize hover:bg-brand/40 active:bg-brand/60"
+                              />
                               <select
                                 disabled={!editable}
                                 className={selectClass(!editable)}
@@ -1584,36 +1896,70 @@ export function BidSpecSheetsSection({
                             ) : null}
                             <td className="px-1 py-0.5">
                               {showPipeSizes ? (
-                                <select
-                                  disabled={!editable || !canSize}
-                                  className={`${selectClass(!editable || !canSize)} w-24`}
-                                  value={
-                                    row.sizeMin != null
-                                      ? String(row.sizeMin)
-                                      : ""
-                                  }
-                                  onChange={(e) =>
-                                    patchRow(active.id, row.id, {
-                                      sizeMin: e.target.value
-                                        ? Number(e.target.value)
-                                        : null,
-                                    })
-                                  }
-                                >
-                                  <option value="">—</option>
-                                  {rowSizes.map((s) => (
-                                    <option
-                                      key={s.value}
-                                      value={String(s.value)}
-                                    >
-                                      {dimLabel(s)}
-                                    </option>
-                                  ))}
-                                </select>
+                                row.sizeMin === sizeRangeMin &&
+                                row.sizeMax === mikeSizeMax ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-medium text-ink/55">
+                                      All sizes
+                                    </span>
+                                    {editable && canSize ? (
+                                      <button
+                                        type="button"
+                                        className="text-[10px] text-brand hover:underline"
+                                        onClick={() =>
+                                          patchRow(active.id, row.id, {
+                                            sizeMin: null,
+                                            sizeMax: null,
+                                          })
+                                        }
+                                      >
+                                        Clear
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                ) : (
+                                  <select
+                                    disabled={!editable || !canSize}
+                                    className={`${selectClass(!editable || !canSize)} w-24`}
+                                    value={
+                                      row.sizeMin != null
+                                        ? String(row.sizeMin)
+                                        : ""
+                                    }
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      if (v === "__all__") {
+                                        patchRow(active.id, row.id, {
+                                          sizeMin: sizeRangeMin,
+                                          sizeMax: mikeSizeMax,
+                                        });
+                                        return;
+                                      }
+                                      patchRow(active.id, row.id, {
+                                        sizeMin: v
+                                          ? clampInch(Number(v))
+                                          : null,
+                                      });
+                                    }}
+                                  >
+                                    <option value="">—</option>
+                                    <option value="__all__">All sizes</option>
+                                    {rowSizes.map((s) => (
+                                      <option
+                                        key={s.value}
+                                        value={String(s.value)}
+                                      >
+                                        {dimLabel(s)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )
                               ) : showDuctSizeInputs ? (
                                 <input
                                   type="number"
                                   step="any"
+                                  min={sizeRangeMin}
+                                  max={sizeRangeMax}
                                   disabled={!editable || !canSize}
                                   placeholder="any"
                                   className={`${selectClass(!editable || !canSize)} w-20`}
@@ -1621,7 +1967,7 @@ export function BidSpecSheetsSection({
                                   onChange={(e) =>
                                     patchRow(active.id, row.id, {
                                       sizeMin: e.target.value
-                                        ? Number(e.target.value)
+                                        ? clampInch(Number(e.target.value))
                                         : null,
                                     })
                                   }
@@ -1632,36 +1978,45 @@ export function BidSpecSheetsSection({
                             </td>
                             <td className="px-1 py-0.5">
                               {showPipeSizes ? (
-                                <select
-                                  disabled={!editable || !canSize}
-                                  className={`${selectClass(!editable || !canSize)} w-24`}
-                                  value={
-                                    row.sizeMax != null
-                                      ? String(row.sizeMax)
-                                      : ""
-                                  }
-                                  onChange={(e) =>
-                                    patchRow(active.id, row.id, {
-                                      sizeMax: e.target.value
-                                        ? Number(e.target.value)
-                                        : null,
-                                    })
-                                  }
-                                >
-                                  <option value="">—</option>
-                                  {rowSizes.map((s) => (
-                                    <option
-                                      key={s.value}
-                                      value={String(s.value)}
-                                    >
-                                      {dimLabel(s)}
-                                    </option>
-                                  ))}
-                                </select>
+                                row.sizeMin === sizeRangeMin &&
+                                row.sizeMax === mikeSizeMax ? (
+                                  <span className="text-[10px] text-ink/40">
+                                    0–{mikeSizeMax}
+                                  </span>
+                                ) : (
+                                  <select
+                                    disabled={!editable || !canSize}
+                                    className={`${selectClass(!editable || !canSize)} w-24`}
+                                    value={
+                                      row.sizeMax != null
+                                        ? String(row.sizeMax)
+                                        : ""
+                                    }
+                                    onChange={(e) =>
+                                      patchRow(active.id, row.id, {
+                                        sizeMax: e.target.value
+                                          ? clampInch(Number(e.target.value))
+                                          : null,
+                                      })
+                                    }
+                                  >
+                                    <option value="">—</option>
+                                    {rowSizes.map((s) => (
+                                      <option
+                                        key={s.value}
+                                        value={String(s.value)}
+                                      >
+                                        {dimLabel(s)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )
                               ) : showDuctSizeInputs ? (
                                 <input
                                   type="number"
                                   step="any"
+                                  min={sizeRangeMin}
+                                  max={sizeRangeMax}
                                   disabled={!editable || !canSize}
                                   placeholder="any"
                                   className={`${selectClass(!editable || !canSize)} w-20`}
@@ -1669,7 +2024,7 @@ export function BidSpecSheetsSection({
                                   onChange={(e) =>
                                     patchRow(active.id, row.id, {
                                       sizeMax: e.target.value
-                                        ? Number(e.target.value)
+                                        ? clampInch(Number(e.target.value))
                                         : null,
                                     })
                                   }
@@ -1677,6 +2032,26 @@ export function BidSpecSheetsSection({
                               ) : (
                                 <span className="text-xs text-ink/35">—</span>
                               )}
+                            </td>
+                            <td className="px-1 py-0.5">
+                              <input
+                                type="number"
+                                step="any"
+                                min={sizeRangeMin}
+                                max={sizeRangeMax}
+                                disabled={!editable || !canSize}
+                                placeholder="—"
+                                title={`Width ${sizeRangeMin}–${sizeRangeMax} in`}
+                                className={`${selectClass(!editable || !canSize)} w-20`}
+                                value={row.widthIn ?? ""}
+                                onChange={(e) =>
+                                  patchRow(active.id, row.id, {
+                                    widthIn: e.target.value
+                                      ? clampInch(Number(e.target.value))
+                                      : null,
+                                  })
+                                }
+                              />
                             </td>
                             <td className="px-1 py-0.5">
                               {rowThicks.length === 0 ? (
@@ -1782,43 +2157,75 @@ export function BidSpecSheetsSection({
                               />
                             </td>
                             <td className="px-1 py-0.5">
-                              <div className="flex min-w-[7rem] flex-col gap-0.5">
-                                <input
-                                  disabled={!editable}
-                                  className={selectClass(!editable)}
-                                  value={row.notes ?? ""}
-                                  onChange={(e) =>
-                                    patchRow(active.id, row.id, {
-                                      notes:
-                                        e.target.value.slice(0, 500) || null,
-                                    })
-                                  }
-                                />
-                                {showOtherNote ? (
-                                  <input
-                                    disabled={!editable}
-                                    className={selectClass(!editable)}
-                                    placeholder="Other note"
-                                    value={row.otherNote ?? ""}
-                                    onChange={(e) =>
-                                      patchRow(active.id, row.id, {
-                                        otherNote:
-                                          e.target.value.slice(0, 500) || null,
-                                      })
-                                    }
-                                  />
-                                ) : null}
-                              </div>
+                              <input
+                                disabled={!editable}
+                                className={selectClass(!editable)}
+                                value={row.notes ?? ""}
+                                onChange={(e) =>
+                                  patchRow(active.id, row.id, {
+                                    notes:
+                                      e.target.value.slice(0, 500) || null,
+                                  })
+                                }
+                              />
                             </td>
                             {editable ? (
                               <td className="px-1 py-0.5">
-                                <button
-                                  type="button"
-                                  onClick={() => removeRow(row.id)}
-                                  className="text-xs font-medium text-danger/80 hover:text-danger"
-                                >
-                                  Delete
-                                </button>
+                                <div className="flex flex-row items-center gap-0.5">
+                                  {allowCopyRow ? (
+                                    <button
+                                      type="button"
+                                      title="Copy row"
+                                      aria-label="Copy row"
+                                      onClick={() => copyRow(row.id)}
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-ink/45 transition hover:bg-ink/[0.06] hover:text-brand"
+                                    >
+                                      <svg
+                                        viewBox="0 0 24 24"
+                                        className="h-3.5 w-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        aria-hidden
+                                      >
+                                        <rect
+                                          x="9"
+                                          y="9"
+                                          width="13"
+                                          height="13"
+                                          rx="2"
+                                        />
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                      </svg>
+                                    </button>
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    title="Delete row"
+                                    aria-label="Delete row"
+                                    onClick={() => removeRow(row.id)}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-danger/70 transition hover:bg-danger-tint/40 hover:text-danger"
+                                  >
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      className="h-3.5 w-3.5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      aria-hidden
+                                    >
+                                      <path d="M3 6h18" />
+                                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                                      <path d="M10 11v6" />
+                                      <path d="M14 11v6" />
+                                    </svg>
+                                  </button>
+                                </div>
                               </td>
                             ) : null}
                           </tr>

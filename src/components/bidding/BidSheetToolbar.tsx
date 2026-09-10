@@ -79,7 +79,7 @@ export function BidSheetToolbar({
         <div className="hidden h-8 w-px bg-ink/10 sm:block" aria-hidden />
         <p className="hidden text-xs text-ink/40 sm:block">
           {dirty ? (
-            <span className="text-amber-700">Unsaved changes — auto-saving…</span>
+            <span className="text-amber-700">Unsaved changes — click Save</span>
           ) : lastSavedAt ? (
             <>Saved {formatSavedAt(lastSavedAt)}</>
           ) : (

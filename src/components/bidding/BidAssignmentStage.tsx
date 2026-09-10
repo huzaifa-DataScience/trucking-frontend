@@ -31,6 +31,7 @@ export function BidAssignmentStage() {
     draft,
     setField,
     saving,
+    dirty,
     error,
     editable,
     inputClass,
@@ -132,7 +133,7 @@ export function BidAssignmentStage() {
       <header>
         <h2 className="text-base font-semibold text-ink">Assignment</h2>
         <p className="mt-1 text-xs text-ink/40">
-          {saving ? "Saving…" : editable ? "Draft autosaves" : "Read only"}
+          {saving ? "Saving…" : dirty ? "Unsaved changes" : editable ? "Save to keep changes" : "Read only"}
         </p>
       </header>
 

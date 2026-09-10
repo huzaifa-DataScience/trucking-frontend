@@ -37,7 +37,9 @@ export function BidListCard({
 
   return (
     <Link
-      href={`/bidding/${bid.id}?stage=intake`}
+      href={`/bidding/${bid.id}?stage=${encodeURIComponent(
+        String(bid.processStage || "intake")
+      )}`}
       className="group ui-animate-in flex min-h-[164px] cursor-pointer flex-col justify-between rounded-[14px] border border-ink/[0.08] bg-surface p-6 shadow-[0_2px_6px_-2px_rgba(1,1,1,0.08)] transition hover:border-brand/35 hover:bg-brand/[0.03]"
     >
       <div>
@@ -45,13 +47,25 @@ export function BidListCard({
           <h3 className="line-clamp-2 min-w-0 text-xl font-semibold leading-tight text-ink">
             {bid.bidName || "Untitled estimate"}
           </h3>
-          {showChip ? (
-            <span
-              className={`inline-flex h-7 shrink-0 items-center rounded-full border px-3 text-[13px] font-semibold ${STATUS_CHIP_CLASSES[bid.status]}`}
-            >
-              {STATUS_LABELS[bid.status]}
-            </span>
-          ) : null}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {showChip ? (
+              <span
+                className={`inline-flex h-7 items-center rounded-full border px-3 text-[13px] font-semibold ${STATUS_CHIP_CLASSES[bid.status]}`}
+              >
+                {STATUS_LABELS[bid.status]}
+              </span>
+            ) : null}
+            {bid.canEdit === false ? (
+              <span className="text-[11px] font-medium text-ink/40">
+                View only
+              </span>
+            ) : null}
+            {bid.isNew ? (
+              <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
+                New
+              </span>
+            ) : null}
+          </div>
         </div>
         <p className="mt-1 text-[13px] text-ink/40">{bid.estimateNumber}</p>
         {metaParts.length ? (

@@ -23,11 +23,17 @@ import type {
   UpdateWageRateBody,
 } from "@/lib/bidding/types";
 import type {
+  MyPlateResponse,
   ProcessMeta,
   WageDecision,
 } from "@/lib/bidding/process-types";
 import { getApiUrl } from "../config";
 import { getAccessToken } from "@/lib/auth/store";
+
+/** Role home — JWT user.role picks queues. Do not replace with filtered listBids. */
+export async function getMyPlate(): Promise<MyPlateResponse> {
+  return get<MyPlateResponse>("/bids/my-plate");
+}
 
 export async function listBids(params?: {
   status?: string;
@@ -65,6 +71,14 @@ export async function patchBid(id: string, body: PatchBidBody): Promise<BidDetai
 
 export async function deleteBid(id: string): Promise<void> {
   await del(`/bids/${id}`);
+}
+
+/** Merge a mistaken duplicate into the keeper. Invites/links move; duplicate is cancelled. */
+export async function linkDuplicateBid(
+  duplicateId: string,
+  body: { keepBidId: number | string; notes?: string }
+): Promise<BidDetail> {
+  return post<BidDetail>(`/bids/${duplicateId}/link-duplicate`, body);
 }
 
 /** Complete or return a workflow stage — BIDDING_FRONTEND_API §0 */
