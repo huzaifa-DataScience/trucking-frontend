@@ -10,8 +10,6 @@ import {
   specSheetsFingerprint,
 } from "@/lib/bidding/specSheetMap";
 
-const SAVE_MS = 500;
-
 function processFingerprint(p: BidProcess): string {
   return JSON.stringify({
     ...p,
@@ -47,20 +45,24 @@ function mergeProcessSheetCodes(
 }
 
 /**
- * Debounced PATCH { process }.
- * Concurrent edits must not wipe newer local fields when an older save returns.
+ * Local process draft — manual Save only (no autosave).
+ * Registers dirty + save with BidSheetContext for tab/navigation warnings.
  */
 export function useProcessDraft() {
-  const { bid, canWrite, applyBidDetail } = useBidSheet();
-  const [draft, setDraft] = useState<BidProcess>({});
+  const {
+    bid,
+    canWrite,
+    applyBidDetail,
+    setProcessDirty,
+    registerProcessSave,
+  } = useBidSheet();
+  const [draft, setDraftState] = useState<BidProcess>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [dirty, setDirty] = useState(false);
   const hydratedId = useRef<string | null>(null);
   const draftRef = useRef<BidProcess>({});
-  const persistInFlight = useRef(false);
-  const needsResave = useRef(false);
-  const saveGen = useRef(0);
+  const savedFp = useRef<string>("");
   const archived = bid?.status === "archived";
   const editable = Boolean(canWrite && !archived);
 
@@ -73,94 +75,73 @@ export function useProcessDraft() {
       specSheets: normalizeSpecSheets(bid.process?.specSheets),
     };
     draftRef.current = next;
-    saveGen.current = 0;
-    needsResave.current = false;
-    setDraft(next);
-  }, [bid]);
+    savedFp.current = processFingerprint(next);
+    setDraftState(next);
+    setDirty(false);
+    setProcessDirty(false);
+  }, [bid, setProcessDirty]);
 
   const persist = useCallback(async () => {
     if (!bid || !editable) return;
-    if (persistInFlight.current) {
-      needsResave.current = true;
-      return;
-    }
-
-    persistInFlight.current = true;
     setSaving(true);
     setError(null);
-
     try {
-      // Always send the latest draft at fire time (not a stale closure).
       const snapshot = draftRef.current;
-      const genAtStart = saveGen.current;
       const updated = await biddingApi.patchBid(bid.id, {
         process: snapshot,
       });
-
-      const localMoved =
-        saveGen.current !== genAtStart ||
-        processFingerprint(draftRef.current) !== processFingerprint(snapshot);
-
-      if (localMoved) {
-        // Keep newer local edits — never clobber size/facing/etc. with stale save.
-        applyBidDetail({
-          ...updated,
-          process: draftRef.current,
-        });
-        needsResave.current = true;
-      } else {
-        // Keep what we sent; only adopt missing codes from server (never replace values).
-        const serverSheets = normalizeSpecSheets(
-          updated.process?.specSheets ?? []
-        );
-        const localSheets = normalizeSpecSheets(snapshot.specSheets ?? []);
-        const sheets =
-          serverSheets.length > 0
-            ? mergeProcessSheetCodes(localSheets, serverSheets)
-            : localSheets;
-        const mergedProcess: BidProcess = {
-          ...(updated.process ?? {}),
-          ...snapshot,
-          specSheets: sheets,
-          insulationSpecs:
-            updated.process?.insulationSpecs ??
-            snapshot.insulationSpecs ??
-            null,
-        };
-        draftRef.current = mergedProcess;
-        setDraft(mergedProcess);
-        applyBidDetail({
-          ...updated,
-          process: mergedProcess,
-        });
-      }
+      const serverSheets = normalizeSpecSheets(
+        updated.process?.specSheets ?? []
+      );
+      const localSheets = normalizeSpecSheets(snapshot.specSheets ?? []);
+      const sheets =
+        serverSheets.length > 0
+          ? mergeProcessSheetCodes(localSheets, serverSheets)
+          : localSheets;
+      const mergedProcess: BidProcess = {
+        ...(updated.process ?? {}),
+        ...snapshot,
+        specSheets: sheets,
+        insulationSpecs:
+          updated.process?.insulationSpecs ?? snapshot.insulationSpecs ?? null,
+      };
+      draftRef.current = mergedProcess;
+      savedFp.current = processFingerprint(mergedProcess);
+      setDraftState(mergedProcess);
+      setDirty(false);
+      setProcessDirty(false);
+      applyBidDetail({
+        ...updated,
+        process: mergedProcess,
+      });
     } catch (e) {
       setError(getApiErrorMessage(e, "Failed to save"));
+      throw e;
     } finally {
-      persistInFlight.current = false;
       setSaving(false);
-      if (needsResave.current) {
-        needsResave.current = false;
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => void persist(), SAVE_MS);
-      }
     }
-  }, [bid, editable, applyBidDetail]);
+  }, [bid, editable, applyBidDetail, setProcessDirty]);
+
+  useEffect(() => {
+    registerProcessSave(persist);
+    return () => registerProcessSave(null);
+  }, [persist, registerProcessSave]);
+
+  useEffect(() => {
+    setProcessDirty(dirty);
+    return () => setProcessDirty(false);
+  }, [dirty, setProcessDirty]);
 
   const schedule = useCallback(
-    (next: BidProcess, opts?: { immediate?: boolean }) => {
+    (next: BidProcess) => {
       draftRef.current = next;
-      saveGen.current += 1;
-      setDraft(next);
+      setDraftState(next);
       if (!editable) return;
-      if (timer.current) clearTimeout(timer.current);
-      if (opts?.immediate) {
-        void persist();
-        return;
-      }
-      timer.current = setTimeout(() => void persist(), SAVE_MS);
+      const nextDirty = processFingerprint(next) !== savedFp.current;
+      setDirty(nextDirty);
+      setProcessDirty(nextDirty);
     },
-    [editable, persist]
+    [editable, setProcessDirty]
   );
 
   const setField = <K extends keyof BidProcess>(
@@ -184,6 +165,8 @@ export function useProcessDraft() {
     setField,
     setSpecSheets,
     persist,
+    save: persist,
+    dirty,
     saving,
     error,
     editable,

@@ -10,6 +10,7 @@ export function BidLostStage() {
     draft,
     setField,
     saving,
+    dirty,
     error,
     editable,
     inputClass,
@@ -41,7 +42,7 @@ export function BidLostStage() {
           present.
         </p>
         <p className="mt-1 text-xs text-ink/40">
-          {saving ? "Saving…" : editable ? "Draft autosaves" : "Read only"}
+          {saving ? "Saving…" : dirty ? "Unsaved changes" : editable ? "Save to keep changes" : "Read only"}
         </p>
       </header>
 

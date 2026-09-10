@@ -85,10 +85,14 @@ export const DEFAULT_SPEC_COVERINGS: { id: string; label: string }[] = [
 export const DEFAULT_SPEC_MANUFACTURERS: { id: string; label: string }[] = [
   { id: "owens_corning", label: "Owens Corning" },
   { id: "johns_manville", label: "Johns Manville" },
+  { id: "certainteed", label: "CertainTeed" },
   { id: "knauf", label: "Knauf" },
   { id: "manson", label: "Manson" },
   { id: "other", label: "Other" },
 ];
+
+/** Mike pipe size “and greater” — FRONTEND_SPEC_SHEET.md */
+export const MIKE_SIZE_MAX = 999;
 
 export const DEFAULT_SPEC_DUCT_SHAPES: { id: string; label: string }[] = [
   { id: "rectangular", label: "Rectangular" },
@@ -169,6 +173,7 @@ export function emptySpecSheetRow(
     areaCode: null,
     sizeMin: null,
     sizeMax: null,
+    widthIn: null,
     sizeMode: kind ? defaultSizeModeForKind(kind) : null,
     ductShape: null,
     insulationFamily: null,
@@ -506,6 +511,7 @@ export function normalizeSpecSheetRow(
     areaCode: asNullableString(o.areaCode),
     sizeMin: asNullableNumber(o.sizeMin),
     sizeMax: asNullableNumber(o.sizeMax),
+    widthIn: asNullableNumber(o.widthIn),
     sizeMode,
     ductShape: asDuctShape(o.ductShape),
     insulationFamily: asInsulationFamily(o.insulationFamily),
@@ -674,6 +680,7 @@ export function specSheetsFingerprint(sheets: SpecSheet[]): string {
         areaCode: r.areaCode,
         sizeMin: r.sizeMin,
         sizeMax: r.sizeMax,
+        widthIn: r.widthIn,
         sizeMode: r.sizeMode,
         ductShape: r.ductShape,
         insulationFamily: r.insulationFamily,

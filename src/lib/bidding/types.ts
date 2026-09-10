@@ -53,6 +53,12 @@ export interface BidListItem {
   relatedBidId?: number | null;
   bidKind?: string | null;
   dueDate?: string | null;
+  dueTime?: string | null;
+  teamId?: number | null;
+  canEdit?: boolean | null;
+  isNew?: boolean | null;
+  takeoffAssigned?: boolean | null;
+  takeoffReceived?: boolean | null;
 }
 
 export interface BidCompanyInfo {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { login } from "@/lib/api/endpoints/auth";
+import { homePathForRole } from "@/lib/auth/roles";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { AuthShell } from "@/components/auth/AuthShell";
 
@@ -19,7 +20,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (authLoading || !user) return;
     if (user.status !== "active") router.replace("/pending");
-    else router.replace("/job");
+    else router.replace(homePathForRole(user.role));
   }, [user, authLoading, router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -30,7 +31,7 @@ export default function LoginPage() {
       const data = await login({ email, password });
       loginSuccess(data);
       // Login only succeeds for active users; pending users get 401 with backend message.
-      router.push("/job");
+      router.push(homePathForRole(data.user.role));
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

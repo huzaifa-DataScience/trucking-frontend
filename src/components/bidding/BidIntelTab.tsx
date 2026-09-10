@@ -10,71 +10,92 @@ import type {
   ProcessIntelligence,
 } from "@/lib/bidding/process-types";
 
-const SAVE_MS = 800;
-
-/** Intel tab shell — GCs / mechanicals / competitors */
+/** Intel tab shell — GCs / mechanicals / competitors — manual Save */
 export function BidIntelTab() {
-  const { bid, canWrite, refresh } = useBidSheet();
+  const {
+    bid,
+    canWrite,
+    refresh,
+    setProcessDirty,
+    registerProcessSave,
+  } = useBidSheet();
   const [notes, setNotes] = useState("");
   const [gcs, setGcs] = useState("");
   const [mechs, setMechs] = useState("");
+  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stateRef = useRef({ notes: "", gcs: "", mechs: "" });
   const editable = canWrite && bid?.status !== "archived";
 
   useEffect(() => {
     if (!bid?.process) return;
     const intel = bid.process.intelligence as ProcessIntelligence | undefined;
-    setNotes(intel?.notes ?? "");
-    setGcs(
-      (bid.process.generalContractors ?? [])
-        .map((g) => g.company || g.name || "")
-        .filter(Boolean)
-        .join("\n")
-    );
-    setMechs(
-      (bid.process.mechanicals ?? [])
-        .map((g) => g.company || g.name || "")
-        .filter(Boolean)
-        .join("\n")
-    );
-  }, [bid]);
+    const nextNotes = intel?.notes ?? "";
+    const nextGcs = (bid.process.generalContractors ?? [])
+      .map((g) => g.company || g.name || "")
+      .filter(Boolean)
+      .join("\n");
+    const nextMechs = (bid.process.mechanicals ?? [])
+      .map((g) => g.company || g.name || "")
+      .filter(Boolean)
+      .join("\n");
+    setNotes(nextNotes);
+    setGcs(nextGcs);
+    setMechs(nextMechs);
+    stateRef.current = { notes: nextNotes, gcs: nextGcs, mechs: nextMechs };
+    setDirty(false);
+    setProcessDirty(false);
+  }, [bid, setProcessDirty]);
 
-  const persist = useCallback(
-    async (nextNotes: string, nextGcs: string, nextMechs: string) => {
-      if (!bid || !editable) return;
-      setSaving(true);
-      setError(null);
-      const toList = (text: string): ProcessGcOrMech[] =>
-        text
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean)
-          .map((line) => ({ company: line, name: line }));
-      const process: Partial<BidProcess> = {
-        generalContractors: toList(nextGcs),
-        mechanicals: toList(nextMechs),
-        intelligence: {
-          ...(bid.process?.intelligence ?? {}),
-          notes: nextNotes || null,
-        },
-      };
-      try {
-        await biddingApi.patchBid(bid.id, { process });
-        await refresh();
-      } catch (e) {
-        setError(getApiErrorMessage(e, "Failed to save Intel"));
-      } finally {
-        setSaving(false);
-      }
-    },
-    [bid, editable, refresh]
-  );
+  const persist = useCallback(async () => {
+    if (!bid || !editable) return;
+    setSaving(true);
+    setError(null);
+    const { notes: nextNotes, gcs: nextGcs, mechs: nextMechs } =
+      stateRef.current;
+    const toList = (text: string): ProcessGcOrMech[] =>
+      text
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((line) => ({ company: line, name: line }));
+    const process: Partial<BidProcess> = {
+      generalContractors: toList(nextGcs),
+      mechanicals: toList(nextMechs),
+      intelligence: {
+        ...(bid.process?.intelligence ?? {}),
+        notes: nextNotes || null,
+      },
+    };
+    try {
+      await biddingApi.patchBid(bid.id, { process });
+      setDirty(false);
+      setProcessDirty(false);
+      await refresh();
+    } catch (e) {
+      setError(getApiErrorMessage(e, "Failed to save Intel"));
+      throw e;
+    } finally {
+      setSaving(false);
+    }
+  }, [bid, editable, refresh, setProcessDirty]);
 
-  const schedule = (n: string, g: string, m: string) => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => void persist(n, g, m), SAVE_MS);
+  useEffect(() => {
+    registerProcessSave(persist);
+    return () => registerProcessSave(null);
+  }, [persist, registerProcessSave]);
+
+  useEffect(() => {
+    setProcessDirty(dirty);
+    return () => setProcessDirty(false);
+  }, [dirty, setProcessDirty]);
+
+  const markDirty = (n: string, g: string, m: string) => {
+    stateRef.current = { notes: n, gcs: g, mechs: m };
+    if (!editable) return;
+    setDirty(true);
+    setProcessDirty(true);
   };
 
   if (!bid) return null;
@@ -84,19 +105,35 @@ export function BidIntelTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-base font-semibold text-ink">Post-Bid</h2>
-        <p className="mt-0.5 text-sm text-ink/50">
-          Follow-up, GCs / mechanicals, competitors. Still Pre — pick win/lose on
-          the Outcome tab next.
-        </p>
-        <p className="mt-1 text-xs text-ink/40">
-          {saving ? "Saving…" : editable ? "Autosave on" : "Read only"}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="text-base font-semibold text-ink">Post-Bid</h2>
+          <p className="mt-0.5 text-sm text-ink/50">
+            Follow-up, GCs / mechanicals, competitors. Still Pre — pick win/lose
+            on the Outcome tab next.
+          </p>
+          <p className="mt-1 text-xs text-ink/40">
+            {saving
+              ? "Saving…"
+              : dirty
+                ? "Unsaved changes"
+                : editable
+                  ? "Save to keep changes"
+                  : "Read only"}
+          </p>
+        </div>
+        {editable ? (
+          <button
+            type="button"
+            disabled={saving || !dirty}
+            onClick={() => void persist()}
+            className="rounded-xl border border-brand/30 bg-brand/10 px-3 py-2 text-sm font-semibold text-brand disabled:opacity-40"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        ) : null}
       </div>
-      {error ? (
-        <p className="text-sm text-danger">{error}</p>
-      ) : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
       <label className="flex flex-col gap-1">
         <span className="text-xs font-semibold text-ink/60">
           General contractors
@@ -107,7 +144,7 @@ export function BidIntelTab() {
           value={gcs}
           onChange={(e) => {
             setGcs(e.target.value);
-            schedule(notes, e.target.value, mechs);
+            markDirty(notes, e.target.value, mechs);
           }}
           placeholder="Clark Construction&#10;…"
         />
@@ -120,19 +157,21 @@ export function BidIntelTab() {
           value={mechs}
           onChange={(e) => {
             setMechs(e.target.value);
-            schedule(notes, gcs, e.target.value);
+            markDirty(notes, gcs, e.target.value);
           }}
         />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-semibold text-ink/60">Notes / competitors</span>
+        <span className="text-xs font-semibold text-ink/60">
+          Notes / competitors
+        </span>
         <textarea
           className={area}
           disabled={!editable}
           value={notes}
           onChange={(e) => {
             setNotes(e.target.value);
-            schedule(e.target.value, gcs, mechs);
+            markDirty(e.target.value, gcs, mechs);
           }}
         />
       </label>

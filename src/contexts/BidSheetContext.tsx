@@ -31,7 +31,6 @@ import type {
 import { useBiddingLookups } from "@/hooks/useBiddingLookups";
 import { useBiddingAccess } from "@/hooks/useBiddingAccess";
 
-const AUTO_SAVE_MS = 1500;
 const PREVIEW_DEBOUNCE_MS = 400;
 
 type BidHeaderPatch = Partial<
@@ -53,6 +52,8 @@ type BidSheetContextValue = {
   canRead: boolean;
   canWrite: boolean;
   dirty: boolean;
+  processDirty: boolean;
+  unsavedChanges: boolean;
   lastSavedAt: Date | null;
   serverVerifyWarnings: string[];
   selectedTeam: ReturnType<typeof useBiddingLookups>["teams"][number] | null;
@@ -70,6 +71,11 @@ type BidSheetContextValue = {
   refresh: () => Promise<void>;
   /** Quiet merge after process PATCH — no full reload */
   applyBidDetail: (detail: BidDetail) => void;
+  setProcessDirty: (dirty: boolean) => void;
+  registerProcessSave: (fn: (() => Promise<void>) | null) => void;
+  saveProcess: () => Promise<void>;
+  /** true = OK to leave; false = stay */
+  confirmLeaveUnsaved: () => boolean;
   saveNow: () => Promise<void>;
   saveCoverSheet: () => Promise<void>;
   markSubmitted: () => Promise<void>;
@@ -133,12 +139,13 @@ export function BidSheetProvider({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [processDirty, setProcessDirty] = useState(false);
+  const processSaveRef = useRef<(() => Promise<void>) | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [serverVerifyWarnings, setServerVerifyWarnings] = useState<string[]>([]);
   const bidRef = useRef<BidDetail | null>(null);
   const fetchedRef = useRef(false);
   const loadGenRef = useRef(0);
-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canWriteRef = useRef(canWrite);
   canWriteRef.current = canWrite;
@@ -258,40 +265,47 @@ export function BidSheetProvider({
     [bidId]
   );
 
-  const autoSaveNow = useCallback(async () => {
-    const current = bidRef.current;
-    if (!current || current.status !== "draft" || !canWriteRef.current) return;
-    const withCalc = applyEngineToBid(current, engineLookups);
-    setBid(withCalc);
-    const errs = withCalc.computed?.errors;
-    if (Array.isArray(errs) && errs.length > 0) return;
-    try {
-      await savePatch(buildContentPatch(withCalc), withCalc);
-      setLastSavedAt(new Date());
-      setDirty(false);
-    } catch {
-      /* savePatch sets error */
-    }
-  }, [engineLookups, buildContentPatch, savePatch]);
-
+  /** Mark estimate dirty + live preview — no network autosave. */
   const scheduleAutoSave = useCallback(() => {
     if (!canWriteRef.current) return;
     const current = bidRef.current;
     if (!current || current.status !== "draft") return;
     setDirty(true);
     schedulePreview();
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = setTimeout(() => {
-      void autoSaveNow();
-    }, AUTO_SAVE_MS);
-  }, [autoSaveNow, schedulePreview]);
+  }, [schedulePreview]);
 
   useEffect(() => {
     return () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
       if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
     };
   }, []);
+
+  const registerProcessSave = useCallback((fn: (() => Promise<void>) | null) => {
+    processSaveRef.current = fn;
+  }, []);
+
+  const saveProcess = useCallback(async () => {
+    if (processSaveRef.current) await processSaveRef.current();
+  }, []);
+
+  const unsavedChanges = dirty || processDirty;
+
+  const confirmLeaveUnsaved = useCallback(() => {
+    if (!dirty && !processDirty) return true;
+    return window.confirm(
+      "You have unsaved changes. Leave without saving?"
+    );
+  }, [dirty, processDirty]);
+
+  useEffect(() => {
+    if (!unsavedChanges) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [unsavedChanges]);
 
   const setBidHeader = useCallback(
     (patch: BidHeaderPatch) => {
@@ -629,6 +643,9 @@ export function BidSheetProvider({
     });
   }, []);
 
+  const bidCanEdit = bid?.canEdit !== false;
+  const effectiveWrite = canWrite && bidCanEdit;
+
   const value: BidSheetContextValue = {
     bid,
     insights,
@@ -637,10 +654,12 @@ export function BidSheetProvider({
     initialLoading,
     saving,
     error,
-    isEditable: bid?.status === "draft" && canWrite,
+    isEditable: bid?.status === "draft" && effectiveWrite,
     canRead,
-    canWrite,
+    canWrite: effectiveWrite,
     dirty,
+    processDirty,
+    unsavedChanges,
     lastSavedAt,
     serverVerifyWarnings,
     selectedTeam,
@@ -657,6 +676,10 @@ export function BidSheetProvider({
     verifyServerCalc,
     refresh: () => loadBid({ silent: true }),
     applyBidDetail,
+    setProcessDirty,
+    registerProcessSave,
+    saveProcess,
+    confirmLeaveUnsaved,
     saveNow,
     saveCoverSheet,
     markSubmitted,

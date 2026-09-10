@@ -60,6 +60,8 @@ export interface ProcessParty {
   contactName?: string | null;
   email?: string | null;
   phone?: string | null;
+  /** Preferred reach — email | phone (FRONTEND_INTAKE.md). */
+  preferredContact?: "email" | "phone" | null;
 }
 
 export interface ProcessAddress {
@@ -187,6 +189,8 @@ export interface SpecSheetRow {
   areaCode: string | null;
   sizeMin: number | null;
   sizeMax: number | null;
+  /** Roll / board width in inches (0–999). */
+  widthIn: number | null;
   sizeMode: SpecSheetSizeMode | null;
   ductShape: SpecSheetDuctShape | null;
   insulationFamily: SpecSheetInsulationFamily | null;
@@ -252,7 +256,7 @@ export interface SpecSheetEditorMeta {
   coverings?: SpecSheetMetaOption[] | string[];
   /**
    * Manufacturer ids for `manufacturersAllowed` / `manufacturerPreferred`.
-   * Exact ids: owens_corning, johns_manville, knauf, manson, other.
+   * Exact ids: owens_corning, johns_manville, certainteed, knauf, manson, other.
    */
   manufacturers?: SpecSheetMetaOption[] | string[];
   /** Duct shapes when kind=duct — rectangular | square | round | oval. */
@@ -264,6 +268,13 @@ export interface SpecSheetEditorMeta {
   sizes?: number[];
   /** Intentionally [] — use material.thicknesses after pick. */
   thicknesses?: number[];
+  /** Mike “and greater” pipe size (usually 999). */
+  mikeSizeMax?: number;
+  /** Inch inputs — usually `{ min: 0, max: 999 }`. */
+  sizeRange?: { min?: number; max?: number } | null;
+  copyRow?: boolean;
+  stackSheets?: boolean;
+  confirmDeleteSheet?: boolean;
   /** Leftover fallback only if API has no kind filter. */
   systemKindHints?: Partial<Record<SpecSheetKind, string[]>>;
   [key: string]: unknown;
@@ -341,6 +352,8 @@ export interface ProcessDocumentLink {
   url: string;
   label?: string | null;
   source?: string | null;
+  /** Clerk should re-check this source for addenda. */
+  checkAddenda?: boolean | null;
 }
 
 export interface ProcessInvitationAddendum {
@@ -358,6 +371,8 @@ export interface ProcessInvitation {
   attachmentIds?: number[];
   /** Addenda from this inviter — arrays replace on save */
   addenda?: ProcessInvitationAddendum[];
+  /** Paste full invite email / portal dump (not clerk notes). Cap ~50k. */
+  inviteBody?: string | null;
   notes?: string | null;
 }
 
@@ -377,6 +392,8 @@ export interface ProcessInviteContact {
   company?: string | null;
   email?: string | null;
   phone?: string | null;
+  /** Preferred reach — email | phone. */
+  preferredContact?: "email" | "phone" | null;
 }
 
 /** Full process object from GET /bids/:id (empty defaults filled). */
@@ -493,6 +510,13 @@ export interface ProcessMeta {
   intakeEditor?: {
     sketchTiers?: ProcessContractTier[];
     cascade?: string[];
+    jobIdOnIntake?: boolean;
+    hideJobIdOnIntake?: boolean;
+    fillAddressFromLine1?: boolean;
+    preferredContact?: boolean;
+    inviteBody?: boolean;
+    checkAddenda?: boolean;
+    assignmentOwners?: string[];
     [key: string]: unknown;
   };
   clearances?: ProcessMetaEnumOption[] | string[];
@@ -501,7 +525,93 @@ export interface ProcessMeta {
   defaults?: Record<string, unknown>;
   specSheetTemplates?: SpecSheetTemplateMeta[];
   specSheetEditor?: SpecSheetEditorMeta;
+  /** Role home catalog — GET /bids/my-plate uses JWT role; this is labels only. */
+  dashboardPlates?: DashboardPlateMeta[];
   [key: string]: unknown;
+}
+
+/** Catalog entry from process-meta.dashboardPlates (no rows). */
+export interface DashboardPlateMeta {
+  id?: string;
+  role?: string;
+  title?: string;
+  hint?: string;
+  [key: string]: unknown;
+}
+
+/** GET /bids/my-plate — role home dashboard. */
+export interface MyPlateColumn {
+  key: string;
+  label?: string;
+}
+
+export interface MyPlateRow {
+  id: number | string;
+  estimateNumber?: string | null;
+  bidName?: string | null;
+  drawingName?: string | null;
+  dueDate?: string | null;
+  dueTime?: string | null;
+  teamId?: number | null;
+  processStage?: string | null;
+  isNew?: boolean | null;
+  thisWeek?: boolean | null;
+  canEdit?: boolean | null;
+  takeoffAssigned?: boolean | null;
+  takeoffReceived?: boolean | null;
+  [key: string]: unknown;
+}
+
+export interface MyPlateGroup {
+  id: string;
+  title: string;
+  columns?: MyPlateColumn[] | string[];
+  rows: MyPlateRow[];
+}
+
+export interface MyPlateCounts {
+  due?: number;
+  upcoming?: number;
+  assigned?: number;
+  unreadMessages?: number;
+  notifications?: number;
+  [key: string]: number | undefined;
+}
+
+export interface MyPlateMessageItem {
+  conversationId: string;
+  title?: string | null;
+  type?: string | null;
+  lastMessageAt?: string | null;
+  lastMessagePreview?: string | null;
+  lastMessageSenderName?: string | null;
+  unreadCount?: number | null;
+}
+
+export interface MyPlateMessages {
+  totalUnread?: number;
+  items?: MyPlateMessageItem[];
+}
+
+export interface MyPlateNotification {
+  kind: "message" | "due" | "new_bid" | string;
+  title?: string | null;
+  body?: string | null;
+  conversationId?: string | null;
+  bidId?: string | number | null;
+  at?: string | null;
+}
+
+export interface MyPlateResponse {
+  role: string;
+  plateId?: string;
+  title?: string;
+  hint?: string;
+  teamId?: number | null;
+  counts?: MyPlateCounts;
+  groups: MyPlateGroup[];
+  messages?: MyPlateMessages | null;
+  notifications?: MyPlateNotification[];
 }
 
 export interface WageDecision {

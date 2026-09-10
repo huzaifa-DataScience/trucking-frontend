@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import * as biddingPartiesApi from "@/lib/api/endpoints/biddingParties";
@@ -8,12 +9,14 @@ import type { BidPartyLookup } from "@/lib/api/endpoints/biddingParties";
 import { PartyNameCombobox } from "@/components/bidding/PartyNameCombobox";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
+import { getApiErrorMessage } from "@/lib/api/client";
 import {
   bidKindOptionsFromMeta,
   tierRoleOptionsFromMeta,
   workTypeOptionsFromMeta,
   type ProcessContractTier,
   type ProcessDocumentLink,
+  type ProcessGcOrMech,
   type ProcessInvitation,
   type ProcessInvitationAddendum,
   type ProcessMeta,
@@ -41,7 +44,18 @@ function party(p: ProcessParty | null | undefined): ProcessParty {
     contactName: p?.contactName ?? "",
     email: p?.email ?? "",
     phone: p?.phone ?? "",
+    preferredContact: p?.preferredContact ?? null,
   };
+}
+
+function preferredContactValue(p: {
+  preferredContact?: "email" | "phone" | null;
+  email?: string | null;
+  phone?: string | null;
+}): string {
+  if (p.preferredContact === "phone") return (p.phone ?? "").trim();
+  if (p.preferredContact === "email") return (p.email ?? "").trim();
+  return ((p.email || p.phone) ?? "").trim();
 }
 
 function emptyAddendum(): ProcessInvitationAddendum {
@@ -57,16 +71,36 @@ function emptyInvitation(): ProcessInvitation {
   return {
     id: newId(),
     receivedAt: null,
-    contact: { name: null, email: null, phone: null, company: null },
+    contact: {
+      name: null,
+      email: null,
+      phone: null,
+      company: null,
+      preferredContact: null,
+    },
     links: [],
     attachmentIds: [],
     addenda: [],
+    inviteBody: null,
     notes: null,
   };
 }
 
 function emptyDocLink(): ProcessDocumentLink {
-  return { url: "", label: null, source: "owner" };
+  return { url: "", label: null, source: "owner", checkAddenda: false };
+}
+
+function emptyGcOrMech(): ProcessGcOrMech {
+  return {
+    name: null,
+    company: "",
+    contactName: null,
+    email: null,
+    phone: null,
+    preferredContact: null,
+    hasTheJob: null,
+    stillBidding: null,
+  };
 }
 
 /** Unique companies from invite_contact parties for company-first typeahead. */
@@ -109,6 +143,7 @@ function contactsForCompany(
 
 /** Stage 1 — Intake (FRONTEND_INTAKE.md). Bid clerk. Incomplete OK. */
 export function BidIntakeStage() {
+  const router = useRouter();
   const { setBidHeader } = useBidSheet();
   const {
     bid,
@@ -116,6 +151,7 @@ export function BidIntakeStage() {
     setDraft,
     setField,
     saving,
+    dirty,
     error,
     editable,
     inputClass,
@@ -124,6 +160,8 @@ export function BidIntakeStage() {
   const [meta, setMeta] = useState<ProcessMeta | null>(null);
   const [dupHits, setDupHits] = useState<BidListItem[]>([]);
   const [dupSearching, setDupSearching] = useState(false);
+  const [linkingDupId, setLinkingDupId] = useState<string | null>(null);
+  const [linkDupError, setLinkDupError] = useState<string | null>(null);
   const [partiesByRole, setPartiesByRole] = useState<{
     owner: BidPartyLookup[];
     architect: BidPartyLookup[];
@@ -264,6 +302,68 @@ export function BidIntakeStage() {
     setInvitations(next);
   };
 
+  /** Invitation contact ↔ Mechanical party (bidirectional on select). */
+  const partyFromInviteContact = (
+    contact: ProcessInvitation["contact"] | null | undefined
+  ): ProcessParty => ({
+    name: contact?.name || contact?.company || null,
+    company: contact?.company || null,
+    contactName: contact?.name || null,
+    email: contact?.email || null,
+    phone: contact?.phone || null,
+  });
+
+  const inviteContactFromParty = (
+    p: ProcessParty,
+    prev?: ProcessInvitation["contact"] | null
+  ): NonNullable<ProcessInvitation["contact"]> => ({
+    name: p.contactName || p.name || prev?.name || null,
+    company: p.company || p.name || prev?.company || null,
+    email: p.email || prev?.email || null,
+    phone: p.phone || prev?.phone || null,
+  });
+
+  /** Pick Mechanical → fill first invitation row (create one if needed). */
+  const pickMechanical = (picked: ProcessParty) => {
+    const me: ProcessParty = {
+      name: picked.name ?? null,
+      company: picked.company ?? null,
+      contactName: picked.contactName ?? null,
+      email: picked.email ?? null,
+      phone: picked.phone ?? null,
+    };
+    const base = invitations.length > 0 ? invitations : [emptyInvitation()];
+    const nextInvs = base.map((inv, i) =>
+      i === 0
+        ? {
+            ...inv,
+            contact: inviteContactFromParty(me, inv.contact),
+          }
+        : inv
+    );
+    setDraft({
+      ...draft,
+      mechanicalEngineer: me,
+      invitations: nextInvs,
+    });
+  };
+
+  /** Pick invitation company/contact → fill Mechanical. */
+  const pickInvitationContact = (
+    index: number,
+    contact: NonNullable<ProcessInvitation["contact"]>
+  ) => {
+    const base = invitations.length > 0 ? invitations : [emptyInvitation()];
+    const nextInvs = base.map((inv, i) =>
+      i === index ? { ...inv, contact } : inv
+    );
+    setDraft({
+      ...draft,
+      invitations: nextInvs,
+      mechanicalEngineer: partyFromInviteContact(contact),
+    });
+  };
+
   const setTiers = (next: ProcessContractTier[]) => {
     setField("contractTiers", next);
   };
@@ -272,17 +372,56 @@ export function BidIntakeStage() {
     setTiers(tiers.map((t, i) => (i === index ? { ...t, ...patch } : t)));
   };
 
+  const gcs: ProcessGcOrMech[] = draft.generalContractors ?? [];
+  const mechs: ProcessGcOrMech[] = draft.mechanicals ?? [];
+
+  const setGcs = (next: ProcessGcOrMech[]) => {
+    setField("generalContractors", next);
+  };
+  const setMechs = (next: ProcessGcOrMech[]) => {
+    setField("mechanicals", next);
+  };
+
+  const linkIntoKeeper = async (keep: BidListItem) => {
+    if (!bid || !editable) return;
+    if (
+      !window.confirm(
+        `Merge this bid into ${keep.estimateNumber}? Invites and links move to the keeper; this bid is cancelled.`
+      )
+    ) {
+      return;
+    }
+    setLinkingDupId(keep.id);
+    setLinkDupError(null);
+    try {
+      await biddingApi.linkDuplicateBid(bid.id, {
+        keepBidId: keep.id,
+        notes: "same drawings",
+      });
+      router.push(`/bidding/${keep.id}?stage=intake`);
+    } catch (e) {
+      setLinkDupError(
+        getApiErrorMessage(e, "Could not link duplicate bids")
+      );
+    } finally {
+      setLinkingDupId(null);
+    }
+  };
+
   function renderPartySection(
     key: "owner" | "architect" | "mechanicalEngineer",
     title: string,
     role: "owner" | "architect" | "mechanical"
   ) {
     const p = party(draft[key] as ProcessParty);
+    const isMechanical = key === "mechanicalEngineer";
     return (
       <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
         <h3 className="sm:col-span-2 text-sm font-semibold text-ink">{title}</h3>
         <p className="sm:col-span-2 -mt-1 text-xs text-ink/45">
-          Pick from saved list, or type a new name.
+          {isMechanical
+            ? "Pick from saved list — also fills the first invitation. Or type a new name."
+            : "Pick from saved list, or type a new name."}
         </p>
         <PartyNameCombobox
           label="Name"
@@ -292,20 +431,24 @@ export function BidIntakeStage() {
           inputClass={inputClass}
           labelClass={labelClass}
           onChangeName={(name) => setParty(key, "name", name)}
-          onPickExisting={(picked) =>
+          onPickExisting={(picked) => {
+            if (isMechanical) {
+              pickMechanical(picked);
+              return;
+            }
             setField(key, {
               name: picked.name ?? null,
               company: picked.company ?? null,
               contactName: picked.contactName ?? null,
               email: picked.email ?? null,
               phone: picked.phone ?? null,
-            })
-          }
+            });
+          }}
         />
         {(
           [
             ["company", "Company"],
-            ["contactName", "Contact"],
+            ["contactName", "Contact name"],
             ["email", "Email"],
             ["phone", "Phone"],
           ] as const
@@ -320,6 +463,35 @@ export function BidIntakeStage() {
             />
           </label>
         ))}
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>Preferred contact</span>
+          <select
+            className={inputClass}
+            disabled={!editable}
+            value={p.preferredContact ?? ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              setField(key, {
+                ...p,
+                preferredContact: v === "email" || v === "phone" ? v : null,
+              });
+            }}
+          >
+            <option value="">—</option>
+            <option value="email">Email</option>
+            <option value="phone">Phone</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>Preferred value</span>
+          <input
+            className={inputClass}
+            disabled
+            readOnly
+            value={preferredContactValue(p)}
+            placeholder="Matches email or phone above"
+          />
+        </label>
       </section>
     );
   }
@@ -329,7 +501,7 @@ export function BidIntakeStage() {
       <header>
         <h2 className="text-base font-semibold text-ink">Intake</h2>
         <p className="mt-1 text-xs text-ink/40">
-          {saving ? "Saving…" : editable ? "Draft autosaves" : "Read only"}
+          {saving ? "Saving…" : editable ? (dirty ? "Unsaved changes" : "Save to keep changes") : "Read only"}
         </p>
       </header>
 
@@ -347,11 +519,18 @@ export function BidIntakeStage() {
           </p>
           <p className="mt-0.5 text-xs text-ink/55">
             Same drawings? Open that bid and Add invitation — do not create a
-            second bid.
+            second bid. If this bid was created by mistake, merge it into the
+            keeper.
           </p>
-          <ul className="mt-2 space-y-1">
+          {linkDupError ? (
+            <p className="mt-2 text-xs text-danger">{linkDupError}</p>
+          ) : null}
+          <ul className="mt-2 space-y-2">
             {dupHits.map((h) => (
-              <li key={h.id}>
+              <li
+                key={h.id}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1"
+              >
                 <Link
                   href={`/bidding/${h.id}?stage=intake`}
                   className="text-sm font-medium text-brand hover:underline"
@@ -366,6 +545,18 @@ export function BidIntakeStage() {
                     ? ` · EOR Mech # ${h.mechanicalEngineerProjectNumber}`
                     : ""}
                 </Link>
+                {editable && bid && String(h.id) !== String(bid.id) ? (
+                  <button
+                    type="button"
+                    disabled={linkingDupId != null}
+                    className="text-xs font-semibold text-ink/70 underline-offset-2 hover:text-ink hover:underline disabled:opacity-50"
+                    onClick={() => void linkIntoKeeper(h)}
+                  >
+                    {linkingDupId === h.id
+                      ? "Merging…"
+                      : "Merge this bid into keeper"}
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -518,16 +709,23 @@ export function BidIntakeStage() {
           <h3 className="sm:col-span-2 text-sm font-semibold text-ink">
             Project address
           </h3>
+          <p className="sm:col-span-2 -mt-1 text-xs text-ink/45">
+            Paste the full US line in Address line 1 — backend fills city / state /
+            ZIP when those are empty. Do not clear line 1.
+          </p>
           {(
             [
-              ["line1", "Address line 1"],
+              ["line1", "Address line 1 (paste full)"],
               ["line2", "Address line 2"],
               ["city", "City"],
               ["state", "State"],
               ["zip", "ZIP"],
             ] as const
           ).map(([k, label]) => (
-            <label key={k} className="flex flex-col gap-1">
+            <label
+              key={k}
+              className={`flex flex-col gap-1 ${k === "line1" ? "sm:col-span-2" : ""}`}
+            >
               <span className={labelClass}>{label}</span>
               <input
                 className={inputClass}
@@ -551,8 +749,8 @@ export function BidIntakeStage() {
           <div>
             <h3 className="text-sm font-semibold text-ink">Invitations</h3>
             <p className="text-xs text-ink/45">
-              Company first, then contacts from that company. Many vendors →
-              many rows, one bid.
+              Company first, then contacts. Selecting a contact also fills
+              Mechanical. Many vendors → many rows, one bid.
             </p>
           </div>
           {editable ? (
@@ -599,11 +797,9 @@ export function BidIntakeStage() {
                     })
                   }
                   onPickExisting={(picked) =>
-                    patchInvitation(index, {
-                      contact: {
-                        ...(inv.contact ?? {}),
-                        company: picked.company || picked.name || null,
-                      },
+                    pickInvitationContact(index, {
+                      ...(inv.contact ?? {}),
+                      company: picked.company || picked.name || null,
                     })
                   }
                 />
@@ -643,16 +839,14 @@ export function BidIntakeStage() {
                     })
                   }
                   onPickExisting={(picked) =>
-                    patchInvitation(index, {
-                      contact: {
-                        name: picked.name ?? null,
-                        company:
-                          picked.company ||
-                          inv.contact?.company ||
-                          null,
-                        email: picked.email ?? null,
-                        phone: picked.phone ?? null,
-                      },
+                    pickInvitationContact(index, {
+                      name: picked.name ?? null,
+                      company:
+                        picked.company ||
+                        inv.contact?.company ||
+                        null,
+                      email: picked.email ?? null,
+                      phone: picked.phone ?? null,
                     })
                   }
                 />
@@ -684,6 +878,69 @@ export function BidIntakeStage() {
                           ...(inv.contact ?? {}),
                           phone: e.target.value || null,
                         },
+                      })
+                    }
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className={labelClass}>Preferred contact</span>
+                  <select
+                    className={inputClass}
+                    disabled={!editable}
+                    value={inv.contact?.preferredContact ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      patchInvitation(index, {
+                        contact: {
+                          ...(inv.contact ?? {}),
+                          preferredContact:
+                            v === "email" || v === "phone" ? v : null,
+                        },
+                      });
+                    }}
+                  >
+                    <option value="">—</option>
+                    <option value="email">Email</option>
+                    <option value="phone">Phone</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className={labelClass}>Preferred value</span>
+                  <input
+                    className={inputClass}
+                    disabled
+                    readOnly
+                    value={preferredContactValue(inv.contact ?? {})}
+                    placeholder="Matches email or phone"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 sm:col-span-2">
+                  <span className={labelClass}>
+                    Invitation email (paste full)
+                  </span>
+                  <textarea
+                    className={`${inputClass} min-h-[6rem] resize-y`}
+                    disabled={!editable}
+                    value={inv.inviteBody ?? ""}
+                    placeholder="Paste the full invite email / portal dump…"
+                    maxLength={50000}
+                    onChange={(e) =>
+                      patchInvitation(index, {
+                        inviteBody: e.target.value.slice(0, 50000) || null,
+                      })
+                    }
+                  />
+                </label>
+                <label className="flex flex-col gap-1 sm:col-span-2">
+                  <span className={labelClass}>Clerk notes</span>
+                  <textarea
+                    className={`${inputClass} min-h-[3.5rem] resize-y`}
+                    disabled={!editable}
+                    value={inv.notes ?? ""}
+                    placeholder="Internal notes (not the invite paste)"
+                    onChange={(e) =>
+                      patchInvitation(index, {
+                        notes: e.target.value || null,
                       })
                     }
                   />
@@ -808,8 +1065,8 @@ export function BidIntakeStage() {
                                 addenda: addenda.filter(
                                   (_, i) => i !== adIndex
                                 ),
-                              })
-                            }
+                              });
+                            }}
                           >
                             <TrashIcon />
                           </button>
@@ -828,8 +1085,8 @@ export function BidIntakeStage() {
                     onClick={() =>
                       setInvitations(
                         invitations.filter((_, i) => i !== index)
-                      )
-                    }
+                      );
+                    }}
                   >
                     <TrashIcon />
                   </button>
@@ -918,7 +1175,10 @@ export function BidIntakeStage() {
           <p className="text-sm text-ink/45">No owner links yet.</p>
         ) : (
           documentLinks.map((link, index) => (
-            <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <div
+              key={index}
+              className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]"
+            >
               <input
                 className={inputClass}
                 disabled={!editable}
@@ -945,6 +1205,22 @@ export function BidIntakeStage() {
                   setField("documentLinks", next);
                 }}
               />
+              <label className="inline-flex items-center gap-1.5 text-xs text-ink/70">
+                <input
+                  type="checkbox"
+                  disabled={!editable}
+                  checked={link.checkAddenda === true}
+                  onChange={(e) => {
+                    const next = documentLinks.map((l, i) =>
+                      i === index
+                        ? { ...l, checkAddenda: e.target.checked }
+                        : l
+                    );
+                    setField("documentLinks", next);
+                  }}
+                />
+                Check addenda
+              </label>
               {editable ? (
                 <button
                   type="button"
@@ -955,8 +1231,8 @@ export function BidIntakeStage() {
                     setField(
                       "documentLinks",
                       documentLinks.filter((_, i) => i !== index)
-                    )
-                  }
+                    );
+                  }}
                 >
                   <TrashIcon />
                 </button>
@@ -1094,8 +1370,8 @@ export function BidIntakeStage() {
                               tiers
                                 .filter((_, i) => i !== index)
                                 .map((row, i) => ({ ...row, sortOrder: i }))
-                            )
-                          }
+                            );
+                          }}
                         >
                           <TrashIcon />
                         </button>
@@ -1109,11 +1385,147 @@ export function BidIntakeStage() {
         )}
       </section>
 
+      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-ink">
+              GCs / mechanicals
+            </h3>
+            <p className="mt-0.5 text-xs text-ink/45">
+              Same opportunity — company + flags. Deeper follow-up stays on
+              Post-Bid.
+            </p>
+          </div>
+        </div>
+        {(
+          [
+            {
+              key: "gc" as const,
+              title: "General contractors",
+              list: gcs,
+              setList: setGcs,
+            },
+            {
+              key: "mech" as const,
+              title: "Mechanicals",
+              list: mechs,
+              setList: setMechs,
+            },
+          ] as const
+        ).map(({ key, title, list, setList }) => (
+          <div key={key} className="mt-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">
+                {title}
+              </p>
+              {editable ? (
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-brand hover:underline"
+                  onClick={() => setList([...list, emptyGcOrMech()])}
+                >
+                  + Add
+                </button>
+              ) : null}
+            </div>
+            {list.length === 0 ? (
+              <p className="mt-1 text-sm text-ink/40">None yet.</p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {list.map((row, index) => (
+                  <li
+                    key={`${key}-${index}`}
+                    className="flex flex-wrap items-center gap-2 rounded-xl border border-ink/[0.06] px-3 py-2"
+                  >
+                    <input
+                      className={`${inputClass} min-w-[10rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Company"
+                      value={row.company ?? row.name ?? ""}
+                      onChange={(e) => {
+                        const company = e.target.value;
+                        setList(
+                          list.map((r, i) =>
+                            i === index
+                              ? { ...r, company, name: company || null }
+                              : r
+                          )
+                        );
+                      }}
+                    />
+                    <label className="flex items-center gap-1.5 text-xs text-ink/70">
+                      <input
+                        type="checkbox"
+                        disabled={!editable}
+                        checked={row.hasTheJob === true}
+                        onChange={(e) =>
+                          setList(
+                            list.map((r, i) =>
+                              i === index
+                                ? {
+                                    ...r,
+                                    hasTheJob: e.target.checked ? true : null,
+                                  }
+                                : r
+                            )
+                          )
+                        }
+                      />
+                      Has the job
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-ink/70">
+                      <input
+                        type="checkbox"
+                        disabled={!editable}
+                        checked={row.stillBidding === true}
+                        onChange={(e) =>
+                          setList(
+                            list.map((r, i) =>
+                              i === index
+                                ? {
+                                    ...r,
+                                    stillBidding: e.target.checked
+                                      ? true
+                                      : null,
+                                  }
+                                : r
+                            )
+                          )
+                        }
+                      />
+                      Still bidding
+                    </label>
+                    {editable ? (
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-danger/80 hover:text-danger"
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              `Remove this ${key === "gc" ? "GC" : "mechanical"}?`
+                            )
+                          ) {
+                            return;
+                          }
+                          setList(list.filter((_, i) => i !== index));
+                        }}
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </section>
+
       <p className="text-xs text-ink/45">
         Docs: upload invitation / drawings / specs / addenda as bid attachments
         (`label=invitation|drawings|specifications|addenda`), then put ids on
-        the invitation row. GCs / mechanicals can stay light here — Post-Bid
-        for follow-up.
+        the invitation row. GCs / mechanicals above stay light — Post-Bid for
+        follow-up.
       </p>
     </div>
   );

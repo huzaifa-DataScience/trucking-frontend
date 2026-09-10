@@ -16,6 +16,7 @@ export function BidSpecSheetsStage() {
     setField,
     setSpecSheets,
     saving,
+    dirty,
     error,
     editable,
   } = useProcessDraft();
@@ -39,7 +40,7 @@ export function BidSpecSheetsStage() {
             Not the Mike Specs qty grid.
           </p>
           <p className="mt-1 text-xs text-ink/40">
-            {saving ? "Saving…" : editable ? "Draft autosaves" : "Read only"}
+            {saving ? "Saving…" : dirty ? "Unsaved changes" : editable ? "Save to keep changes" : "Read only"}
           </p>
         </div>
       </header>

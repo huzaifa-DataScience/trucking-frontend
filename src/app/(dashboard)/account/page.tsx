@@ -47,6 +47,7 @@ export default function AccountPage() {
   );
 
   const handleRemovePhoto = useCallback(async () => {
+    if (!window.confirm("Remove your profile photo?")) return;
     setPhotoBusy(true);
     setPhotoError(null);
     try {

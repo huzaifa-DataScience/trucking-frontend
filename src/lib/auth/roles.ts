@@ -62,3 +62,24 @@ export function roleLabel(role: AppRoleId | string): string {
   if (isAppRoleId(role)) return APP_ROLE_LABELS[role];
   return String(role);
 }
+
+/**
+ * Post-login / home path by role — bidding roles land on role Dashboard
+ * (`GET /bids/my-plate`). Estimates list stays on `/bidding` (`GET /bids`).
+ */
+export function homePathForRole(role: AppRoleId | string | null | undefined): string {
+  const r = normalizeAppRole(role);
+  switch (r) {
+    case "bid_clerk":
+    case "captain":
+    case "assistant_estimator":
+    case "project_manager":
+    case "operations_manager":
+    case "user":
+      return "/dashboard";
+    case "admin":
+    case "super_admin":
+    default:
+      return "/job";
+  }
+}

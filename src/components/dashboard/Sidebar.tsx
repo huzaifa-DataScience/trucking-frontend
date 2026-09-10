@@ -32,7 +32,13 @@ import type { AuthUser } from "@/lib/auth/types";
 import { useChatUnreadTotal } from "@/hooks/useChatUnreadTotal";
 import { ChatUnreadBadge } from "@/components/workforce/chat/ChatUnreadBadge";
 
-type ViewMode = "operations" | "billings" | "bidding" | "mike" | "workforce";
+type ViewMode =
+  | "operations"
+  | "billings"
+  | "dashboard"
+  | "bidding"
+  | "mike"
+  | "workforce";
 
 const WORKSPACE_STORAGE_KEY = "construction-logistics-workspace";
 
@@ -46,6 +52,7 @@ function viewFromPathname(pathname: string): ViewMode {
   ) {
     return "mike";
   }
+  if (pathname.startsWith("/dashboard")) return "dashboard";
   if (pathname.startsWith("/bidding")) return "bidding";
   if (pathname.startsWith("/billings") || pathname.startsWith("/clearstory")) return "billings";
   return "operations";
@@ -53,6 +60,7 @@ function viewFromPathname(pathname: string): ViewMode {
 
 function defaultHrefForView(view: ViewMode): string {
   if (view === "billings") return "/billings";
+  if (view === "dashboard") return "/dashboard";
   if (view === "bidding") return "/bidding";
   if (view === "mike") return "/estimation-files";
   if (view === "workforce") return "/workforce";
@@ -64,6 +72,8 @@ type SidebarNavItem = {
   label: string;
   Icon: ComponentType<{ className?: string }>;
   activePathPrefix?: string;
+  /** Match pathname === href only (no children). */
+  exact?: boolean;
   /** If set, item is hidden when `can(user, permission)` is false. */
   permission?: string;
   /** Bidding keys use legacy canBidding fallback. */
@@ -117,12 +127,22 @@ const operationsNavItems: SidebarNavItem[] = [
   },
 ];
 
+const dashboardNavItems: SidebarNavItem[] = [
+  {
+    href: "/dashboard",
+    label: "Home",
+    Icon: NavIconChart,
+    exact: true,
+    biddingPermission: "bidding:read",
+  },
+];
+
 const biddingNavItems: SidebarNavItem[] = [
   {
     href: "/bidding",
-    label: "Estimates",
-    Icon: NavIconProposal,
-    activePathPrefix: "/bidding",
+    label: "Bids",
+    Icon: NavIconTable,
+    exact: true,
     biddingPermission: "bidding:read",
   },
   {
@@ -240,6 +260,7 @@ function navItemVisible(
 const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ className?: string }> }[] = [
   { value: "operations", label: "Ops", Icon: NavIconTruck },
   { value: "billings", label: "Billing", Icon: NavIconInvoice },
+  { value: "dashboard", label: "Dashboard", Icon: NavIconChart },
   { value: "bidding", label: "Estimates", Icon: NavIconProposal },
   { value: "mike", label: "Mike", Icon: NavIconTable },
   { value: "workforce", label: "Workforce", Icon: NavIconClock },
@@ -248,6 +269,7 @@ const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ classN
 const WORKSPACE_FULL_LABELS: Record<ViewMode, string> = {
   operations: "Operations & reporting",
   billings: "Billing",
+  dashboard: "Dashboard",
   bidding: "Estimates",
   mike: "Mike",
   workforce: "Workforce",
@@ -297,7 +319,7 @@ export function Sidebar({
           return operationsNavItems.some((i) => navItemVisible(user, i));
         }
         if (value === "billings") return canSeeBillings;
-        if (value === "bidding" || value === "mike") {
+        if (value === "dashboard" || value === "bidding" || value === "mike") {
           return canBidding(user, "bidding:read");
         }
         if (value === "workforce") {
@@ -319,6 +341,7 @@ export function Sidebar({
   function itemsForView(view: ViewMode): SidebarNavItem[] {
     if (view === "workforce") return workforceNavItems;
     if (view === "mike") return mikeNavItems;
+    if (view === "dashboard") return dashboardNavItems;
     if (view === "billings") {
       return canSeeBillings
         ? [{ href: "/billings", label: "Billing", Icon: NavIconInvoice } as SidebarNavItem]
@@ -343,21 +366,21 @@ export function Sidebar({
   const inClearstory = pathname.startsWith("/clearstory");
 
   const navLinkClass = (active: boolean) =>
-    `flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition-colors ${
+    `flex items-center gap-3 rounded-lg px-2 py-2.5 text-[15px] font-semibold transition-colors ${
       iconOnly ? "justify-center" : "justify-start px-2.5"
     } ${
       active
         ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
-        : "text-white/65 hover:bg-white/[0.05] hover:text-white"
+        : "text-white/70 hover:bg-white/[0.05] hover:text-white"
     }`;
 
   const subLinkClass = (active: boolean) =>
-    `flex items-center gap-2.5 rounded-lg py-1.5 text-[13px] font-medium transition-colors ${
-      iconOnly ? "justify-center px-2" : "pl-9 pr-3"
+    `flex items-center gap-2.5 rounded-md py-1.5 text-[12.5px] font-medium transition-colors ${
+      iconOnly ? "justify-center px-2" : "pl-3 pr-2.5"
     } ${
       active
         ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
-        : "text-white/60 hover:bg-white/[0.05] hover:text-white"
+        : "text-white/55 hover:bg-white/[0.05] hover:text-white/85"
     }`;
 
   return (
@@ -426,31 +449,35 @@ export function Sidebar({
 
       <nav className="ui-scroll-dark flex-1 space-y-6 overflow-y-auto px-2 py-4 lg:px-3">
         <div>
-          <p className={`mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 ${lgLabel}`}>
+          <p className={`mb-2.5 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 ${lgLabel}`}>
             Workspace
           </p>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {visibleWorkspaces.map(({ value, Icon }) => {
               const isActiveWorkspace = currentView === value;
-              /** "Operations & reporting" stays expanded at all times; other workspaces expand only when active. */
-              const isExpanded = isActiveWorkspace || value === "operations";
+              /** Accordion: only the selected workspace stays open. */
+              const isExpanded = isActiveWorkspace;
               const items = itemsForView(value).filter((i) => navItemVisible(user, i));
               return (
-                <div key={value}>
+                <div key={value} className="space-y-0.5">
                   <button
                     type="button"
                     onClick={() => handleViewChange(value)}
                     title={WORKSPACE_FULL_LABELS[value]}
                     aria-expanded={isExpanded}
-                    className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm font-semibold transition-colors ${
+                    className={`flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-[15px] font-semibold tracking-tight transition-colors ${
                       iconOnly ? "justify-center" : "justify-start px-2.5"
                     } ${
                       isActiveWorkspace
-                        ? "bg-white/[0.06] text-white"
-                        : "text-white/65 hover:bg-white/[0.05] hover:text-white"
+                        ? "bg-white/[0.08] text-white"
+                        : "text-white/75 hover:bg-white/[0.05] hover:text-white"
                     }`}
                   >
-                    <Icon className={`h-[1.15rem] w-[1.15rem] shrink-0 ${isActiveWorkspace ? "text-brand" : "text-white/50"}`} />
+                    <Icon
+                      className={`h-5 w-5 shrink-0 ${
+                        isActiveWorkspace ? "text-brand" : "text-white/55"
+                      }`}
+                    />
                     <span className={`flex-1 truncate text-left ${lgLabelInline}`}>
                       {WORKSPACE_FULL_LABELS[value]}
                     </span>
@@ -467,10 +494,15 @@ export function Sidebar({
                   </button>
 
                   {isExpanded && (items.length > 0 || value === "billings") ? (
-                    <div className="mt-0.5 space-y-0.5">
-                      {items.map(({ href, label, Icon: ItemIcon, activePathPrefix }) => {
-                        const active =
-                          href === "/workforce"
+                    <div
+                      className={`mt-1 space-y-0.5 ${
+                        iconOnly ? "" : "ml-3 border-l border-white/[0.1] pl-2.5"
+                      }`}
+                    >
+                      {items.map(({ href, label, Icon: ItemIcon, activePathPrefix, exact }) => {
+                        const active = exact
+                          ? pathname === href
+                          : href === "/workforce"
                             ? pathname === "/workforce"
                             : activePathPrefix
                               ? pathname === activePathPrefix ||
@@ -478,7 +510,11 @@ export function Sidebar({
                               : pathname === href || pathname.startsWith(`${href}/`);
                         return (
                           <Link key={href} href={href} className={subLinkClass(active)} title={label}>
-                            <ItemIcon className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/55"}`} />
+                            <ItemIcon
+                              className={`h-3.5 w-3.5 shrink-0 ${
+                                active ? "text-brand" : "text-white/45"
+                              }`}
+                            />
                             <span className={`flex-1 ${lgLabelInline}`}>{label}</span>
                             {href === "/workforce/chat" && chatUnreadTotal > 0 ? (
                               <ChatUnreadBadge count={chatUnreadTotal} />
@@ -496,11 +532,11 @@ export function Sidebar({
                             title="Clearstory"
                           >
                             <NavIconLayers
-                              className={`h-4 w-4 shrink-0 ${inClearstory ? "text-brand" : "text-white/55"}`}
+                              className={`h-3.5 w-3.5 shrink-0 ${inClearstory ? "text-brand" : "text-white/45"}`}
                             />
                             <span className={`flex-1 ${lgLabelInline}`}>Clearstory</span>
                             <svg
-                              className={`h-3.5 w-3.5 shrink-0 text-white/40 transition-transform ${lgLabel} ${inClearstory ? "rotate-90" : ""}`}
+                              className={`h-3 w-3 shrink-0 text-white/40 transition-transform ${lgLabel} ${inClearstory ? "rotate-90" : ""}`}
                               viewBox="0 0 24 24"
                               fill="none"
                               stroke="currentColor"
@@ -512,20 +548,24 @@ export function Sidebar({
                           </Link>
                           {inClearstory && (
                             <div className={`mt-0.5 ${lgLabel}`}>
-                              <div className="ml-[1.15rem] space-y-0.5 border-l border-white/[0.08] pl-3">
+                              <div className="ml-2 space-y-0.5 border-l border-white/[0.08] pl-2.5">
                                 {clearstorySubItems.map(({ href, label, Icon }) => {
                                   const active = pathname === href || pathname.startsWith(`${href}/`);
                                   return (
                                     <Link
                                       key={href}
                                       href={href}
-                                      className={`flex items-center gap-2 rounded-lg py-1.5 pl-2 pr-3 text-[12.5px] font-medium transition-colors ${
+                                      className={`flex items-center gap-2 rounded-md py-1.5 pl-2 pr-2.5 text-[12px] font-medium transition-colors ${
                                         active
                                           ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
-                                          : "text-white/55 hover:bg-white/[0.05] hover:text-white"
+                                          : "text-white/50 hover:bg-white/[0.05] hover:text-white/80"
                                       }`}
                                     >
-                                      <Icon className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/50"}`} />
+                                      <Icon
+                                        className={`h-3.5 w-3.5 shrink-0 ${
+                                          active ? "text-brand" : "text-white/40"
+                                        }`}
+                                      />
                                       <span className="flex-1">{label}</span>
                                     </Link>
                                   );

@@ -7,48 +7,70 @@ import { useBidSheet } from "@/contexts/BidSheetContext";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { ProcessAward } from "@/lib/bidding/process-types";
 
-const SAVE_MS = 800;
-
 /** Awarded / startup — only when workflow.showAward (outcome = awarded). */
 export function BidAwardTab() {
-  const { bid, canWrite, refresh, setJobId } = useBidSheet();
+  const {
+    bid,
+    canWrite,
+    refresh,
+    setJobId,
+    setProcessDirty,
+    registerProcessSave,
+    confirmLeaveUnsaved,
+  } = useBidSheet();
   const [award, setAward] = useState<ProcessAward>({});
   const [jobIdDraft, setJobIdDraft] = useState("");
+  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const awardRef = useRef<ProcessAward>({});
   const editable = canWrite && bid?.status !== "archived";
 
   useEffect(() => {
     if (!bid) return;
-    setAward({ ...(bid.process?.award ?? {}) });
-    setJobIdDraft(bid.jobId != null ? String(bid.jobId) : "");
-  }, [bid]);
-
-  const persist = useCallback(
-    async (next: ProcessAward) => {
-      if (!bid || !editable) return;
-      setSaving(true);
-      setError(null);
-      try {
-        await biddingApi.patchBid(bid.id, {
-          process: { award: next },
-        });
-        await refresh();
-      } catch (e) {
-        setError(getApiErrorMessage(e, "Failed to save Award"));
-      } finally {
-        setSaving(false);
-      }
-    },
-    [bid, editable, refresh]
-  );
-
-  const scheduleAward = (next: ProcessAward) => {
+    const next = { ...(bid.process?.award ?? {}) };
     setAward(next);
+    awardRef.current = next;
+    setJobIdDraft(bid.jobId != null ? String(bid.jobId) : "");
+    setDirty(false);
+    setProcessDirty(false);
+  }, [bid, setProcessDirty]);
+
+  const persist = useCallback(async () => {
+    if (!bid || !editable) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await biddingApi.patchBid(bid.id, {
+        process: { award: awardRef.current },
+      });
+      setDirty(false);
+      setProcessDirty(false);
+      await refresh();
+    } catch (e) {
+      setError(getApiErrorMessage(e, "Failed to save Award"));
+      throw e;
+    } finally {
+      setSaving(false);
+    }
+  }, [bid, editable, refresh, setProcessDirty]);
+
+  useEffect(() => {
+    registerProcessSave(persist);
+    return () => registerProcessSave(null);
+  }, [persist, registerProcessSave]);
+
+  useEffect(() => {
+    setProcessDirty(dirty);
+    return () => setProcessDirty(false);
+  }, [dirty, setProcessDirty]);
+
+  const patchAward = (next: ProcessAward) => {
+    setAward(next);
+    awardRef.current = next;
     if (!editable) return;
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => void persist(next), SAVE_MS);
+    setDirty(true);
+    setProcessDirty(true);
   };
 
   if (!bid) return null;
@@ -61,6 +83,9 @@ export function BidAwardTab() {
         <Link
           href={`/bidding/${bid.id}?stage=result`}
           className="font-medium text-brand underline-offset-2 hover:underline"
+          onClick={(e) => {
+            if (!confirmLeaveUnsaved()) e.preventDefault();
+          }}
         >
           Outcome
         </Link>{" "}
@@ -74,15 +99,33 @@ export function BidAwardTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-base font-semibold text-ink">Awarded / startup</h2>
-        <p className="mt-0.5 text-sm text-ink/50">
-          Same bid. Confirm award + leftover startup. Contract tiers / bonds can
-          expand next.
-        </p>
-        <p className="mt-1 text-xs text-ink/40">
-          {saving ? "Saving…" : editable ? "Autosave on" : "Read only"}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="text-base font-semibold text-ink">Awarded / startup</h2>
+          <p className="mt-0.5 text-sm text-ink/50">
+            Same bid. Confirm award + leftover startup. Contract tiers / bonds
+            can expand next.
+          </p>
+          <p className="mt-1 text-xs text-ink/40">
+            {saving
+              ? "Saving…"
+              : dirty
+                ? "Unsaved changes"
+                : editable
+                  ? "Save to keep changes"
+                  : "Read only"}
+          </p>
+        </div>
+        {editable ? (
+          <button
+            type="button"
+            disabled={saving || !dirty}
+            onClick={() => void persist()}
+            className="rounded-xl border border-brand/30 bg-brand/10 px-3 py-2 text-sm font-semibold text-brand disabled:opacity-40"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        ) : null}
       </div>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
@@ -106,7 +149,7 @@ export function BidAwardTab() {
               disabled={!editable}
               value={String(award[k] ?? "")}
               onChange={(e) =>
-                scheduleAward({ ...award, [k]: e.target.value || null })
+                patchAward({ ...award, [k]: e.target.value || null })
               }
             />
           </label>

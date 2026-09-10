@@ -6,12 +6,21 @@ import { useBidSheet } from "@/contexts/BidSheetContext";
 import { getApiErrorMessage } from "@/lib/api/client";
 
 /**
- * Save draft = autosave PATCH process.
- * Complete / Return only — win/lose lives on Outcome tab (§0).
+ * Manual Save + Complete / Return. Win/lose on Outcome tab (§0).
  */
 export function BidHandoffActions() {
-  const { bid, canWrite, refresh, saving } = useBidSheet();
-  const [busy, setBusy] = useState<"complete" | "return" | null>(null);
+  const {
+    bid,
+    canWrite,
+    refresh,
+    saving,
+    processDirty,
+    dirty,
+    unsavedChanges,
+    saveProcess,
+    saveNow,
+  } = useBidSheet();
+  const [busy, setBusy] = useState<"complete" | "return" | "save" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
 
@@ -21,8 +30,38 @@ export function BidHandoffActions() {
   const archived = bid.status === "archived";
   const editable = canWrite && !archived;
 
+  const flushSaves = async () => {
+    if (processDirty) await saveProcess();
+    if (dirty) await saveNow();
+  };
+
+  const runSave = async () => {
+    if (!editable || !unsavedChanges) return;
+    setBusy("save");
+    setError(null);
+    try {
+      await flushSaves();
+    } catch (e) {
+      setError(getApiErrorMessage(e, "Failed to save"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const runHandoff = async (action: "complete" | "return") => {
     if (!editable) return;
+    if (unsavedChanges) {
+      const saveFirst = window.confirm(
+        "You have unsaved changes. Click OK to save, then continue. Click Cancel to stay on this page."
+      );
+      if (!saveFirst) return;
+      try {
+        await flushSaves();
+      } catch (e) {
+        setError(getApiErrorMessage(e, "Failed to save before handoff"));
+        return;
+      }
+    }
     setBusy(action);
     setError(null);
     try {
@@ -42,9 +81,23 @@ export function BidHandoffActions() {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-ink/55">
-        {saving ? "Saving draft…" : "Incomplete OK — draft autosaves"}
+        {busy === "save" || saving
+          ? "Saving…"
+          : unsavedChanges
+            ? "Unsaved changes"
+            : editable
+              ? "Save when ready — incomplete OK"
+              : "Read only"}
       </p>
       <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={!editable || busy !== null || !unsavedChanges}
+          onClick={() => void runSave()}
+          className="rounded-xl border border-brand/30 bg-brand/10 px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand/15 disabled:opacity-40"
+        >
+          {busy === "save" || saving ? "Saving…" : "Save"}
+        </button>
         <button
           type="button"
           disabled={

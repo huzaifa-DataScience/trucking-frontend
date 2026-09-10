@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { BidStatusBadge } from "@/components/bidding/BidStatusBadge";
 import { BidStageStrip } from "@/components/bidding/BidStageStrip";
@@ -83,7 +82,9 @@ function NotesIcon() {
 
 /** Shared bid chrome — BIDDING_FRONTEND_API.md §0 (PDF stages + handoff) */
 export function BidSheetLayout({ children }: { children: ReactNode }) {
-  const { bid, saving, initialLoading } = useBidSheet();
+  const { bid, saving, initialLoading, unsavedChanges, confirmLeaveUnsaved } =
+    useBidSheet();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [activityOpen, setActivityOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -107,8 +108,12 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
     <>
     <div className="flex min-h-0 flex-1 flex-col gap-4 bid-animate-in">
       <div className="flex flex-col gap-3">
-        <Link
-          href="/bidding"
+        <button
+          type="button"
+          onClick={() => {
+            if (!confirmLeaveUnsaved()) return;
+            router.push("/bidding");
+          }}
           className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-ink/50 transition hover:text-brand"
         >
           <svg
@@ -122,7 +127,12 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
             <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           Bids
-        </Link>
+          {unsavedChanges ? (
+            <span className="text-[10px] font-semibold text-amber-700">
+              · unsaved
+            </span>
+          ) : null}
+        </button>
         <PageHeader
           title={bid.estimateNumber}
           subtitle={bid.bidName || "Untitled estimate"}
@@ -136,6 +146,11 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
                 {formatOutcome(outcome ?? undefined)}
               </span>
               <BidStatusBadge status={bid.status} />
+              {bid.canEdit === false ? (
+                <span className="rounded-lg border border-ink/10 bg-ink/[0.04] px-2 py-1 text-[11px] font-semibold text-ink/55">
+                  View only
+                </span>
+              ) : null}
               {saving ? (
                 <span className="text-xs font-medium text-brand">Saving…</span>
               ) : null}

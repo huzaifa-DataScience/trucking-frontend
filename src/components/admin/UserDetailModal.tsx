@@ -141,6 +141,11 @@ export function UserDetailModal({
                     </option>
                   ))}
                 </select>
+                <p className="mt-1.5 text-[11px] text-stone-500">
+                  Assigning a role picks their bidding home queues (clerk /
+                  captain / AE / PM / ops). No separate team or dashboard
+                  picker on the user.
+                </p>
               </dd>
             </div>
             <div>
@@ -184,8 +189,10 @@ export function UserDetailModal({
                   </ul>
                 )}
                 <p className="mt-1.5 text-[11px] text-stone-500">
-                  Read-only. Change the role to change permissions. Do not PATCH
-                  permissions per user.
+                  Read-only. Change the role to change permissions and the
+                  bidding home plate (`GET /bids/my-plate`). Do not PATCH
+                  permissions per user, and do not add a second dashboard
+                  picker here.
                 </p>
               </dd>
             </div>
