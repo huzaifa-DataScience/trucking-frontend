@@ -44,6 +44,7 @@ export function useClearstoryProjects(params: { search?: string; page: number; p
   const [data, setData] = useState<ClearstoryProjectsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const refetch = useCallback(async () => {
     setLoading(true);
@@ -62,6 +63,7 @@ export function useClearstoryProjects(params: { search?: string; page: number; p
       setError(getApiErrorMessage(e, "Failed to load projects"));
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   }, [params.page, params.pageSize, params.search]);
 
@@ -69,7 +71,7 @@ export function useClearstoryProjects(params: { search?: string; page: number; p
     void refetch();
   }, [refetch]);
 
-  return { data, error, loading, refetch };
+  return { data, error, loading, initialLoading, refetch };
 }
 
 export function useClearstoryProjectSummary(projectId: string | null, enabled: boolean) {

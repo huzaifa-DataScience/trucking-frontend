@@ -10,6 +10,97 @@ import {
   type WageDecision,
 } from "@/lib/bidding/process-types";
 
+function CheckIcon() {
+  return (
+    <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} aria-hidden>
+      <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** Custom checkbox row — 20x20 rounded-square box, brand-orange when checked, whole row clickable. */
+function CheckboxRow({
+  checked,
+  disabled,
+  onChange,
+  label,
+  badges,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  badges?: string[];
+}) {
+  return (
+    <label
+      className={`group inline-flex w-fit items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors duration-150 ${
+        disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+      } ${checked ? "bg-brand/[0.06]" : "hover:bg-ink/[0.03]"}`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="peer sr-only"
+      />
+      <span
+        aria-hidden
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border-[1.5px] transition-all duration-150 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand ${
+          checked ? "border-brand bg-brand" : "border-ink/25 bg-white group-hover:border-brand/40"
+        }`}
+      >
+        {checked ? <CheckIcon /> : null}
+      </span>
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink/85">
+        {label}
+        {badges?.map((b) => (
+          <span
+            key={b}
+            className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink/45"
+          >
+            {b}
+          </span>
+        ))}
+      </span>
+    </label>
+  );
+}
+
+/** Compact currency input — leading $ prefix, capped width, 8px radius. */
+/** Compact currency input — leading $ prefix, capped width, 8px radius. */
+function CurrencyField({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: number | null | undefined;
+  disabled?: boolean;
+  onChange: (v: number | null) => void;
+}) {
+  return (
+    <label className="flex max-w-[360px] flex-col gap-1.5">
+      <span className="text-xs font-semibold text-ink/60">{label}</span>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink/40">$</span>
+        <input
+          type="number"
+          step="0.01"
+          inputMode="decimal"
+          placeholder="0.00"
+          disabled={disabled}
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
+          className="h-11 w-full rounded-lg border border-ink/10 bg-surface py-2 pl-7 pr-3 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+        />
+      </div>
+    </label>
+  );
+}
+
 /** Stage 3 — Estimating Setup (wage decision ≠ wage rate). Spec sheets = next tab. */
 export function BidEstimatingSetupStage() {
   const {
@@ -48,10 +139,6 @@ export function BidEstimatingSetupStage() {
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="text-base font-semibold text-ink">Estimating Setup</h2>
-        <p className="mt-0.5 text-sm text-ink/50">
-          Wage decision, PLA, OCIP, lifts, parking, technical review. Spec sheet
-          rules are on the next tab. Hand off to Takeoff only when approved.
-        </p>
         <p className="mt-1 text-xs text-ink/40">
           {saving ? "Saving…" : editable ? "Draft autosaves" : "Read only"}
         </p>
@@ -160,122 +247,95 @@ export function BidEstimatingSetupStage() {
         </label>
       </section>
 
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
-        <h3 className="sm:col-span-2 text-sm font-semibold text-ink">
-          OCIP / lifts / parking
-        </h3>
-        <label className="flex items-center gap-2 sm:col-span-2">
-          <input
-            type="checkbox"
-            disabled={!editable}
-            checked={draft.buyAmerican === true}
-            onChange={(e) =>
-              setField("buyAmerican", e.target.checked ? true : null)
-            }
-          />
-          <span className="text-sm text-ink/80">
-            Buy American?{" "}
-            <span className="text-ink/45">(project-level · federal)</span>
-          </span>
-        </label>
-        <label className="flex items-center gap-2 sm:col-span-2">
-          <input
-            type="checkbox"
-            disabled={!editable}
-            checked={draft.aPlus === true}
-            onChange={(e) =>
-              setField("aPlus", e.target.checked ? true : null)
-            }
-          />
-          <span className="text-sm text-ink/80">
-            A+{" "}
-            <span className="text-ink/45">(bid-level · Setup)</span>
-          </span>
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            disabled={!editable}
-            checked={Boolean(draft.ocipCcip?.coversWc)}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                ocipCcip: {
-                  ...(draft.ocipCcip ?? {}),
-                  coversWc: e.target.checked,
-                },
-              })
-            }
-          />
-          <span className="text-sm text-ink/80">OCIP covers WC</span>
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            disabled={!editable}
-            checked={Boolean(draft.ocipCcip?.coversGl)}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                ocipCcip: {
-                  ...(draft.ocipCcip ?? {}),
-                  coversGl: e.target.checked,
-                },
-              })
-            }
-          />
-          <span className="text-sm text-ink/80">OCIP covers GL</span>
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            disabled={!editable}
-            checked={Boolean(draft.lifts?.needed)}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                lifts: { ...(draft.lifts ?? {}), needed: e.target.checked },
-              })
-            }
-          />
-          <span className="text-sm text-ink/80">Lifts needed</span>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Lifts add $</span>
-          <input
-            type="number"
-            className={inputClass}
-            disabled={!editable}
-            value={draft.lifts?.addMoney ?? ""}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                lifts: {
-                  ...(draft.lifts ?? {}),
-                  addMoney: e.target.value ? Number(e.target.value) : null,
-                },
-              })
-            }
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Parking total $</span>
-          <input
-            type="number"
-            className={inputClass}
-            disabled={!editable}
-            value={draft.parking?.total ?? ""}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                parking: {
-                  ...(draft.parking ?? {}),
-                  total: e.target.value ? Number(e.target.value) : null,
-                },
-              })
-            }
-          />
-        </label>
+      <section className="flex flex-col gap-5 rounded-2xl border border-ink/[0.08] bg-surface p-5">
+        <div>
+          <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink/45">Requirements</h3>
+          <div className="flex flex-col gap-2">
+            <CheckboxRow
+              label="Buy American"
+              badges={["Project level", "Federal"]}
+              disabled={!editable}
+              checked={draft.buyAmerican === true}
+              onChange={(v) => setField("buyAmerican", v ? true : null)}
+            />
+            <CheckboxRow
+              label="A+"
+              badges={["Bid level", "Setup"]}
+              disabled={!editable}
+              checked={draft.aPlus === true}
+              onChange={(v) => setField("aPlus", v ? true : null)}
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-ink/[0.06] pt-5">
+          <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink/45">Insurance</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <CheckboxRow
+              label="OCIP covers WC"
+              disabled={!editable}
+              checked={Boolean(draft.ocipCcip?.coversWc)}
+              onChange={(v) =>
+                setDraft({
+                  ...draft,
+                  ocipCcip: { ...(draft.ocipCcip ?? {}), coversWc: v },
+                })
+              }
+            />
+            <CheckboxRow
+              label="OCIP covers GL"
+              disabled={!editable}
+              checked={Boolean(draft.ocipCcip?.coversGl)}
+              onChange={(v) =>
+                setDraft({
+                  ...draft,
+                  ocipCcip: { ...(draft.ocipCcip ?? {}), coversGl: v },
+                })
+              }
+            />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink/45">Site logistics</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <CheckboxRow
+              label="Lifts needed"
+              disabled={!editable}
+              checked={Boolean(draft.lifts?.needed)}
+              onChange={(v) =>
+                setDraft({
+                  ...draft,
+                  lifts: { ...(draft.lifts ?? {}), needed: v },
+                })
+              }
+            />
+            {draft.lifts?.needed ? (
+              <CurrencyField
+                label="Lift cost"
+                disabled={!editable}
+                value={draft.lifts?.addMoney}
+                onChange={(v) =>
+                  setDraft({
+                    ...draft,
+                    lifts: { ...(draft.lifts ?? {}), addMoney: v },
+                  })
+                }
+              />
+            ) : null}
+            <CurrencyField
+              label="Parking cost"
+              disabled={!editable}
+              value={draft.parking?.total}
+              onChange={(v) =>
+                setDraft({
+                  ...draft,
+                  parking: { ...(draft.parking ?? {}), total: v },
+                })
+              }
+            />
+          </div>
+        </div>
       </section>
 
       <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
