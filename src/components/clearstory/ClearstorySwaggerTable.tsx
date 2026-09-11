@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { JsonPayloadModal } from "@/components/clearstory/JsonPayloadModal";
@@ -76,10 +76,12 @@ function SortIcon({ dir }: { dir: SortDir | null }) {
 const TABLE_SCROLL =
   "min-h-0 min-w-0 w-full flex-1 overflow-x-auto overflow-y-auto max-h-[min(70dvh,calc(100dvh-14rem))]";
 
-/** Sticky-left cell classes for the pinned (id) column, keyed by whether the row is zebra-striped. */
-export const STICKY_HEADER_CLASS = "sticky left-0 z-30 bg-[#f0f2f5] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]";
-export function stickyBodyClass(zebra: boolean): string {
-  return `sticky left-0 z-10 ${zebra ? "bg-[#fbfbfc]" : "bg-white"} shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]`;
+/** Sticky-left classes for pinned columns. `isLast` puts the divider shadow only on the rightmost pinned column. */
+export function pinnedHeaderClass(isLast: boolean): string {
+  return `sticky z-30 bg-[#f0f2f5] ${isLast ? "shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]" : ""}`;
+}
+export function pinnedBodyClass(zebra: boolean, isLast: boolean): string {
+  return `sticky z-10 ${zebra ? "bg-[#fbfbfc]" : "bg-white"} ${isLast ? "shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]" : ""}`;
 }
 
 export function loadHiddenColumns(storageKey: string): Set<string> {
@@ -94,16 +96,109 @@ export function loadHiddenColumns(storageKey: string): Set<string> {
   }
 }
 
+export function loadPinnedColumns(storageKey: string): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Column pin state + sticky-left pixel offsets for as many pinned columns as the user wants.
+ * `lockedKey` (the id column) is always pinned first and can't be unpinned.
+ */
+export function useColumnPinning({
+  storageKey,
+  lockedKey,
+}: {
+  storageKey: string;
+  lockedKey?: string;
+}) {
+  const [pinnedKeys, setPinnedKeys] = useState<string[]>(() => loadPinnedColumns(storageKey));
+
+  useEffect(() => {
+    setPinnedKeys(loadPinnedColumns(storageKey));
+  }, [storageKey]);
+
+  const togglePin = (key: string) => {
+    if (key === lockedKey) return;
+    setPinnedKeys((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        /* ignore storage failures */
+      }
+      return next;
+    });
+  };
+
+  const effectivePinnedOrder = useMemo(() => {
+    const rest = pinnedKeys.filter((k) => k !== lockedKey);
+    return lockedKey ? [lockedKey, ...rest] : rest;
+  }, [pinnedKeys, lockedKey]);
+
+  return { pinnedKeys, togglePin, effectivePinnedOrder };
+}
+
+/** Orders headers pinned-first (in pin order), measures their rendered widths, and returns cumulative left offsets. */
+export function useStickyOffsets(
+  orderedPinnedKeys: string[],
+  cellRefs: React.MutableRefObject<Map<string, HTMLTableCellElement>>,
+  deps: unknown[]
+) {
+  const [offsets, setOffsets] = useState<Record<string, number>>({});
+
+  useLayoutEffect(() => {
+    const next: Record<string, number> = {};
+    let acc = 0;
+    for (const key of orderedPinnedKeys) {
+      next[key] = acc;
+      const el = cellRefs.current.get(key);
+      acc += el ? el.offsetWidth : 0;
+    }
+    setOffsets(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderedPinnedKeys.join("|"), ...deps]);
+
+  return offsets;
+}
+
+function PinIcon({ filled, className = "h-3.5 w-3.5" }: { filled: boolean; className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path d="M12 2l1.5 5.5L19 9l-4.5 3.5L16 18l-4-3-4 3 1.5-5.5L5 9l5.5-1.5L12 2Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function ColumnPickerButton({
   columns,
   hidden,
   lockedKey,
   onToggle,
+  pinned,
+  onTogglePin,
 }: {
   columns: { key: string; label: string }[];
   hidden: Set<string>;
   lockedKey?: string;
   onToggle: (key: string) => void;
+  /** When provided, each row gets a pin toggle (unlimited columns can be pinned). */
+  pinned?: Set<string>;
+  onTogglePin?: (key: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -125,6 +220,9 @@ export function ColumnPickerButton({
   }, [open]);
 
   const hiddenCount = columns.filter((c) => hidden.has(c.key) && c.key !== lockedKey).length;
+  const pinnedCount = columns.filter((c) => c.key !== lockedKey && (pinned?.has(c.key) ?? false)).length;
+  const hiddenNames = columns.filter((c) => hidden.has(c.key) && c.key !== lockedKey).map((c) => c.label);
+  const pinnedNames = columns.filter((c) => c.key !== lockedKey && (pinned?.has(c.key) ?? false)).map((c) => c.label);
 
   return (
     <div className="relative shrink-0" ref={ref}>
@@ -133,6 +231,14 @@ export function ColumnPickerButton({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
+        title={
+          [
+            pinnedNames.length ? `Pinned: ${pinnedNames.join(", ")}` : null,
+            hiddenNames.length ? `Hidden: ${hiddenNames.join(", ")}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || undefined
+        }
         className="flex items-center gap-1.5 rounded-lg border border-ink/12 bg-white px-3 py-1.5 text-xs font-semibold text-ink/70 shadow-sm transition hover:border-ink/20 hover:text-ink"
       >
         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -142,6 +248,12 @@ export function ColumnPickerButton({
           <circle cx="9" cy="18" r="1.6" fill="currentColor" stroke="none" />
         </svg>
         Columns
+        {pinnedCount > 0 ? (
+          <span className="flex items-center gap-1 rounded-full bg-ink/[0.06] px-1.5 py-0.5 text-[10px] font-bold text-ink/60">
+            <PinIcon filled />
+            {pinnedCount}
+          </span>
+        ) : null}
         {hiddenCount > 0 ? (
           <span className="rounded-full bg-brand/15 px-1.5 py-0.5 text-[10px] font-bold text-brand">{hiddenCount} hidden</span>
         ) : null}
@@ -150,28 +262,51 @@ export function ColumnPickerButton({
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-full z-30 mt-1.5 max-h-80 w-56 overflow-y-auto rounded-xl border border-ink/[0.08] bg-white p-1.5 shadow-[0_12px_32px_-8px_rgba(1,1,1,0.18)]"
+          className="absolute right-0 top-full z-30 mt-1.5 max-h-96 w-72 overflow-y-auto rounded-xl border border-ink/[0.08] bg-white p-1.5 shadow-[0_12px_32px_-8px_rgba(1,1,1,0.18)]"
         >
+          <div className="flex items-center gap-2 px-2.5 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-wide text-ink/35">
+            <span className="flex-1">Show column</span>
+            <span className="w-16 shrink-0 text-right">Pin left</span>
+          </div>
           {columns.map(({ key, label }) => {
             const locked = key === lockedKey;
             const checked = locked || !hidden.has(key);
+            const isPinned = locked || (pinned?.has(key) ?? false);
             return (
-              <label
+              <div
                 key={key}
                 className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition ${
-                  locked ? "cursor-not-allowed text-ink/40" : "cursor-pointer text-ink/75 hover:bg-ink/[0.04]"
+                  locked ? "text-ink/40" : "text-ink/75 hover:bg-ink/[0.04]"
                 }`}
               >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  disabled={locked}
-                  onChange={() => onToggle(key)}
-                  className="h-3.5 w-3.5 rounded border-ink/25 accent-brand"
-                />
-                <span className="truncate">{label}</span>
-                {locked ? <span className="ml-auto shrink-0 text-[10px] text-ink/35">pinned</span> : null}
-              </label>
+                <label className={`flex min-w-0 flex-1 items-center gap-2 ${locked ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={locked}
+                    onChange={() => onToggle(key)}
+                    className="h-3.5 w-3.5 shrink-0 rounded border-ink/25 accent-brand"
+                  />
+                  <span className="truncate">{label}</span>
+                </label>
+                {locked ? (
+                  <span className="w-16 shrink-0 text-right text-[10px] text-ink/35">Always</span>
+                ) : onTogglePin ? (
+                  <button
+                    type="button"
+                    onClick={() => onTogglePin(key)}
+                    aria-pressed={isPinned}
+                    className={`flex w-16 shrink-0 items-center justify-end gap-1 rounded-md py-1 text-[11px] font-semibold transition ${
+                      isPinned ? "text-brand" : "text-ink/30 hover:text-ink/55"
+                    }`}
+                  >
+                    <PinIcon filled={isPinned} className="h-3 w-3" />
+                    {isPinned ? "Pinned" : "Pin"}
+                  </button>
+                ) : (
+                  <span className="w-16 shrink-0" />
+                )}
+              </div>
             );
           })}
         </div>
@@ -299,6 +434,29 @@ export function ClearstorySwaggerTable({
     [allHeaders, hiddenColumns, idKey]
   );
 
+  const pinStorageKey = `cs-table-pins-${paginationIdPrefix}`;
+  const { pinnedKeys, togglePin, effectivePinnedOrder } = useColumnPinning({
+    storageKey: pinStorageKey,
+    lockedKey: idKey,
+  });
+
+  const visibleKeySet = useMemo(() => new Set(visibleHeaders.map((h) => dataHeaderKey(h.spec))), [visibleHeaders]);
+  const activePinnedOrder = useMemo(
+    () => effectivePinnedOrder.filter((k) => visibleKeySet.has(k)),
+    [effectivePinnedOrder, visibleKeySet]
+  );
+  const pinnedSet = useMemo(() => new Set(activePinnedOrder), [activePinnedOrder]);
+
+  const orderedHeaders = useMemo(() => {
+    const byKey = new Map(visibleHeaders.map((h) => [dataHeaderKey(h.spec), h]));
+    const pinnedHeaders = activePinnedOrder.map((k) => byKey.get(k)).filter((h): h is HeaderCol => Boolean(h));
+    const unpinnedHeaders = visibleHeaders.filter((h) => !pinnedSet.has(dataHeaderKey(h.spec)));
+    return [...pinnedHeaders, ...unpinnedHeaders];
+  }, [visibleHeaders, activePinnedOrder, pinnedSet]);
+
+  const pinnedCellRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
+  const pinnedOffsets = useStickyOffsets(activePinnedOrder, pinnedCellRefs, [orderedHeaders.length]);
+
   const [sort, setSort] = useState<SortState>(null);
 
   const toggleSort = (key: string) => {
@@ -357,6 +515,8 @@ export function ClearstorySwaggerTable({
                 hidden={hiddenColumns}
                 lockedKey={idKey}
                 onToggle={toggleColumn}
+                pinned={pinnedSet}
+                onTogglePin={togglePin}
               />
             ) : null}
           </div>
@@ -371,16 +531,22 @@ export function ClearstorySwaggerTable({
                 <caption className="sr-only">{title}</caption>
                 <thead className="sticky top-0 z-20">
                   <tr className="bg-[#f0f2f5]">
-                    {visibleHeaders.map((h) => {
+                    {orderedHeaders.map((h) => {
                       const key = dataHeaderKey(h.spec);
                       const dir = sort?.key === key ? sort.dir : null;
-                      const isSticky = key === idKey;
+                      const isPinned = pinnedSet.has(key);
+                      const isLastPinned = isPinned && activePinnedOrder[activePinnedOrder.length - 1] === key;
                       return (
                         <th
                           key={key}
+                          ref={(el) => {
+                            if (isPinned && el) pinnedCellRefs.current.set(key, el);
+                            else pinnedCellRefs.current.delete(key);
+                          }}
                           scope="col"
+                          style={isPinned ? { left: pinnedOffsets[key] ?? 0 } : undefined}
                           className={`whitespace-nowrap border-b border-ink/[0.1] px-0 py-0 text-xs font-semibold tracking-wide text-ink/60 ${
-                            isSticky ? STICKY_HEADER_CLASS : ""
+                            isPinned ? pinnedHeaderClass(isLastPinned) : ""
                           }`}
                         >
                           <button
@@ -405,16 +571,18 @@ export function ClearstorySwaggerTable({
                         key={row.resourceKey}
                         className={`align-top transition-colors hover:bg-brand/[0.03] ${zebra ? "bg-ink/[0.015]" : ""}`}
                       >
-                        {visibleHeaders.map((h) => {
+                        {orderedHeaders.map((h) => {
                           const label = tableColumnLabel(h.spec);
                           const cellKey = dataHeaderKey(h.spec);
-                          const isSticky = cellKey === idKey;
-                          const cellClass = `max-w-[16rem] border-b border-ink/[0.06] px-3 py-2.5 align-middle ${isSticky ? stickyBodyClass(zebra) : ""}`;
+                          const isPinned = pinnedSet.has(cellKey);
+                          const isLastPinned = isPinned && activePinnedOrder[activePinnedOrder.length - 1] === cellKey;
+                          const cellStyle = isPinned ? { left: pinnedOffsets[cellKey] ?? 0 } : undefined;
+                          const cellClass = `max-w-[16rem] border-b border-ink/[0.06] px-3 py-2.5 align-middle ${isPinned ? pinnedBodyClass(zebra, isLastPinned) : ""}`;
 
                           if (h.spec.kind === "group") {
                             const raw = getGroupedSwaggerOrMirrorValue(row, h.spec.prefix);
                             return (
-                              <td key={cellKey} className={cellClass}>
+                              <td key={cellKey} className={cellClass} style={cellStyle}>
                                 {raw === undefined ? (
                                   <span className="text-sm text-ink/30">—</span>
                                 ) : (
@@ -438,7 +606,7 @@ export function ClearstorySwaggerTable({
                           const exp = expandCellForModal(raw);
 
                           return (
-                            <td key={cellKey} className={cellClass}>
+                            <td key={cellKey} className={cellClass} style={cellStyle}>
                               {"empty" in exp ? (
                                 <span className="text-sm text-ink/30">—</span>
                               ) : "modal" in exp ? (

@@ -17,10 +17,7 @@ export default function ClearstoryCorTablePage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
-      <PageHeader
-        title="COR (table)"
-        subtitle="Change Order Requests (COR). Browse the register and open details as needed."
-      />
+      <PageHeader title="COR (table)" />
 
       <ClearstorySwaggerTable
         title="Change orders"

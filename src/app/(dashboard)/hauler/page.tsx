@@ -11,7 +11,7 @@ import { useLookups } from "@/hooks/useLookups";
 import { useHaulerDashboard } from "@/hooks/useHaulerDashboard";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { DashboardSkeleton } from "@/components/reporting/DashboardSkeleton";
+import { Skeleton, SkeletonStatRow, SkeletonTableRows } from "@/components/ui/Skeleton";
 import * as haulerApi from "@/lib/api/endpoints/hauler-dashboard";
 
 function createDefaultFilters(): FilterConfig {
@@ -100,19 +100,38 @@ export default function HaulerDashboardPage() {
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 sm:gap-8">
       <PageHeader
         title="Hauler (vendor) dashboard"
-        subtitle="Fraud detection and efficiency analysis — Created At helps surface late or backdated entries."
+        subtitle="Fraud detection and efficiency analysis. The Created At timestamp helps surface late or backdated entries."
       />
 
-      <ReportFilters
-        filters={filters}
-        options={filterOptions}
-        onChange={setFilters}
-        showJob
-        showMaterial
-        showHauler
-        showTruckType
-        showDirection
-      />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ReportFilters
+          filters={filters}
+          options={filterOptions}
+          onChange={setFilters}
+          showJob
+          showMaterial
+          showHauler
+          showTruckType
+          showDirection
+        />
+        <div className="flex h-full flex-col rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.06)] sm:p-5">
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-ink/40 sm:mb-4">
+            Overview
+          </h2>
+          {loading ? (
+            <SkeletonStatRow count={3} />
+          ) : (
+            <KPICards
+              maxCols={2}
+              items={[
+                { label: "Total Tickets", value: kpis.totalTickets },
+                { label: "Unique Trucks", value: kpis.uniqueTrucks },
+                { label: "Active Jobs", value: kpis.activeJobs },
+              ]}
+            />
+          )}
+        </div>
+      </div>
 
       {error && (
         <div className="rounded-2xl border border-danger-border bg-danger-tint px-4 py-3 text-sm text-danger">
@@ -120,18 +139,26 @@ export default function HaulerDashboardPage() {
         </div>
       )}
 
-      {loading && <DashboardSkeleton kpiCount={3} />}
+      {loading && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.06)]"
+              aria-hidden
+            >
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="mt-1.5 h-3 w-52" />
+              <div className="mt-5">
+                <SkeletonTableRows rows={6} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {!loading && (
         <>
-          <KPICards
-            items={[
-              { label: "Total Tickets", value: kpis.totalTickets },
-              { label: "Unique Trucks", value: kpis.uniqueTrucks },
-              { label: "Active Jobs", value: kpis.activeJobs },
-            ]}
-          />
-
           <div className="grid gap-6 lg:grid-cols-2">
             <SummaryTable
               title="Billable units"

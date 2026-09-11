@@ -12,7 +12,7 @@ import { useLookups } from "@/hooks/useLookups";
 import { useJobDashboard } from "@/hooks/useJobDashboard";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { DashboardSkeleton } from "@/components/reporting/DashboardSkeleton";
+import { Skeleton, SkeletonStatRow, SkeletonTableRows } from "@/components/ui/Skeleton";
 import * as jobApi from "@/lib/api/endpoints/job-dashboard";
 
 function createDefaultFilters(initialJobId?: string | null): FilterConfig {
@@ -130,15 +130,32 @@ export default function JobDashboardPage() {
         subtitle="Supply chain visibility, disposal limits, and compliance in one place."
       />
 
-      <ReportFilters
-        filters={filters}
-        options={filterOptions}
-        onChange={setFilters}
-        showJob
-        showDirection
-      />
-
-     
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ReportFilters
+          filters={filters}
+          options={filterOptions}
+          onChange={setFilters}
+          showJob
+          showDirection
+        />
+        <div className="flex h-full flex-col rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.06)] sm:p-5">
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-ink/40 sm:mb-4">
+            Overview
+          </h2>
+          {loading ? (
+            <SkeletonStatRow count={3} />
+          ) : (
+            <KPICards
+              maxCols={2}
+              items={[
+                { label: "Total Tickets", value: kpis.totalTickets },
+                { label: "Flow Balance", value: kpis.flowBalance },
+                { label: "Last Active", value: kpis.lastActive },
+              ]}
+            />
+          )}
+        </div>
+      </div>
 
       {error && (
         <div className="rounded-2xl border border-danger-border bg-danger-tint px-4 py-3 text-sm text-danger">
@@ -146,18 +163,26 @@ export default function JobDashboardPage() {
         </div>
       )}
 
-      {loading && <DashboardSkeleton kpiCount={3} />}
+      {loading && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.06)]"
+              aria-hidden
+            >
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="mt-1.5 h-3 w-52" />
+              <div className="mt-5">
+                <SkeletonTableRows rows={6} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {!loading && (
         <>
-          <KPICards
-            items={[
-              { label: "Total Tickets", value: kpis.totalTickets },
-              { label: "Flow Balance", value: kpis.flowBalance },
-              { label: "Last Active", value: kpis.lastActive },
-            ]}
-          />
-
           <div className="grid min-w-0 gap-6 lg:grid-cols-2">
             <SummaryTable
               title="Vendor summary"

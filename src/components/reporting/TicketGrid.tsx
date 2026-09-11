@@ -190,6 +190,15 @@ export function TicketGrid({
                 <Th><span className="sr-only">Open details</span></Th>
               </tr>
             </thead>
+            {pageTickets.length === 0 ? (
+              <tbody>
+                <tr>
+                  <td colSpan={12} className="px-3 py-10 text-center text-sm text-ink/40">
+                    No tickets match the selected filters.
+                  </td>
+                </tr>
+              </tbody>
+            ) : (
             <tbody>
               {pageTickets.map((row) => (
                 <tr
@@ -227,6 +236,7 @@ export function TicketGrid({
                 </tr>
               ))}
             </tbody>
+            )}
           </table>
           </div>
         </div>

@@ -11,7 +11,7 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { useLookups } from "@/hooks/useLookups";
 import { useMaterialDashboard } from "@/hooks/useMaterialDashboard";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { DashboardSkeleton } from "@/components/reporting/DashboardSkeleton";
+import { Skeleton, SkeletonStatRow, SkeletonTableRows } from "@/components/ui/Skeleton";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import * as materialApi from "@/lib/api/endpoints/material-dashboard";
 
@@ -116,14 +116,34 @@ export default function MaterialDashboardPage() {
         subtitle="Billing reconciliation, sources and destinations, and ticket-level audit."
       />
 
-      <ReportFilters
-        filters={filters}
-        options={filterOptions}
-        onChange={setFilters}
-        showJob
-        showMaterial
-        showDirection
-      />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ReportFilters
+          filters={filters}
+          options={filterOptions}
+          onChange={setFilters}
+          showJob
+          showMaterial
+          showDirection
+        />
+        <div className="flex h-full flex-col rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.06)] sm:p-5">
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-ink/40 sm:mb-4">
+            Overview
+          </h2>
+          {loading ? (
+            <SkeletonStatRow count={4} />
+          ) : (
+            <KPICards
+              maxCols={2}
+              items={[
+                { label: "Total Tickets", value: kpis.totalTickets },
+                { label: "Top Source", value: kpis.topSource },
+                { label: "Top Destination", value: kpis.topDestination },
+                { label: "Active Jobs", value: kpis.activeJobs },
+              ]}
+            />
+          )}
+        </div>
+      </div>
 
       {error && (
         <div className="rounded-2xl border border-danger-border bg-danger-tint px-4 py-3 text-sm text-danger">
@@ -131,19 +151,26 @@ export default function MaterialDashboardPage() {
         </div>
       )}
 
-      {loading && <DashboardSkeleton kpiCount={4} />}
+      {loading && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.06)]"
+              aria-hidden
+            >
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="mt-1.5 h-3 w-52" />
+              <div className="mt-5">
+                <SkeletonTableRows rows={6} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {!loading && (
         <>
-          <KPICards
-            items={[
-              { label: "Total Tickets", value: kpis.totalTickets },
-              { label: "Top Source", value: kpis.topSource },
-              { label: "Top Destination", value: kpis.topDestination },
-              { label: "Active Jobs", value: kpis.activeJobs },
-            ]}
-          />
-
           <div className="grid gap-6 lg:grid-cols-2">
             <SummaryTable
               title="Sites summary"
