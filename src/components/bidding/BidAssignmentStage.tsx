@@ -131,10 +131,6 @@ export function BidAssignmentStage() {
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="text-base font-semibold text-ink">Assignment</h2>
-        <p className="mt-0.5 text-sm text-ink/50">
-          Nick + PJ — pick team, pursue / no-bid, takeoff owners. Uncheck pursue
-          → Outcome (no_bid), still changeable.
-        </p>
         <p className="mt-1 text-xs text-ink/40">
           {saving ? "Saving…" : editable ? "Draft autosaves" : "Read only"}
         </p>

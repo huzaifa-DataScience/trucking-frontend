@@ -96,7 +96,7 @@ export function SpecsJobSelect({
         }`}
         htmlFor={`specs-job-${bidId}`}
       >
-        {needsPick ? "Select Job for Qty Received" : "Job (reselect anytime)"}
+        {needsPick ? "Select Job for Qty Received" : "Job"}
       </label>
       <select
         id={`specs-job-${bidId}`}

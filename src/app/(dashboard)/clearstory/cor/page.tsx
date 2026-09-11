@@ -17,11 +17,10 @@ export default function ClearstoryCorTablePage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
-      <PageHeader title="COR (table)" />
+      <PageHeader title="Change Orders" />
 
       <ClearstorySwaggerTable
-        title="Change orders"
-        subtitle="Meta columns first; remaining columns from swagger keys on this page (alphabetical, capped)."
+        title="Register"
         rows={rows}
         total={total}
         page={page}

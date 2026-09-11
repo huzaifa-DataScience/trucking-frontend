@@ -24,6 +24,7 @@ export function SpecsSetupStrip({
   lineCount,
   canWrite,
   regenerating,
+  addingLine,
   fileBusyId,
   onRegenerate,
   onAddLine,
@@ -40,6 +41,7 @@ export function SpecsSetupStrip({
   lineCount: number;
   canWrite: boolean;
   regenerating: boolean;
+  addingLine?: boolean;
   fileBusyId?: number | null;
   onRegenerate: () => void;
   onAddLine: () => void;
@@ -118,10 +120,11 @@ export function SpecsSetupStrip({
             </button>
             <button
               type="button"
+              disabled={addingLine}
               onClick={onAddLine}
-              className="rounded-xl border border-ink/10 bg-canvas px-3 py-2.5 text-xs font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand"
+              className="rounded-xl border border-ink/10 bg-canvas px-3 py-2.5 text-xs font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand disabled:opacity-50"
             >
-              + Add line
+              {addingLine ? "Adding…" : "+ Add line"}
             </button>
           </div>
         ) : null}

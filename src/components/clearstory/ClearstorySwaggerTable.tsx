@@ -477,7 +477,7 @@ export function ClearstorySwaggerTable({
   }, [rows, sort, columnSpecs]);
 
   return (
-    <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <Card className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <CardHeader title={title} subtitle={subtitle} />
       {footer ? <div className="mb-3">{footer}</div> : null}
 
@@ -491,7 +491,13 @@ export function ClearstorySwaggerTable({
         onClose={() => setInspect(null)}
       />
 
-      {loading ? (
+      {loading && rows.length > 0 ? (
+        <div className="absolute left-0 right-0 top-0 z-30 h-0.5 overflow-hidden bg-brand/15" aria-hidden>
+          <div className="h-full w-1/3 animate-[ticket-grid-loading_1s_ease-in-out_infinite] bg-brand" />
+        </div>
+      ) : null}
+
+      {loading && rows.length === 0 ? (
         <TableSkeleton rows={8} />
       ) : error ? (
         <p className="text-sm text-red-600" role="alert">
