@@ -30,7 +30,7 @@ export function LateSubmissionGrid({ rows, onOpenDetail }: LateSubmissionGridPro
     <div className="min-w-0 rounded-xl border border-stone-200/80 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900/50">
       <div className="flex min-w-0 flex-col gap-3 border-b border-stone-200/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-stone-800">
         <span className="block min-w-0 flex-1 truncate text-sm font-medium text-stone-700 dark:text-stone-300">
-          Tickets where Created At is &gt; 24 hours after Ticket Date ({rows.length} rows)
+          Late submissions ({rows.length} rows)
         </span>
         <button
           type="button"

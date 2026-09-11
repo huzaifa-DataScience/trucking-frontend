@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { PageHeader } from "@/components/dashboard/PageHeader";
@@ -22,9 +22,11 @@ import { JsonPayloadModal } from "@/components/clearstory/JsonPayloadModal";
 import { ClearstoryTablePagination } from "@/components/clearstory/ClearstoryTablePagination";
 import {
   ColumnPickerButton,
-  STICKY_HEADER_CLASS,
   loadHiddenColumns,
-  stickyBodyClass,
+  pinnedBodyClass,
+  pinnedHeaderClass,
+  useColumnPinning,
+  useStickyOffsets,
 } from "@/components/clearstory/ClearstorySwaggerTable";
 
 // Match COR tables: the table scrolls (X+Y) inside a bounded region.
@@ -215,6 +217,24 @@ export default function ClearstoryProjectsPage() {
     [columnKeys, hiddenColumns]
   );
 
+  const { togglePin, effectivePinnedOrder } = useColumnPinning({
+    storageKey: "cs-table-pins-cs-projects",
+    lockedKey: "id",
+  });
+  const visibleKeySet = useMemo(() => new Set(visibleColumnKeys), [visibleColumnKeys]);
+  const activePinnedOrder = useMemo(
+    () => effectivePinnedOrder.filter((k) => visibleKeySet.has(k)),
+    [effectivePinnedOrder, visibleKeySet]
+  );
+  const pinnedSet = useMemo(() => new Set(activePinnedOrder), [activePinnedOrder]);
+  const orderedColumnKeys = useMemo(() => {
+    const unpinned = visibleColumnKeys.filter((k) => !pinnedSet.has(k));
+    return [...activePinnedOrder, ...unpinned];
+  }, [visibleColumnKeys, activePinnedOrder, pinnedSet]);
+
+  const pinnedCellRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
+  const pinnedOffsets = useStickyOffsets(activePinnedOrder, pinnedCellRefs, [orderedColumnKeys.length]);
+
   // If backend clamps/normalizes pagination values, mirror them in UI state.
   // Only reconcile once a fetch has settled (`!loading`) — reconciling against `data`
   // while a new page/pageSize request is in flight compares the *stale* previous
@@ -342,7 +362,7 @@ export default function ClearstoryProjectsPage() {
           ) : null}
         </Card>
 
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Card className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <JsonPayloadModal
             open={!!inspect}
             title={inspect ? `“${inspect.columnKey}”` : ""}
@@ -353,7 +373,13 @@ export default function ClearstoryProjectsPage() {
             onClose={() => setInspect(null)}
           />
 
-          {loading ? (
+          {loading && projects.length > 0 ? (
+            <div className="absolute left-0 right-0 top-0 z-30 h-0.5 overflow-hidden bg-brand/15" aria-hidden>
+              <div className="h-full w-1/3 animate-[ticket-grid-loading_1s_ease-in-out_infinite] bg-brand" />
+            </div>
+          ) : null}
+
+          {loading && projects.length === 0 ? (
             <TableSkeleton rows={8} />
           ) : error ? (
             <p className="text-sm text-red-600" role="alert">
@@ -372,6 +398,8 @@ export default function ClearstoryProjectsPage() {
                   hidden={hiddenColumns}
                   lockedKey="id"
                   onToggle={toggleColumn}
+                  pinned={pinnedSet}
+                  onTogglePin={togglePin}
                 />
               </div>
               <div className={`${TABLE_SCROLL} rounded-xl border border-ink/[0.1] bg-[#fafbfc] shadow-inner`}>
@@ -379,15 +407,21 @@ export default function ClearstoryProjectsPage() {
                   <caption className="sr-only">Clearstory projects</caption>
                   <thead>
                     <tr className="sticky top-0 z-20 bg-[#f0f2f5]">
-                      {visibleColumnKeys.map((k) => {
+                      {orderedColumnKeys.map((k) => {
                         const dir = sort?.key === k ? sort.dir : null;
-                        const isSticky = k === "id";
+                        const isPinned = pinnedSet.has(k);
+                        const isLastPinned = isPinned && activePinnedOrder[activePinnedOrder.length - 1] === k;
                         return (
                           <th
                             key={k}
+                            ref={(el) => {
+                              if (isPinned && el) pinnedCellRefs.current.set(k, el);
+                              else pinnedCellRefs.current.delete(k);
+                            }}
                             scope="col"
+                            style={isPinned ? { left: pinnedOffsets[k] ?? 0 } : undefined}
                             className={`whitespace-nowrap border-b border-ink/[0.1] px-0 py-0 text-xs font-semibold tracking-wide text-ink/60 ${
-                              isSticky ? STICKY_HEADER_CLASS : ""
+                              isPinned ? pinnedHeaderClass(isLastPinned) : ""
                             }`}
                           >
                             <button
@@ -413,13 +447,15 @@ export default function ClearstoryProjectsPage() {
                           key={p.id}
                           className={`align-top transition hover:bg-brand/[0.03] ${zebra ? "bg-ink/[0.015]" : "bg-white"}`}
                         >
-                          {visibleColumnKeys.map((k) => {
+                          {orderedColumnKeys.map((k) => {
                             const raw = (p as Record<string, unknown>)[k];
-                            const isSticky = k === "id";
+                            const isPinned = pinnedSet.has(k);
+                            const isLastPinned = isPinned && activePinnedOrder[activePinnedOrder.length - 1] === k;
+                            const cellStyle = isPinned ? { left: pinnedOffsets[k] ?? 0 } : undefined;
                             // Special-case baseContractValue to use USD formatting when possible.
                             if (k === "baseContractValue") {
                               return (
-                                <td key={k} className={`max-w-[16rem] border-b border-ink/[0.06] px-3 py-2.5 text-sm text-ink/90 tabular-nums ${isSticky ? stickyBodyClass(zebra) : ""}`}>
+                                <td key={k} style={cellStyle} className={`max-w-[16rem] border-b border-ink/[0.06] px-3 py-2.5 text-sm text-ink/90 tabular-nums ${isPinned ? pinnedBodyClass(zebra, isLastPinned) : ""}`}>
                                   {formatUsdWhole(base)}
                                 </td>
                               );
@@ -427,7 +463,7 @@ export default function ClearstoryProjectsPage() {
 
                             const exp = expandCellForModal(raw);
                             return (
-                              <td key={k} className={`max-w-[18rem] border-b border-ink/[0.06] px-3 py-2.5 text-sm text-ink/90 ${isSticky ? stickyBodyClass(zebra) : ""}`}>
+                              <td key={k} style={cellStyle} className={`max-w-[18rem] border-b border-ink/[0.06] px-3 py-2.5 text-sm text-ink/90 ${isPinned ? pinnedBodyClass(zebra, isLastPinned) : ""}`}>
                                 {"empty" in exp ? (
                                   <span className="text-ink/30">—</span>
                                 ) : "modal" in exp ? (

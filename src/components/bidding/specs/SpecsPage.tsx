@@ -54,6 +54,7 @@ export function SpecsPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [addingLine, setAddingLine] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [fileBusyId, setFileBusyId] = useState<number | null>(null);
   const [catalogLine, setCatalogLine] = useState<SpecLine | null>(null);
@@ -182,6 +183,7 @@ export function SpecsPage({
   };
 
   const handleAddLine = async () => {
+    setAddingLine(true);
     try {
       const line = await biddingSpecsApi.createSpecLine(bidId, {
         type: "Plumbing",
@@ -194,6 +196,8 @@ export function SpecsPage({
       setLines((prev) => [...prev, line]);
     } catch (e) {
       showToast(getSpecsErrorMessage(e, "Failed to add line"), "error");
+    } finally {
+      setAddingLine(false);
     }
   };
 
@@ -271,10 +275,7 @@ export function SpecsPage({
           </p>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-ink/50">
-            Specs — Mike takeoff qty / hours (merged on this bid)
-          </p>
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => setRulesOpen(true)}
@@ -321,6 +322,7 @@ export function SpecsPage({
         lineCount={lines.length}
         canWrite={editable || canWrite}
         regenerating={regenerating}
+        addingLine={addingLine}
         fileBusyId={fileBusyId}
         onRegenerate={() => void handleRegenerate()}
         onAddLine={() => void handleAddLine()}
