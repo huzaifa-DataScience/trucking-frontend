@@ -53,23 +53,30 @@ export function SummaryTable<T extends Record<string, string | number>>({
                 ))}
               </tr>
             </thead>
-            <tbody>
-              {pageRows.map((row, i) => (
-                <tr
-                  key={start + i}
-                  className="border-b border-ink/[0.05] transition-colors last:border-0 hover:bg-ink/[0.02]"
-                >
-                  {columns.map((col) => (
-                    <td
-                      key={String(col.key)}
-                      className={tdClass}
-                    >
-                      {row[col.key as keyof T] ?? "—"}
-                    </td>
-                  ))}
+            {total === 0 ? (
+              <tbody>
+                <tr>
+                  <td colSpan={columns.length} className="px-3 py-8 text-center text-sm text-ink/40">
+                    No data for the selected filters.
+                  </td>
                 </tr>
-              ))}
-            </tbody>
+              </tbody>
+            ) : (
+              <tbody>
+                {pageRows.map((row, i) => (
+                  <tr
+                    key={start + i}
+                    className="border-b border-ink/[0.05] transition-colors last:border-0 hover:bg-ink/[0.02]"
+                  >
+                    {columns.map((col) => (
+                      <td key={String(col.key)} className={tdClass}>
+                        {row[col.key as keyof T] ?? "—"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            )}
           </table>
         </div>
       </div>
