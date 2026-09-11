@@ -64,8 +64,10 @@ export function BidStageStrip({
   );
 
   const go = (href: string) => {
-    if (!confirmLeaveUnsaved()) return;
-    router.push(href);
+    void (async () => {
+      if (!(await confirmLeaveUnsaved())) return;
+      router.push(href);
+    })();
   };
 
   return (

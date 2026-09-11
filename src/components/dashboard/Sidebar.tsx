@@ -258,9 +258,9 @@ function navItemVisible(
 }
 
 const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ className?: string }> }[] = [
+  { value: "dashboard", label: "Dashboard", Icon: NavIconChart },
   { value: "operations", label: "Ops", Icon: NavIconTruck },
   { value: "billings", label: "Billing", Icon: NavIconInvoice },
-  { value: "dashboard", label: "Dashboard", Icon: NavIconChart },
   { value: "bidding", label: "Estimates", Icon: NavIconProposal },
   { value: "mike", label: "Mike", Icon: NavIconTable },
   { value: "workforce", label: "Workforce", Icon: NavIconClock },

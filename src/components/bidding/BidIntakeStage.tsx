@@ -8,6 +8,7 @@ import * as biddingPartiesApi from "@/lib/api/endpoints/biddingParties";
 import type { BidPartyLookup } from "@/lib/api/endpoints/biddingParties";
 import { PartyNameCombobox } from "@/components/bidding/PartyNameCombobox";
 import { useBidSheet } from "@/contexts/BidSheetContext";
+import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
 import { getApiErrorMessage } from "@/lib/api/client";
 import {
@@ -145,6 +146,7 @@ function contactsForCompany(
 export function BidIntakeStage() {
   const router = useRouter();
   const { setBidHeader } = useBidSheet();
+  const confirmDialog = useConfirmDialog();
   const {
     bid,
     draft,
@@ -384,13 +386,13 @@ export function BidIntakeStage() {
 
   const linkIntoKeeper = async (keep: BidListItem) => {
     if (!bid || !editable) return;
-    if (
-      !window.confirm(
-        `Merge this bid into ${keep.estimateNumber}? Invites and links move to the keeper; this bid is cancelled.`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmDialog({
+      title: "Merge duplicate bid?",
+      message: `Merge this bid into ${keep.estimateNumber}? Invites and links move to the keeper; this bid is cancelled.`,
+      confirmLabel: "Merge",
+      variant: "danger",
+    });
+    if (!ok) return;
     setLinkingDupId(keep.id);
     setLinkDupError(null);
     try {
@@ -1060,12 +1062,22 @@ export function BidIntakeStage() {
                             aria-label="Remove addendum"
                             title="Remove addendum"
                             className="ml-auto flex shrink-0 items-center self-end rounded-md p-1.5 pb-2 text-danger/70 hover:text-danger"
-                            onClick={() =>
-                              patchInvitation(index, {
-                                addenda: addenda.filter(
-                                  (_, i) => i !== adIndex
-                                ),
-                              });
+                            onClick={() => {
+                              void (async () => {
+                                const ok = await confirmDialog({
+                                  title: "Remove addendum?",
+                                  message:
+                                    "Remove this addendum from the invitation?",
+                                  confirmLabel: "Remove",
+                                  variant: "danger",
+                                });
+                                if (!ok) return;
+                                patchInvitation(index, {
+                                  addenda: addenda.filter(
+                                    (_, i) => i !== adIndex
+                                  ),
+                                });
+                              })();
                             }}
                           >
                             <TrashIcon />
@@ -1082,10 +1094,19 @@ export function BidIntakeStage() {
                     aria-label="Remove invitation"
                     title="Remove invitation"
                     className="flex shrink-0 items-center justify-self-end rounded-md p-1.5 text-danger/70 hover:text-danger sm:col-span-2"
-                    onClick={() =>
-                      setInvitations(
-                        invitations.filter((_, i) => i !== index)
-                      );
+                    onClick={() => {
+                      void (async () => {
+                        const ok = await confirmDialog({
+                          title: "Remove invitation?",
+                          message: "Remove this invitation row?",
+                          confirmLabel: "Remove",
+                          variant: "danger",
+                        });
+                        if (!ok) return;
+                        setInvitations(
+                          invitations.filter((_, i) => i !== index)
+                        );
+                      })();
                     }}
                   >
                     <TrashIcon />
@@ -1227,11 +1248,20 @@ export function BidIntakeStage() {
                   aria-label="Remove link"
                   title="Remove link"
                   className="ml-auto flex shrink-0 items-center justify-self-end rounded-md p-1.5 text-danger/70 hover:text-danger"
-                  onClick={() =>
-                    setField(
-                      "documentLinks",
-                      documentLinks.filter((_, i) => i !== index)
-                    );
+                  onClick={() => {
+                    void (async () => {
+                      const ok = await confirmDialog({
+                        title: "Remove document link?",
+                        message: "Remove this owner / federal document link?",
+                        confirmLabel: "Remove",
+                        variant: "danger",
+                      });
+                      if (!ok) return;
+                      setField(
+                        "documentLinks",
+                        documentLinks.filter((_, i) => i !== index)
+                      );
+                    })();
                   }}
                 >
                   <TrashIcon />
@@ -1365,12 +1395,21 @@ export function BidIntakeStage() {
                           aria-label="Remove row"
                           title="Remove row"
                           className="inline-flex shrink-0 items-center rounded-md p-1.5 text-danger/70 hover:text-danger"
-                          onClick={() =>
-                            setTiers(
-                              tiers
-                                .filter((_, i) => i !== index)
-                                .map((row, i) => ({ ...row, sortOrder: i }))
-                            );
+                          onClick={() => {
+                            void (async () => {
+                              const ok = await confirmDialog({
+                                title: "Remove contract layer?",
+                                message: "Remove this contract chain layer?",
+                                confirmLabel: "Remove",
+                                variant: "danger",
+                              });
+                              if (!ok) return;
+                              setTiers(
+                                tiers
+                                  .filter((_, i) => i !== index)
+                                  .map((row, i) => ({ ...row, sortOrder: i }))
+                              );
+                            })();
                           }}
                         >
                           <TrashIcon />
@@ -1500,14 +1539,19 @@ export function BidIntakeStage() {
                         type="button"
                         className="text-xs font-medium text-danger/80 hover:text-danger"
                         onClick={() => {
-                          if (
-                            !window.confirm(
-                              `Remove this ${key === "gc" ? "GC" : "mechanical"}?`
-                            )
-                          ) {
-                            return;
-                          }
-                          setList(list.filter((_, i) => i !== index));
+                          void (async () => {
+                            const ok = await confirmDialog({
+                              title:
+                                key === "gc"
+                                  ? "Remove GC?"
+                                  : "Remove mechanical?",
+                              message: `Remove this ${key === "gc" ? "GC" : "mechanical"}?`,
+                              confirmLabel: "Remove",
+                              variant: "danger",
+                            });
+                            if (!ok) return;
+                            setList(list.filter((_, i) => i !== index));
+                          })();
                         }}
                       >
                         Remove

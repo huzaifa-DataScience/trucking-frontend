@@ -474,6 +474,8 @@ export interface BidProcess {
     notes?: string | null;
   } | null;
   lost?: ProcessLost | null;
+  /** Bid-level working notes (Notes drawer). Merged on PATCH. */
+  notes?: string | null;
   breadcrumbs?: { at?: string; text?: string }[];
   [key: string]: unknown;
 }

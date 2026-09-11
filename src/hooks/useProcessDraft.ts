@@ -32,12 +32,30 @@ function mergeProcessSheetCodes(
       rows: ls.rows.map((lr) => {
         const sr = rowById.get(lr.id);
         if (!sr) return lr;
+        const serverLayers = sr.insulationLayers ?? [];
+        const insulationLayers = (lr.insulationLayers ?? []).map((L, i) => ({
+          ...L,
+          materialName: L.materialName ?? serverLayers[i]?.materialName ?? null,
+          materialCode: L.materialCode ?? serverLayers[i]?.materialCode ?? null,
+          thicknessIn: L.thicknessIn ?? serverLayers[i]?.thicknessIn ?? null,
+        }));
         return {
           ...lr,
           systemCode: lr.systemCode ?? sr.systemCode,
           areaCode: lr.areaCode ?? sr.areaCode,
-          materialCode: lr.materialCode ?? sr.materialCode,
+          materialCode:
+            lr.materialCode ??
+            insulationLayers[0]?.materialCode ??
+            sr.materialCode,
+          materialName:
+            lr.materialName ??
+            insulationLayers[0]?.materialName ??
+            sr.materialName,
           unit: lr.unit ?? sr.unit,
+          insulationLayers:
+            insulationLayers.length > 0
+              ? insulationLayers
+              : lr.insulationLayers,
         };
       }),
     };
@@ -86,7 +104,17 @@ export function useProcessDraft() {
     setSaving(true);
     setError(null);
     try {
-      const snapshot = draftRef.current;
+      // Clone to a plain JSON payload — avoids stuck stringify on weird refs.
+      let snapshot: BidProcess;
+      try {
+        snapshot = JSON.parse(JSON.stringify(draftRef.current)) as BidProcess;
+      } catch {
+        throw new Error("Process draft could not be serialized for save");
+      }
+      if (typeof window !== "undefined") {
+        // eslint-disable-next-line no-console
+        console.log("[Save] PATCH /bids/%s { process }", bid.id);
+      }
       const updated = await biddingApi.patchBid(bid.id, {
         process: snapshot,
       });
@@ -127,10 +155,15 @@ export function useProcessDraft() {
     return () => registerProcessSave(null);
   }, [persist, registerProcessSave]);
 
+  // Keep context in sync — do not clear processDirty when `dirty` flips
+  // (that raced Save). Clear only on unmount when leaving the stage.
   useEffect(() => {
     setProcessDirty(dirty);
-    return () => setProcessDirty(false);
   }, [dirty, setProcessDirty]);
+
+  useEffect(() => {
+    return () => setProcessDirty(false);
+  }, [setProcessDirty]);
 
   const schedule = useCallback(
     (next: BidProcess) => {

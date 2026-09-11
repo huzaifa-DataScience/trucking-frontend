@@ -458,11 +458,13 @@ function normalizeInsulationLayers(
     : [];
 
   let layers = resizeInsulationLayers(fromArray, count);
-  // Hydrate from legacy single material if layers empty but name exists.
+  // Hydrate layer 0 from legacy row fields when the slot is empty.
+  // Must run for default 1-layer rows too (count === null) — otherwise
+  // reload shows blank Insulation even though materialName was saved.
   if (
-    count != null &&
     layers.length > 0 &&
     !layers[0].materialName &&
+    !layers[0].materialCode &&
     (legacyName || legacyCode)
   ) {
     layers = layers.map((L, i) =>
@@ -471,7 +473,7 @@ function normalizeInsulationLayers(
             ...L,
             materialName: legacyName,
             materialCode: legacyCode,
-            thicknessIn: legacyThick,
+            thicknessIn: L.thicknessIn ?? legacyThick,
           }
         : L
     );
@@ -502,6 +504,17 @@ export function normalizeSpecSheetRow(
     thicknessIn
   );
   const primary = syncPrimaryMaterialFields(insulationLayers);
+  const resolvedName = primary.materialName ?? materialName;
+  const resolvedCode = primary.materialCode ?? materialCode;
+  // Prefer saved family; if missing, infer so cascade + materials prefetch unlock.
+  const insulationFamily =
+    asInsulationFamily(o.insulationFamily) ??
+    (resolvedName || resolvedCode
+      ? inferMaterialFamily({
+          description: resolvedName,
+          code: resolvedCode,
+        })
+      : null);
   return {
     id: typeof o.id === "string" && o.id ? o.id : newId(),
     systemName: asNullableString(o.systemName),
@@ -514,11 +527,11 @@ export function normalizeSpecSheetRow(
     widthIn: asNullableNumber(o.widthIn),
     sizeMode,
     ductShape: asDuctShape(o.ductShape),
-    insulationFamily: asInsulationFamily(o.insulationFamily),
+    insulationFamily,
     insulationLayerCount,
     insulationLayers,
-    materialName: primary.materialName ?? materialName,
-    materialCode: primary.materialCode ?? materialCode,
+    materialName: resolvedName,
+    materialCode: resolvedCode,
     thicknessIn: primary.thicknessIn ?? thicknessIn,
     weight: asNullableNumber(o.weight),
     facing: asNullableString(o.facing),

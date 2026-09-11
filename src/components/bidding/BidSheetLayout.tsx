@@ -6,57 +6,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { BidStatusBadge } from "@/components/bidding/BidStatusBadge";
 import { BidStageStrip } from "@/components/bidding/BidStageStrip";
-import { BidHandoffActions } from "@/components/bidding/BidHandoffActions";
+import {
+  BidHandoffActions,
+  BidSaveButton,
+} from "@/components/bidding/BidHandoffActions";
 import { BidActivityPanel } from "@/components/bidding/BidActivityPanel";
 import { BidSidebarDrawer, BidFloatingButton } from "@/components/bidding/BidSidebarDrawer";
 import { BidSheetSkeleton } from "@/components/ui/Skeleton";
 import { useBidSheet } from "@/contexts/BidSheetContext";
-import { formatDate } from "@/lib/bidding/format";
-import type { BidDetail } from "@/lib/bidding/types";
 import {
   formatOutcome,
   formatProcessStage,
   formatWorkType,
   parseChromeStage,
 } from "@/lib/bidding/process-types";
-
-/** Right-hand "at a glance" summary rail — CRM-style record recap alongside the long form. */
-function BidSummaryRail({ bid }: { bid: BidDetail }) {
-  const work = bid.workType ?? bid.process?.workType ?? null;
-  const processStage = bid.processStage ?? bid.process?.stage ?? bid.workflow?.stage ?? null;
-  const outcome = bid.outcomeStatus ?? bid.process?.outcome ?? bid.workflow?.outcome ?? "open";
-
-  const rows: { label: string; value: string }[] = [
-    { label: "Company", value: bid.companyName },
-    { label: "Work type", value: formatWorkType(work ?? undefined) },
-    { label: "Stage", value: formatProcessStage(processStage ?? undefined) },
-    { label: "Outcome", value: formatOutcome(outcome ?? undefined) },
-  ];
-  if (bid.dueDate) rows.push({ label: "Due date", value: formatDate(bid.dueDate.slice(0, 10)) });
-  rows.push({ label: "Updated", value: formatDate(bid.updatedAt.slice(0, 10)) });
-
-  return (
-    <aside className="hidden w-72 shrink-0 lg:mt-[4.5rem] lg:block">
-      <div className="sticky top-4 flex flex-col gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_2px_rgba(1,1,1,0.04)]">
-        <div>
-          <p className="text-xs font-medium text-ink/40">{bid.estimateNumber}</p>
-          <p className="mt-0.5 text-sm font-semibold leading-snug text-ink">
-            {bid.bidName || "Untitled estimate"}
-          </p>
-        </div>
-        <BidStatusBadge status={bid.status} />
-        <dl className="flex flex-col gap-3 border-t border-ink/[0.06] pt-4">
-          {rows.map((r) => (
-            <div key={r.label}>
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-brand/70">{r.label}</dt>
-              <dd className="mt-0.5 text-sm text-ink/85">{r.value || "—"}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    </aside>
-  );
-}
 
 function ActivityIcon() {
   return (
@@ -111,8 +74,10 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
         <button
           type="button"
           onClick={() => {
-            if (!confirmLeaveUnsaved()) return;
-            router.push("/bidding");
+            void (async () => {
+              if (!(await confirmLeaveUnsaved())) return;
+              router.push("/bidding");
+            })();
           }}
           className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-ink/50 transition hover:text-brand"
         >
@@ -157,6 +122,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
               <span className="hidden text-sm text-ink/45 sm:inline">
                 {bid.companyName}
               </span>
+              <BidSaveButton />
             </div>
           }
         />
@@ -168,9 +134,8 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
         />
       </div>
 
-      <div className="flex min-h-0 w-full max-w-[1520px] flex-1 flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
-        <BidSummaryRail bid={bid} />
+      <div className="flex min-h-0 w-full max-w-[1520px] flex-1 flex-col">
+        {children}
       </div>
     </div>
 

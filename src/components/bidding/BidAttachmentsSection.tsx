@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
+import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import type { BidAttachment } from "@/lib/bidding/types";
 
 const MAX_FILES = 20;
@@ -89,6 +90,7 @@ export function BidAttachmentsSection({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const confirmDialog = useConfirmDialog();
 
   const handleFiles = useCallback(
     async (files: FileList | null) => {
@@ -193,14 +195,16 @@ export function BidAttachmentsSection({
                     <button
                       type="button"
                       onClick={() => {
-                        if (
-                          !window.confirm(
-                            `Remove attachment “${att.fileName}”?`
-                          )
-                        ) {
-                          return;
-                        }
-                        void onDelete(att.id);
+                        void (async () => {
+                          const ok = await confirmDialog({
+                            title: "Remove attachment?",
+                            message: `Remove attachment “${att.fileName}”?`,
+                            confirmLabel: "Remove",
+                            variant: "danger",
+                          });
+                          if (!ok) return;
+                          void onDelete(att.id);
+                        })();
                       }}
                       className="text-xs font-semibold text-ink/45 hover:text-danger"
                     >
