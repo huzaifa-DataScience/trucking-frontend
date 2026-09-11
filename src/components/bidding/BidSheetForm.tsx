@@ -214,7 +214,7 @@ export function BidSheetForm() {
               disabled={saving}
               className="rounded-xl border border-ink/10 px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04] disabled:opacity-50"
             >
-              {saving ? "Saving…" : isEditable ? "Save cover sheet + bid" : "Save cover sheet"}
+              {saving ? "Saving…" : isEditable ? "Save" : "Save cover sheet"}
             </button>
           </div>
 

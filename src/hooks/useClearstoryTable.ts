@@ -19,6 +19,7 @@ export function useClearstoryTable(
   const [data, setData] = useState<ClearstoryTablePageResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const projectId = options.projectId?.trim() || undefined;
   const prevProjectId = useRef(projectId);
@@ -40,6 +41,7 @@ export function useClearstoryTable(
       setError(getApiErrorMessage(e, "Failed to load table"));
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   }, [module, page, pageSize, projectId]);
 
@@ -58,6 +60,7 @@ export function useClearstoryTable(
     setPageSize,
     totalPages,
     isLoading: loading,
+    isInitialLoading: initialLoading,
     error,
     refetch,
   };

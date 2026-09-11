@@ -22,6 +22,18 @@ import {
 import type { BidListItem } from "@/lib/bidding/types";
 import { newId } from "@/lib/bidding/newId";
 
+function TrashIcon() {
+  return (
+    <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path
+        d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function party(p: ProcessParty | null | undefined): ProcessParty {
   return {
     name: p?.name ?? "",
@@ -316,10 +328,6 @@ export function BidIntakeStage() {
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="text-base font-semibold text-ink">Intake</h2>
-        <p className="mt-0.5 text-sm text-ink/50">
-          Bid clerk: use the architect name on the drawings, not the invitation subject.
-          Incomplete is fine. For a second invitation on the same bid, add a row.
-        </p>
         <p className="mt-1 text-xs text-ink/40">
           {saving ? "Saving…" : editable ? "Draft autosaves" : "Read only"}
         </p>
@@ -505,7 +513,7 @@ export function BidIntakeStage() {
         </label>
       </section>
 
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
           <h3 className="sm:col-span-2 text-sm font-semibold text-ink">
             Project address
@@ -533,7 +541,7 @@ export function BidIntakeStage() {
         {renderPartySection("owner", "Owner", "owner")}
       </div>
 
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         {renderPartySection("architect", "Architect", "architect")}
         {renderPartySection("mechanicalEngineer", "Mechanical", "mechanical")}
       </div>
@@ -620,6 +628,7 @@ export function BidIntakeStage() {
                   disabled={!editable}
                   inputClass={inputClass}
                   labelClass={labelClass}
+                  showPicker
                   placeholder={
                     company
                       ? "Search contacts at this company…"
@@ -791,7 +800,9 @@ export function BidIntakeStage() {
                         {editable ? (
                           <button
                             type="button"
-                            className="self-end pb-2 text-xs font-medium text-danger/80 hover:text-danger"
+                            aria-label="Remove addendum"
+                            title="Remove addendum"
+                            className="ml-auto flex shrink-0 items-center self-end rounded-md p-1.5 pb-2 text-danger/70 hover:text-danger"
                             onClick={() =>
                               patchInvitation(index, {
                                 addenda: addenda.filter(
@@ -800,7 +811,7 @@ export function BidIntakeStage() {
                               })
                             }
                           >
-                            Remove
+                            <TrashIcon />
                           </button>
                         ) : null}
                       </div>
@@ -811,14 +822,16 @@ export function BidIntakeStage() {
                 {editable && invitations.length > 1 ? (
                   <button
                     type="button"
-                    className="justify-self-start text-xs font-medium text-danger/80 hover:text-danger sm:col-span-2"
+                    aria-label="Remove invitation"
+                    title="Remove invitation"
+                    className="flex shrink-0 items-center justify-self-end rounded-md p-1.5 text-danger/70 hover:text-danger sm:col-span-2"
                     onClick={() =>
                       setInvitations(
                         invitations.filter((_, i) => i !== index)
                       )
                     }
                   >
-                    Remove invitation
+                    <TrashIcon />
                   </button>
                 ) : null}
               </div>
@@ -935,7 +948,9 @@ export function BidIntakeStage() {
               {editable ? (
                 <button
                   type="button"
-                  className="text-xs font-medium text-danger/80 hover:text-danger"
+                  aria-label="Remove link"
+                  title="Remove link"
+                  className="ml-auto flex shrink-0 items-center justify-self-end rounded-md p-1.5 text-danger/70 hover:text-danger"
                   onClick={() =>
                     setField(
                       "documentLinks",
@@ -943,7 +958,7 @@ export function BidIntakeStage() {
                     )
                   }
                 >
-                  Remove
+                  <TrashIcon />
                 </button>
               ) : null}
             </div>
@@ -1068,10 +1083,12 @@ export function BidIntakeStage() {
                       />
                     </td>
                     {editable ? (
-                      <td className="px-1.5 py-1.5">
+                      <td className="px-1.5 py-1.5 text-right">
                         <button
                           type="button"
-                          className="text-xs font-medium text-danger/80 hover:text-danger"
+                          aria-label="Remove row"
+                          title="Remove row"
+                          className="inline-flex shrink-0 items-center rounded-md p-1.5 text-danger/70 hover:text-danger"
                           onClick={() =>
                             setTiers(
                               tiers
@@ -1080,7 +1097,7 @@ export function BidIntakeStage() {
                             )
                           }
                         >
-                          Remove
+                          <TrashIcon />
                         </button>
                       </td>
                     ) : null}
