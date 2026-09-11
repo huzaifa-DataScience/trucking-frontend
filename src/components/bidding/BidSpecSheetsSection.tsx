@@ -1,10 +1,19 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import * as biddingSpecsApi from "@/lib/api/endpoints/biddingSpecs";
 import { normalizeSpecDimOptions } from "@/lib/api/endpoints/biddingSpecs";
 import { useBidSheet } from "@/contexts/BidSheetContext";
+import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { BidAttachment } from "@/lib/bidding/types";
 import type {
@@ -72,12 +81,30 @@ function mergeIncomingSheets(
       rows: ls.rows.map((lr) => {
         const sr = rowById.get(lr.id);
         if (!sr) return lr;
+        const serverLayers = sr.insulationLayers ?? [];
+        const insulationLayers = (lr.insulationLayers ?? []).map((L, i) => ({
+          ...L,
+          materialName: L.materialName ?? serverLayers[i]?.materialName ?? null,
+          materialCode: L.materialCode ?? serverLayers[i]?.materialCode ?? null,
+          thicknessIn: L.thicknessIn ?? serverLayers[i]?.thicknessIn ?? null,
+        }));
         return {
           ...lr,
           systemCode: lr.systemCode ?? sr.systemCode,
           areaCode: lr.areaCode ?? sr.areaCode,
-          materialCode: lr.materialCode ?? sr.materialCode,
+          materialCode:
+            lr.materialCode ??
+            insulationLayers[0]?.materialCode ??
+            sr.materialCode,
+          materialName:
+            lr.materialName ??
+            insulationLayers[0]?.materialName ??
+            sr.materialName,
           unit: lr.unit ?? sr.unit,
+          insulationLayers:
+            insulationLayers.length > 0
+              ? insulationLayers
+              : lr.insulationLayers,
         };
       }),
     };
@@ -109,6 +136,30 @@ function CodeChip({ code }: { code: string | null | undefined }) {
     <span className="inline-block rounded bg-ink/[0.06] px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-ink/55">
       {code}
     </span>
+  );
+}
+
+/** Tiny spinner over a single cell control — never a full-section loader. */
+function CellBusy({
+  busy,
+  children,
+}: {
+  busy: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative min-w-0">
+      {children}
+      {busy ? (
+        <span
+          className="pointer-events-none absolute inset-y-0 right-1.5 z-[1] flex items-center"
+          aria-label="Loading"
+          role="status"
+        >
+          <span className="h-3 w-3 animate-spin rounded-full border-2 border-ink/20 border-t-brand" />
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -375,6 +426,10 @@ function selectClass(disabled: boolean) {
   }`;
 }
 
+function cellBusySelectClass(disabled: boolean, busy: boolean) {
+  return `${selectClass(disabled)}${busy ? " pr-6" : ""}`;
+}
+
 /** Allowed manufacturers — one dropdown, pick again to unselect. */
 function ManufacturerAllowedSelect({
   options,
@@ -513,6 +568,7 @@ export function BidSpecSheetsSection({
 }) {
   const { bid, uploadAttachment, deleteAttachment, applyBidDetail } =
     useBidSheet();
+  const confirmDialog = useConfirmDialog();
   const templates: SpecSheetTemplateMeta[] = meta?.specSheetTemplates?.length
     ? meta.specSheetTemplates
     : defaultSpecSheetTemplates();
@@ -596,6 +652,7 @@ export function BidSpecSheetsSection({
   }, []);
 
   const [systems, setSystems] = useState<SpecSystem[]>([]);
+  const [systemsLoading, setSystemsLoading] = useState(false);
   /**
    * Mike-code fallback only when BE ignores ?code=.
    * Do NOT use bare GET to fill Insulation — family-less → [] on purpose.
@@ -605,11 +662,18 @@ export function BidSpecSheetsSection({
   );
   /** family → insulation-layer materials from ?family=&layer=insulation */
   const materialsByFamily = useRef<Record<string, SpecMaterial[]>>({});
+  const familyLoadInflight = useRef<Record<string, Promise<void>>>({});
   const [familyMaterials, setFamilyMaterials] = useState<
     Record<string, SpecMaterial[]>
   >({});
+  /** Per-family fetch in flight — drives Insulation / Size cell spinners. */
+  const [familyLoading, setFamilyLoading] = useState<Record<string, boolean>>(
+    {}
+  );
   const [areas, setAreas] = useState<SpecArea[]>([]);
+  const [areasLoading, setAreasLoading] = useState(true);
   const [facings, setFacings] = useState<SpecFacing[]>([]);
+  const [facingsLoading, setFacingsLoading] = useState(true);
   const systemsByKind = useRef<Partial<Record<SpecSheetKind, SpecSystem[]>>>(
     {}
   );
@@ -617,6 +681,30 @@ export function BidSpecSheetsSection({
     {}
   );
   const [mikeCodeBusy, setMikeCodeBusy] = useState<string | null>(null);
+
+  /** Reload: Mike input is local-only — seed from saved materialCode. */
+  useEffect(() => {
+    setMikeCodeByRow((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const sheet of sheets) {
+        for (const row of sheet.rows ?? []) {
+          if (next[row.id]?.trim()) continue;
+          const code = (
+            row.materialCode ||
+            row.insulationLayers?.[0]?.materialCode ||
+            ""
+          )
+            .trim()
+            .toUpperCase();
+          if (!code) continue;
+          next[row.id] = code;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [sheets]);
 
   const [activeId, setActiveId] = useState<string | null>(
     sheets[0]?.id ?? null
@@ -632,6 +720,8 @@ export function BidSpecSheetsSection({
 
   useEffect(() => {
     let cancelled = false;
+    setAreasLoading(true);
+    setFacingsLoading(true);
     void Promise.all([
       biddingSpecsApi.getSpecAreas(),
       biddingSpecsApi.getSpecFacings(),
@@ -641,7 +731,12 @@ export function BidSpecSheetsSection({
         setAreas(ar);
         setFacings(fac);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (cancelled) return;
+        setAreasLoading(false);
+        setFacingsLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -679,16 +774,19 @@ export function BidSpecSheetsSection({
   useEffect(() => {
     if (!active?.kind) {
       setSystems([]);
+      setSystemsLoading(false);
       return;
     }
     const kind = active.kind;
     const cachedSys = systemsByKind.current[kind];
     if (cachedSys?.length) {
       setSystems(cachedSys);
+      setSystemsLoading(false);
       return;
     }
 
     let cancelled = false;
+    setSystemsLoading(true);
     void (async () => {
       try {
         let byKind = await biddingSpecsApi.getSpecSystems({ kind });
@@ -704,6 +802,8 @@ export function BidSpecSheetsSection({
         } catch {
           if (!cancelled) setSystems([]);
         }
+      } finally {
+        if (!cancelled) setSystemsLoading(false);
       }
     })();
 
@@ -714,30 +814,55 @@ export function BidSpecSheetsSection({
 
   const ensureFamilyMaterials = useCallback(async (family: string) => {
     if (!family) return;
-    try {
-      const remote = await biddingSpecsApi.getSpecMaterials({
-        family,
-        layer: "insulation",
-      });
-      // Contract: bare/family-less → []. If BE still ignores ?family= and returns
-      // everything untagged, heuristic-narrow so Insulation isn't the full dump.
-      const tagged = remote.filter(
-        (m) =>
-          String(m.family ?? "").toLowerCase() === family.toLowerCase() &&
-          (!m.layer || String(m.layer).toLowerCase() === "insulation")
-      );
-      const list =
-        tagged.length > 0
-          ? tagged
-          : remote.length > 0
-            ? filterMaterialsForFamily(remote, family)
-            : [];
-      materialsByFamily.current[family] = list;
-      setFamilyMaterials((prev) => ({ ...prev, [family]: list }));
-    } catch {
-      materialsByFamily.current[family] = [];
-      setFamilyMaterials((prev) => ({ ...prev, [family]: [] }));
+    if (
+      Object.prototype.hasOwnProperty.call(materialsByFamily.current, family)
+    ) {
+      return;
     }
+    const inflight = familyLoadInflight.current[family];
+    if (inflight) return inflight;
+
+    setFamilyLoading((prev) =>
+      prev[family] ? prev : { ...prev, [family]: true }
+    );
+
+    const job = (async () => {
+      try {
+        const remote = await biddingSpecsApi.getSpecMaterials({
+          family,
+          layer: "insulation",
+        });
+        // Contract: bare/family-less → []. If BE still ignores ?family= and returns
+        // everything untagged, heuristic-narrow so Insulation isn't the full dump.
+        const tagged = remote.filter(
+          (m) =>
+            String(m.family ?? "").toLowerCase() === family.toLowerCase() &&
+            (!m.layer || String(m.layer).toLowerCase() === "insulation")
+        );
+        const list =
+          tagged.length > 0
+            ? tagged
+            : remote.length > 0
+              ? filterMaterialsForFamily(remote, family)
+              : [];
+        materialsByFamily.current[family] = list;
+        setFamilyMaterials((prev) => ({ ...prev, [family]: list }));
+      } catch {
+        materialsByFamily.current[family] = [];
+        setFamilyMaterials((prev) => ({ ...prev, [family]: [] }));
+      } finally {
+        setFamilyLoading((prev) => {
+          if (!prev[family]) return prev;
+          const next = { ...prev };
+          delete next[family];
+          return next;
+        });
+        delete familyLoadInflight.current[family];
+      }
+    })();
+
+    familyLoadInflight.current[family] = job;
+    return job;
   }, []);
 
   const materialsForRow = (row: SpecSheetRow): SpecMaterial[] => {
@@ -746,6 +871,16 @@ export function BidSpecSheetsSection({
       familyMaterials[row.insulationFamily] ??
       materialsByFamily.current[row.insulationFamily] ??
       []
+    );
+  };
+
+  const isFamilyMaterialsLoading = (family: string | null | undefined) => {
+    if (!family) return false;
+    if (familyLoading[family]) return true;
+    // Prefetch hasn't finished writing cache yet — treat as loading so the cell spins.
+    return !Object.prototype.hasOwnProperty.call(
+      materialsByFamily.current,
+      family
     );
   };
 
@@ -851,6 +986,44 @@ export function BidSpecSheetsSection({
     },
     [commitSheets]
   );
+
+  /**
+   * After reload, Mike input is empty (local-only). Seed from saved code, or
+   * from family catalog match by insulation name — display only, no dirty.
+   */
+  useEffect(() => {
+    if (!active) return;
+    setMikeCodeByRow((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const row of active.rows) {
+        if (next[row.id]?.trim()) continue;
+        let code = (
+          row.materialCode ||
+          row.insulationLayers?.[0]?.materialCode ||
+          ""
+        )
+          .trim()
+          .toUpperCase();
+        if (!code && row.insulationFamily) {
+          const mats =
+            familyMaterials[row.insulationFamily] ??
+            materialsByFamily.current[row.insulationFamily] ??
+            [];
+          const name =
+            row.insulationLayers?.[0]?.materialName ?? row.materialName;
+          const hit = name
+            ? mats.find((m) => m.description === name)
+            : null;
+          code = hit?.code?.trim().toUpperCase() || "";
+        }
+        if (!code) continue;
+        next[row.id] = code;
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [active, familyMaterials]);
 
   const patchRow = (
     sheetId: string,
@@ -1108,15 +1281,18 @@ export function BidSpecSheetsSection({
 
   const removeSheet = (id: string) => {
     if (!editable) return;
-    if (
-      typeof window !== "undefined" &&
-      !window.confirm("Delete this spec sheet? This cannot be undone from here.")
-    ) {
-      return;
-    }
-    const next = sheetsRef.current.filter((s) => s.id !== id);
-    commitSheets(next);
-    setActiveId(next[0]?.id ?? null);
+    void (async () => {
+      const ok = await confirmDialog({
+        title: "Delete spec sheet?",
+        message: "Delete this spec sheet? This cannot be undone from here.",
+        confirmLabel: "Delete",
+        variant: "danger",
+      });
+      if (!ok) return;
+      const next = sheetsRef.current.filter((s) => s.id !== id);
+      commitSheets(next);
+      setActiveId(next[0]?.id ?? null);
+    })();
   };
 
   const addRow = () => {
@@ -1143,15 +1319,18 @@ export function BidSpecSheetsSection({
 
   const removeRow = (rowId: string) => {
     if (!active || !editable) return;
-    if (
-      typeof window !== "undefined" &&
-      !window.confirm("Delete this row?")
-    ) {
-      return;
-    }
-    replaceSheet(active.id, {
-      rows: active.rows.filter((r) => r.id !== rowId),
-    });
+    void (async () => {
+      const ok = await confirmDialog({
+        title: "Delete row?",
+        message: "Delete this row from the spec sheet?",
+        confirmLabel: "Delete",
+        variant: "danger",
+      });
+      if (!ok) return;
+      replaceSheet(active.id, {
+        rows: active.rows.filter((r) => r.id !== rowId),
+      });
+    })();
   };
 
   const attachImage = async (file: File) => {
@@ -1188,12 +1367,13 @@ export function BidSpecSheetsSection({
 
   const detachImage = async (attachmentId: number) => {
     if (!active || !editable) return;
-    if (
-      typeof window !== "undefined" &&
-      !window.confirm("Remove this schedule photo?")
-    ) {
-      return;
-    }
+    const ok = await confirmDialog({
+      title: "Remove photo?",
+      message: "Remove this schedule photo from the sheet?",
+      confirmLabel: "Remove",
+      variant: "danger",
+    });
+    if (!ok) return;
     setUploadError(null);
     try {
       await deleteAttachment(attachmentId);
@@ -1577,13 +1757,24 @@ export function BidSpecSheetsSection({
                         const canLayers = Boolean(row.insulationFamily);
                         // Insulation 1 always once family is set; Layers only raises count.
                         const canPickInsulation = canLayers;
-                        const hasProduct = layerPicks.some(
-                          (L) => L.materialName || L.materialCode
-                        );
+                        const matsLoading =
+                          canPickInsulation &&
+                          isFamilyMaterialsLoading(row.insulationFamily);
+                        const hasProduct =
+                          layerPicks.some(
+                            (L) => L.materialName || L.materialCode
+                          ) || Boolean(row.materialName || row.materialCode);
                         const canLayersFinish = Boolean(
                           hasProduct &&
                             (row.insulationFamily || row.materialCode)
                         );
+                        const mikeBusy = mikeCodeBusy === row.id;
+                        const dimsLoading =
+                          matsLoading &&
+                          Boolean(
+                            row.insulationLayers?.[0]?.materialName ??
+                              row.materialName
+                          );
                         const canSize = hasProduct;
 
                         return (
@@ -1614,29 +1805,34 @@ export function BidSpecSheetsSection({
                                 }}
                                 className="absolute inset-x-0 bottom-0 z-10 h-1 cursor-row-resize hover:bg-brand/40 active:bg-brand/60"
                               />
-                              <select
-                                disabled={!editable}
-                                className={selectClass(!editable)}
-                                value={row.systemName ?? ""}
-                                onChange={(e) =>
-                                  pickSystem(active.id, row, e.target.value)
-                                }
-                              >
-                                <option value="">—</option>
-                                {systems.map((s) => (
-                                  <option key={s.id} value={s.systemName}>
-                                    {s.systemName}
-                                  </option>
-                                ))}
-                                {row.systemName &&
-                                !systems.some(
-                                  (s) => s.systemName === row.systemName
-                                ) ? (
-                                  <option value={row.systemName}>
-                                    {row.systemName}
-                                  </option>
-                                ) : null}
-                              </select>
+                              <CellBusy busy={systemsLoading}>
+                                <select
+                                  disabled={!editable || systemsLoading}
+                                  className={cellBusySelectClass(
+                                    !editable || systemsLoading,
+                                    systemsLoading
+                                  )}
+                                  value={row.systemName ?? ""}
+                                  onChange={(e) =>
+                                    pickSystem(active.id, row, e.target.value)
+                                  }
+                                >
+                                  <option value="">—</option>
+                                  {systems.map((s) => (
+                                    <option key={s.id} value={s.systemName}>
+                                      {s.systemName}
+                                    </option>
+                                  ))}
+                                  {row.systemName &&
+                                  !systems.some(
+                                    (s) => s.systemName === row.systemName
+                                  ) ? (
+                                    <option value={row.systemName}>
+                                      {row.systemName}
+                                    </option>
+                                  ) : null}
+                                </select>
+                              </CellBusy>
                             </td>
                             <td className="px-1 py-0.5">
                               <CodeChip code={row.systemCode} />
@@ -1645,29 +1841,36 @@ export function BidSpecSheetsSection({
                               {row.unit ?? "—"}
                             </td>
                             <td className="px-1 py-0.5">
-                              <select
-                                disabled={!editable || !canArea}
-                                className={selectClass(!editable || !canArea)}
-                                value={row.areaName ?? ""}
-                                onChange={(e) =>
-                                  pickArea(active.id, row, e.target.value)
-                                }
-                              >
-                                <option value="">—</option>
-                                {areas.map((a) => (
-                                  <option key={a.id} value={a.areaName}>
-                                    {a.areaName}
-                                  </option>
-                                ))}
-                                {row.areaName &&
-                                !areas.some(
-                                  (a) => a.areaName === row.areaName
-                                ) ? (
-                                  <option value={row.areaName}>
-                                    {row.areaName}
-                                  </option>
-                                ) : null}
-                              </select>
+                              <CellBusy busy={areasLoading && canArea}>
+                                <select
+                                  disabled={
+                                    !editable || !canArea || areasLoading
+                                  }
+                                  className={cellBusySelectClass(
+                                    !editable || !canArea || areasLoading,
+                                    areasLoading && canArea
+                                  )}
+                                  value={row.areaName ?? ""}
+                                  onChange={(e) =>
+                                    pickArea(active.id, row, e.target.value)
+                                  }
+                                >
+                                  <option value="">—</option>
+                                  {areas.map((a) => (
+                                    <option key={a.id} value={a.areaName}>
+                                      {a.areaName}
+                                    </option>
+                                  ))}
+                                  {row.areaName &&
+                                  !areas.some(
+                                    (a) => a.areaName === row.areaName
+                                  ) ? (
+                                    <option value={row.areaName}>
+                                      {row.areaName}
+                                    </option>
+                                  ) : null}
+                                </select>
+                              </CellBusy>
                             </td>
                             <td className="px-1 py-0.5">
                               <CodeChip code={row.areaCode} />
@@ -1725,45 +1928,67 @@ export function BidSpecSheetsSection({
                                 const activeSlot =
                                   canPickInsulation && i < layerCount;
                                 const pick = layerPicks[i];
+                                // Layer 0 may still be empty after older saves — fall back to row.
+                                const displayName =
+                                  pick?.materialName ??
+                                  (i === 0 ? row.materialName : null);
+                                const displayCode =
+                                  pick?.materialCode ||
+                                  (i === 0 ? row.materialCode : null) ||
+                                  (displayName
+                                    ? rowMats.find(
+                                        (m) => m.description === displayName
+                                      )?.code
+                                    : null);
                                 return (
                                   <Fragment key={`${row.id}-ins-${i}`}>
                                     <td className="px-1 py-0.5">
                                       {activeSlot ? (
-                                        <select
-                                          disabled={!editable}
-                                          className={selectClass(!editable)}
-                                          value={pick?.materialName ?? ""}
-                                          onChange={(e) =>
-                                            pickMaterialAtLayer(
-                                              active.id,
-                                              row,
-                                              i,
-                                              e.target.value
-                                            )
-                                          }
-                                        >
-                                          <option value="">—</option>
-                                          {rowMats.map((m) => (
-                                            <option
-                                              key={m.id}
-                                              value={m.description}
-                                            >
-                                              {m.code
-                                                ? `${m.description} (${m.code})`
-                                                : m.description}
+                                        <CellBusy busy={matsLoading}>
+                                          <select
+                                            disabled={
+                                              !editable || matsLoading
+                                            }
+                                            className={cellBusySelectClass(
+                                              !editable || matsLoading,
+                                              matsLoading
+                                            )}
+                                            value={displayName ?? ""}
+                                            onChange={(e) =>
+                                              pickMaterialAtLayer(
+                                                active.id,
+                                                row,
+                                                i,
+                                                e.target.value
+                                              )
+                                            }
+                                          >
+                                            <option value="">
+                                              {matsLoading
+                                                ? "Loading…"
+                                                : "—"}
                                             </option>
-                                          ))}
-                                          {pick?.materialName &&
-                                          !rowMats.some(
-                                            (m) =>
-                                              m.description ===
-                                              pick.materialName
-                                          ) ? (
-                                            <option value={pick.materialName}>
-                                              {pick.materialName}
-                                            </option>
-                                          ) : null}
-                                        </select>
+                                            {rowMats.map((m) => (
+                                              <option
+                                                key={m.id}
+                                                value={m.description}
+                                              >
+                                                {m.code
+                                                  ? `${m.description} (${m.code})`
+                                                  : m.description}
+                                              </option>
+                                            ))}
+                                            {displayName &&
+                                            !rowMats.some(
+                                              (m) =>
+                                                m.description === displayName
+                                            ) ? (
+                                              <option value={displayName}>
+                                                {displayName}
+                                              </option>
+                                            ) : null}
+                                          </select>
+                                        </CellBusy>
                                       ) : (
                                         <span className="text-xs text-ink/25">
                                           —
@@ -1772,7 +1997,7 @@ export function BidSpecSheetsSection({
                                     </td>
                                     <td className="px-1 py-0.5">
                                       {activeSlot ? (
-                                        <CodeChip code={pick?.materialCode} />
+                                        <CodeChip code={displayCode} />
                                       ) : (
                                         <span className="text-xs text-ink/25">
                                           —
@@ -1785,69 +2010,88 @@ export function BidSpecSheetsSection({
                             )}
                             <td className="px-1 py-0.5">
                               <div className="flex min-w-[6.5rem] gap-1">
-                                <input
-                                  disabled={!editable}
-                                  className={`${selectClass(!editable)} w-20`}
-                                  placeholder="FGA"
-                                  title="Mike code — fills Insulation 1"
-                                  value={mikeCodeByRow[row.id] ?? ""}
-                                  onChange={(e) =>
-                                    setMikeCodeByRow((prev) => ({
-                                      ...prev,
-                                      [row.id]: e.target.value
-                                        .slice(0, 24)
-                                        .toUpperCase(),
-                                    }))
-                                  }
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      void runMikeCode(active.id, row);
+                                <CellBusy busy={mikeBusy}>
+                                  <input
+                                    disabled={!editable || mikeBusy}
+                                    className={`${cellBusySelectClass(
+                                      !editable || mikeBusy,
+                                      mikeBusy
+                                    )} w-20`}
+                                    placeholder="FGA"
+                                    title="Mike code — fills Insulation 1"
+                                    value={mikeCodeByRow[row.id] ?? ""}
+                                    onChange={(e) =>
+                                      setMikeCodeByRow((prev) => ({
+                                        ...prev,
+                                        [row.id]: e.target.value
+                                          .slice(0, 24)
+                                          .toUpperCase(),
+                                      }))
                                     }
-                                  }}
-                                />
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        void runMikeCode(active.id, row);
+                                      }
+                                    }}
+                                  />
+                                </CellBusy>
                                 <button
                                   type="button"
-                                  disabled={
-                                    !editable || mikeCodeBusy === row.id
-                                  }
+                                  disabled={!editable || mikeBusy}
                                   onClick={() =>
                                     void runMikeCode(active.id, row)
                                   }
-                                  className="rounded-lg border border-ink/10 px-1.5 text-[10px] font-semibold text-ink/60 hover:border-brand/40 hover:text-brand disabled:opacity-40"
+                                  className="inline-flex min-w-[2rem] items-center justify-center rounded-lg border border-ink/10 px-1.5 text-[10px] font-semibold text-ink/60 hover:border-brand/40 hover:text-brand disabled:opacity-40"
+                                  aria-label={mikeBusy ? "Loading" : "Apply Mike code"}
                                 >
-                                  Go
+                                  {mikeBusy ? (
+                                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-ink/20 border-t-brand" />
+                                  ) : (
+                                    "Go"
+                                  )}
                                 </button>
                               </div>
                             </td>
                             <td className="px-1 py-0.5">
-                              <select
-                                disabled={!editable || !canLayersFinish}
-                                className={selectClass(
-                                  !editable || !canLayersFinish
-                                )}
-                                value={row.facing ?? ""}
-                                onChange={(e) =>
-                                  patchRow(active.id, row.id, {
-                                    facing: e.target.value || null,
-                                  })
-                                }
+                              <CellBusy
+                                busy={facingsLoading && canLayersFinish}
                               >
-                                <option value="">—</option>
-                                {facings.map((f) => (
-                                  <option key={f.value} value={f.value}>
-                                    {f.label || f.value}
-                                  </option>
-                                ))}
-                                {row.facing &&
-                                !facings.some(
-                                  (f) => f.value === row.facing
-                                ) ? (
-                                  <option value={row.facing}>
-                                    {row.facing}
-                                  </option>
-                                ) : null}
-                              </select>
+                                <select
+                                  disabled={
+                                    !editable ||
+                                    !canLayersFinish ||
+                                    facingsLoading
+                                  }
+                                  className={cellBusySelectClass(
+                                    !editable ||
+                                      !canLayersFinish ||
+                                      facingsLoading,
+                                    facingsLoading && canLayersFinish
+                                  )}
+                                  value={row.facing ?? ""}
+                                  onChange={(e) =>
+                                    patchRow(active.id, row.id, {
+                                      facing: e.target.value || null,
+                                    })
+                                  }
+                                >
+                                  <option value="">—</option>
+                                  {facings.map((f) => (
+                                    <option key={f.value} value={f.value}>
+                                      {f.label || f.value}
+                                    </option>
+                                  ))}
+                                  {row.facing &&
+                                  !facings.some(
+                                    (f) => f.value === row.facing
+                                  ) ? (
+                                    <option value={row.facing}>
+                                      {row.facing}
+                                    </option>
+                                  ) : null}
+                                </select>
+                              </CellBusy>
                             </td>
                             <td className="px-1 py-0.5">
                               <select
@@ -1895,103 +2139,149 @@ export function BidSpecSheetsSection({
                               </td>
                             ) : null}
                             <td className="px-1 py-0.5">
-                              {showPipeSizes ? (
-                                row.sizeMin === sizeRangeMin &&
-                                row.sizeMax === mikeSizeMax ? (
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-medium text-ink/55">
-                                      All sizes
-                                    </span>
-                                    {editable && canSize ? (
-                                      <button
-                                        type="button"
-                                        className="text-[10px] text-brand hover:underline"
-                                        onClick={() =>
-                                          patchRow(active.id, row.id, {
-                                            sizeMin: null,
-                                            sizeMax: null,
-                                          })
-                                        }
-                                      >
-                                        Clear
-                                      </button>
-                                    ) : null}
-                                  </div>
-                                ) : (
-                                  <select
-                                    disabled={!editable || !canSize}
-                                    className={`${selectClass(!editable || !canSize)} w-24`}
-                                    value={
-                                      row.sizeMin != null
-                                        ? String(row.sizeMin)
-                                        : ""
-                                    }
-                                    onChange={(e) => {
-                                      const v = e.target.value;
-                                      if (v === "__all__") {
-                                        patchRow(active.id, row.id, {
-                                          sizeMin: sizeRangeMin,
-                                          sizeMax: mikeSizeMax,
-                                        });
-                                        return;
+                              <CellBusy busy={dimsLoading && canSize}>
+                                {showPipeSizes ? (
+                                  row.sizeMin === sizeRangeMin &&
+                                  row.sizeMax === mikeSizeMax ? (
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="text-[10px] font-medium text-ink/55">
+                                        All sizes
+                                      </span>
+                                      {editable && canSize ? (
+                                        <button
+                                          type="button"
+                                          className="text-[10px] text-brand hover:underline"
+                                          onClick={() =>
+                                            patchRow(active.id, row.id, {
+                                              sizeMin: null,
+                                              sizeMax: null,
+                                            })
+                                          }
+                                        >
+                                          Clear
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                  ) : (
+                                    <select
+                                      disabled={
+                                        !editable || !canSize || dimsLoading
                                       }
-                                      patchRow(active.id, row.id, {
-                                        sizeMin: v
-                                          ? clampInch(Number(v))
-                                          : null,
-                                      });
-                                    }}
-                                  >
-                                    <option value="">—</option>
-                                    <option value="__all__">All sizes</option>
-                                    {rowSizes.map((s) => (
-                                      <option
-                                        key={s.value}
-                                        value={String(s.value)}
-                                      >
-                                        {dimLabel(s)}
+                                      className={`${cellBusySelectClass(
+                                        !editable || !canSize || dimsLoading,
+                                        dimsLoading && canSize
+                                      )} w-24`}
+                                      value={
+                                        row.sizeMin != null
+                                          ? String(row.sizeMin)
+                                          : ""
+                                      }
+                                      onChange={(e) => {
+                                        const v = e.target.value;
+                                        if (v === "__all__") {
+                                          patchRow(active.id, row.id, {
+                                            sizeMin: sizeRangeMin,
+                                            sizeMax: mikeSizeMax,
+                                          });
+                                          return;
+                                        }
+                                        patchRow(active.id, row.id, {
+                                          sizeMin: v
+                                            ? clampInch(Number(v))
+                                            : null,
+                                        });
+                                      }}
+                                    >
+                                      <option value="">
+                                        {dimsLoading ? "Loading…" : "—"}
                                       </option>
-                                    ))}
-                                  </select>
-                                )
-                              ) : showDuctSizeInputs ? (
-                                <input
-                                  type="number"
-                                  step="any"
-                                  min={sizeRangeMin}
-                                  max={sizeRangeMax}
-                                  disabled={!editable || !canSize}
-                                  placeholder="any"
-                                  className={`${selectClass(!editable || !canSize)} w-20`}
-                                  value={row.sizeMin ?? ""}
-                                  onChange={(e) =>
-                                    patchRow(active.id, row.id, {
-                                      sizeMin: e.target.value
-                                        ? clampInch(Number(e.target.value))
-                                        : null,
-                                    })
-                                  }
-                                />
-                              ) : (
-                                <span className="text-xs text-ink/35">—</span>
-                              )}
+                                      <option value="__all__">All sizes</option>
+                                      {rowSizes.map((s) => (
+                                        <option
+                                          key={s.value}
+                                          value={String(s.value)}
+                                        >
+                                          {dimLabel(s)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )
+                                ) : showDuctSizeInputs ? (
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    min={sizeRangeMin}
+                                    max={sizeRangeMax}
+                                    disabled={!editable || !canSize}
+                                    placeholder="any"
+                                    className={`${selectClass(!editable || !canSize)} w-20`}
+                                    value={row.sizeMin ?? ""}
+                                    onChange={(e) =>
+                                      patchRow(active.id, row.id, {
+                                        sizeMin: e.target.value
+                                          ? clampInch(Number(e.target.value))
+                                          : null,
+                                      })
+                                    }
+                                  />
+                                ) : (
+                                  <span className="text-xs text-ink/35">—</span>
+                                )}
+                              </CellBusy>
                             </td>
                             <td className="px-1 py-0.5">
-                              {showPipeSizes ? (
-                                row.sizeMin === sizeRangeMin &&
-                                row.sizeMax === mikeSizeMax ? (
-                                  <span className="text-[10px] text-ink/40">
-                                    0–{mikeSizeMax}
-                                  </span>
-                                ) : (
-                                  <select
+                              <CellBusy busy={dimsLoading && canSize}>
+                                {showPipeSizes ? (
+                                  row.sizeMin === sizeRangeMin &&
+                                  row.sizeMax === mikeSizeMax ? (
+                                    <span className="text-[10px] text-ink/40">
+                                      0–{mikeSizeMax}
+                                    </span>
+                                  ) : (
+                                    <select
+                                      disabled={
+                                        !editable || !canSize || dimsLoading
+                                      }
+                                      className={`${cellBusySelectClass(
+                                        !editable || !canSize || dimsLoading,
+                                        dimsLoading && canSize
+                                      )} w-24`}
+                                      value={
+                                        row.sizeMax != null
+                                          ? String(row.sizeMax)
+                                          : ""
+                                      }
+                                      onChange={(e) =>
+                                        patchRow(active.id, row.id, {
+                                          sizeMax: e.target.value
+                                            ? clampInch(Number(e.target.value))
+                                            : null,
+                                        })
+                                      }
+                                    >
+                                      <option value="">
+                                        {dimsLoading ? "Loading…" : "—"}
+                                      </option>
+                                      {rowSizes.map((s) => (
+                                        <option
+                                          key={s.value}
+                                          value={String(s.value)}
+                                        >
+                                          {dimLabel(s)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )
+                                ) : showDuctSizeInputs ? (
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    min={sizeRangeMin}
+                                    max={sizeRangeMax}
                                     disabled={!editable || !canSize}
-                                    className={`${selectClass(!editable || !canSize)} w-24`}
-                                    value={
-                                      row.sizeMax != null
-                                        ? String(row.sizeMax)
-                                        : ""
-                                    }
+                                    placeholder="any"
+                                    className={`${selectClass(!editable || !canSize)} w-20`}
+                                    value={row.sizeMax ?? ""}
                                     onChange={(e) =>
                                       patchRow(active.id, row.id, {
                                         sizeMax: e.target.value
@@ -1999,39 +2289,11 @@ export function BidSpecSheetsSection({
                                           : null,
                                       })
                                     }
-                                  >
-                                    <option value="">—</option>
-                                    {rowSizes.map((s) => (
-                                      <option
-                                        key={s.value}
-                                        value={String(s.value)}
-                                      >
-                                        {dimLabel(s)}
-                                      </option>
-                                    ))}
-                                  </select>
-                                )
-                              ) : showDuctSizeInputs ? (
-                                <input
-                                  type="number"
-                                  step="any"
-                                  min={sizeRangeMin}
-                                  max={sizeRangeMax}
-                                  disabled={!editable || !canSize}
-                                  placeholder="any"
-                                  className={`${selectClass(!editable || !canSize)} w-20`}
-                                  value={row.sizeMax ?? ""}
-                                  onChange={(e) =>
-                                    patchRow(active.id, row.id, {
-                                      sizeMax: e.target.value
-                                        ? clampInch(Number(e.target.value))
-                                        : null,
-                                    })
-                                  }
-                                />
-                              ) : (
-                                <span className="text-xs text-ink/35">—</span>
-                              )}
+                                  />
+                                ) : (
+                                  <span className="text-xs text-ink/35">—</span>
+                                )}
+                              </CellBusy>
                             </td>
                             <td className="px-1 py-0.5">
                               <input
@@ -2054,44 +2316,53 @@ export function BidSpecSheetsSection({
                               />
                             </td>
                             <td className="px-1 py-0.5">
-                              {rowThicks.length === 0 ? (
-                                <span className="text-xs text-ink/35">—</span>
-                              ) : (
-                                <select
-                                  disabled={!editable || !canSize}
-                                  className={`${selectClass(!editable || !canSize)} w-24`}
-                                  value={
-                                    row.thicknessIn != null
-                                      ? String(row.thicknessIn)
-                                      : ""
-                                  }
-                                  onChange={(e) => {
-                                    const thicknessIn = e.target.value
-                                      ? Number(e.target.value)
-                                      : null;
-                                    const layers = resizeInsulationLayers(
-                                      row.insulationLayers,
-                                      row.insulationLayerCount
-                                    ).map((L, idx) =>
-                                      idx === 0 ? { ...L, thicknessIn } : L
-                                    );
-                                    patchRow(active.id, row.id, {
-                                      thicknessIn,
-                                      insulationLayers: layers,
-                                    });
-                                  }}
-                                >
-                                  <option value="">—</option>
-                                  {rowThicks.map((t) => (
-                                    <option
-                                      key={t.value}
-                                      value={String(t.value)}
-                                    >
-                                      {dimLabel(t)}
+                              <CellBusy busy={dimsLoading && canSize}>
+                                {rowThicks.length === 0 && !dimsLoading ? (
+                                  <span className="text-xs text-ink/35">—</span>
+                                ) : (
+                                  <select
+                                    disabled={
+                                      !editable || !canSize || dimsLoading
+                                    }
+                                    className={`${cellBusySelectClass(
+                                      !editable || !canSize || dimsLoading,
+                                      dimsLoading && canSize
+                                    )} w-24`}
+                                    value={
+                                      row.thicknessIn != null
+                                        ? String(row.thicknessIn)
+                                        : ""
+                                    }
+                                    onChange={(e) => {
+                                      const thicknessIn = e.target.value
+                                        ? Number(e.target.value)
+                                        : null;
+                                      const layers = resizeInsulationLayers(
+                                        row.insulationLayers,
+                                        row.insulationLayerCount
+                                      ).map((L, idx) =>
+                                        idx === 0 ? { ...L, thicknessIn } : L
+                                      );
+                                      patchRow(active.id, row.id, {
+                                        thicknessIn,
+                                        insulationLayers: layers,
+                                      });
+                                    }}
+                                  >
+                                    <option value="">
+                                      {dimsLoading ? "Loading…" : "—"}
                                     </option>
-                                  ))}
-                                </select>
-                              )}
+                                    {rowThicks.map((t) => (
+                                      <option
+                                        key={t.value}
+                                        value={String(t.value)}
+                                      >
+                                        {dimLabel(t)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )}
+                              </CellBusy>
                             </td>
                             <td className="px-1 py-0.5">
                               <ManufacturerAllowedSelect

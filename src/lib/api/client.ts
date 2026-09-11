@@ -4,7 +4,7 @@
  */
  
 import { getAccessToken, clearAuth } from "@/lib/auth/store";
-import { getApiUrl } from "./config";
+import { getApiUrl, getBaseUrl } from "./config";
 
 function authHeaders(): HeadersInit {
   const token = getAccessToken();
@@ -174,18 +174,57 @@ export async function post<T>(
 
 /**
  * PATCH request with JSON body.
+ * Times out so Save cannot stick on "Saving…" when the backend is down.
  */
 export async function patch<T>(
   path: string,
-  body: unknown
+  body: unknown,
+  opts?: { timeoutMs?: number }
 ): Promise<T> {
   const url = getApiUrl(path);
-  const response = await fetch(url, {
-    method: "PATCH",
-    headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return handleResponse<T>(response);
+  const timeoutMs = opts?.timeoutMs ?? 20_000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let payload: string;
+  try {
+    payload = JSON.stringify(body);
+  } catch (e) {
+    clearTimeout(timer);
+    throw new ApiError(
+      e instanceof Error
+        ? `Could not serialize request: ${e.message}`
+        : "Could not serialize request body",
+      0,
+      "SERIALIZE_ERROR"
+    );
+  }
+  try {
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: payload,
+      signal: controller.signal,
+    });
+    return await handleResponse<T>(response);
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw new ApiError(
+        `Request timed out after ${timeoutMs / 1000}s — is the API up at ${getBaseUrl()}? (${path})`,
+        0,
+        "TIMEOUT"
+      );
+    }
+    if (e instanceof TypeError) {
+      throw new ApiError(
+        `Network error — cannot reach ${getBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`,
+        0,
+        "NETWORK"
+      );
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**

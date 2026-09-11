@@ -11,6 +11,7 @@ interface ConfirmModalProps {
   onCancel: () => void;
 }
 
+/** In-app confirmation dialog — not `window.confirm`. */
 export function ConfirmModal({
   isOpen,
   title,
@@ -23,38 +24,44 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   if (!isOpen) return null;
 
-  const confirmColor =
+  const confirmClass =
     variant === "danger"
-      ? "bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
-      : "bg-brand hover:bg-brand-secondary dark:bg-brand dark:hover:bg-brand-secondary";
+      ? "bg-danger text-white hover:bg-danger/90"
+      : "bg-brand text-white hover:bg-brand/90";
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="confirm-modal-title"
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-md rounded-xl border border-stone-200 bg-white shadow-xl dark:border-stone-700 dark:bg-stone-900"
+        className="w-full max-w-md rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_16px_40px_-12px_rgba(1,1,1,0.28)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4">
-          <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100">{title}</h3>
-          <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">{message}</p>
+        <div className="px-5 py-4 sm:px-6">
+          <h3
+            id="confirm-modal-title"
+            className="text-base font-semibold text-ink"
+          >
+            {title}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-ink/60">{message}</p>
         </div>
-        <div className="flex justify-end gap-3 border-t border-stone-200 px-6 py-4 dark:border-stone-700">
+        <div className="flex justify-end gap-2 border-t border-ink/[0.06] px-5 py-3.5 sm:px-6">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 dark:border-stone-600 dark:text-stone-300 dark:hover:bg-stone-800"
+            className="rounded-xl border border-ink/10 px-4 py-2 text-sm font-medium text-ink/70 transition hover:bg-ink/[0.04]"
           >
             {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors ${confirmColor}`}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${confirmClass}`}
           >
             {confirmLabel}
           </button>

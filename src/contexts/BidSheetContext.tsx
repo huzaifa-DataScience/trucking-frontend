@@ -12,6 +12,7 @@ import {
 } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { getApiErrorMessage } from "@/lib/api/client";
+import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import { insightsFromBid } from "@/lib/bidding/computed";
 import { normalizeSystems } from "@/lib/bidding/constants";
 import {
@@ -74,8 +75,8 @@ type BidSheetContextValue = {
   setProcessDirty: (dirty: boolean) => void;
   registerProcessSave: (fn: (() => Promise<void>) | null) => void;
   saveProcess: () => Promise<void>;
-  /** true = OK to leave; false = stay */
-  confirmLeaveUnsaved: () => boolean;
+  /** true = OK to leave; false = stay (in-app confirm modal) */
+  confirmLeaveUnsaved: () => Promise<boolean>;
   saveNow: () => Promise<void>;
   saveCoverSheet: () => Promise<void>;
   markSubmitted: () => Promise<void>;
@@ -133,6 +134,7 @@ export function BidSheetProvider({
 }) {
   const lookups = useBiddingLookups();
   const { canRead, canWrite } = useBiddingAccess();
+  const confirmDialog = useConfirmDialog();
   const [bid, setBid] = useState<BidDetail | null>(null);
   const [burdenedRate, setBurdenedRate] = useState<BurdenedRateResult | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -290,12 +292,16 @@ export function BidSheetProvider({
 
   const unsavedChanges = dirty || processDirty;
 
-  const confirmLeaveUnsaved = useCallback(() => {
+  const confirmLeaveUnsaved = useCallback(async () => {
     if (!dirty && !processDirty) return true;
-    return window.confirm(
-      "You have unsaved changes. Leave without saving?"
-    );
-  }, [dirty, processDirty]);
+    return confirmDialog({
+      title: "Unsaved changes",
+      message: "You have unsaved changes. Leave without saving?",
+      confirmLabel: "Leave",
+      cancelLabel: "Stay",
+      variant: "danger",
+    });
+  }, [dirty, processDirty, confirmDialog]);
 
   useEffect(() => {
     if (!unsavedChanges) return;

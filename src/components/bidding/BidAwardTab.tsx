@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { useBidSheet } from "@/contexts/BidSheetContext";
@@ -9,6 +10,7 @@ import type { ProcessAward } from "@/lib/bidding/process-types";
 
 /** Awarded / startup — only when workflow.showAward (outcome = awarded). */
 export function BidAwardTab() {
+  const router = useRouter();
   const {
     bid,
     canWrite,
@@ -84,7 +86,11 @@ export function BidAwardTab() {
           href={`/bidding/${bid.id}?stage=result`}
           className="font-medium text-brand underline-offset-2 hover:underline"
           onClick={(e) => {
-            if (!confirmLeaveUnsaved()) e.preventDefault();
+            e.preventDefault();
+            void (async () => {
+              if (!(await confirmLeaveUnsaved())) return;
+              router.push(`/bidding/${bid.id}?stage=result`);
+            })();
           }}
         >
           Outcome
