@@ -78,10 +78,7 @@ export default function ClearstoryRatesPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
-      <PageHeader
-        title="Rates"
-        subtitle="Company and project LMEO rows via structured query params. Overview payloads use fixed keys inbox=sent | inbox=received."
-      />
+      <PageHeader title="Rates" />
 
       <Card>
         <CardHeader title="Fetch payload" />
