@@ -15,6 +15,7 @@
   "dependencies": {
     "next": "16.1.6",
     "react": "19.2.3",
+    "react-aria-components": "^1.21.1",
     "react-dom": "19.2.3",
     "recharts": "^3.10.1",
     "socket.io-client": "^4.8.3",
@@ -28,6 +29,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "playwright": "^1.63.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
