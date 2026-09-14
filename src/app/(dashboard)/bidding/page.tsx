@@ -17,6 +17,17 @@ import { getApiErrorMessage } from "@/lib/api/client";
 import { formatDate } from "@/lib/bidding/format";
 import { formatOutcome, formatProcessStage, formatWorkType } from "@/lib/bidding/process-types";
 import type { BidListItem, BidStatus } from "@/lib/bidding/types";
+import { FilterSidebar } from "@/components/filters/FilterSidebar";
+import { SavedViewTabs } from "@/components/filters/SavedViewTabs";
+import {
+  rowMatchesGroups,
+  loadSavedViews,
+  saveSavedViews,
+  type FilterGroup,
+  type SavedView,
+} from "@/lib/filters/types";
+import { BIDDING_SAVED_VIEWS_KEY, FILTER_FIELDS } from "@/lib/bidding/savedViews";
+import { newId } from "@/lib/bidding/newId";
 
 type StatusFilter = "all" | BidStatus;
 type SortKey = "updated" | "estimate";
@@ -175,6 +186,14 @@ export default function BiddingListPage() {
   const [bids, setBids] = useState<BidListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSavedViews(loadSavedViews(BIDDING_SAVED_VIEWS_KEY));
+  }, []);
 
   const entityId = companyId ? Number(companyId) : undefined;
 
@@ -220,13 +239,52 @@ export default function BiddingListPage() {
   }, [bids]);
 
   const visibleBids = useMemo(() => {
-    const filtered = status === "all" ? bids : bids.filter((b) => b.status === status);
+    const filtered = (status === "all" ? bids : bids.filter((b) => b.status === status)).filter((b) =>
+      rowMatchesGroups(b as unknown as Record<string, unknown>, filterGroups)
+    );
     return [...filtered].sort((a, b) =>
       sortKey === "estimate"
         ? a.estimateNumber.localeCompare(b.estimateNumber, undefined, { numeric: true })
         : b.updatedAt.localeCompare(a.updatedAt)
     );
-  }, [bids, status, sortKey]);
+  }, [bids, status, sortKey, filterGroups]);
+
+  const applyFilterGroups = (groups: FilterGroup[]) => {
+    setFilterGroups(groups);
+    setFilterOpen(false);
+  };
+
+  const saveAsView = (name: string, groups: FilterGroup[]) => {
+    const view: SavedView = { id: newId(), name, groups };
+    const next = [...savedViews, view];
+    setSavedViews(next);
+    saveSavedViews(BIDDING_SAVED_VIEWS_KEY, next);
+    setFilterGroups(groups);
+    setActiveSavedViewId(view.id);
+    setFilterOpen(false);
+  };
+
+  const openSavedView = (view: SavedView) => {
+    setActiveSavedViewId(view.id);
+    setFilterGroups(view.groups);
+  };
+
+  const removeSavedView = (id: string) => {
+    const next = savedViews.filter((v) => v.id !== id);
+    setSavedViews(next);
+    saveSavedViews(BIDDING_SAVED_VIEWS_KEY, next);
+    if (activeSavedViewId === id) {
+      setActiveSavedViewId(null);
+      setFilterGroups([]);
+    }
+  };
+
+  const clearView = () => {
+    setActiveSavedViewId(null);
+    setFilterGroups([]);
+  };
+
+  const activeFilterCount = useMemo(() => filterGroups.reduce((n, g) => n + g.conditions.length, 0), [filterGroups]);
 
   const emptyMessage = useMemo(() => {
     if (error) return error;
@@ -285,6 +343,15 @@ export default function BiddingListPage() {
           </div>
         )}
       </div>
+
+      <SavedViewTabs
+        views={savedViews}
+        activeId={activeSavedViewId}
+        showClear={Boolean(activeSavedViewId) || activeFilterCount > 0}
+        onOpen={openSavedView}
+        onRemove={removeSavedView}
+        onClear={clearView}
+      />
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]">
@@ -351,6 +418,22 @@ export default function BiddingListPage() {
               />
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setFilterOpen(true)}
+            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-ink/10 bg-surface px-3.5 text-sm font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
+            </svg>
+            Filters
+            {activeFilterCount > 0 ? (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
 
           <div className="flex h-10 shrink-0 items-center gap-0.5 rounded-lg border border-ink/10 bg-surface p-1">
             <button
@@ -454,6 +537,16 @@ export default function BiddingListPage() {
           ))}
         </div>
       )}
+
+      <FilterSidebar
+        open={filterOpen}
+        fields={FILTER_FIELDS}
+        title="Filter estimates"
+        initialGroups={filterGroups}
+        onClose={() => setFilterOpen(false)}
+        onApply={applyFilterGroups}
+        onSaveAsView={saveAsView}
+      />
     </div>
   );
 }

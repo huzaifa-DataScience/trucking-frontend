@@ -28,6 +28,17 @@ import {
   useColumnPinning,
   useStickyOffsets,
 } from "@/components/clearstory/ClearstorySwaggerTable";
+import { FilterSidebar } from "@/components/filters/FilterSidebar";
+import { SavedViewTabs } from "@/components/filters/SavedViewTabs";
+import {
+  rowMatchesGroups,
+  loadSavedViews,
+  saveSavedViews,
+  type FilterGroup,
+  type SavedView,
+} from "@/lib/filters/types";
+import { PROJECTS_SAVED_VIEWS_KEY, PROJECT_FILTER_FIELDS } from "@/lib/clearstory/projectFilters";
+import { newId } from "@/lib/bidding/newId";
 
 // Match COR tables: the table scrolls (X+Y) inside a bounded region.
 const TABLE_SCROLL =
@@ -170,9 +181,59 @@ export default function ClearstoryProjectsPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
-  const projects = useMemo(
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSavedViews(loadSavedViews(PROJECTS_SAVED_VIEWS_KEY));
+  }, []);
+
+  const applyFilterGroups = (groups: FilterGroup[]) => {
+    setFilterGroups(groups);
+    setFilterOpen(false);
+  };
+
+  const saveAsView = (name: string, groups: FilterGroup[]) => {
+    const view: SavedView = { id: newId(), name, groups };
+    const next = [...savedViews, view];
+    setSavedViews(next);
+    saveSavedViews(PROJECTS_SAVED_VIEWS_KEY, next);
+    setFilterGroups(groups);
+    setActiveSavedViewId(view.id);
+    setFilterOpen(false);
+  };
+
+  const openSavedView = (view: SavedView) => {
+    setActiveSavedViewId(view.id);
+    setFilterGroups(view.groups);
+  };
+
+  const removeSavedView = (id: string) => {
+    const next = savedViews.filter((v) => v.id !== id);
+    setSavedViews(next);
+    saveSavedViews(PROJECTS_SAVED_VIEWS_KEY, next);
+    if (activeSavedViewId === id) {
+      setActiveSavedViewId(null);
+      setFilterGroups([]);
+    }
+  };
+
+  const clearView = () => {
+    setActiveSavedViewId(null);
+    setFilterGroups([]);
+  };
+
+  const activeFilterCount = useMemo(() => filterGroups.reduce((n, g) => n + g.conditions.length, 0), [filterGroups]);
+
+  const allProjects = useMemo(
     () => ((data && "projects" in data ? data.projects : []) ?? []) as ClearstoryProjectRowAllColumns[],
     [data]
+  );
+  const projects = useMemo(
+    () => allProjects.filter((p) => rowMatchesGroups(p as unknown as Record<string, unknown>, filterGroups)),
+    [allProjects, filterGroups]
   );
   const total = data && "total" in data ? data.total : projects.length;
   const dataAsOf = useMemo(() => formatDataAsOf(newestUpdatedAt(projects)), [projects]);
@@ -315,6 +376,15 @@ export default function ClearstoryProjectsPage() {
         }
       />
 
+      <SavedViewTabs
+        views={savedViews}
+        activeId={activeSavedViewId}
+        showClear={Boolean(activeSavedViewId) || activeFilterCount > 0}
+        onOpen={openSavedView}
+        onRemove={removeSavedView}
+        onClear={clearView}
+      />
+
       <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] gap-4">
         <Card className="flex flex-col">
           <CardHeader
@@ -340,6 +410,21 @@ export default function ClearstoryProjectsPage() {
                 className="w-full max-w-md rounded-xl border border-ink/10 bg-[#f8f9fb] px-3 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setFilterOpen(true)}
+              className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-ink/10 bg-surface px-3.5 text-sm font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
+              </svg>
+              Filters
+              {activeFilterCount > 0 ? (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </button>
             <p className="text-xs text-ink/45" role="status" aria-live="polite">
               {statusLoading ? (
                 "Checking module status…"
@@ -519,6 +604,16 @@ export default function ClearstoryProjectsPage() {
           )}
         </Card>
       </div>
+
+      <FilterSidebar
+        open={filterOpen}
+        fields={PROJECT_FILTER_FIELDS}
+        title="Filter projects"
+        initialGroups={filterGroups}
+        onClose={() => setFilterOpen(false)}
+        onApply={applyFilterGroups}
+        onSaveAsView={saveAsView}
+      />
     </div>
   );
 }
