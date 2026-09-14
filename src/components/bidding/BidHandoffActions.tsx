@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
@@ -16,10 +16,6 @@ async function flushBidSaves(opts: {
 }) {
   if (opts.forceProcess || opts.processDirty) await opts.saveProcess();
   if (opts.dirty) await opts.saveNow();
-}
-
-function processNotesOf(bid: { process?: { notes?: string | null } | null } | null) {
-  return String(bid?.process?.notes ?? "");
 }
 
 function breadcrumbsOf(
@@ -39,7 +35,6 @@ export function BidSaveButton() {
     saving,
     unsavedChanges,
     saveProcess,
-    applyBidDetail,
   } = useBidSheet();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,25 +45,10 @@ export function BidSaveButton() {
 
   const runSave = async () => {
     if (!editable) return;
-    // Spec/intake/setup: only process PATCH. Do not also chain estimate saveNow
-    // (that could leave a second "Saving…" if math dirty is stale).
     setBusy(true);
     setError(null);
     try {
       await saveProcess();
-      // Keep drawer notes on the bid even when Save is pressed from the header.
-      const notesEl = document.getElementById(
-        "bid-sheet-notes"
-      ) as HTMLTextAreaElement | null;
-      if (notesEl) {
-        const notes = notesEl.value.trim() || null;
-        if (notes !== (processNotesOf(bid).trim() || null)) {
-          const updated = await biddingApi.patchBid(bid.id, {
-            process: { notes },
-          });
-          applyBidDetail(updated);
-        }
-      }
     } catch (e) {
       setError(getApiErrorMessage(e, "Failed to save"));
     } finally {
@@ -97,8 +77,8 @@ export function BidSaveButton() {
 }
 
 /**
- * Notes drawer: persistent bid notes + Complete / Return handoff.
- * Save writes `process.notes` so they show after save/reload.
+ * Notes drawer footer: Complete / Return handoff + process breadcrumbs.
+ * Chat lives in BidCommentsPanel — do not PATCH process.notes for conversation.
  */
 export function BidHandoffActions() {
   const {
@@ -111,26 +91,12 @@ export function BidHandoffActions() {
     unsavedChanges,
     saveProcess,
     saveNow,
-    applyBidDetail,
   } = useBidSheet();
   const confirmDialog = useConfirmDialog();
   const [busy, setBusy] = useState<"complete" | "return" | "save" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [notes, setNotes] = useState(() => processNotesOf(bid));
   const [handoffNote, setHandoffNote] = useState("");
 
-  useEffect(() => {
-    setNotes(processNotesOf(bid));
-  }, [bid?.id]);
-
-  useEffect(() => {
-    // Don't clobber in-progress edits while a save/handoff is running.
-    if (busy !== null) return;
-    setNotes(processNotesOf(bid));
-  }, [bid?.process?.notes, busy]);
-
-  const savedNotes = processNotesOf(bid);
-  const notesDirty = notes !== savedNotes;
   const crumbs = breadcrumbsOf(bid);
 
   if (!bid) return null;
@@ -148,24 +114,12 @@ export function BidHandoffActions() {
       forceProcess: true,
     });
 
-  const persistNotes = async () => {
-    const next = notes.trim() || null;
-    const prev = savedNotes.trim() || null;
-    if (next === prev) return bid;
-    const updated = await biddingApi.patchBid(bid.id, {
-      process: { notes: next },
-    });
-    applyBidDetail(updated);
-    return updated;
-  };
-
   const runSave = async () => {
     if (!editable) return;
     setBusy("save");
     setError(null);
     try {
       await flushSaves();
-      await persistNotes();
     } catch (e) {
       setError(getApiErrorMessage(e, "Failed to save"));
     } finally {
@@ -175,7 +129,7 @@ export function BidHandoffActions() {
 
   const runHandoff = async (action: "complete" | "return") => {
     if (!editable) return;
-    if (unsavedChanges || notesDirty) {
+    if (unsavedChanges) {
       const saveFirst = await confirmDialog({
         title: "Unsaved changes",
         message:
@@ -186,7 +140,6 @@ export function BidHandoffActions() {
       if (!saveFirst) return;
       try {
         await flushSaves();
-        await persistNotes();
       } catch (e) {
         setError(getApiErrorMessage(e, "Failed to save before handoff"));
         return;
@@ -214,32 +167,10 @@ export function BidHandoffActions() {
 
   return (
     <div className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-ink/40">
-          Bid notes
-        </span>
-        <textarea
-          id="bid-sheet-notes"
-          disabled={!editable}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={6}
-          className="resize-y rounded-xl border border-ink/10 bg-canvas/40 px-3 py-2 text-sm leading-relaxed text-ink outline-none focus:border-brand disabled:opacity-60"
-          placeholder="Working notes for this bid…"
-        />
-        {notesDirty ? (
-          <span className="text-[10px] font-semibold text-amber-700">
-            Unsaved notes
-          </span>
-        ) : notes.trim() ? (
-          <span className="text-[10px] font-medium text-ink/40">Saved</span>
-        ) : null}
-      </label>
-
       <p className="text-sm text-ink/55">
         {busy === "save" || saving
           ? "Saving…"
-          : unsavedChanges || notesDirty
+          : unsavedChanges
             ? "Unsaved changes"
             : editable
               ? "Save when ready — incomplete OK"

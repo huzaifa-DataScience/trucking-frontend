@@ -432,6 +432,8 @@ export function BidIntakeStage() {
           disabled={!editable}
           inputClass={inputClass}
           labelClass={labelClass}
+          showPicker
+          addressBookTitle="Company Address Book"
           onChangeName={(name) => setParty(key, "name", name)}
           onPickExisting={(picked) => {
             if (isMechanical) {
@@ -447,10 +449,75 @@ export function BidIntakeStage() {
             });
           }}
         />
+        <PartyNameCombobox
+          label="Company"
+          value={p.company ?? ""}
+          options={companyOptionsFromParties(partiesByRole[role])}
+          addressBookOptions={partiesByRole[role]}
+          disabled={!editable}
+          inputClass={inputClass}
+          labelClass={labelClass}
+          showPicker
+          addressBookTitle="Company Address Book"
+          placeholder="Search or type company…"
+          inputValueFromParty={(picked) =>
+            picked.company || picked.name || ""
+          }
+          onChangeName={(name) => setParty(key, "company", name)}
+          onPickExisting={(picked) => {
+            if (isMechanical) {
+              pickMechanical({
+                ...picked,
+                company: picked.company || picked.name || null,
+              });
+              return;
+            }
+            setField(key, {
+              ...p,
+              company: picked.company || picked.name || null,
+              contactName:
+                picked.contactName || picked.name || p.contactName || null,
+              email: picked.email ?? p.email ?? null,
+              phone: picked.phone ?? p.phone ?? null,
+            });
+          }}
+        />
+        <PartyNameCombobox
+          label="Contact name"
+          value={p.contactName ?? ""}
+          options={partiesByRole[role]}
+          disabled={!editable}
+          inputClass={inputClass}
+          labelClass={labelClass}
+          showPicker
+          addressBookTitle="Company Address Book"
+          placeholder="Search or type contact…"
+          inputValueFromParty={(picked) =>
+            picked.contactName || picked.name || ""
+          }
+          onChangeName={(name) => setParty(key, "contactName", name)}
+          onPickExisting={(picked) => {
+            const contact =
+              picked.contactName || picked.name || null;
+            if (isMechanical) {
+              pickMechanical({
+                ...picked,
+                contactName: contact,
+                name: p.name || picked.name || null,
+              });
+              return;
+            }
+            setField(key, {
+              ...p,
+              contactName: contact,
+              company: picked.company ?? p.company ?? null,
+              email: picked.email ?? p.email ?? null,
+              phone: picked.phone ?? p.phone ?? null,
+            });
+          }}
+        />
         {(
           [
-            ["company", "Company"],
-            ["contactName", "Contact name"],
             ["email", "Email"],
             ["phone", "Phone"],
           ] as const
@@ -786,10 +853,16 @@ export function BidIntakeStage() {
                   label="Company"
                   value={company}
                   options={inviteCompanyOptions}
+                  addressBookOptions={partiesByRole.invite_contact}
                   disabled={!editable}
                   inputClass={inputClass}
                   labelClass={labelClass}
+                  showPicker
+                  addressBookTitle="Company Address Book"
                   placeholder="Which company sent the invite…"
+                  inputValueFromParty={(picked) =>
+                    picked.company || picked.name || ""
+                  }
                   onChangeName={(name) =>
                     patchInvitation(index, {
                       contact: {
@@ -802,6 +875,13 @@ export function BidIntakeStage() {
                     pickInvitationContact(index, {
                       ...(inv.contact ?? {}),
                       company: picked.company || picked.name || null,
+                      name:
+                        inv.contact?.name ||
+                        picked.contactName ||
+                        picked.name ||
+                        null,
+                      email: picked.email ?? inv.contact?.email ?? null,
+                      phone: picked.phone ?? inv.contact?.phone ?? null,
                     })
                   }
                 />
@@ -823,14 +903,23 @@ export function BidIntakeStage() {
                   label="Contact name"
                   value={inv.contact?.name ?? ""}
                   options={contactOptions}
+                  addressBookOptions={
+                    company
+                      ? contactOptions
+                      : partiesByRole.invite_contact
+                  }
                   disabled={!editable}
                   inputClass={inputClass}
                   labelClass={labelClass}
                   showPicker
+                  addressBookTitle="Company Address Book"
                   placeholder={
                     company
                       ? "Search contacts at this company…"
                       : "Search or type new contact…"
+                  }
+                  inputValueFromParty={(picked) =>
+                    picked.contactName || picked.name || ""
                   }
                   onChangeName={(name) =>
                     patchInvitation(index, {

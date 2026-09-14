@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev -p 3001",
     "dev:clean": "rm -rf .next && next dev -p 3001",
-    "build": "next build",
-    "build:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next build",
+    "build": "node scripts/next-build.cjs",
+    "build:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && node scripts/next-build.cjs",
     "start": "next start -p 3002",
     "lint": "eslint",
     "test:bidding": "npx --yes tsx --test src/lib/bidding/engine/idc6098-golden.test.ts",

@@ -59,6 +59,8 @@ export interface RbacPermissionMeta {
   label: string;
   description?: string | null;
   group?: string | null;
+  /** Locked rows (e.g. wfs:*) — hide from matrix. */
+  locked?: boolean;
 }
 
 /** GET /admin/rbac */
