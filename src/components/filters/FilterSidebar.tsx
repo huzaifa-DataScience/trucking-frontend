@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { newId } from "@/lib/bidding/newId";
+import { DatePicker } from "@/components/ui/DatePicker";
 import {
   describeCondition,
   type FilterCondition,
@@ -60,12 +61,11 @@ function FieldControl({
   if (field.kind === "dateRange") {
     return (
       <div className="flex gap-2">
-        <input
-          type="date"
-          className={inputClass}
+        <DatePicker
+          ariaLabel={`${field.label} start`}
+          className="h-10 w-full rounded-lg px-3 text-sm"
           value={condition?.start ?? ""}
-          onChange={(e) => {
-            const start = e.target.value;
+          onChange={(start) => {
             const end = condition?.end ?? "";
             if (!start && !end) {
               onChange(null);
@@ -74,12 +74,11 @@ function FieldControl({
             onChange({ id: condition?.id ?? newId(), field: field.key, op: "between", start, end });
           }}
         />
-        <input
-          type="date"
-          className={inputClass}
+        <DatePicker
+          ariaLabel={`${field.label} end`}
+          className="h-10 w-full rounded-lg px-3 text-sm"
           value={condition?.end ?? ""}
-          onChange={(e) => {
-            const end = e.target.value;
+          onChange={(end) => {
             const start = condition?.start ?? "";
             if (!start && !end) {
               onChange(null);
