@@ -4,7 +4,7 @@ import { useEffect, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { roleLabel, isAdminPanelRole } from "@/lib/auth/roles";
+import { roleLabel, isAdminPanelRole, canSeeWfs } from "@/lib/auth/roles";
 import { can, canBidding, PERMISSIONS } from "@/lib/auth/permissions";
 import { AppLogo } from "@/components/ui/AppLogo";
 import {
@@ -38,12 +38,14 @@ type ViewMode =
   | "dashboard"
   | "bidding"
   | "mike"
-  | "workforce";
+  | "workforce"
+  | "wfs";
 
 const WORKSPACE_STORAGE_KEY = "construction-logistics-workspace";
 
 function viewFromPathname(pathname: string): ViewMode {
   if (pathname.startsWith("/workforce")) return "workforce";
+  if (pathname.startsWith("/wfs")) return "wfs";
   if (
     pathname.startsWith("/mike") ||
     pathname.startsWith("/estimation-files") ||
@@ -64,6 +66,7 @@ function defaultHrefForView(view: ViewMode): string {
   if (view === "bidding") return "/bidding";
   if (view === "mike") return "/estimation-files";
   if (view === "workforce") return "/workforce";
+  if (view === "wfs") return "/wfs";
   return "/job";
 }
 
@@ -134,6 +137,16 @@ const dashboardNavItems: SidebarNavItem[] = [
     Icon: NavIconChart,
     exact: true,
     biddingPermission: "bidding:read",
+  },
+];
+
+const wfsNavItems: SidebarNavItem[] = [
+  {
+    href: "/wfs",
+    label: "Overview",
+    Icon: NavIconInvoice,
+    exact: true,
+    // Visibility is role-gated (super_admin only) — not wfs:read.
   },
 ];
 
@@ -238,8 +251,8 @@ const adminNavItems: SidebarNavItem[] = [
 ];
 
 /**
- * FRONTEND_RBAC.md — admin / super_admin see every workspace item;
- * do not hide chrome on missing permission keys.
+ * FRONTEND_RBAC.md — admin / super_admin see every workspace item
+ * (except WFS — super_admin only). Do not hide other chrome on missing keys.
  */
 function navItemVisible(
   user: AuthUser | null,
@@ -259,6 +272,7 @@ function navItemVisible(
 
 const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ className?: string }> }[] = [
   { value: "dashboard", label: "Dashboard", Icon: NavIconChart },
+  { value: "wfs", label: "WFS", Icon: NavIconInvoice },
   { value: "operations", label: "Ops", Icon: NavIconTruck },
   { value: "billings", label: "Billing", Icon: NavIconInvoice },
   { value: "bidding", label: "Estimates", Icon: NavIconProposal },
@@ -270,6 +284,7 @@ const WORKSPACE_FULL_LABELS: Record<ViewMode, string> = {
   operations: "Operations & reporting",
   billings: "Billing",
   dashboard: "Dashboard",
+  wfs: "WFS",
   bidding: "Estimates",
   mike: "Mike",
   workforce: "Workforce",
@@ -305,6 +320,7 @@ export function Sidebar({
 
   const currentView: ViewMode = viewFromPathname(pathname);
   const seesAllChrome = isAdminPanelRole(user?.role);
+  const showWfs = canSeeWfs(user?.role);
 
   const canSeeBillings =
     seesAllChrome ||
@@ -312,21 +328,22 @@ export function Sidebar({
     can(user, PERMISSIONS.clearstoryRead) ||
     can(user, PERMISSIONS.sitelineRead);
 
-  const visibleWorkspaces = seesAllChrome
-    ? WORKSPACES
-    : WORKSPACES.filter(({ value }) => {
-        if (value === "operations") {
-          return operationsNavItems.some((i) => navItemVisible(user, i));
-        }
-        if (value === "billings") return canSeeBillings;
-        if (value === "dashboard" || value === "bidding" || value === "mike") {
-          return canBidding(user, "bidding:read");
-        }
-        if (value === "workforce") {
-          return workforceNavItems.some((i) => navItemVisible(user, i));
-        }
-        return true;
-      });
+  const visibleWorkspaces = WORKSPACES.filter(({ value }) => {
+    // FRONTEND_WFS.md — never show WFS via admin chrome; super_admin only.
+    if (value === "wfs") return showWfs;
+    if (seesAllChrome) return true;
+    if (value === "operations") {
+      return operationsNavItems.some((i) => navItemVisible(user, i));
+    }
+    if (value === "billings") return canSeeBillings;
+    if (value === "dashboard" || value === "bidding" || value === "mike") {
+      return canBidding(user, "bidding:read");
+    }
+    if (value === "workforce") {
+      return workforceNavItems.some((i) => navItemVisible(user, i));
+    }
+    return true;
+  });
 
   const handleViewChange = (value: ViewMode) => {
     if (value === currentView) return;
@@ -342,6 +359,7 @@ export function Sidebar({
     if (view === "workforce") return workforceNavItems;
     if (view === "mike") return mikeNavItems;
     if (view === "dashboard") return dashboardNavItems;
+    if (view === "wfs") return wfsNavItems;
     if (view === "billings") {
       return canSeeBillings
         ? [{ href: "/billings", label: "Billing", Icon: NavIconInvoice } as SidebarNavItem]

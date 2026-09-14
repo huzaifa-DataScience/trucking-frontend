@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { BidStatusBadge } from "@/components/bidding/BidStatusBadge";
 import { BidStageStrip } from "@/components/bidding/BidStageStrip";
@@ -10,6 +10,7 @@ import {
   BidHandoffActions,
   BidSaveButton,
 } from "@/components/bidding/BidHandoffActions";
+import { BidCommentsPanel } from "@/components/bidding/BidCommentsPanel";
 import { BidActivityPanel } from "@/components/bidding/BidActivityPanel";
 import { BidSidebarDrawer, BidFloatingButton } from "@/components/bidding/BidSidebarDrawer";
 import { BidSheetSkeleton } from "@/components/ui/Skeleton";
@@ -43,19 +44,47 @@ function NotesIcon() {
   );
 }
 
+function HandoffIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path
+        d="M4 12h12M12 6l6 6-6 6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Shared bid chrome — BIDDING_FRONTEND_API.md §0 (PDF stages + handoff) */
 export function BidSheetLayout({ children }: { children: ReactNode }) {
   const { bid, saving, initialLoading, unsavedChanges, confirmLeaveUnsaved } =
     useBidSheet();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [activityOpen, setActivityOpen] = useState(false);
-  const [notesOpen, setNotesOpen] = useState(false);
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const [notesManualOpen, setNotesManualOpen] = useState(false);
+  const notesFromQuery =
+    searchParams.get("notes") === "1" ||
+    searchParams.get("openNotes") === "1";
+  const notesOpen = notesManualOpen || notesFromQuery;
   const stage = parseChromeStage(
     searchParams.get("stage"),
     searchParams.get("tab"),
     bid?.processStage ?? bid?.process?.stage
   );
+
+  const closeNotes = () => {
+    setNotesManualOpen(false);
+    if (!notesFromQuery) return;
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("notes");
+    next.delete("openNotes");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
 
   if (initialLoading || !bid) {
     return <BidSheetSkeleton />;
@@ -144,7 +173,16 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
         label="Notes"
         icon={<NotesIcon />}
         active={notesOpen}
-        onClick={() => setNotesOpen((v) => !v)}
+        onClick={() => {
+          if (notesOpen) closeNotes();
+          else setNotesManualOpen(true);
+        }}
+      />
+      <BidFloatingButton
+        label="Handoff"
+        icon={<HandoffIcon />}
+        active={handoffOpen}
+        onClick={() => setHandoffOpen((v) => !v)}
       />
       <BidFloatingButton
         label="Activity"
@@ -154,7 +192,15 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
       />
     </div>
 
-    <BidSidebarDrawer title="Notes" open={notesOpen} onClose={() => setNotesOpen(false)}>
+    <BidSidebarDrawer title="Notes" open={notesOpen} onClose={closeNotes}>
+      <BidCommentsPanel />
+    </BidSidebarDrawer>
+
+    <BidSidebarDrawer
+      title="Handoff"
+      open={handoffOpen}
+      onClose={() => setHandoffOpen(false)}
+    >
       <BidHandoffActions />
     </BidSidebarDrawer>
 

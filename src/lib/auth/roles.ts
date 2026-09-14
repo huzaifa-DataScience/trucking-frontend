@@ -58,6 +58,14 @@ export function isAdminPanelRole(role: AppRoleId | string | null | undefined): b
   return role === "admin" || role === "super_admin";
 }
 
+/**
+ * WFS sidebar + page — FRONTEND_WFS.md / FRONTEND_RBAC.md.
+ * Super admin only. Hide for `admin` (IT) and every other role.
+ */
+export function canSeeWfs(role: AppRoleId | string | null | undefined): boolean {
+  return role === "super_admin";
+}
+
 export function roleLabel(role: AppRoleId | string): string {
   if (isAppRoleId(role)) return APP_ROLE_LABELS[role];
   return String(role);

@@ -1,8 +1,15 @@
 import type { NextConfig } from "next";
+import path from "path";
+
+const projectRoot = path.resolve(__dirname);
 
 const nextConfig: NextConfig = {
-  /* config options here */
   reactCompiler: true,
+  // Parent ~/package-lock.json otherwise wins as Turbopack / tracing root.
+  outputFileTracingRoot: projectRoot,
+  turbopack: {
+    root: projectRoot,
+  },
   // Allow dev requests from server IP and localhost on ports 3000–3005
   allowedDevOrigins: [
     "http://172.20.20.225:3000",

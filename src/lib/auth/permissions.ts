@@ -20,6 +20,8 @@ export const PERMISSIONS = {
   trimbleRead: "trimble:read",
   connecteamRead: "connecteam:read",
   connecteamWrite: "connecteam:write",
+  wfsRead: "wfs:read",
+  wfsWrite: "wfs:write",
   adminUsers: "admin:users",
   adminCreateUser: "admin:create_user",
   adminRbac: "admin:rbac",

@@ -12,12 +12,17 @@ export type BidPartyRole =
 
 export interface BidPartyLookup {
   id: number | string;
+  /** Person / contact display name */
   name: string;
   company?: string | null;
   contactName?: string | null;
   email?: string | null;
   phone?: string | null;
   role?: BidPartyRole | string | null;
+  /** Optional CRM flags — show in address book Name column */
+  status?: string | null;
+  inactive?: boolean | null;
+  doNotContact?: boolean | null;
 }
 
 function asPartyArray(raw: unknown): BidPartyLookup[] {
@@ -49,6 +54,19 @@ function asPartyArray(raw: unknown): BidPartyLookup[] {
       email: r.email != null ? String(r.email) : null,
       phone: r.phone != null ? String(r.phone) : null,
       role: (r.role as BidPartyRole) ?? null,
+      status: r.status != null ? String(r.status) : null,
+      inactive:
+        typeof r.inactive === "boolean"
+          ? r.inactive
+          : typeof r.isInactive === "boolean"
+            ? r.isInactive
+            : null,
+      doNotContact:
+        typeof r.doNotContact === "boolean"
+          ? r.doNotContact
+          : typeof r.do_not_contact === "boolean"
+            ? r.do_not_contact
+            : null,
     });
   }
   return out;
@@ -57,15 +75,22 @@ function asPartyArray(raw: unknown): BidPartyLookup[] {
 /**
  * Known Owner / Architect / Mechanical / invite contacts.
  * 404 / missing route → [] so FE still allows free-text new entry.
+ *
+ * Optional page/pageSize: when BE returns `{ items, total }`, server paging
+ * is used; plain arrays still work (FE pages client-side in the modal).
  */
 export async function getBiddingParties(params?: {
   role?: BidPartyRole | string;
   q?: string;
+  page?: number;
+  pageSize?: number;
 }): Promise<BidPartyLookup[]> {
   try {
     const raw = await get<unknown>("/lookups/bidding/parties", {
       role: params?.role,
       q: params?.q,
+      page: params?.page,
+      pageSize: params?.pageSize,
     });
     return asPartyArray(raw);
   } catch {
