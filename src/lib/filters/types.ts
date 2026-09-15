@@ -1,4 +1,6 @@
-export type FilterFieldKind = "text" | "select" | "dateRange";
+import { DATE_PRESETS } from "./datePresets";
+
+export type FilterFieldKind = "text" | "select" | "date" | "dateRange" | "checkbox";
 
 export interface FilterFieldDef {
   key: string;
@@ -6,6 +8,14 @@ export interface FilterFieldDef {
   section: string;
   kind: FilterFieldKind;
   options?: { value: string; label: string }[];
+  /** Overrides the auto-derived "Select {label}" placeholder for select fields. */
+  placeholder?: string;
+  /** When true, a select field's options come from FilterSidebar's `dynamicOptions[key]` (derived from live data) instead of the static `options` list. */
+  dynamic?: boolean;
+  /** When true, this field takes its own row in the 2-column grid instead of pairing with a neighbor — the control itself stays the normal single-column width. */
+  soloRow?: boolean;
+  /** For kind "text" — renders a 3-row textarea instead of a single-line input. */
+  multiline?: boolean;
 }
 
 export type FilterOp = "is" | "contains" | "between";
@@ -17,6 +27,8 @@ export interface FilterCondition {
   value?: string;
   start?: string;
   end?: string;
+  /** For "between" conditions built from a relative-date preset (Today, Last 7 Days, …) — the preset's value, for display and re-selection. */
+  preset?: string;
 }
 
 export interface FilterGroup {
@@ -71,11 +83,16 @@ export function describeCondition(fields: FilterFieldDef[], c: FilterCondition):
   const field = fields.find((f) => f.key === c.field);
   const label = field?.label ?? c.field;
   if (c.op === "is") {
+    if (field?.kind === "checkbox") return label;
     const opt = field?.options?.find((o) => o.value === c.value);
     return `${label} is ${opt?.label ?? c.value ?? "…"}`;
   }
   if (c.op === "contains") {
     return `${label} contains "${c.value ?? ""}"`;
+  }
+  if (c.preset) {
+    const preset = DATE_PRESETS.find((p) => p.value === c.preset);
+    if (preset) return `${label} is ${preset.label}`;
   }
   if (c.start && c.end) return `${label} between ${c.start} and ${c.end}`;
   if (c.start) return `${label} on/after ${c.start}`;

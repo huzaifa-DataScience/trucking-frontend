@@ -43,6 +43,134 @@ export type BidKind =
 
 export type ClearanceType = "us_citizen" | "us_person" | "real_id" | null;
 
+export type BidBondStatus = "not_ordered" | "ordered_not_received" | "received" | null;
+export type BudgetBidOption = "yes" | "no" | "unknown" | null;
+export type WageRateCategory = "wage_rate_pw_dba" | "non_wage_scale" | null;
+export type OcipCcipStatus = "not_applicable" | "yes_gl_workmans_comp" | "yes_gl_only" | null;
+export type SalesStatus =
+  | "evaluate_whether_to_bid"
+  | "not_pursued"
+  | "bid_in_process"
+  | "no_bid"
+  | "prospective_future_bid"
+  | "post_bid"
+  | "rebid_budget"
+  | "long_shot"
+  | "in_the_running_to_win"
+  | "lost"
+  | "won"
+  | null;
+export type SubBuildingType =
+  | "other"
+  | "parochial"
+  | "private_college"
+  | "public_college"
+  | "public_elementary_school"
+  | "public_high_school"
+  | "public_middle_junior_high_school"
+  | null;
+export type TradeBidType =
+  | "insulation_sub"
+  | "demolition_sub"
+  | "general_construction"
+  | "demolition_prime"
+  | "insulation_prime"
+  | "concrete"
+  | "masonry"
+  | "wastewater"
+  | "pass_thru"
+  | "other_services"
+  | null;
+export type LeadSource =
+  | "dodge_data_analytics"
+  | "the_blue_book"
+  | "smartsheet"
+  | "smartbid"
+  | "procore"
+  | "planhub"
+  | "pipeline"
+  | "pantera"
+  | "isqft"
+  | "government_construction_bids"
+  | "email_invites_only"
+  | "e_builder"
+  | "bid_central_canadian_construction"
+  | "construction_bid_source"
+  | "coconstruct"
+  | "cmd_group_construction_market"
+  | "building_radar"
+  | "buildingconnected"
+  | "buildertrend"
+  | "box_net"
+  | "bonfire"
+  | "bidtracer"
+  | "bidclerk"
+  | null;
+
+/**
+ * FollowupCRM-parity fields with no home elsewhere. Fields that already exist under a
+ * different name (Contract Amount = award.finalContractAmount, Job Start/End =
+ * schedule.expectedStart/expectedCompletion, Follow Up = intelligence.nextFollowUpDate,
+ * Technical = technicalReview.reviewDate; Office = the bid's own OurEntity/company) are NOT
+ * duplicated here. OCIP/CCIP here is a separate single-select, distinct from the existing
+ * coversGl/coversWc checkboxes on Estimating Setup.
+ */
+export interface ProcessAdditionalDetails {
+  bidNumber?: string | null;
+  winningCompetitor?: string | null;
+  mikeEstimateRef?: string | null;
+  websiteForBiddingDocs?: string | null;
+  altWebLocation1?: string | null;
+  altWebLocation2?: string | null;
+  altWebLocation3?: string | null;
+  wbdUsername?: string | null;
+  wbdPassword?: string | null;
+  wageRateCategory?: WageRateCategory;
+  wageRateAmount?: number | null;
+  grossSqFootage?: number | null;
+  projectNumberIfAwarded?: string | null;
+  usCitizenOnly?: boolean | null;
+  fringe?: number | null;
+  costPerEstimate?: number | null;
+  bidBondStatus?: BidBondStatus;
+  bidBondAmountRequested?: number | null;
+  budgetBid?: BudgetBidOption;
+  takeOffPerson?: string | null;
+  takeOffPerson2?: string | null;
+  takeOffPerson3?: string | null;
+  awl1Username?: string | null;
+  awl1Password?: string | null;
+  awl2Username?: string | null;
+  awl2Password?: string | null;
+  awl3Username?: string | null;
+  awl3Password?: string | null;
+  estimatorBidDate?: string | null;
+  rebid?: boolean | null;
+  engineerProjectNumber?: string | null;
+  contractDate?: string | null;
+  loginDate?: string | null;
+  deadDate?: string | null;
+  comments?: string | null;
+  subBuildingType?: SubBuildingType;
+  source?: LeadSource;
+  preBidDate?: string | null;
+  salesStatus?: SalesStatus;
+  tradeBidType?: TradeBidType;
+  ocipCcipStatus?: OcipCcipStatus;
+}
+
+/** Dates not already covered elsewhere (Follow Up / Technical / Job Start-End live on intelligence/technicalReview/schedule). */
+export interface ProcessSalesActivities {
+  initialContact?: string | null;
+  siteVisit?: string | null;
+  bidDrafted?: string | null;
+  bidDelivered?: string | null;
+  frontEndDocs?: string | null;
+  heatTracingSubPricing?: string | null;
+  prequalificationPackage?: string | null;
+  mandatoryPreBid?: string | null;
+}
+
 export type TakeoffRole =
   | "duct1"
   | "duct2"
@@ -477,6 +605,8 @@ export interface BidProcess {
   /** Bid-level working notes (Notes drawer). Merged on PATCH. */
   notes?: string | null;
   breadcrumbs?: { at?: string; text?: string }[];
+  additionalDetails?: ProcessAdditionalDetails | null;
+  salesActivities?: ProcessSalesActivities | null;
   [key: string]: unknown;
 }
 
