@@ -37,12 +37,13 @@ function FieldControl({
 }) {
   const inputClass =
     "h-10 w-full rounded-lg border border-ink/10 bg-surface px-3 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
+  const selectClass = `${inputClass} pr-8`;
 
   if (field.kind === "select") {
     const options = field.dynamic ? dynamicOptions?.[field.key] ?? [] : field.options ?? [];
     return (
       <select
-        className={inputClass}
+        className={selectClass}
         value={condition?.value ?? ""}
         onChange={(e) => {
           const value = e.target.value;
@@ -86,7 +87,7 @@ function FieldControl({
         <div>
           <span className="mb-1 block text-[11px] text-ink/40">Filter by fixed date</span>
           <select
-            className={inputClass}
+            className={selectClass}
             value={preset}
             onChange={(e) => {
               const next = e.target.value;
@@ -295,7 +296,7 @@ export function FilterSidebar({
   // off-screen on shorter viewports. Portaling out of the page tree avoids the whole class of bug.
   return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="flex h-full w-full max-w-5xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex h-full w-full max-w-3xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* Field picker */}
         <div className="min-w-0 flex-1 overflow-y-auto p-6">
           <div className="mb-5 flex items-center justify-between">
@@ -331,7 +332,7 @@ export function FilterSidebar({
         </div>
 
         {/* Filters summary */}
-        <div className="flex h-full w-96 shrink-0 flex-col border-l border-ink/[0.08]">
+        <div className="flex h-full w-72 shrink-0 flex-col border-l border-ink/[0.08]">
           <div className="flex items-center justify-between border-b border-ink/[0.08] px-5 py-4">
             <h3 className="text-sm font-semibold text-ink">Filters</h3>
             <button
@@ -437,7 +438,7 @@ export function FilterSidebar({
             </button>
           </div>
 
-          <div className="flex shrink-0 gap-2 border-t border-ink/[0.08] p-4">
+          <div className="flex shrink-0 gap-1.5 border-t border-ink/[0.08] p-3">
             <button
               type="button"
               disabled={totalConditions === 0}
@@ -445,7 +446,7 @@ export function FilterSidebar({
                 const name = window.prompt('Name this view (e.g. "Bid in Process — Wilder")');
                 if (name?.trim()) onSaveAsView(name.trim(), groups);
               }}
-              className="flex-1 rounded-xl border border-ink/10 px-3 py-2.5 text-sm font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
+              className="flex-1 whitespace-nowrap rounded-xl border border-ink/10 px-2 py-2.5 text-xs font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
             >
               Save List
             </button>
@@ -456,14 +457,14 @@ export function FilterSidebar({
                 setGroups([emptyGroup()]);
                 setActiveGroupIndex(0);
               }}
-              className="flex-1 rounded-xl border border-danger/30 px-3 py-2.5 text-sm font-semibold text-danger transition hover:bg-danger/[0.06] disabled:pointer-events-none disabled:opacity-40"
+              className="flex-1 whitespace-nowrap rounded-xl border border-danger/30 px-2 py-2.5 text-xs font-semibold text-danger transition hover:bg-danger/[0.06] disabled:pointer-events-none disabled:opacity-40"
             >
               Clear
             </button>
             <button
               type="button"
               onClick={() => onApply(groups)}
-              className="flex-1 rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-secondary"
+              className="flex-1 whitespace-nowrap rounded-xl bg-brand px-2 py-2.5 text-xs font-semibold text-white transition hover:bg-brand-secondary"
             >
               Apply
             </button>
