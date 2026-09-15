@@ -93,6 +93,19 @@ const OUTCOME_FILTERS = [
   { value: "postponed", label: "Postponed" },
 ];
 
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "updated", label: "Last updated" },
+  { value: "estimate", label: "Estimate #" },
+  { value: "bidDate", label: "Bid date" },
+  { value: "estimator", label: "Estimator" },
+  { value: "status", label: "Status" },
+  { value: "workType", label: "Work type" },
+  { value: "baseBid", label: "Base bid" },
+  { value: "contractAmount", label: "Contract amount" },
+  { value: "jobStartDate", label: "Job start date" },
+  { value: "office", label: "Office" },
+];
+
 /** Bordered filter chip with a custom dropdown that always opens below the trigger (native <select> lets the browser decide, which can open upward). */
 function FilterSelect({
   prefix,
@@ -487,6 +500,16 @@ export default function BiddingListPage() {
                 className="h-10 w-full rounded-lg border border-ink/10 bg-surface pl-9 pr-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </div>
+          </div>
+
+          <div className="w-44 shrink-0">
+            <FilterSelect
+              prefix="Sort"
+              value={sortKey}
+              onChange={(v) => setSortKey(v as SortKey)}
+              options={SORT_OPTIONS}
+              ariaLabel="Sort estimates"
+            />
           </div>
 
           <button
