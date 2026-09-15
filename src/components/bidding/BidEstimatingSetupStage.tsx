@@ -162,25 +162,52 @@ export function BidEstimatingSetupStage() {
       <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Construction type</span>
-          <input
+          <select
             className={inputClass}
             disabled={!editable}
             value={draft.constructionType ?? ""}
             onChange={(e) =>
               setField("constructionType", e.target.value || null)
             }
-          />
+          >
+            <option value="">—</option>
+            <option value="renovation">Renovation</option>
+            <option value="new_construction">New Construction</option>
+          </select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className={labelClass}>Subtype</span>
-          <input
+          <span className={labelClass}>Building type</span>
+          <select
             className={inputClass}
             disabled={!editable}
             value={draft.constructionSubtype ?? ""}
             onChange={(e) =>
               setField("constructionSubtype", e.target.value || null)
             }
-          />
+          >
+            <option value="">—</option>
+            <option value="data_center">Data Center</option>
+            <option value="commercial">Commercial</option>
+            <option value="airport">Airport</option>
+            <option value="wastewater">Wastewater</option>
+            <option value="rec_community">Rec/Community</option>
+            <option value="public">Public</option>
+            <option value="prince_georges_county_cbb">Prince Georges County - CBB</option>
+            <option value="power_plant_facilities">Power Plant Facilities</option>
+            <option value="other">Other</option>
+            <option value="museum">Museum</option>
+            <option value="military">Military</option>
+            <option value="metro_facilities_public_transportation">Metro Facilities/Public Transportation</option>
+            <option value="industrial">Industrial</option>
+            <option value="state_of_maryland">State of Maryland</option>
+            <option value="medical">Medical</option>
+            <option value="laboratories">Laboratories</option>
+            <option value="housing">Housing</option>
+            <option value="hotels">Hotels</option>
+            <option value="hotel">Hotel</option>
+            <option value="federal">Federal</option>
+            <option value="educational">Educational</option>
+          </select>
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>MBE preference</span>

@@ -214,6 +214,10 @@ export async function getBiddingPreferences(): Promise<LookupNameItem[]> {
   return get<LookupNameItem[]>("/lookups/bidding/preferences");
 }
 
+export async function getBiddingOffices(): Promise<LookupNameItem[]> {
+  return get<LookupNameItem[]>("/lookups/bidding/offices");
+}
+
 /** @mention typeahead — FRONTEND_BID_COMMENTS.md */
 export async function getBiddingMentionUsers(
   q: string
