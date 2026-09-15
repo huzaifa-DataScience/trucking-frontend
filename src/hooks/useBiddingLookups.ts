@@ -21,6 +21,7 @@ export function useBiddingLookups() {
   const [projectTypes, setProjectTypes] = useState<LookupNameItem[]>([]);
   const [buildingTypes, setBuildingTypes] = useState<LookupNameItem[]>([]);
   const [preferences, setPreferences] = useState<LookupNameItem[]>([]);
+  const [offices, setOffices] = useState<LookupNameItem[]>([]);
   const [ourEntities, setOurEntities] = useState<LookupItem[]>([]);
   const [jobs, setJobs] = useState<LookupItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,10 +58,11 @@ export function useBiddingLookups() {
       biddingApi.getBiddingProjectTypes(),
       biddingApi.getBiddingBuildingTypes(),
       biddingApi.getBiddingPreferences(),
+      biddingApi.getBiddingOffices(),
       lookupsApi.getOurEntities(),
       lookupsApi.getJobs(),
     ])
-      .then(([t, w, pb, st, pt, bt, pref, entities, jobList]) => {
+      .then(([t, w, pb, st, pt, bt, pref, off, entities, jobList]) => {
         if (cancelled) return;
         setTeams(t);
         setWageRates(w);
@@ -69,6 +71,7 @@ export function useBiddingLookups() {
         setProjectTypes(pt);
         setBuildingTypes(bt);
         setPreferences(pref);
+        setOffices(off);
         setOurEntities(entities);
         setJobs(jobList);
       })
@@ -94,6 +97,7 @@ export function useBiddingLookups() {
     projectTypes,
     buildingTypes,
     preferences,
+    offices,
     ourEntities,
     jobs,
     loading,

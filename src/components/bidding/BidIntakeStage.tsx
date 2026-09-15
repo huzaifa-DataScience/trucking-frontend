@@ -7,6 +7,8 @@ import * as biddingApi from "@/lib/api/endpoints/bidding";
 import * as biddingPartiesApi from "@/lib/api/endpoints/biddingParties";
 import type { BidPartyLookup } from "@/lib/api/endpoints/biddingParties";
 import { PartyNameCombobox } from "@/components/bidding/PartyNameCombobox";
+import { BidAdditionalDetailsSection } from "@/components/bidding/BidAdditionalDetailsSection";
+import { TimePicker } from "@/components/ui/TimePicker";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
@@ -715,12 +717,11 @@ export function BidIntakeStage() {
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Due time</span>
-          <input
-            type="time"
-            className={inputClass}
+          <TimePicker
+            ariaLabel="Due time"
             disabled={!editable}
-            value={draft.dueTime ?? ""}
-            onChange={(e) => setField("dueTime", e.target.value || null)}
+            value={draft.dueTime}
+            onChange={(v) => setField("dueTime", v)}
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -1653,6 +1654,14 @@ export function BidIntakeStage() {
           </div>
         ))}
       </section>
+
+      <BidAdditionalDetailsSection
+        additionalDetails={draft.additionalDetails ?? {}}
+        salesActivities={draft.salesActivities ?? {}}
+        onAdditionalDetailsChange={(next) => setField("additionalDetails", next)}
+        onSalesActivitiesChange={(next) => setField("salesActivities", next)}
+        disabled={!editable}
+      />
 
       <p className="text-xs text-ink/45">
         Docs: upload invitation / drawings / specs / addenda as bid attachments

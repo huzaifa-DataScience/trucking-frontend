@@ -1,6 +1,7 @@
 "use client";
 
 import type { Direction } from "@/lib/types";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 export interface FilterConfig {
   startDate: string;
@@ -41,8 +42,6 @@ const DIRECTION_OPTIONS: { value: Direction; label: string }[] = [
   { value: "Export", label: "Export" },
 ];
 
-const fieldClass =
-  "min-h-11 w-full min-w-0 max-w-full rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
 const selectClass =
   "min-h-11 w-full min-w-0 max-w-full appearance-none rounded-xl border border-ink/10 bg-surface py-2 pl-3 pr-9 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
 const labelClass = "text-xs font-medium text-ink/45";
@@ -80,20 +79,20 @@ export function ReportFilters({
       <div className="grid grid-cols-1 items-end gap-x-4 gap-y-3 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-4">
         <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Start date</span>
-          <input
-            type="date"
+          <DatePicker
+            ariaLabel="Start date"
             value={filters.startDate}
-            onChange={(e) => update({ startDate: e.target.value })}
-            className={fieldClass}
+            onChange={(v) => update({ startDate: v })}
+            className="min-h-11 w-full min-w-0 max-w-full rounded-xl px-3 py-2 text-sm"
           />
         </label>
         <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>End date</span>
-          <input
-            type="date"
+          <DatePicker
+            ariaLabel="End date"
             value={filters.endDate}
-            onChange={(e) => update({ endDate: e.target.value })}
-            className={fieldClass}
+            onChange={(v) => update({ endDate: v })}
+            className="min-h-11 w-full min-w-0 max-w-full rounded-xl px-3 py-2 text-sm"
           />
         </label>
         {showJob && (

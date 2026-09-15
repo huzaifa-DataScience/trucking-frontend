@@ -55,6 +55,86 @@ export interface BidListItem {
   dueDate?: string | null;
   dueTime?: string | null;
   teamId?: number | null;
+  /** Captain assigned to lead the estimate — FollowupCRM-style "Estimator" sort/filter. */
+  estimator?: string | null;
+  assistantEstimator?: string | null;
+  /** PJ estimate grand total, mirrored from the latest client calc snapshot. */
+  baseBidAmount?: number | null;
+
+  // --- FollowupCRM filter-parity fields ---
+  contactCell?: string | null;
+  contactFax?: string | null;
+  parentChild?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  marginPercent?: number | null;
+  takeOffPerson2?: string | null;
+  takeOffPerson3?: string | null;
+  awl1Username?: string | null;
+  awl1Password?: string | null;
+  awl2Username?: string | null;
+  awl2Password?: string | null;
+  awl3Username?: string | null;
+  awl3Password?: string | null;
+  subBuildingType?: string | null;
+  source?: string | null;
+  preBidDate?: string | null;
+  salesStatus?: string | null;
+  tradeBidType?: string | null;
+  ocipCcipStatus?: string | null;
+  bidClerk?: string | null;
+  constructionType?: string | null;
+  constructionSubtype?: string | null;
+  pla?: boolean | null;
+  ownerName?: string | null;
+  architectName?: string | null;
+  mechanicalEngineerName?: string | null;
+  contractAmount?: number | null;
+  jobStartDate?: string | null;
+  jobEndDate?: string | null;
+  followUpDate?: string | null;
+  technicalDate?: string | null;
+  coversGl?: boolean | null;
+  coversWc?: boolean | null;
+  bidNumber?: string | null;
+  winningCompetitor?: string | null;
+  mikeEstimateRef?: string | null;
+  websiteForBiddingDocs?: string | null;
+  wbdUsername?: string | null;
+  wbdPassword?: string | null;
+  wageRateCategory?: string | null;
+  wageRateAmount?: number | null;
+  grossSqFootage?: number | null;
+  projectNumberIfAwarded?: string | null;
+  usCitizenOnly?: boolean | null;
+  fringe?: number | null;
+  costPerEstimate?: number | null;
+  bidBondStatus?: string | null;
+  bidBondAmountRequested?: number | null;
+  budgetBid?: string | null;
+  takeOffPerson?: string | null;
+  estimatorBidDate?: string | null;
+  rebid?: boolean | null;
+  engineerProjectNumber?: string | null;
+  contractDate?: string | null;
+  loginDate?: string | null;
+  deadDate?: string | null;
+  comments?: string | null;
+  initialContact?: string | null;
+  siteVisit?: string | null;
+  bidDrafted?: string | null;
+  bidDelivered?: string | null;
+  frontEndDocs?: string | null;
+  heatTracingSubPricing?: string | null;
+  prequalificationPackage?: string | null;
+  mandatoryPreBid?: string | null;
+  hasAttachments?: boolean;
+
   canEdit?: boolean | null;
   isNew?: boolean | null;
   takeoffAssigned?: boolean | null;
@@ -70,6 +150,10 @@ export interface BidCompanyInfo {
   contactName?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  contactCell?: string | null;
+  contactFax?: string | null;
+  /** FollowupCRM "Parent/Child" project relationship classification. */
+  parentChild?: "parents_only" | "children_only" | "both" | "exclude" | null;
   notes?: string | null;
   [key: string]: unknown;
 }

@@ -28,6 +28,18 @@ import {
   useColumnPinning,
   useStickyOffsets,
 } from "@/components/clearstory/ClearstorySwaggerTable";
+import { FilterSidebar } from "@/components/filters/FilterSidebar";
+import { SavedViewTabs, conditionKey } from "@/components/filters/SavedViewTabs";
+import {
+  rowMatchesGroups,
+  loadSavedViews,
+  saveSavedViews,
+  type FilterCondition,
+  type FilterGroup,
+  type SavedView,
+} from "@/lib/filters/types";
+import { PROJECTS_SAVED_VIEWS_KEY, PROJECT_FILTER_FIELDS } from "@/lib/clearstory/projectFilters";
+import { newId } from "@/lib/bidding/newId";
 
 // Match COR tables: the table scrolls (X+Y) inside a bounded region.
 const TABLE_SCROLL =
@@ -170,9 +182,76 @@ export default function ClearstoryProjectsPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
-  const projects = useMemo(
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [activeConditionKeys, setActiveConditionKeys] = useState<string[]>([]);
+
+  useEffect(() => {
+    setSavedViews(loadSavedViews(PROJECTS_SAVED_VIEWS_KEY));
+  }, []);
+
+  const applyFilterGroups = (groups: FilterGroup[]) => {
+    setActiveConditionKeys([]);
+    setFilterGroups(groups);
+    setFilterOpen(false);
+  };
+
+  const saveAsView = (name: string, groups: FilterGroup[]) => {
+    const view: SavedView = { id: newId(), name, groups };
+    const next = [...savedViews, view];
+    setSavedViews(next);
+    saveSavedViews(PROJECTS_SAVED_VIEWS_KEY, next);
+    setFilterOpen(false);
+    // Saving only creates the chips — it does not apply the filter to the table.
+  };
+
+  const findCondition = (views: SavedView[], key: string): FilterCondition | undefined => {
+    const [viewId, conditionId] = key.split("::");
+    const view = views.find((v) => v.id === viewId);
+    return view?.groups.flatMap((g) => g.conditions).find((c) => c.id === conditionId);
+  };
+
+  const groupsForActiveKeys = (keys: string[], views: SavedView[]): FilterGroup[] =>
+    keys
+      .map((k) => findCondition(views, k))
+      .filter((c): c is FilterCondition => Boolean(c))
+      .map((c) => ({ id: newId(), conditions: [c] }));
+
+  const toggleCondition = (viewId: string, condition: FilterCondition) => {
+    const key = conditionKey(viewId, condition.id);
+    setActiveConditionKeys((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      setFilterGroups(groupsForActiveKeys(next, savedViews));
+      return next;
+    });
+  };
+
+  const removeSavedView = (id: string) => {
+    const next = savedViews.filter((v) => v.id !== id);
+    setSavedViews(next);
+    saveSavedViews(PROJECTS_SAVED_VIEWS_KEY, next);
+    setActiveConditionKeys((prev) => {
+      const nextKeys = prev.filter((k) => !k.startsWith(`${id}::`));
+      if (nextKeys.length !== prev.length) setFilterGroups(groupsForActiveKeys(nextKeys, next));
+      return nextKeys;
+    });
+  };
+
+  const clearView = () => {
+    setActiveConditionKeys([]);
+    setFilterGroups([]);
+  };
+
+  const activeFilterCount = useMemo(() => filterGroups.reduce((n, g) => n + g.conditions.length, 0), [filterGroups]);
+
+  const allProjects = useMemo(
     () => ((data && "projects" in data ? data.projects : []) ?? []) as ClearstoryProjectRowAllColumns[],
     [data]
+  );
+  const projects = useMemo(
+    () => allProjects.filter((p) => rowMatchesGroups(p as unknown as Record<string, unknown>, filterGroups)),
+    [allProjects, filterGroups]
   );
   const total = data && "total" in data ? data.total : projects.length;
   const dataAsOf = useMemo(() => formatDataAsOf(newestUpdatedAt(projects)), [projects]);
@@ -315,7 +394,7 @@ export default function ClearstoryProjectsPage() {
         }
       />
 
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] gap-4">
+      <div className="grid min-h-0 flex-1 grid-rows-[auto_auto_1fr] gap-4">
         <Card className="flex flex-col">
           <CardHeader
             title="Project list"
@@ -340,6 +419,21 @@ export default function ClearstoryProjectsPage() {
                 className="w-full max-w-md rounded-xl border border-ink/10 bg-[#f8f9fb] px-3 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setFilterOpen(true)}
+              className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-ink/10 bg-surface px-3.5 text-sm font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
+              </svg>
+              Filters
+              {activeFilterCount > 0 ? (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </button>
             <p className="text-xs text-ink/45" role="status" aria-live="polite">
               {statusLoading ? (
                 "Checking module status…"
@@ -361,6 +455,16 @@ export default function ClearstoryProjectsPage() {
             </p>
           ) : null}
         </Card>
+
+        <SavedViewTabs
+          views={savedViews}
+          fields={PROJECT_FILTER_FIELDS}
+          activeKeys={activeConditionKeys}
+          showClear={activeConditionKeys.length > 0 || activeFilterCount > 0}
+          onToggleCondition={toggleCondition}
+          onRemoveView={removeSavedView}
+          onClear={clearView}
+        />
 
         <Card className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <JsonPayloadModal
@@ -519,6 +623,16 @@ export default function ClearstoryProjectsPage() {
           )}
         </Card>
       </div>
+
+      <FilterSidebar
+        open={filterOpen}
+        fields={PROJECT_FILTER_FIELDS}
+        title="Filter projects"
+        initialGroups={filterGroups}
+        onClose={() => setFilterOpen(false)}
+        onApply={applyFilterGroups}
+        onSaveAsView={saveAsView}
+      />
     </div>
   );
 }
