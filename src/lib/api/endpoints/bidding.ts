@@ -4,9 +4,11 @@
 import { del, get, getBlob, patch, post } from "../client";
 import type {
   BidAttachment,
+  BidComment,
   BidCompanyInfo,
   BidDetail,
   BidListItem,
+  BidMentionUser,
   BidStateLookup,
   BidTeam,
   BidWageRate,
@@ -216,6 +218,17 @@ export async function getBiddingOffices(): Promise<LookupNameItem[]> {
   return get<LookupNameItem[]>("/lookups/bidding/offices");
 }
 
+/** @mention typeahead — FRONTEND_BID_COMMENTS.md */
+export async function getBiddingMentionUsers(
+  q: string
+): Promise<BidMentionUser[]> {
+  const raw = await get<BidMentionUser[] | { items?: BidMentionUser[] }>(
+    "/lookups/bidding/mention-users",
+    { q }
+  );
+  return Array.isArray(raw) ? raw : (raw.items ?? []);
+}
+
 /** Suggested client/GC fields from Ref_Jobs (does not save). */
 export async function getCompanyInfoPrefillFromJob(
   jobId: number
@@ -268,4 +281,59 @@ export async function deleteBidAttachment(
   attachmentId: number
 ): Promise<{ ok: boolean }> {
   return del<{ ok: boolean }>(`/bids/${bidId}/attachments/${attachmentId}`);
+}
+
+// --- Bid comments (Notes thread) — FRONTEND_BID_COMMENTS.md ---
+
+export async function getBidComments(
+  bidId: string
+): Promise<{ items: BidComment[] }> {
+  return get<{ items: BidComment[] }>(`/bids/${bidId}/comments`);
+}
+
+/** Multipart: optional `body` + `files` + `mentionUserIds`. Need body or files. */
+export async function postBidComment(
+  bidId: string,
+  opts: { body?: string; files?: File[]; mentionUserIds?: number[] }
+): Promise<BidComment> {
+  const url = getApiUrl(`/bids/${bidId}/comments`);
+  const token = getAccessToken();
+  const form = new FormData();
+  const text = opts.body?.trim();
+  if (text) form.append("body", text);
+  for (const file of opts.files ?? []) {
+    form.append("files", file);
+  }
+  if (opts.mentionUserIds?.length) {
+    form.append("mentionUserIds", opts.mentionUserIds.join(","));
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: form,
+  });
+
+  if (!response.ok) {
+    const textBody = await response.text();
+    let message = textBody || response.statusText;
+    try {
+      const parsed = JSON.parse(textBody) as { message?: string };
+      if (parsed.message) message = parsed.message;
+    } catch {
+      /* use raw text */
+    }
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<BidComment>;
+}
+
+export async function deleteBidComment(
+  bidId: string,
+  commentId: number
+): Promise<void> {
+  await del(`/bids/${bidId}/comments/${commentId}`);
 }

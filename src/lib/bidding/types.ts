@@ -177,6 +177,52 @@ export interface BidAttachment {
   createdAt: string;
 }
 
+/** Bid Notes thread — FRONTEND_BID_COMMENTS.md */
+export interface BidCommentAttachment {
+  id: number;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** GET with JWT — same as bid attachment download */
+  downloadPath: string;
+}
+
+export interface BidCommentMention {
+  userId: number;
+  firstName: string | null;
+  lastName: string | null;
+  /** "First Last" or email */
+  name: string;
+  email: string;
+}
+
+export interface BidComment {
+  id: number;
+  bidId: number;
+  body: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  authorUserId: number;
+  authorFirstName: string | null;
+  authorLastName: string | null;
+  /** "First Last" or email — FRONTEND_BID_COMMENTS.md */
+  authorName: string;
+  authorEmail: string | null;
+  mentions: BidCommentMention[];
+  attachments: BidCommentAttachment[];
+}
+
+/** GET /lookups/bidding/mention-users — FRONTEND_BID_COMMENTS.md */
+export interface BidMentionUser {
+  id: number;
+  email: string;
+  handle: string;
+  firstName: string | null;
+  lastName: string | null;
+  /** "First Last" or email */
+  name: string;
+}
+
 /** Known keys; backend stores baseBid as a loose object (passthrough). */
 export interface BaseBidInput {
   [key: string]: unknown;
