@@ -239,6 +239,16 @@ export function FilterSidebar({
     setActiveGroupIndex(0);
   }, [open, initialGroups]);
 
+  // Lock the page behind the dialog from scrolling while it's open.
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
   const activeGroup = groups[activeGroupIndex];
 
   const setCondition = (field: FilterFieldDef, next: FilterCondition | null) => {
@@ -381,7 +391,7 @@ export function FilterSidebar({
                     ) : null}
                   </div>
                   {g.conditions.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-ink/15 px-3 py-2.5 text-sm text-ink/40">
+                    <p className="rounded-lg border border-dashed border-ink/15 px-3 py-2.5 text-xs text-ink/40">
                       Your filter will appear here
                     </p>
                   ) : (
@@ -392,7 +402,7 @@ export function FilterSidebar({
                         return (
                           <div key={c.id}>
                             {ci > 0 ? <p className="py-0.5 text-center text-[11px] font-semibold text-ink/35">and</p> : null}
-                            <div className="flex items-center justify-between gap-2 rounded-lg bg-brand/10 px-3 py-2 text-sm">
+                            <div className="flex items-center justify-between gap-2 rounded-lg bg-brand/10 px-3 py-2 text-xs">
                               <span className="min-w-0 truncate text-ink">
                                 {splitIdx === -1 ? (
                                   desc
@@ -432,7 +442,7 @@ export function FilterSidebar({
             <button
               type="button"
               onClick={addGroup}
-              className="w-full rounded-xl border border-brand/30 px-3 py-2.5 text-sm font-semibold text-brand transition hover:bg-brand/[0.06]"
+              className="w-full rounded-xl border border-brand/30 px-3 py-2.5 text-xs font-semibold text-brand transition hover:bg-brand/[0.06]"
             >
               + Add filter group
             </button>
