@@ -726,7 +726,7 @@ export interface MyPlateMessages {
 }
 
 export interface MyPlateNotification {
-  kind: "message" | "due" | "new_bid" | string;
+  kind: "message" | "due" | "new_bid" | "comment_mention" | string;
   title?: string | null;
   body?: string | null;
   conversationId?: string | null;

@@ -61,6 +61,9 @@ function notificationHref(n: MyPlateNotification): string | null {
   if (n.kind === "message" && n.conversationId) {
     return chatHref(String(n.conversationId));
   }
+  if (n.kind === "comment_mention" && n.bidId != null && String(n.bidId).trim()) {
+    return `/bidding/${n.bidId}?notes=1`;
+  }
   if (n.bidId != null && String(n.bidId).trim()) {
     return `/bidding/${n.bidId}?stage=intake`;
   }

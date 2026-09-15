@@ -4,7 +4,11 @@
 
 import { PERMISSIONS } from "@/lib/auth/permissions";
 
-export type PermissionGroup = "bidding" | "dashboards" | "siteline" | "admin";
+export type PermissionGroup =
+  | "bidding"
+  | "dashboards"
+  | "siteline"
+  | "admin";
 
 export interface PermissionDefinition {
   key: string;
@@ -51,6 +55,7 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     description: "View the hauler dashboard.",
     group: "dashboards",
   },
+  // wfs:* are super_admin-only and locked — do not show in Access control matrix.
   {
     key: "forensic:read",
     label: "Forensic reporting",

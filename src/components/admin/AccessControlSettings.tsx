@@ -80,7 +80,16 @@ export function AccessControlSettings() {
     }));
   }, [matrix]);
 
-  const permissions = matrix?.permissions ?? [];
+  /** Hide locked + Finance/WFS rows — FRONTEND_RBAC.md (super_admin only). */
+  const permissions = useMemo(() => {
+    const raw = matrix?.permissions ?? [];
+    return raw.filter(
+      (p) =>
+        !p.locked &&
+        !String(p.key).startsWith("wfs:") &&
+        !/wfs|finance/i.test(String(p.group ?? ""))
+    );
+  }, [matrix]);
   const grouped = useMemo(() => groupPermissions(permissions), [permissions]);
 
   const toggleCell = (roleId: string, key: string, enabled: boolean) => {
@@ -103,7 +112,10 @@ export function AccessControlSettings() {
     }
     setSavingRole(roleId);
     try {
-      const permissionsPayload = draftMatrix[roleId] ?? [];
+      // Never persist locked WFS keys onto IT/other roles.
+      const permissionsPayload = (draftMatrix[roleId] ?? []).filter(
+        (k) => !String(k).startsWith("wfs:")
+      );
       const res = await adminApi.patchRbacRolePermissions(
         roleId,
         permissionsPayload
@@ -212,7 +224,8 @@ export function AccessControlSettings() {
             </h2>
             <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
               Save one role column at a time. Super admin is always all
-              permissions — not editable. After save, that role&apos;s users must
+              permissions — not editable. WFS / Finance keys are locked to
+              super_admin and hidden here. After save, that role&apos;s users must
               log in again.
             </p>
           </div>
@@ -263,8 +276,10 @@ export function AccessControlSettings() {
             <span className="font-medium text-stone-800 dark:text-stone-200">
               Super admin
             </span>{" "}
-            (Nick / PJ) always has every permission. No checkboxes — never PATCH{" "}
-            <code className="text-[11px]">super_admin</code>.
+            (Nick / PJ) always has every permission, including WFS. No
+            checkboxes — never PATCH{" "}
+            <code className="text-[11px]">super_admin</code>. IT{" "}
+            <code className="text-[11px]">admin</code> does not see WFS.
           </p>
         </div>
       </Card>
