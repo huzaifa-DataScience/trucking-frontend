@@ -130,7 +130,6 @@ export function BidEstimatingSetupStage() {
 
   const clearances = clearanceOptionsFromMeta(meta);
   const review: ProcessTechnicalReview = { ...(draft.technicalReview ?? {}) };
-  const suggested = draft.entityRule?.suggestedOurEntity;
 
   const setReview = (patch: Partial<ProcessTechnicalReview>) => {
     setField("technicalReview", { ...review, ...patch });
@@ -142,6 +141,9 @@ export function BidEstimatingSetupStage() {
         <h2 className="text-base font-semibold text-ink">Estimating Setup</h2>
         <p className="mt-1 text-xs text-ink/40">
           {saving ? "Saving…" : dirty ? "Unsaved changes" : editable ? "Save to keep changes" : "Read only"}
+          {" · "}
+          Identity (building / GSF / company) is on Intake — Setup stays editable for
+          PLA, OCIP, wage decision, clearance.
         </p>
       </header>
 
@@ -151,64 +153,7 @@ export function BidEstimatingSetupStage() {
         </p>
       ) : null}
 
-      {suggested ? (
-        <p className="rounded-xl border border-ink/[0.08] bg-canvas/50 px-3 py-2 text-xs text-ink/60">
-          Entity rule suggests{" "}
-          <span className="font-semibold text-ink">{suggested}</span> — does not
-          overwrite company on the bid header.
-        </p>
-      ) : null}
-
       <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Construction type</span>
-          <select
-            className={inputClass}
-            disabled={!editable}
-            value={draft.constructionType ?? ""}
-            onChange={(e) =>
-              setField("constructionType", e.target.value || null)
-            }
-          >
-            <option value="">—</option>
-            <option value="renovation">Renovation</option>
-            <option value="new_construction">New Construction</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Building type</span>
-          <select
-            className={inputClass}
-            disabled={!editable}
-            value={draft.constructionSubtype ?? ""}
-            onChange={(e) =>
-              setField("constructionSubtype", e.target.value || null)
-            }
-          >
-            <option value="">—</option>
-            <option value="data_center">Data Center</option>
-            <option value="commercial">Commercial</option>
-            <option value="airport">Airport</option>
-            <option value="wastewater">Wastewater</option>
-            <option value="rec_community">Rec/Community</option>
-            <option value="public">Public</option>
-            <option value="prince_georges_county_cbb">Prince Georges County - CBB</option>
-            <option value="power_plant_facilities">Power Plant Facilities</option>
-            <option value="other">Other</option>
-            <option value="museum">Museum</option>
-            <option value="military">Military</option>
-            <option value="metro_facilities_public_transportation">Metro Facilities/Public Transportation</option>
-            <option value="industrial">Industrial</option>
-            <option value="state_of_maryland">State of Maryland</option>
-            <option value="medical">Medical</option>
-            <option value="laboratories">Laboratories</option>
-            <option value="housing">Housing</option>
-            <option value="hotels">Hotels</option>
-            <option value="hotel">Hotel</option>
-            <option value="federal">Federal</option>
-            <option value="educational">Educational</option>
-          </select>
-        </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>MBE preference</span>
           <input

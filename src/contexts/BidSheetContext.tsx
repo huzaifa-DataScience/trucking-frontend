@@ -166,19 +166,48 @@ export function BidSheetProvider({
   );
 
   const buildContentPatch = useCallback(
-    (withCalc: BidDetail): PatchBidBody => ({
-      jobId: withCalc.jobId,
-      estimateNumber: withCalc.estimateNumber,
-      bidName: withCalc.bidName,
-      bidDate: withCalc.bidDate,
-      submitDate: withCalc.submitDate,
-      timeEstimate: withCalc.timeEstimate,
-      ourEntityId: withCalc.ourEntityId,
-      companyInfo: withCalc.companyInfo,
-      baseBid: withCalc.baseBid,
-      systems: withCalc.systems,
-      computed: buildClientComputedSnapshot(withCalc, engineLookups),
-    }),
+    (withCalc: BidDetail): PatchBidBody => {
+      const baseBid = withCalc.baseBid ?? {};
+      // Dual-bound flags: keep process in sync with baseBid (also editable on Setup)
+      const processPatch = {
+        pla: baseBid.pla ?? withCalc.process?.pla ?? null,
+        mbePreference:
+          (baseBid.preference as string | null | undefined) ??
+          withCalc.process?.mbePreference ??
+          null,
+        ocipCcip: {
+          ...(withCalc.process?.ocipCcip ?? {}),
+          coversWc:
+            baseBid.ccipCoversWc ?? withCalc.process?.ocipCcip?.coversWc ?? null,
+        },
+      };
+      return {
+        jobId: withCalc.jobId,
+        estimateNumber: withCalc.estimateNumber,
+        bidName: withCalc.bidName,
+        bidDate: withCalc.bidDate ?? (baseBid.bidDate as string | undefined) ?? null,
+        submitDate: withCalc.submitDate,
+        timeEstimate: withCalc.timeEstimate,
+        ourEntityId: withCalc.ourEntityId,
+        companyInfo: withCalc.companyInfo,
+        baseBid: {
+          ...baseBid,
+          // Contract: Proposal bid date lives on baseBid.bidDate
+          bidDate:
+            (baseBid.bidDate as string | undefined) ??
+            withCalc.bidDate ??
+            null,
+        },
+        systems: withCalc.systems,
+        // Full engine snapshot — do not strip unknown keys (buildClientComputedSnapshot spreads)
+        computed: buildClientComputedSnapshot(withCalc, engineLookups),
+        // Merge dual-bound flags into process (BE may replace or deep-merge)
+        process: {
+          ...(withCalc.process ?? {}),
+          ...processPatch,
+        },
+      };
+    },
     [engineLookups]
   );
 
@@ -313,9 +342,70 @@ export function BidSheetProvider({
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [unsavedChanges]);
 
+  const setBaseBidField = useCallback(
+    <K extends keyof BaseBidInput>(key: K, value: BaseBidInput[K]) => {
+      setBid((prev) => {
+        if (!prev) return prev;
+        const baseBid = { ...prev.baseBid, [key]: value };
+        let next: BidDetail = { ...prev, baseBid };
+
+        // Dual-bind Proposal ↔ Setup fields
+        if (key === "pla") {
+          next = {
+            ...next,
+            process: { ...(prev.process ?? {}), pla: Boolean(value) },
+          };
+        }
+        if (key === "preference") {
+          next = {
+            ...next,
+            process: {
+              ...(prev.process ?? {}),
+              mbePreference: (value as string) || null,
+            },
+          };
+        }
+        if (key === "ccipCoversWc") {
+          next = {
+            ...next,
+            process: {
+              ...(prev.process ?? {}),
+              ocipCcip: {
+                ...(prev.process?.ocipCcip ?? {}),
+                coversWc: Boolean(value),
+              },
+            },
+          };
+        }
+        // Contract: baseBid.bidDate is the Proposal editor; keep header in sync
+        if (key === "bidDate") {
+          next = {
+            ...next,
+            bidDate: (value as string) || prev.bidDate,
+          };
+        }
+
+        return next;
+      });
+      scheduleAutoSave();
+    },
+    [scheduleAutoSave]
+  );
+
   const setBidHeader = useCallback(
     (patch: BidHeaderPatch) => {
-      setBid((prev) => (prev ? { ...prev, ...patch } : prev));
+      setBid((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, ...patch };
+        // If header bidDate changes, mirror onto baseBid.bidDate (Proposal contract)
+        if (patch.bidDate !== undefined) {
+          next.baseBid = {
+            ...prev.baseBid,
+            bidDate: patch.bidDate,
+          };
+        }
+        return next;
+      });
       scheduleAutoSave();
     },
     [scheduleAutoSave]
@@ -400,17 +490,6 @@ export function BidSheetProvider({
       scheduleAutoSave();
     },
     [bidId, scheduleAutoSave]
-  );
-
-  const setBaseBidField = useCallback(
-    <K extends keyof BaseBidInput>(key: K, value: BaseBidInput[K]) => {
-      setBid((prev) => {
-        if (!prev) return prev;
-        return { ...prev, baseBid: { ...prev.baseBid, [key]: value } };
-      });
-      scheduleAutoSave();
-    },
-    [scheduleAutoSave]
   );
 
   const setProjectState = useCallback(
@@ -603,10 +682,18 @@ export function BidSheetProvider({
   );
 
   const selectedTeam = useMemo(() => {
+    const teamId = bid?.process?.assignment?.teamId;
+    if (typeof teamId === "number") {
+      return lookups.teams.find((t) => t.id === teamId) ?? null;
+    }
     const name = bid?.baseBid?.teamName as string | undefined;
     if (!name) return null;
     return lookups.teams.find((t) => t.teamName === name) ?? null;
-  }, [bid?.baseBid?.teamName, lookups.teams]);
+  }, [
+    bid?.process?.assignment?.teamId,
+    bid?.baseBid?.teamName,
+    lookups.teams,
+  ]);
 
   const insights = useMemo(
     () =>

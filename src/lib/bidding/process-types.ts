@@ -234,8 +234,10 @@ export interface ProcessIntelligence {
 export interface ProcessAssignment {
   pursue?: boolean | null;
   priority?: string | null;
-  /** From GET /lookups/bidding/teams */
+  /** From GET /lookups/bidding/teams — often filled when captainUserId is set */
   teamId?: number | null;
+  /** From GET /lookups/bidding/captains — pick first; BE fills teamId + captain name */
+  captainUserId?: number | null;
   captain?: string | null;
   assistantEstimator?: string | null;
   bidClerk?: string | null;
@@ -552,6 +554,8 @@ export interface BidProcess {
   wageDecisionId?: number | null;
   constructionType?: string | null;
   constructionSubtype?: string | null;
+  /** Life-safety renovated / impacted SF — not whole-building GSF. Intake owns this. */
+  impactedGsf?: number | null;
   mbePreference?: string | null;
   owner?: ProcessParty | null;
   architect?: ProcessParty | null;
@@ -649,6 +653,20 @@ export interface ProcessMeta {
     inviteBody?: boolean;
     checkAddenda?: boolean;
     assignmentOwners?: string[];
+    constructionType?: boolean;
+    constructionSubtype?: boolean;
+    impactedGsf?: boolean;
+    [key: string]: unknown;
+  };
+  /** Proposal stage is output + calculator — do not re-edit intake identity fields */
+  proposalEditor?: {
+    isOutput?: boolean;
+    /** Calculator fields first entered on Proposal */
+    firstHere?: string[] | Record<string, boolean>;
+    /** Also editable on Setup (PLA, preference, CCIP, …) */
+    alsoOnSetup?: string[] | Record<string, boolean>;
+    /** Identity / assignment — show only */
+    readOnly?: string[] | Record<string, boolean>;
     [key: string]: unknown;
   };
   clearances?: ProcessMetaEnumOption[] | string[];
@@ -731,6 +749,8 @@ export interface MyPlateNotification {
   body?: string | null;
   conversationId?: string | null;
   bidId?: string | number | null;
+  commentId?: number | string | null;
+  processStage?: string | null;
   at?: string | null;
 }
 

@@ -4,6 +4,8 @@
 import { del, get, getBlob, patch, post } from "../client";
 import type {
   BidAttachment,
+  BidCaptainLookup,
+  BidContactLookup,
   BidComment,
   BidCompanyInfo,
   BidDetail,
@@ -32,9 +34,18 @@ import type {
 import { getApiUrl } from "../config";
 import { getAccessToken } from "@/lib/auth/store";
 
-/** Role home — JWT user.role picks queues. Do not replace with filtered listBids. */
+/** Role home — prefer GET /dashboard (my-plate is an alias). */
+export async function getDashboard(): Promise<MyPlateResponse> {
+  try {
+    return await get<MyPlateResponse>("/dashboard");
+  } catch {
+    return get<MyPlateResponse>("/bids/my-plate");
+  }
+}
+
+/** @deprecated Prefer getDashboard() */
 export async function getMyPlate(): Promise<MyPlateResponse> {
-  return get<MyPlateResponse>("/bids/my-plate");
+  return getDashboard();
 }
 
 export async function listBids(params?: {
@@ -46,6 +57,7 @@ export async function listBids(params?: {
   outcome?: string;
   ownerProjectNumber?: string;
   mechanicalEngineerProjectNumber?: string;
+  teamId?: number | "all";
 }): Promise<BidListItem[]> {
   return get<BidListItem[]>("/bids", {
     status: params?.status,
@@ -56,6 +68,32 @@ export async function listBids(params?: {
     outcome: params?.outcome,
     ownerProjectNumber: params?.ownerProjectNumber,
     mechanicalEngineerProjectNumber: params?.mechanicalEngineerProjectNumber,
+    teamId: params?.teamId,
+  });
+}
+
+/** Same filters as listBids → Excel download (bids.xlsx). */
+export async function exportBids(params?: {
+  status?: string;
+  entityId?: number;
+  search?: string;
+  processStage?: string;
+  workType?: string;
+  outcome?: string;
+  ownerProjectNumber?: string;
+  mechanicalEngineerProjectNumber?: string;
+  teamId?: number | "all";
+}): Promise<Blob> {
+  return getBlob("/bids/export", {
+    status: params?.status,
+    entityId: params?.entityId,
+    search: params?.search,
+    processStage: params?.processStage,
+    workType: params?.workType,
+    outcome: params?.outcome,
+    ownerProjectNumber: params?.ownerProjectNumber,
+    mechanicalEngineerProjectNumber: params?.mechanicalEngineerProjectNumber,
+    teamId: params?.teamId,
   });
 }
 
@@ -104,6 +142,8 @@ export interface BidActivityEntry {
   at?: string;
   createdAt?: string;
   /** Prefer for who — FRONTEND_INTAKE.md */
+  userFirstName?: string | null;
+  userLastName?: string | null;
   userEmail?: string;
   byEmail?: string;
   actorEmail?: string;
@@ -132,6 +172,111 @@ export async function calculateBid(
 
 export async function getBiddingTeams(): Promise<BidTeam[]> {
   return get<BidTeam[]>("/lookups/bidding/teams");
+}
+
+/** Assignment captain picker — active App_Users with role=captain. */
+export async function getBiddingCaptains(): Promise<BidCaptainLookup[]> {
+  const raw = await get<unknown>("/lookups/bidding/captains");
+  const list: unknown[] = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object" && Array.isArray((raw as { items?: unknown[] }).items)
+      ? ((raw as { items: unknown[] }).items ?? [])
+      : [];
+  const out: BidCaptainLookup[] = [];
+  for (const item of list) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as Record<string, unknown>;
+    const userId =
+      typeof r.userId === "number"
+        ? r.userId
+        : typeof r.id === "number"
+          ? r.id
+          : NaN;
+    if (!Number.isFinite(userId)) continue;
+    const firstName = typeof r.firstName === "string" ? r.firstName : null;
+    const lastName = typeof r.lastName === "string" ? r.lastName : null;
+    const fromParts = [firstName, lastName].filter(Boolean).join(" ").trim();
+    const name =
+      (typeof r.name === "string" && r.name.trim()) ||
+      fromParts ||
+      (typeof r.email === "string" ? r.email : "") ||
+      `User #${userId}`;
+    out.push({
+      userId,
+      name,
+      firstName,
+      lastName,
+      email: typeof r.email === "string" ? r.email : null,
+      teamId: typeof r.teamId === "number" ? r.teamId : null,
+      teamName: typeof r.teamName === "string" ? r.teamName : null,
+    });
+  }
+  return out;
+}
+
+/**
+ * People directory — Settings → My team + Assignment AE.
+ * Full list (no paging). Optional ?role=assistant_estimator|bid_clerk|…
+ * Do not use /captains for AEs.
+ */
+export async function getBiddingContacts(params?: {
+  role?: string;
+  q?: string;
+}): Promise<BidContactLookup[]> {
+  const raw = await get<unknown>("/lookups/bidding/contacts", {
+    role: params?.role,
+    q: params?.q,
+  });
+  const list: unknown[] = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object"
+      ? Array.isArray((raw as { items?: unknown[] }).items)
+        ? ((raw as { items: unknown[] }).items ?? [])
+        : Array.isArray((raw as { contacts?: unknown[] }).contacts)
+          ? ((raw as { contacts: unknown[] }).contacts ?? [])
+          : Array.isArray((raw as { users?: unknown[] }).users)
+            ? ((raw as { users: unknown[] }).users ?? [])
+            : []
+      : [];
+  const out: BidContactLookup[] = [];
+  for (const item of list) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as Record<string, unknown>;
+    const firstName = typeof r.firstName === "string" ? r.firstName : null;
+    const lastName = typeof r.lastName === "string" ? r.lastName : null;
+    const fromParts = [firstName, lastName].filter(Boolean).join(" ").trim();
+    const name =
+      (typeof r.name === "string" && r.name.trim()) ||
+      (typeof r.displayName === "string" && r.displayName.trim()) ||
+      fromParts ||
+      (typeof r.email === "string" ? r.email : "");
+    if (!name) continue;
+    const connecteam =
+      typeof r.connecteamUserId === "number"
+        ? r.connecteamUserId
+        : typeof r.connecteam_user_id === "number"
+          ? r.connecteam_user_id
+          : null;
+    const appUserId =
+      typeof r.appUserId === "number"
+        ? r.appUserId
+        : typeof r.app_user_id === "number"
+          ? r.app_user_id
+          : typeof r.userId === "number" && connecteam == null
+            ? r.userId
+            : null;
+    out.push({
+      name,
+      firstName,
+      lastName,
+      email: typeof r.email === "string" ? r.email : null,
+      role: typeof r.role === "string" ? r.role : null,
+      connecteamUserId: connecteam,
+      appUserId,
+      nameOnly: connecteam == null && appUserId == null,
+    });
+  }
+  return out;
 }
 
 /** Lifecycle enums + attachment labels — BIDDING_FRONTEND_API §0 */

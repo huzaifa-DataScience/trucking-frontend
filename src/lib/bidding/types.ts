@@ -302,6 +302,7 @@ export interface BidTeam {
   id: number;
   teamName: string;
   captain: string | null;
+  captainUserId?: number | null;
   assistantEstimator?: string | null;
   bidClerk: string | null;
   duct1: string | null;
@@ -310,6 +311,36 @@ export interface BidTeam {
   hydronic2: string | null;
   plumbing1: string | null;
   plumbing2: string | null;
+}
+
+/** GET /lookups/bidding/captains — Assignment picker (App_Users role=captain). */
+export interface BidCaptainLookup {
+  /** App user id — dropdown value / assignment.captainUserId */
+  userId: number;
+  name: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  teamId: number | null;
+  teamName?: string | null;
+}
+
+/**
+ * GET /lookups/bidding/contacts — people for Settings → My team + Assignment AE.
+ * Do not mix with /captains (AEs missing there).
+ */
+export interface BidContactLookup {
+  name: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  role?: string | null;
+  /** Prefer for PATCH slots when present */
+  connecteamUserId?: number | null;
+  /** Portal App_Users id */
+  appUserId?: number | null;
+  /** Excel-only / name-only rows */
+  nameOnly?: boolean;
 }
 
 export interface BidWageRate {

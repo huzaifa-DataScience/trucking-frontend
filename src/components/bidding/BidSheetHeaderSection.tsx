@@ -8,6 +8,7 @@ import type { LookupItem } from "@/lib/api/types";
 export function BidSheetHeaderSection({
   bid,
   isEditable,
+  identityLocked = false,
   entityOptions,
   jobs,
   onEstimateNumber,
@@ -20,6 +21,8 @@ export function BidSheetHeaderSection({
 }: {
   bid: BidDetail;
   isEditable: boolean;
+  /** Proposal output mode — estimate #, bid name, company from Intake (read-only). */
+  identityLocked?: boolean;
   entityOptions: { value: string; label: string }[];
   jobs: LookupItem[];
   onEstimateNumber: (v: string) => void;
@@ -31,9 +34,13 @@ export function BidSheetHeaderSection({
   onJobChange: (jobId: number | null, prefillCompany: boolean) => void;
 }) {
   const bidDate =
-    bid.bidDate?.slice(0, 10) ??
-    (typeof bid.baseBid?.bidDate === "string" ? String(bid.baseBid.bidDate).slice(0, 10) : "");
+    (typeof bid.baseBid?.bidDate === "string"
+      ? String(bid.baseBid.bidDate).slice(0, 10)
+      : "") ||
+    bid.bidDate?.slice(0, 10) ||
+    "";
   const submitDate = bid.submitDate?.slice(0, 10) ?? "";
+  const identityDisabled = !isEditable || identityLocked;
 
   const jobOptions = [
     { value: "", label: "No job linked" },
@@ -43,11 +50,19 @@ export function BidSheetHeaderSection({
     })),
   ];
 
+  const companyLabel =
+    entityOptions.find((o) => o.value === String(bid.ourEntityId))?.label ||
+    `Entity #${bid.ourEntityId}`;
+
   return (
     <Card>
       <CardHeader
         title="Cover sheet"
-        subtitle="Estimate header — job link, bid date, submit date, and time estimate (hours)."
+        subtitle={
+          identityLocked
+            ? "Proposal output — company / estimate # / bid name from Intake. Dates & hours stay editable."
+            : "Estimate header — job link, bid date, submit date, and time estimate (hours)."
+        }
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <BidFormField
@@ -68,29 +83,64 @@ export function BidSheetHeaderSection({
           />
         </BidFormField>
         <BidFormField label="Estimate number" htmlFor="est-num">
-          <BidTextInput
-            id="est-num"
-            value={bid.estimateNumber}
-            onChange={onEstimateNumber}
-            disabled={!isEditable}
-          />
+          {identityLocked ? (
+            <p
+              id="est-num"
+              className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 font-mono text-sm text-ink"
+            >
+              {bid.estimateNumber || "—"}
+            </p>
+          ) : (
+            <BidTextInput
+              id="est-num"
+              value={bid.estimateNumber}
+              onChange={onEstimateNumber}
+              disabled={identityDisabled}
+            />
+          )}
         </BidFormField>
         <BidFormField label="Bid / project name" htmlFor="bid-name">
-          <BidTextInput
-            id="bid-name"
-            value={bid.bidName ?? ""}
-            onChange={onBidName}
-            disabled={!isEditable}
-          />
+          {identityLocked ? (
+            <p
+              id="bid-name"
+              className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+            >
+              {bid.bidName || bid.process?.drawingName || "—"}
+            </p>
+          ) : (
+            <BidTextInput
+              id="bid-name"
+              value={bid.bidName ?? ""}
+              onChange={onBidName}
+              disabled={identityDisabled}
+            />
+          )}
         </BidFormField>
-        <BidFormField label="Company bidding (us)" htmlFor="entity" hint="GOEL / GOEL DC / DCB">
-          <BidSelect
-            id="entity"
-            value={String(bid.ourEntityId)}
-            onChange={onEntity}
-            options={entityOptions}
-            disabled={!isEditable}
-          />
+        <BidFormField
+          label="Company bidding (us)"
+          htmlFor="entity"
+          hint={
+            identityLocked
+              ? "From Intake — ourEntityId / entityRule"
+              : "GOEL / GOEL DC / DCB"
+          }
+        >
+          {identityLocked ? (
+            <p
+              id="entity"
+              className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+            >
+              {companyLabel}
+            </p>
+          ) : (
+            <BidSelect
+              id="entity"
+              value={String(bid.ourEntityId)}
+              onChange={onEntity}
+              options={entityOptions}
+              disabled={identityDisabled}
+            />
+          )}
         </BidFormField>
         <BidFormField label="Bid date" htmlFor="bid-date">
           <BidTextInput

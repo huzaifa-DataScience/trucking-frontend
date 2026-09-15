@@ -9,7 +9,7 @@ import type {
   ProcessTakeoffAssignment,
   TakeoffRole,
 } from "@/lib/bidding/process-types";
-import type { BidTeam } from "@/lib/bidding/types";
+import type { BidCaptainLookup, BidContactLookup, BidTeam } from "@/lib/bidding/types";
 
 const TAKEOFF_ROLES: TakeoffRole[] = [
   "duct1",
@@ -23,7 +23,16 @@ const TAKEOFF_ROLES: TakeoffRole[] = [
   "other",
 ];
 
-/** Stage 2 — Assignment (FRONTEND_INTAKE.md). Nick + PJ. */
+function contactDisplayName(c: BidContactLookup): string {
+  return (
+    c.name?.trim() ||
+    [c.firstName, c.lastName].filter(Boolean).join(" ").trim() ||
+    c.email?.trim() ||
+    ""
+  );
+}
+
+/** Stage 2 — Assignment (FRONTEND_INTAKE.md). Nick + PJ + bid clerk. */
 export function BidAssignmentStage() {
   const router = useRouter();
   const {
@@ -38,12 +47,23 @@ export function BidAssignmentStage() {
     labelClass,
   } = useProcessDraft();
   const [teams, setTeams] = useState<BidTeam[]>([]);
+  const [captains, setCaptains] = useState<BidCaptainLookup[]>([]);
+  const [aes, setAes] = useState<BidContactLookup[]>([]);
 
   useEffect(() => {
     void biddingApi
       .getBiddingTeams()
       .then(setTeams)
       .catch(() => setTeams([]));
+    void biddingApi
+      .getBiddingCaptains()
+      .then(setCaptains)
+      .catch(() => setCaptains([]));
+    // AEs are not on /captains — use contacts?role=assistant_estimator
+    void biddingApi
+      .getBiddingContacts({ role: "assistant_estimator" })
+      .then(setAes)
+      .catch(() => setAes([]));
   }, []);
 
   if (!bid) return null;
@@ -56,7 +76,6 @@ export function BidAssignmentStage() {
   const setAssignment = (patch: Partial<ProcessAssignment>) => {
     const next = { ...a, ...patch };
     setField("assignment", next);
-    // No-bid → Outcome tab with no_bid pre-selected (§0 / CONTEXT)
     if (patch.pursue === false) {
       void (async () => {
         try {
@@ -69,24 +88,7 @@ export function BidAssignmentStage() {
     }
   };
 
-  const pickTeam = (teamIdRaw: string) => {
-    if (!teamIdRaw) {
-      setAssignment({ teamId: null });
-      return;
-    }
-    const teamId = Number(teamIdRaw);
-    const team = teams.find((t) => t.id === teamId);
-    if (!team) {
-      setAssignment({ teamId });
-      return;
-    }
-    setAssignment({
-      teamId: team.id,
-      captain: team.captain,
-      assistantEstimator: team.assistantEstimator ?? a.assistantEstimator ?? null,
-      bidClerk: team.bidClerk,
-    });
-    // Prefill takeoff names from team roster when blank
+  const seedTakeoffFromTeam = (team: BidTeam) => {
     const nextRows = [...rows];
     const seed: { role: TakeoffRole; name: string | null }[] = [
       { role: "duct1", name: team.duct1 },
@@ -112,6 +114,64 @@ export function BidAssignmentStage() {
     setField("takeoffAssignments", nextRows);
   };
 
+  /** Captain first — save captainUserId; BE fills teamId + captain name. */
+  const pickCaptain = (captainUserIdRaw: string) => {
+    if (!captainUserIdRaw) {
+      setAssignment({ captainUserId: null, captain: null, teamId: null });
+      return;
+    }
+    const captainUserId = Number(captainUserIdRaw);
+    const cap = captains.find((c) => c.userId === captainUserId);
+    if (!cap) {
+      setAssignment({ captainUserId });
+      return;
+    }
+    // teamId null → disabled in UI; still don't invent a team
+    const team =
+      cap.teamId != null ? teams.find((t) => t.id === cap.teamId) : undefined;
+    setAssignment({
+      captainUserId: cap.userId,
+      // Optimistic label; BE overwrites captain + teamId on save
+      captain: cap.name,
+      teamId: cap.teamId,
+      assistantEstimator:
+        team?.assistantEstimator ?? a.assistantEstimator ?? null,
+      bidClerk: team?.bidClerk ?? a.bidClerk ?? null,
+    });
+    if (team) seedTakeoffFromTeam(team);
+  };
+
+  /**
+   * Team still shown. Changing team only fills captain when that team has a
+   * login captain in GET /lookups/bidding/captains.
+   */
+  const pickTeam = (teamIdRaw: string) => {
+    if (!teamIdRaw) {
+      setAssignment({ teamId: null });
+      return;
+    }
+    const teamId = Number(teamIdRaw);
+    const team = teams.find((t) => t.id === teamId);
+    const loginCaptain = captains.find((c) => c.teamId === teamId) ?? null;
+    setAssignment({
+      teamId,
+      ...(loginCaptain
+        ? {
+            captainUserId: loginCaptain.userId,
+            captain: loginCaptain.name,
+          }
+        : {
+            // No active captain login for this team — clear captain
+            captainUserId: null,
+            captain: null,
+          }),
+      assistantEstimator:
+        team?.assistantEstimator ?? a.assistantEstimator ?? null,
+      bidClerk: team?.bidClerk ?? a.bidClerk ?? null,
+    });
+    if (team) seedTakeoffFromTeam(team);
+  };
+
   const upsertRole = (role: TakeoffRole, assigneeName: string) => {
     const next = [...rows];
     const i = next.findIndex((r) => r.role === role);
@@ -133,7 +193,13 @@ export function BidAssignmentStage() {
       <header>
         <h2 className="text-base font-semibold text-ink">Assignment</h2>
         <p className="mt-1 text-xs text-ink/40">
-          {saving ? "Saving…" : dirty ? "Unsaved changes" : editable ? "Save to keep changes" : "Read only"}
+          {saving
+            ? "Saving…"
+            : dirty
+              ? "Unsaved changes"
+              : editable
+                ? "Save to keep changes"
+                : "Read only"}
         </p>
       </header>
 
@@ -156,6 +222,35 @@ export function BidAssignmentStage() {
           </span>
         </label>
         <label className="flex flex-col gap-1 sm:col-span-2">
+          <span className={labelClass}>Captain (pick first)</span>
+          <select
+            className={inputClass}
+            disabled={!editable}
+            value={a.captainUserId != null ? String(a.captainUserId) : ""}
+            onChange={(e) => pickCaptain(e.target.value)}
+          >
+            <option value="">—</option>
+            {captains.length === 0 ? (
+              <option value="" disabled>
+                No captains (API empty)
+              </option>
+            ) : (
+              captains.map((c) => (
+                <option key={c.userId} value={c.userId}>
+                  {c.name}
+                  {c.teamName ? ` · ${c.teamName}` : ""}
+                  {c.teamId == null ? " (crew later in Settings)" : ""}
+                </option>
+              ))
+            )}
+          </select>
+          <span className="text-[10px] text-ink/40">
+            App users with role captain. teamId null is OK — crew set later in
+            Settings → My team. Save captainUserId; backend fills team + name when
+            they have a crew.
+          </span>
+        </label>
+        <label className="flex flex-col gap-1 sm:col-span-2">
           <span className={labelClass}>Team</span>
           <select
             className={inputClass}
@@ -170,6 +265,10 @@ export function BidAssignmentStage() {
               </option>
             ))}
           </select>
+          <span className="text-[10px] text-ink/40">
+            Captain first. Changing team sets captain only if that crew has a
+            login captain.
+          </span>
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Priority</span>
@@ -182,24 +281,54 @@ export function BidAssignmentStage() {
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className={labelClass}>Captain</span>
+          <span className={labelClass}>Captain name</span>
           <input
             className={inputClass}
-            disabled={!editable}
+            disabled
+            readOnly
             value={a.captain ?? ""}
-            onChange={(e) => setAssignment({ captain: e.target.value || null })}
+            placeholder="Filled from captain pick"
           />
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Assistant estimator</span>
-          <input
+          <select
             className={inputClass}
             disabled={!editable}
             value={a.assistantEstimator ?? ""}
             onChange={(e) =>
               setAssignment({ assistantEstimator: e.target.value || null })
             }
-          />
+          >
+            <option value="">—</option>
+            {/* Keep current value if not in list */}
+            {a.assistantEstimator &&
+            !aes.some((c) => contactDisplayName(c) === a.assistantEstimator) ? (
+              <option value={a.assistantEstimator}>{a.assistantEstimator}</option>
+            ) : null}
+            {aes.map((c, i) => {
+              const name = contactDisplayName(c);
+              if (!name) return null;
+              return (
+                <option
+                  key={
+                    c.appUserId != null
+                      ? `ae-app-${c.appUserId}`
+                      : c.connecteamUserId != null
+                        ? `ae-ct-${c.connecteamUserId}`
+                        : `ae-${name}-${i}`
+                  }
+                  value={name}
+                >
+                  {name}
+                  {c.email ? ` · ${c.email}` : ""}
+                </option>
+              );
+            })}
+          </select>
+          <span className="text-[10px] text-ink/40">
+            Assistant estimators from contacts — not the captain list.
+          </span>
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Bid clerk</span>
@@ -239,7 +368,7 @@ export function BidAssignmentStage() {
       <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
         <h3 className="text-sm font-semibold text-ink">Takeoff assignments</h3>
         <p className="mt-0.5 mb-3 text-xs text-ink/45">
-          1 or 2 people per scope. Team pick prefills blank roles.
+          1 or 2 people per scope. Team/captain pick prefills blank roles.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {TAKEOFF_ROLES.map((role) => (
@@ -250,7 +379,6 @@ export function BidAssignmentStage() {
                 disabled={!editable}
                 value={assigneeFor(role)}
                 onChange={(e) => upsertRole(role, e.target.value)}
-                placeholder="Assignee name"
               />
             </label>
           ))}

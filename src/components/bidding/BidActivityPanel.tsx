@@ -32,6 +32,11 @@ function formatActivityWhat(e: BidActivityEntry): { lead: string; fieldCount: nu
 }
 
 function formatActivityWho(e: BidActivityEntry): string {
+  const fromParts = [e.userFirstName, e.userLastName]
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter(Boolean)
+    .join(" ");
+  if (fromParts) return fromParts;
   const who = e.userEmail || e.byEmail || e.actorEmail;
   return who ? String(who) : "Unknown";
 }

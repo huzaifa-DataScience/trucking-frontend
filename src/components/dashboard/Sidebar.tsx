@@ -39,11 +39,13 @@ type ViewMode =
   | "bidding"
   | "mike"
   | "workforce"
-  | "wfs";
+  | "wfs"
+  | "settings";
 
 const WORKSPACE_STORAGE_KEY = "construction-logistics-workspace";
 
 function viewFromPathname(pathname: string): ViewMode {
+  if (pathname.startsWith("/settings")) return "settings";
   if (pathname.startsWith("/workforce")) return "workforce";
   if (pathname.startsWith("/wfs")) return "wfs";
   if (
@@ -67,6 +69,7 @@ function defaultHrefForView(view: ViewMode): string {
   if (view === "mike") return "/estimation-files";
   if (view === "workforce") return "/workforce";
   if (view === "wfs") return "/wfs";
+  if (view === "settings") return "/settings/my-team";
   return "/job";
 }
 
@@ -250,6 +253,16 @@ const adminNavItems: SidebarNavItem[] = [
   { href: "/admin/settings", label: "Settings", Icon: NavIconCog },
 ];
 
+const settingsNavItems: SidebarNavItem[] = [
+  {
+    href: "/settings/my-team",
+    label: "My team",
+    Icon: NavIconUsers,
+    activePathPrefix: "/settings",
+    biddingPermission: "bidding:read",
+  },
+];
+
 /**
  * FRONTEND_RBAC.md — admin / super_admin see every workspace item
  * (except WFS — super_admin only). Do not hide other chrome on missing keys.
@@ -278,6 +291,7 @@ const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ classN
   { value: "bidding", label: "Estimates", Icon: NavIconProposal },
   { value: "mike", label: "Mike", Icon: NavIconTable },
   { value: "workforce", label: "Workforce", Icon: NavIconClock },
+  { value: "settings", label: "Settings", Icon: NavIconCog },
 ];
 
 const WORKSPACE_FULL_LABELS: Record<ViewMode, string> = {
@@ -288,6 +302,7 @@ const WORKSPACE_FULL_LABELS: Record<ViewMode, string> = {
   bidding: "Estimates",
   mike: "Mike",
   workforce: "Workforce",
+  settings: "Settings",
 };
 
 export function Sidebar({
@@ -339,6 +354,16 @@ export function Sidebar({
     if (value === "dashboard" || value === "bidding" || value === "mike") {
       return canBidding(user, "bidding:read");
     }
+    if (value === "settings") {
+      return (
+        canBidding(user, "bidding:read") &&
+        (user?.role === "captain" ||
+          user?.role === "assistant_estimator" ||
+          user?.role === "bid_clerk" ||
+          user?.role === "user" ||
+          isAdminPanelRole(user?.role))
+      );
+    }
     if (value === "workforce") {
       return workforceNavItems.some((i) => navItemVisible(user, i));
     }
@@ -360,6 +385,7 @@ export function Sidebar({
     if (view === "mike") return mikeNavItems;
     if (view === "dashboard") return dashboardNavItems;
     if (view === "wfs") return wfsNavItems;
+    if (view === "settings") return settingsNavItems;
     if (view === "billings") {
       return canSeeBillings
         ? [{ href: "/billings", label: "Billing", Icon: NavIconInvoice } as SidebarNavItem]

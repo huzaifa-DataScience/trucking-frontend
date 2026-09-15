@@ -31,6 +31,8 @@ interface AuthContextValue {
   loginSuccess: (data: LoginResponse) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  /** Replace stored user (e.g. after PATCH /auth/team). Keeps the same JWT. */
+  setUser: (user: AuthUser) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -55,8 +57,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const profile = await getProfile();
     if (profile) {
       setUser(profile);
+      const token = getAccessToken();
+      if (token) storeSetAuth(token, profile);
       setSessionCookie();
     }
+  }, []);
+
+  const replaceUser = useCallback((next: AuthUser) => {
+    setUser(next);
+    const token = getAccessToken();
+    if (token) storeSetAuth(token, next);
+    setSessionCookie();
   }, []);
 
   useEffect(() => {
@@ -89,8 +100,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginSuccess,
       logout,
       refreshUser,
+      setUser: replaceUser,
     }),
-    [user, loading, loginSuccess, logout, refreshUser]
+    [user, loading, loginSuccess, logout, refreshUser, replaceUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

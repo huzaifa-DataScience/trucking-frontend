@@ -159,12 +159,17 @@ function CommentThumb({ attachment }: { attachment: BidCommentAttachment }) {
   );
 }
 
-export function BidCommentsPanel() {
+export function BidCommentsPanel({
+  highlightCommentId,
+}: {
+  highlightCommentId?: string | null;
+} = {}) {
   const { bid, canWrite } = useBidSheet();
   const { user } = useAuth();
   const confirmDialog = useConfirmDialog();
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const highlightRef = useRef<HTMLLIElement | null>(null);
 
   const [items, setItems] = useState<BidComment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,6 +215,13 @@ export function BidCommentsPanel() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (loading || !highlightCommentId || !items.length) return;
+    const el = highlightRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [loading, highlightCommentId, items]);
 
   useEffect(() => {
     if (!mentionActive) {
@@ -523,10 +535,18 @@ export function BidCommentsPanel() {
               });
               const authorLabel = commentAuthorLabel(c);
               const authorInitials = commentAuthorInitials(c);
+              const isHighlight =
+                highlightCommentId != null &&
+                String(c.id) === String(highlightCommentId);
               return (
                 <li
                   key={c.id}
-                  className="rounded-xl border border-ink/[0.06] bg-canvas/50 px-3 py-2.5"
+                  ref={isHighlight ? highlightRef : undefined}
+                  className={`rounded-xl border px-3 py-2.5 ${
+                    isHighlight
+                      ? "border-brand/40 bg-brand/5 ring-2 ring-brand/25"
+                      : "border-ink/[0.06] bg-canvas/50"
+                  }`}
                 >
                   <div className="flex items-start gap-2.5">
                     <div

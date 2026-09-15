@@ -53,7 +53,8 @@ export async function getConnecteamUsersMe(): Promise<ConnecteamUsersMe> {
 export async function listConnecteamUsers(params?: {
   search?: string;
   page?: number;
-  pageSize?: number;
+  /** Number for tables; `"all"` = full roster (Settings → My team picker). */
+  pageSize?: number | "all";
   includeArchived?: boolean;
 }): Promise<PaginatedUsers> {
   return get<PaginatedUsers>(`${BASE}/users`, {
@@ -62,6 +63,17 @@ export async function listConnecteamUsers(params?: {
     pageSize: params?.pageSize,
     includeArchived: params?.includeArchived ? "true" : undefined,
   });
+}
+
+/** Full Connecteam roster — one call for Settings people pickers (no pagination). */
+export async function listAllConnecteamUsers(params?: {
+  includeArchived?: boolean;
+}): Promise<ConnecteamUser[]> {
+  const res = await listConnecteamUsers({
+    pageSize: "all",
+    includeArchived: params?.includeArchived,
+  });
+  return res.users ?? [];
 }
 
 export async function linkConnecteamUser(

@@ -68,7 +68,8 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
   const [notesManualOpen, setNotesManualOpen] = useState(false);
   const notesFromQuery =
     searchParams.get("notes") === "1" ||
-    searchParams.get("openNotes") === "1";
+    searchParams.get("openNotes") === "1" ||
+    Boolean(searchParams.get("commentId"));
   const notesOpen = notesManualOpen || notesFromQuery;
   const stage = parseChromeStage(
     searchParams.get("stage"),
@@ -78,10 +79,11 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
 
   const closeNotes = () => {
     setNotesManualOpen(false);
-    if (!notesFromQuery) return;
+    if (!notesFromQuery && !searchParams.get("commentId")) return;
     const next = new URLSearchParams(searchParams.toString());
     next.delete("notes");
     next.delete("openNotes");
+    next.delete("commentId");
     const qs = next.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
@@ -193,7 +195,9 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
     </div>
 
     <BidSidebarDrawer title="Notes" open={notesOpen} onClose={closeNotes}>
-      <BidCommentsPanel />
+      <BidCommentsPanel
+        highlightCommentId={searchParams.get("commentId")}
+      />
     </BidSidebarDrawer>
 
     <BidSidebarDrawer
