@@ -14,15 +14,16 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { getApiErrorMessage } from "@/lib/api/client";
-import { formatDate } from "@/lib/bidding/format";
+import { formatDate, formatMoney } from "@/lib/bidding/format";
 import { formatOutcome, formatProcessStage, formatWorkType } from "@/lib/bidding/process-types";
 import type { BidListItem, BidStatus } from "@/lib/bidding/types";
 import { FilterSidebar } from "@/components/filters/FilterSidebar";
-import { SavedViewTabs } from "@/components/filters/SavedViewTabs";
+import { SavedViewTabs, conditionKey } from "@/components/filters/SavedViewTabs";
 import {
   rowMatchesGroups,
   loadSavedViews,
   saveSavedViews,
+  type FilterCondition,
   type FilterGroup,
   type SavedView,
 } from "@/lib/filters/types";
@@ -30,7 +31,17 @@ import { BIDDING_SAVED_VIEWS_KEY, FILTER_FIELDS } from "@/lib/bidding/savedViews
 import { newId } from "@/lib/bidding/newId";
 
 type StatusFilter = "all" | BidStatus;
-type SortKey = "updated" | "estimate";
+type SortKey =
+  | "updated"
+  | "estimate"
+  | "bidDate"
+  | "estimator"
+  | "status"
+  | "workType"
+  | "baseBid"
+  | "contractAmount"
+  | "jobStartDate"
+  | "office";
 type ViewMode = "tiles" | "list";
 
 const VIEW_MODE_KEY = "bidding-view-mode";
@@ -189,11 +200,35 @@ export default function BiddingListPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
-  const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
+  const [activeConditionKeys, setActiveConditionKeys] = useState<string[]>([]);
 
   useEffect(() => {
     setSavedViews(loadSavedViews(BIDDING_SAVED_VIEWS_KEY));
   }, []);
+
+  /** Options for "dynamic" select filter fields (Estimator, Bid Clerk, Take Off Person, Office, …) —
+   * derived from values already present on loaded bids, since these have no separate fixed lookup list.
+   * "Office" here is the bid's own Company/OurEntity (GOEL / GOEL DC / DCB), not a separate concept. */
+  const dynamicOptions = useMemo(() => {
+    const uniqueOptions = (key: keyof BidListItem) => {
+      const seen = new Set<string>();
+      for (const b of bids) {
+        const v = b[key];
+        if (typeof v === "string" && v.trim()) seen.add(v.trim());
+      }
+      return [...seen].sort().map((v) => ({ value: v, label: v }));
+    };
+    return {
+      estimator: uniqueOptions("estimator"),
+      bidClerk: uniqueOptions("bidClerk"),
+      takeOffPerson: uniqueOptions("takeOffPerson"),
+      takeOffPerson2: uniqueOptions("takeOffPerson2"),
+      takeOffPerson3: uniqueOptions("takeOffPerson3"),
+      clientCompanyName: uniqueOptions("clientCompanyName"),
+      contactName: uniqueOptions("contactName"),
+      companyName: uniqueOptions("companyName"),
+    };
+  }, [bids]);
 
   const entityId = companyId ? Number(companyId) : undefined;
 
@@ -242,14 +277,61 @@ export default function BiddingListPage() {
     const filtered = (status === "all" ? bids : bids.filter((b) => b.status === status)).filter((b) =>
       rowMatchesGroups(b as unknown as Record<string, unknown>, filterGroups)
     );
-    return [...filtered].sort((a, b) =>
-      sortKey === "estimate"
-        ? a.estimateNumber.localeCompare(b.estimateNumber, undefined, { numeric: true })
-        : b.updatedAt.localeCompare(a.updatedAt)
-    );
+    return [...filtered].sort((a, b) => {
+      switch (sortKey) {
+        case "estimate":
+          return a.estimateNumber.localeCompare(b.estimateNumber, undefined, { numeric: true });
+        case "bidDate":
+          return (b.bidDate ?? "").localeCompare(a.bidDate ?? "");
+        case "estimator":
+          return (a.estimator ?? "").localeCompare(b.estimator ?? "");
+        case "status":
+          return a.status.localeCompare(b.status);
+        case "workType":
+          return (a.workType ?? "").localeCompare(b.workType ?? "");
+        case "baseBid":
+          return (b.baseBidAmount ?? -Infinity) - (a.baseBidAmount ?? -Infinity);
+        case "contractAmount":
+          return (b.contractAmount ?? -Infinity) - (a.contractAmount ?? -Infinity);
+        case "jobStartDate":
+          return (a.jobStartDate ?? "").localeCompare(b.jobStartDate ?? "");
+        case "office":
+          return (a.companyName ?? "").localeCompare(b.companyName ?? "");
+        default:
+          return b.updatedAt.localeCompare(a.updatedAt);
+      }
+    });
   }, [bids, status, sortKey, filterGroups]);
 
+  const exportToExcel = useCallback(() => {
+    import("xlsx").then((XLSX) => {
+      const ws = XLSX.utils.json_to_sheet(
+        visibleBids.map((b) => ({
+          "Estimate #": b.estimateNumber,
+          "Bid name": b.bidName,
+          Contractor: b.clientCompanyName ?? "",
+          Estimator: b.estimator ?? "",
+          "Base bid": b.baseBidAmount ?? "",
+          "Contract amount": b.contractAmount ?? "",
+          "Job start date": b.jobStartDate ?? "",
+          "Job end date": b.jobEndDate ?? "",
+          Status: b.status,
+          "Work type": formatWorkType(b.workType ?? undefined),
+          Stage: formatProcessStage(b.processStage ?? undefined),
+          Outcome: formatOutcome(b.outcomeStatus ?? undefined),
+          "Bid date": b.bidDate ?? "",
+          "Due date": b.dueDate ?? "",
+          "Updated": b.updatedAt,
+        }))
+      );
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Estimates");
+      XLSX.writeFile(wb, "estimates-export.xlsx");
+    });
+  }, [visibleBids]);
+
   const applyFilterGroups = (groups: FilterGroup[]) => {
+    setActiveConditionKeys([]);
     setFilterGroups(groups);
     setFilterOpen(false);
   };
@@ -259,28 +341,44 @@ export default function BiddingListPage() {
     const next = [...savedViews, view];
     setSavedViews(next);
     saveSavedViews(BIDDING_SAVED_VIEWS_KEY, next);
-    setFilterGroups(groups);
-    setActiveSavedViewId(view.id);
     setFilterOpen(false);
+    // Saving only creates the chips — it does not apply the filter to the table.
   };
 
-  const openSavedView = (view: SavedView) => {
-    setActiveSavedViewId(view.id);
-    setFilterGroups(view.groups);
+  const findCondition = (views: SavedView[], key: string): FilterCondition | undefined => {
+    const [viewId, conditionId] = key.split("::");
+    const view = views.find((v) => v.id === viewId);
+    return view?.groups.flatMap((g) => g.conditions).find((c) => c.id === conditionId);
+  };
+
+  const groupsForActiveKeys = (keys: string[], views: SavedView[]): FilterGroup[] =>
+    keys
+      .map((k) => findCondition(views, k))
+      .filter((c): c is FilterCondition => Boolean(c))
+      .map((c) => ({ id: newId(), conditions: [c] }));
+
+  const toggleCondition = (viewId: string, condition: FilterCondition) => {
+    const key = conditionKey(viewId, condition.id);
+    setActiveConditionKeys((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      setFilterGroups(groupsForActiveKeys(next, savedViews));
+      return next;
+    });
   };
 
   const removeSavedView = (id: string) => {
     const next = savedViews.filter((v) => v.id !== id);
     setSavedViews(next);
     saveSavedViews(BIDDING_SAVED_VIEWS_KEY, next);
-    if (activeSavedViewId === id) {
-      setActiveSavedViewId(null);
-      setFilterGroups([]);
-    }
+    setActiveConditionKeys((prev) => {
+      const nextKeys = prev.filter((k) => !k.startsWith(`${id}::`));
+      if (nextKeys.length !== prev.length) setFilterGroups(groupsForActiveKeys(nextKeys, next));
+      return nextKeys;
+    });
   };
 
   const clearView = () => {
-    setActiveSavedViewId(null);
+    setActiveConditionKeys([]);
     setFilterGroups([]);
   };
 
@@ -335,23 +433,17 @@ export default function BiddingListPage() {
         ) : (
           <div>
             <p className="text-2xl font-semibold leading-none text-ink">
-              {status === "all" ? counts.total : counts[status]}
+              {visibleBids.length}
+              {visibleBids.length !== counts.total ? (
+                <span className="text-base font-normal text-ink/40"> of {counts.total}</span>
+              ) : null}
             </p>
             <p className="mt-1.5 text-xs font-medium uppercase tracking-wide text-ink/40">
-              {status === "all" ? "Total estimates" : `${STATUS_FILTERS.find((f) => f.value === status)?.label} estimates`}
+              {status === "all" ? "Estimates shown" : `${STATUS_FILTERS.find((f) => f.value === status)?.label} estimates shown`}
             </p>
           </div>
         )}
       </div>
-
-      <SavedViewTabs
-        views={savedViews}
-        activeId={activeSavedViewId}
-        showClear={Boolean(activeSavedViewId) || activeFilterCount > 0}
-        onOpen={openSavedView}
-        onRemove={removeSavedView}
-        onClear={clearView}
-      />
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]">
@@ -379,29 +471,7 @@ export default function BiddingListPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="w-36">
-            <FilterSelect prefix="Work type" value={workType} onChange={setWorkType} options={WORK_TYPE_FILTERS} />
-          </div>
-          <div className="w-32">
-            <FilterSelect prefix="Stage" value={processStage} onChange={setProcessStage} options={STAGE_FILTERS} />
-          </div>
-          <div className="w-36">
-            <FilterSelect prefix="Outcome" value={outcome} onChange={setOutcome} options={OUTCOME_FILTERS} />
-          </div>
-          <div className="w-40">
-            <FilterSelect
-              prefix="Sort"
-              value={sortKey}
-              onChange={(v) => setSortKey(v as SortKey)}
-              ariaLabel="Sort bids"
-              options={[
-                { value: "updated", label: "Last updated" },
-                { value: "estimate", label: "Estimate #" },
-              ]}
-            />
-          </div>
-
-          <div className="w-full sm:ml-auto sm:w-[320px]">
+          <div className="w-full sm:mr-auto sm:w-[320px]">
             <div className="relative">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" aria-hidden>
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -433,6 +503,19 @@ export default function BiddingListPage() {
                 {activeFilterCount}
               </span>
             ) : null}
+          </button>
+
+          <button
+            type="button"
+            onClick={exportToExcel}
+            disabled={visibleBids.length === 0}
+            title="Export the currently filtered/sorted list to Excel"
+            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-ink/10 bg-surface px-3.5 text-sm font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Export
           </button>
 
           <div className="flex h-10 shrink-0 items-center gap-0.5 rounded-lg border border-ink/10 bg-surface p-1">
@@ -471,6 +554,16 @@ export default function BiddingListPage() {
         </div>
       </div>
 
+      <SavedViewTabs
+        views={savedViews}
+        fields={FILTER_FIELDS}
+        activeKeys={activeConditionKeys}
+        showClear={activeConditionKeys.length > 0 || activeFilterCount > 0}
+        onToggleCondition={toggleCondition}
+        onRemoveView={removeSavedView}
+        onClear={clearView}
+      />
+
       {loading ? (
         viewMode === "list" ? <TableSkeleton rows={8} toolbar={false} /> : <SkeletonCardGrid count={6} />
       ) : visibleBids.length === 0 ? (
@@ -495,8 +588,10 @@ export default function BiddingListPage() {
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Estimate #</th>
                 <th className="px-4 py-3">Company</th>
+                <th className="px-4 py-3">Estimator</th>
                 <th className="px-4 py-3">Work type · Stage</th>
                 <th className="px-4 py-3">Outcome</th>
+                <th className="px-4 py-3">Base bid</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Updated</th>
               </tr>
@@ -517,10 +612,14 @@ export default function BiddingListPage() {
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-ink/50">{bid.estimateNumber}</td>
                   <td className="max-w-[12rem] truncate px-4 py-3 text-ink/70">{bid.companyName}</td>
+                  <td className="max-w-[10rem] truncate px-4 py-3 text-ink/70">{bid.estimator || "—"}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-ink/70">
                     {formatWorkType(bid.workType ?? undefined)} · {formatProcessStage(bid.processStage ?? undefined)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-ink/70">{formatOutcome(bid.outcomeStatus ?? undefined)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-ink/70">
+                    {bid.baseBidAmount != null ? formatMoney(bid.baseBidAmount) : "—"}
+                  </td>
                   <td className="whitespace-nowrap px-4 py-3">
                     {status === "draft" && bid.status === "draft" ? null : <BidStatusBadge status={bid.status} />}
                   </td>
@@ -546,6 +645,7 @@ export default function BiddingListPage() {
         onClose={() => setFilterOpen(false)}
         onApply={applyFilterGroups}
         onSaveAsView={saveAsView}
+        dynamicOptions={dynamicOptions}
       />
     </div>
   );

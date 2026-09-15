@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardHeader } from "@/components/ui/Card";
-import { BidFormField, BidTextInput } from "@/components/bidding/BidFormField";
+import { BidFormField, BidTextInput, BidSelect } from "@/components/bidding/BidFormField";
 import type { BidCompanyInfo, BidDetail } from "@/lib/bidding/types";
 
 export function BidSheetCompanyInfoSection({
@@ -106,6 +106,37 @@ export function BidSheetCompanyInfoSection({
             value={info.contactPhone ?? ""}
             onChange={(v) => onFieldChange("contactPhone", v)}
             disabled={!isEditable}
+          />
+        </BidFormField>
+        <BidFormField label="Contact cell" htmlFor="ci-cell">
+          <BidTextInput
+            id="ci-cell"
+            value={info.contactCell ?? ""}
+            onChange={(v) => onFieldChange("contactCell", v)}
+            disabled={!isEditable}
+          />
+        </BidFormField>
+        <BidFormField label="Contact fax" htmlFor="ci-fax">
+          <BidTextInput
+            id="ci-fax"
+            value={info.contactFax ?? ""}
+            onChange={(v) => onFieldChange("contactFax", v)}
+            disabled={!isEditable}
+          />
+        </BidFormField>
+        <BidFormField label="Parent / Child" htmlFor="ci-parent-child">
+          <BidSelect
+            id="ci-parent-child"
+            value={info.parentChild ?? ""}
+            onChange={(v) => onFieldChange("parentChild", v)}
+            disabled={!isEditable}
+            options={[
+              { value: "", label: "—" },
+              { value: "parents_only", label: "Parents Only" },
+              { value: "children_only", label: "Children Only" },
+              { value: "both", label: "Both" },
+              { value: "exclude", label: "Exclude" },
+            ]}
           />
         </BidFormField>
         <div className="sm:col-span-2">

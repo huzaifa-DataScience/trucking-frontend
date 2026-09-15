@@ -29,11 +29,12 @@ import {
   useStickyOffsets,
 } from "@/components/clearstory/ClearstorySwaggerTable";
 import { FilterSidebar } from "@/components/filters/FilterSidebar";
-import { SavedViewTabs } from "@/components/filters/SavedViewTabs";
+import { SavedViewTabs, conditionKey } from "@/components/filters/SavedViewTabs";
 import {
   rowMatchesGroups,
   loadSavedViews,
   saveSavedViews,
+  type FilterCondition,
   type FilterGroup,
   type SavedView,
 } from "@/lib/filters/types";
@@ -184,13 +185,14 @@ export default function ClearstoryProjectsPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
-  const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
+  const [activeConditionKeys, setActiveConditionKeys] = useState<string[]>([]);
 
   useEffect(() => {
     setSavedViews(loadSavedViews(PROJECTS_SAVED_VIEWS_KEY));
   }, []);
 
   const applyFilterGroups = (groups: FilterGroup[]) => {
+    setActiveConditionKeys([]);
     setFilterGroups(groups);
     setFilterOpen(false);
   };
@@ -200,28 +202,44 @@ export default function ClearstoryProjectsPage() {
     const next = [...savedViews, view];
     setSavedViews(next);
     saveSavedViews(PROJECTS_SAVED_VIEWS_KEY, next);
-    setFilterGroups(groups);
-    setActiveSavedViewId(view.id);
     setFilterOpen(false);
+    // Saving only creates the chips — it does not apply the filter to the table.
   };
 
-  const openSavedView = (view: SavedView) => {
-    setActiveSavedViewId(view.id);
-    setFilterGroups(view.groups);
+  const findCondition = (views: SavedView[], key: string): FilterCondition | undefined => {
+    const [viewId, conditionId] = key.split("::");
+    const view = views.find((v) => v.id === viewId);
+    return view?.groups.flatMap((g) => g.conditions).find((c) => c.id === conditionId);
+  };
+
+  const groupsForActiveKeys = (keys: string[], views: SavedView[]): FilterGroup[] =>
+    keys
+      .map((k) => findCondition(views, k))
+      .filter((c): c is FilterCondition => Boolean(c))
+      .map((c) => ({ id: newId(), conditions: [c] }));
+
+  const toggleCondition = (viewId: string, condition: FilterCondition) => {
+    const key = conditionKey(viewId, condition.id);
+    setActiveConditionKeys((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      setFilterGroups(groupsForActiveKeys(next, savedViews));
+      return next;
+    });
   };
 
   const removeSavedView = (id: string) => {
     const next = savedViews.filter((v) => v.id !== id);
     setSavedViews(next);
     saveSavedViews(PROJECTS_SAVED_VIEWS_KEY, next);
-    if (activeSavedViewId === id) {
-      setActiveSavedViewId(null);
-      setFilterGroups([]);
-    }
+    setActiveConditionKeys((prev) => {
+      const nextKeys = prev.filter((k) => !k.startsWith(`${id}::`));
+      if (nextKeys.length !== prev.length) setFilterGroups(groupsForActiveKeys(nextKeys, next));
+      return nextKeys;
+    });
   };
 
   const clearView = () => {
-    setActiveSavedViewId(null);
+    setActiveConditionKeys([]);
     setFilterGroups([]);
   };
 
@@ -376,16 +394,7 @@ export default function ClearstoryProjectsPage() {
         }
       />
 
-      <SavedViewTabs
-        views={savedViews}
-        activeId={activeSavedViewId}
-        showClear={Boolean(activeSavedViewId) || activeFilterCount > 0}
-        onOpen={openSavedView}
-        onRemove={removeSavedView}
-        onClear={clearView}
-      />
-
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] gap-4">
+      <div className="grid min-h-0 flex-1 grid-rows-[auto_auto_1fr] gap-4">
         <Card className="flex flex-col">
           <CardHeader
             title="Project list"
@@ -446,6 +455,16 @@ export default function ClearstoryProjectsPage() {
             </p>
           ) : null}
         </Card>
+
+        <SavedViewTabs
+          views={savedViews}
+          fields={PROJECT_FILTER_FIELDS}
+          activeKeys={activeConditionKeys}
+          showClear={activeConditionKeys.length > 0 || activeFilterCount > 0}
+          onToggleCondition={toggleCondition}
+          onRemoveView={removeSavedView}
+          onClear={clearView}
+        />
 
         <Card className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <JsonPayloadModal

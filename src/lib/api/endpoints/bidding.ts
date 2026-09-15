@@ -212,6 +212,10 @@ export async function getBiddingPreferences(): Promise<LookupNameItem[]> {
   return get<LookupNameItem[]>("/lookups/bidding/preferences");
 }
 
+export async function getBiddingOffices(): Promise<LookupNameItem[]> {
+  return get<LookupNameItem[]>("/lookups/bidding/offices");
+}
+
 /** Suggested client/GC fields from Ref_Jobs (does not save). */
 export async function getCompanyInfoPrefillFromJob(
   jobId: number
