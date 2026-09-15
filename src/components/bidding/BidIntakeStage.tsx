@@ -25,7 +25,7 @@ import {
   type ProcessMeta,
   type ProcessParty,
 } from "@/lib/bidding/process-types";
-import type { BidListItem } from "@/lib/bidding/types";
+import type { BidListItem, LookupNameItem } from "@/lib/bidding/types";
 import { newId } from "@/lib/bidding/newId";
 
 function TrashIcon() {
@@ -166,6 +166,8 @@ export function BidIntakeStage() {
   const [dupSearching, setDupSearching] = useState(false);
   const [linkingDupId, setLinkingDupId] = useState<string | null>(null);
   const [linkDupError, setLinkDupError] = useState<string | null>(null);
+  const [buildingTypes, setBuildingTypes] = useState<LookupNameItem[]>([]);
+  const [projectTypes, setProjectTypes] = useState<LookupNameItem[]>([]);
   const [partiesByRole, setPartiesByRole] = useState<{
     owner: BidPartyLookup[];
     architect: BidPartyLookup[];
@@ -181,6 +183,14 @@ export function BidIntakeStage() {
 
   useEffect(() => {
     void biddingApi.getProcessMeta().then(setMeta).catch(() => setMeta(null));
+    void biddingApi
+      .getBiddingBuildingTypes()
+      .then(setBuildingTypes)
+      .catch(() => setBuildingTypes([]));
+    void biddingApi
+      .getBiddingProjectTypes()
+      .then(setProjectTypes)
+      .catch(() => setProjectTypes([]));
   }, []);
 
   useEffect(() => {
@@ -431,6 +441,7 @@ export function BidIntakeStage() {
           label="Name"
           value={p.name ?? ""}
           options={partiesByRole[role]}
+          partyRole={role}
           disabled={!editable}
           inputClass={inputClass}
           labelClass={labelClass}
@@ -456,6 +467,7 @@ export function BidIntakeStage() {
           value={p.company ?? ""}
           options={companyOptionsFromParties(partiesByRole[role])}
           addressBookOptions={partiesByRole[role]}
+          partyRole={role}
           disabled={!editable}
           inputClass={inputClass}
           labelClass={labelClass}
@@ -488,6 +500,7 @@ export function BidIntakeStage() {
           label="Contact name"
           value={p.contactName ?? ""}
           options={partiesByRole[role]}
+          partyRole={role}
           disabled={!editable}
           inputClass={inputClass}
           labelClass={labelClass}
@@ -746,6 +759,71 @@ export function BidIntakeStage() {
           </select>
         </label>
         <label className="flex flex-col gap-1">
+          <span className={labelClass}>Building type</span>
+          <select
+            className={inputClass}
+            disabled={!editable}
+            value={draft.constructionType ?? ""}
+            onChange={(e) =>
+              setField("constructionType", e.target.value || null)
+            }
+          >
+            <option value="">—</option>
+            {buildingTypes.map((o) => (
+              <option key={o.id ?? o.name} value={o.name}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>Project type</span>
+          <select
+            className={inputClass}
+            disabled={!editable}
+            value={draft.constructionSubtype ?? ""}
+            onChange={(e) =>
+              setField("constructionSubtype", e.target.value || null)
+            }
+          >
+            <option value="">—</option>
+            {projectTypes.map((o) => (
+              <option key={o.id ?? o.name} value={o.name}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>Impacted SF</span>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            className={inputClass}
+            disabled={!editable}
+            value={draft.impactedGsf ?? ""}
+            onChange={(e) =>
+              setField(
+                "impactedGsf",
+                e.target.value === "" ? null : Number(e.target.value)
+              )
+            }
+            placeholder="Renovated / impacted area"
+          />
+          <span className="text-[10px] text-ink/40">
+            Life-safety renovated area — not whole-building GSF
+          </span>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>Entity rule (suggests company)</span>
+          <p className="rounded-xl border border-ink/[0.06] bg-canvas/40 px-3 py-2 text-sm text-ink/70">
+            {draft.entityRule?.suggestedOurEntity
+              ? `Suggests ${draft.entityRule.suggestedOurEntity.replace(/_/g, " ")}`
+              : "Pick company on the bid header — rule only suggests"}
+          </p>
+        </label>
+        <label className="flex flex-col gap-1">
           <span className={labelClass}>Related / rebid bid ID</span>
           <div className="flex gap-2">
             <input
@@ -855,6 +933,7 @@ export function BidIntakeStage() {
                   value={company}
                   options={inviteCompanyOptions}
                   addressBookOptions={partiesByRole.invite_contact}
+                  partyRole="invite_contact"
                   disabled={!editable}
                   inputClass={inputClass}
                   labelClass={labelClass}
@@ -909,6 +988,7 @@ export function BidIntakeStage() {
                       ? contactOptions
                       : partiesByRole.invite_contact
                   }
+                  partyRole="invite_contact"
                   disabled={!editable}
                   inputClass={inputClass}
                   labelClass={labelClass}

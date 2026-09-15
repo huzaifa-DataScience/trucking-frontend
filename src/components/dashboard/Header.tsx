@@ -358,6 +358,23 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                       </svg>
                       Manage account
                     </Link>
+                    {user.role === "captain" ||
+                    user.role === "assistant_estimator" ||
+                    user.role === "bid_clerk" ||
+                    user.role === "user" ? (
+                      <Link
+                        href="/settings/my-team"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-ink transition hover:bg-ink/[0.05]"
+                      >
+                        <svg className="h-4 w-4 text-ink/45" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden>
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" />
+                          <circle cx="9" cy="7" r="4" />
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" />
+                        </svg>
+                        My team
+                      </Link>
+                    ) : null}
                   </div>
 
                   <div className="border-t border-ink/[0.06] p-2">

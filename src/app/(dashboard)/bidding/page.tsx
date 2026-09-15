@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton, SkeletonCardGrid, TableSkeleton } from "@/components/ui/Skeleton";
 import { buttonClasses } from "@/components/ui/Button";
 import { RestrictedState } from "@/components/ui/RestrictedState";
+import { useAuth } from "@/contexts/AuthContext";
 import { useBiddingAccess } from "@/hooks/useBiddingAccess";
 import { useCompany } from "@/contexts/CompanyContext";
 import { PERMISSIONS } from "@/lib/auth/permissions";
@@ -199,6 +200,7 @@ function FilterSelect({
 
 export default function BiddingListPage() {
   const { companyId } = useCompany();
+  const { user } = useAuth();
   const { canRead, canWrite } = useBiddingAccess();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -214,6 +216,9 @@ export default function BiddingListPage() {
   const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [activeConditionKeys, setActiveConditionKeys] = useState<string[]>([]);
+  const [exporting, setExporting] = useState(false);
+  /** Show every crew — GET /bids?teamId=all (when user is normally team-scoped). */
+  const [showAllTeams, setShowAllTeams] = useState(false);
 
   useEffect(() => {
     setSavedViews(loadSavedViews(BIDDING_SAVED_VIEWS_KEY));
@@ -244,18 +249,49 @@ export default function BiddingListPage() {
   }, [bids]);
 
   const entityId = companyId ? Number(companyId) : undefined;
+  const role = user?.role;
+  const isTeamScopedRole =
+    role === "captain" ||
+    role === "assistant_estimator" ||
+    role === "user";
+  const hasCrew = user?.teamId != null;
+  const promptPickCrew =
+    (role === "captain" || role === "assistant_estimator") && !hasCrew;
 
-  // Fetch all statuses so the KPI strip shows true counts; status filter is client-side.
+  const listParams = useMemo(
+    () => ({
+      entityId: entityId && !Number.isNaN(entityId) ? entityId : undefined,
+      search: search.trim() || undefined,
+      workType: workType || undefined,
+      processStage: processStage || undefined,
+      outcome: outcome || undefined,
+      status: status === "all" ? undefined : status,
+      teamId: isTeamScopedRole && showAllTeams ? ("all" as const) : undefined,
+    }),
+    [
+      entityId,
+      search,
+      workType,
+      processStage,
+      outcome,
+      status,
+      isTeamScopedRole,
+      showAllTeams,
+    ]
+  );
+
+  // Backend auto-scopes by JWT teamId; pass teamId=all only when toggled.
   const loadBids = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const list = await biddingApi.listBids({
-        entityId: entityId && !Number.isNaN(entityId) ? entityId : undefined,
-        search: search.trim() || undefined,
-        workType: workType || undefined,
-        processStage: processStage || undefined,
-        outcome: outcome || undefined,
+        entityId: listParams.entityId,
+        search: listParams.search,
+        workType: listParams.workType,
+        processStage: listParams.processStage,
+        outcome: listParams.outcome,
+        teamId: listParams.teamId,
       });
       setBids(list);
     } catch (e) {
@@ -264,7 +300,7 @@ export default function BiddingListPage() {
     } finally {
       setLoading(false);
     }
-  }, [entityId, search, workType, processStage, outcome]);
+  }, [listParams]);
 
   useEffect(() => {
     const t = setTimeout(() => void loadBids(), search ? 300 : 0);
@@ -277,6 +313,31 @@ export default function BiddingListPage() {
       window.localStorage.setItem(VIEW_MODE_KEY, mode);
     } catch {
       /* ignore storage failures */
+    }
+  };
+
+  const runExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await biddingApi.exportBids({
+        entityId: listParams.entityId,
+        search: listParams.search,
+        workType: listParams.workType,
+        processStage: listParams.processStage,
+        outcome: listParams.outcome,
+        status: listParams.status,
+        teamId: listParams.teamId,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "bids.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(getApiErrorMessage(e, "Export failed"));
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -429,16 +490,51 @@ export default function BiddingListPage() {
         title="Estimates"
         subtitle="Track each estimate from Intake through Outcome. Awarded or Lost bids continue on from their final outcome."
         action={
-          canWrite ? (
-            <Link href="/bidding/new" className={buttonClasses("secondary")}>
-              <span className="text-lg leading-none" aria-hidden>
-                +
-              </span>
-              New bid
-            </Link>
-          ) : undefined
+          <div className="flex flex-wrap items-center gap-2">
+            {isTeamScopedRole && hasCrew ? (
+              <button
+                type="button"
+                aria-pressed={showAllTeams}
+                onClick={() => setShowAllTeams((v) => !v)}
+                className={`rounded-lg border px-2.5 py-2 text-xs font-semibold transition ${
+                  showAllTeams
+                    ? "border-brand/30 bg-brand/10 text-brand"
+                    : "border-ink/10 bg-surface text-ink/70 hover:border-ink/20 hover:text-ink"
+                }`}
+                title="GET /bids?teamId=all"
+              >
+                {showAllTeams ? "All teams" : "My crew"}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              disabled={exporting || loading}
+              onClick={() => void runExport()}
+              className={buttonClasses("secondary")}
+            >
+              {exporting ? "Exporting…" : "Export"}
+            </button>
+            {canWrite ? (
+              <Link href="/bidding/new" className={buttonClasses("secondary")}>
+                <span className="text-lg leading-none" aria-hidden>
+                  +
+                </span>
+                New bid
+              </Link>
+            ) : null}
+          </div>
         }
       />
+
+      {promptPickCrew ? (
+        <p className="rounded-xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          No estimating crew on your profile yet — Estimates is unscoped until you
+          pick one.{" "}
+          <Link href="/settings/my-team" className="font-semibold underline underline-offset-2">
+            Choose crew in Settings → My team
+          </Link>
+        </p>
+      ) : null}
 
       <div className="w-fit rounded-2xl border border-ink/[0.08] bg-surface px-5 py-4 shadow-[0_1px_2px_rgba(1,1,1,0.04)]">
         {loading && bids.length === 0 ? (

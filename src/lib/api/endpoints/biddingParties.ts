@@ -25,6 +25,13 @@ export interface BidPartyLookup {
   doNotContact?: boolean | null;
 }
 
+export interface BidPartiesPage {
+  items: BidPartyLookup[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 function asPartyArray(raw: unknown): BidPartyLookup[] {
   let list: unknown[] = [];
   if (Array.isArray(raw)) list = raw;
@@ -72,28 +79,62 @@ function asPartyArray(raw: unknown): BidPartyLookup[] {
   return out;
 }
 
+function asPartiesPage(
+  raw: unknown,
+  page: number,
+  pageSize: number
+): BidPartiesPage {
+  const items = asPartyArray(raw);
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const o = raw as Record<string, unknown>;
+    const total =
+      typeof o.total === "number"
+        ? o.total
+        : typeof o.count === "number"
+          ? o.count
+          : items.length;
+    return {
+      items,
+      total,
+      page: typeof o.page === "number" ? o.page : page,
+      pageSize: typeof o.pageSize === "number" ? o.pageSize : pageSize,
+    };
+  }
+  return { items, total: items.length, page, pageSize };
+}
+
 /**
  * Known Owner / Architect / Mechanical / invite contacts.
- * 404 / missing route → [] so FE still allows free-text new entry.
- *
- * Optional page/pageSize: when BE returns `{ items, total }`, server paging
- * is used; plain arrays still work (FE pages client-side in the modal).
+ * 404 / missing route → empty page so FE still allows free-text new entry.
  */
+export async function getBiddingPartiesPage(params?: {
+  role?: BidPartyRole | string;
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<BidPartiesPage> {
+  const page = params?.page ?? 1;
+  const pageSize = params?.pageSize ?? 10;
+  try {
+    const raw = await get<unknown>("/lookups/bidding/parties", {
+      role: params?.role,
+      q: params?.q,
+      page,
+      pageSize,
+    });
+    return asPartiesPage(raw, page, pageSize);
+  } catch {
+    return { items: [], total: 0, page, pageSize };
+  }
+}
+
+/** Convenience — items only (typeahead). */
 export async function getBiddingParties(params?: {
   role?: BidPartyRole | string;
   q?: string;
   page?: number;
   pageSize?: number;
 }): Promise<BidPartyLookup[]> {
-  try {
-    const raw = await get<unknown>("/lookups/bidding/parties", {
-      role: params?.role,
-      q: params?.q,
-      page: params?.page,
-      pageSize: params?.pageSize,
-    });
-    return asPartyArray(raw);
-  } catch {
-    return [];
-  }
+  const page = await getBiddingPartiesPage(params);
+  return page.items;
 }

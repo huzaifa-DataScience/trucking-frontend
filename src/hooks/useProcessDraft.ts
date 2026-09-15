@@ -117,6 +117,18 @@ export function useProcessDraft() {
       }
       const updated = await biddingApi.patchBid(bid.id, {
         process: snapshot,
+        // Dual-bind Setup ↔ Proposal calculator flags
+        baseBid: {
+          ...(bid.baseBid ?? {}),
+          pla: snapshot.pla ?? (bid.baseBid as { pla?: boolean } | undefined)?.pla,
+          preference:
+            snapshot.mbePreference ??
+            (bid.baseBid as { preference?: string } | undefined)?.preference ??
+            undefined,
+          ccipCoversWc:
+            snapshot.ocipCcip?.coversWc ??
+            (bid.baseBid as { ccipCoversWc?: boolean } | undefined)?.ccipCoversWc,
+        },
       });
       const serverSheets = normalizeSpecSheets(
         updated.process?.specSheets ?? []

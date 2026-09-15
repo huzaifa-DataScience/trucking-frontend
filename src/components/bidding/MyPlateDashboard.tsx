@@ -62,10 +62,13 @@ function notificationHref(n: MyPlateNotification): string | null {
     return chatHref(String(n.conversationId));
   }
   if (n.kind === "comment_mention" && n.bidId != null && String(n.bidId).trim()) {
-    return `/bidding/${n.bidId}?notes=1`;
+    const q = new URLSearchParams({ notes: "1" });
+    if (n.commentId != null) q.set("commentId", String(n.commentId));
+    return `/bidding/${n.bidId}?${q.toString()}`;
   }
   if (n.bidId != null && String(n.bidId).trim()) {
-    return `/bidding/${n.bidId}?stage=intake`;
+    const stage = String(n.processStage || "intake").trim() || "intake";
+    return `/bidding/${n.bidId}?stage=${encodeURIComponent(stage)}`;
   }
   return null;
 }
@@ -117,7 +120,7 @@ export function MyPlateDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const data = await biddingApi.getMyPlate();
+      const data = await biddingApi.getDashboard();
       setPlate(data);
     } catch (e) {
       setError(getApiErrorMessage(e, "Failed to load your plate"));

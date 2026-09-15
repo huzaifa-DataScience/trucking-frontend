@@ -110,7 +110,8 @@ export async function getPublic<T>(
 }
 
 /**
- * GET request. Query params with value "all", "", or undefined are omitted.
+ * GET request. Empty / undefined query values are omitted.
+ * Literal `"all"` is kept for `pageSize` and `teamId` only.
  */
 export async function get<T>(
   path: string,

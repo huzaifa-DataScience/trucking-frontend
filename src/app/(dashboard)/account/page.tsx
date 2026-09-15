@@ -1,12 +1,22 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { AvatarCircle } from "@/components/ui/AvatarCircle";
 import { useAuth } from "@/contexts/AuthContext";
+import * as authApi from "@/lib/api/endpoints/auth";
 import { roleLabel } from "@/lib/auth/roles";
-import { uploadAvatar, deleteAvatar, changePassword } from "@/lib/api/endpoints/auth";
+
+function canSeeMyTeamLink(role: string | undefined): boolean {
+  return (
+    role === "captain" ||
+    role === "assistant_estimator" ||
+    role === "bid_clerk" ||
+    role === "user"
+  );
+}
 
 export default function AccountPage() {
   const { user, refreshUser } = useAuth();
@@ -35,7 +45,7 @@ export default function AccountPage() {
       setPhotoBusy(true);
       setPhotoError(null);
       try {
-        await uploadAvatar(file);
+        await authApi.uploadAvatar(file);
         await refreshUser();
       } catch (err) {
         setPhotoError(err instanceof Error ? err.message : "Couldn't upload photo.");
@@ -51,7 +61,7 @@ export default function AccountPage() {
     setPhotoBusy(true);
     setPhotoError(null);
     try {
-      await deleteAvatar();
+      await authApi.deleteAvatar();
       await refreshUser();
     } catch (err) {
       setPhotoError(err instanceof Error ? err.message : "Couldn't remove photo.");
@@ -77,7 +87,7 @@ export default function AccountPage() {
 
       setPasswordBusy(true);
       try {
-        await changePassword(currentPassword, newPassword);
+        await authApi.changePassword(currentPassword, newPassword);
         setPasswordSuccess(true);
         setCurrentPassword("");
         setNewPassword("");
@@ -153,6 +163,17 @@ export default function AccountPage() {
             <dd className="mt-0.5 text-sm font-medium text-ink">{roleLabel(user.role)}</dd>
           </div>
         </dl>
+        {canSeeMyTeamLink(user.role) ? (
+          <p className="mt-4 border-t border-ink/[0.06] pt-4 text-sm text-ink/70">
+            Estimating crew is managed under Settings.{" "}
+            <Link
+              href="/settings/my-team"
+              className="font-semibold text-brand hover:underline"
+            >
+              Open My team →
+            </Link>
+          </p>
+        ) : null}
       </Card>
 
       <Card>

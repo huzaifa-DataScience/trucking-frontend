@@ -1,10 +1,38 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { BidPartyLookup } from "@/lib/api/endpoints/biddingParties";
+import { createPortal } from "react-dom";
+import * as biddingPartiesApi from "@/lib/api/endpoints/biddingParties";
+import type {
+  BidPartyLookup,
+  BidPartyRole,
+} from "@/lib/api/endpoints/biddingParties";
 import type { ProcessParty } from "@/lib/bidding/process-types";
 
 const PAGE_SIZE = 10;
+
+/** Stable viewport-fixed host — escapes transformed ancestors (e.g. bid-animate-in). */
+function getModalRoot(): HTMLElement {
+  const id = "app-viewport-modal-root";
+  let root = document.getElementById(id);
+  if (!root) {
+    root = document.createElement("div");
+    root.id = id;
+    Object.assign(root.style, {
+      position: "fixed",
+      top: "0",
+      left: "0",
+      right: "0",
+      bottom: "0",
+      width: "100vw",
+      height: "100dvh",
+      zIndex: "99999",
+      pointerEvents: "none",
+    });
+    document.documentElement.appendChild(root);
+  }
+  return root;
+}
 
 function partyFromLookup(p: BidPartyLookup): ProcessParty {
   return {
@@ -20,37 +48,85 @@ function nameWithStatus(o: BidPartyLookup): { label: string; tags: string[] } {
   const tags: string[] = [];
   if (o.doNotContact) tags.push("do not contact");
   if (o.inactive) tags.push("Inactive");
-  if (o.status?.trim() && !tags.some((t) => t.toLowerCase() === o.status!.trim().toLowerCase())) {
+  if (
+    o.status?.trim() &&
+    !tags.some((t) => t.toLowerCase() === o.status!.trim().toLowerCase())
+  ) {
     tags.push(o.status.trim());
   }
   return { label: o.name, tags };
 }
 
-/** CRM-style Company Address Book — table, search, pagination, row "+" to select. */
+/** CRM address book — portal to body so it stays in the viewport (not page scroll). */
 function AddressBookModal({
   open,
   title,
-  options,
+  role,
+  seedOptions,
   onClose,
   onPick,
   onAddNew,
 }: {
   open: boolean;
   title: string;
-  options: BidPartyLookup[];
+  role?: BidPartyRole | string;
+  seedOptions: BidPartyLookup[];
   onClose: () => void;
   onPick: (party: BidPartyLookup) => void;
   onAddNew: (name: string) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [page, setPage] = useState(1);
+  const [rows, setRows] = useState<BidPartyLookup[]>(seedOptions);
+  const [total, setTotal] = useState(seedOptions.length);
+  const [loading, setLoading] = useState(false);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const fetchGen = useRef(0);
 
   useEffect(() => {
-    if (open) {
-      setQuery("");
-      setPage(1);
-    }
-  }, [open]);
+    setPortalRoot(getModalRoot());
+  }, []);
+
+  // Keep the portal layer glued to the *visible* viewport (not document middle).
+  useEffect(() => {
+    if (!open || !portalRoot) return;
+    const sync = () => {
+      const vv = window.visualViewport;
+      if (!vv) {
+        Object.assign(portalRoot.style, {
+          top: "0px",
+          left: "0px",
+          width: "100vw",
+          height: "100dvh",
+        });
+        return;
+      }
+      Object.assign(portalRoot.style, {
+        top: `${vv.offsetTop}px`,
+        left: `${vv.offsetLeft}px`,
+        width: `${vv.width}px`,
+        height: `${vv.height}px`,
+      });
+    };
+    sync();
+    window.visualViewport?.addEventListener("resize", sync);
+    window.visualViewport?.addEventListener("scroll", sync);
+    window.addEventListener("resize", sync);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", sync);
+      window.visualViewport?.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+    };
+  }, [open, portalRoot]);
+
+  useEffect(() => {
+    if (!open) return;
+    setQuery("");
+    setPage(1);
+    setRows(seedOptions);
+    setTotal(seedOptions.length);
+  }, [open, seedOptions]);
 
   useEffect(() => {
     if (!open) return;
@@ -58,40 +134,75 @@ function AddressBookModal({
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+    };
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!open) return;
+    const q = query.trim();
+    const t = window.setTimeout(() => setDebouncedQ(q), q ? 200 : 0);
+    return () => window.clearTimeout(t);
+  }, [open, query]);
+
+  useEffect(() => {
+    if (!open || !role) return;
+    setPage(1);
+  }, [open, role, debouncedQ]);
+
+  // Server page: GET /lookups/bidding/parties?role=&q=&page=&pageSize=
+  useEffect(() => {
+    if (!open || !role) return;
+    const gen = ++fetchGen.current;
+    setLoading(true);
+    void biddingPartiesApi
+      .getBiddingPartiesPage({
+        role,
+        q: debouncedQ || undefined,
+        page,
+        pageSize: PAGE_SIZE,
+      })
+      .then((res) => {
+        if (fetchGen.current !== gen) return;
+        setRows(res.items);
+        setTotal(res.total);
+      })
+      .finally(() => {
+        if (fetchGen.current === gen) setLoading(false);
+      });
+  }, [open, role, debouncedQ, page]);
+
   const filtered = useMemo(() => {
+    // Role-backed: `rows` is the current server page.
+    if (role) return rows;
     const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter((o) => {
-      const hay = [
-        o.name,
-        o.company,
-        o.contactName,
-        o.email,
-        o.phone,
-        o.status,
-      ]
+    if (!q) return rows;
+    return rows.filter((o) => {
+      const hay = [o.name, o.company, o.contactName, o.email, o.phone, o.status]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [options, query]);
+  }, [rows, query, role]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [query]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE
+  const totalPages = Math.max(
+    1,
+    Math.ceil((role ? total : filtered.length) / PAGE_SIZE)
   );
+  const safePage = Math.min(page, totalPages);
+  const pageRows = role
+    ? filtered
+    : filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  const exactHit = options.some(
+  const exactHit = rows.some(
     (o) => o.name.trim().toLowerCase() === query.trim().toLowerCase()
   );
 
@@ -104,18 +215,32 @@ function AddressBookModal({
     return [cur - 1, cur, cur + 1, cur + 2];
   }, [safePage, totalPages]);
 
-  if (!open) return null;
+  if (!open || !portalRoot) return null;
 
-  return (
+  const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4 backdrop-blur-[1px]"
       role="dialog"
       aria-modal="true"
       aria-label={title}
       onClick={onClose}
+      style={{
+        pointerEvents: "auto",
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "1rem",
+        background: "rgba(1, 1, 1, 0.45)",
+        boxSizing: "border-box",
+      }}
     >
       <div
-        className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-ink/10 bg-white shadow-2xl"
+        className="flex w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-ink/10 bg-white shadow-2xl"
+        style={{ maxHeight: "min(88dvh, 900px)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-brand px-5 py-3.5">
@@ -164,7 +289,16 @@ function AddressBookModal({
               </tr>
             </thead>
             <tbody>
-              {pageRows.length === 0 ? (
+              {loading && pageRows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-10 text-center text-sm text-ink/45"
+                  >
+                    Loading contacts…
+                  </td>
+                </tr>
+              ) : pageRows.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
@@ -299,6 +433,8 @@ function AddressBookModal({
       </div>
     </div>
   );
+
+  return createPortal(modal, portalRoot);
 }
 
 /**
@@ -316,6 +452,7 @@ export function PartyNameCombobox({
   addressBookTitle,
   addressBookOptions,
   inputValueFromParty,
+  partyRole,
   onChangeName,
   onPickExisting,
 }: {
@@ -326,14 +463,12 @@ export function PartyNameCombobox({
   labelClass: string;
   label?: string;
   placeholder?: string;
-  /** Show the "+" address-book button */
   showPicker?: boolean;
-  /** Modal header — defaults to "Company Address Book" */
   addressBookTitle?: string;
-  /** Full directory for the modal (defaults to `options`) */
   addressBookOptions?: BidPartyLookup[];
-  /** What to put in the input after a pick (default: party.name) */
   inputValueFromParty?: (party: ProcessParty) => string;
+  /** When set, typeahead + address book call GET /lookups/bidding/parties?role=&q= */
+  partyRole?: BidPartyRole | string;
   onChangeName: (name: string) => void;
   onPickExisting: (party: ProcessParty) => void;
 }) {
@@ -342,11 +477,16 @@ export function PartyNameCombobox({
   const [open, setOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState(value);
+  const [remoteOptions, setRemoteOptions] = useState<BidPartyLookup[] | null>(
+    null
+  );
+  const typeaheadGen = useRef(0);
 
   const resolveInput = (party: ProcessParty) =>
     (inputValueFromParty?.(party) ?? party.name ?? "").trim();
 
   const bookOptions = addressBookOptions ?? options;
+  const listOptions = remoteOptions ?? options;
 
   useEffect(() => {
     setQuery(value);
@@ -360,18 +500,42 @@ export function PartyNameCombobox({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  // Server typeahead while typing (intake doc).
+  useEffect(() => {
+    if (!partyRole || disabled) return;
+    const q = query.trim();
+    if (!q) {
+      setRemoteOptions(null);
+      return;
+    }
+    const gen = ++typeaheadGen.current;
+    const t = window.setTimeout(() => {
+      void biddingPartiesApi
+        .getBiddingParties({ role: partyRole, q })
+        .then((list) => {
+          if (typeaheadGen.current !== gen) return;
+          setRemoteOptions(list);
+        });
+    }, 200);
+    return () => window.clearTimeout(t);
+  }, [query, partyRole, disabled]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return options.slice(0, 40);
-    return options
+    if (partyRole && remoteOptions) {
+      return remoteOptions.slice(0, 40);
+    }
+    if (!q) return listOptions.slice(0, 40);
+    return listOptions
       .filter((o) => {
-        const hay = `${o.name} ${o.company ?? ""} ${o.email ?? ""} ${o.phone ?? ""}`.toLowerCase();
+        const hay =
+          `${o.name} ${o.company ?? ""} ${o.email ?? ""} ${o.phone ?? ""}`.toLowerCase();
         return hay.includes(q);
       })
       .slice(0, 40);
-  }, [options, query]);
+  }, [listOptions, query, partyRole, remoteOptions]);
 
-  const exactHit = options.find(
+  const exactHit = listOptions.find(
     (o) => o.name.trim().toLowerCase() === query.trim().toLowerCase()
   );
 
@@ -379,7 +543,7 @@ export function PartyNameCombobox({
     const name = raw.trim();
     onChangeName(name);
     if (!name) return;
-    const hit = options.find(
+    const hit = listOptions.find(
       (o) => o.name.trim().toLowerCase() === name.toLowerCase()
     );
     if (hit) onPickExisting(partyFromLookup(hit));
@@ -503,7 +667,8 @@ export function PartyNameCombobox({
       <AddressBookModal
         open={pickerOpen}
         title={addressBookTitle ?? "Company Address Book"}
-        options={bookOptions}
+        role={partyRole}
+        seedOptions={bookOptions}
         onClose={() => setPickerOpen(false)}
         onPick={(o) => {
           const party = partyFromLookup(o);
