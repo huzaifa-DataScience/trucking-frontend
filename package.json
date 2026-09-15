@@ -13,6 +13,7 @@
     "verify:bidding-excel": "node scripts/verify-bidding-excel.mjs"
   },
   "dependencies": {
+    "@internationalized/date": "^3.12.4",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-aria-components": "^1.21.1",
