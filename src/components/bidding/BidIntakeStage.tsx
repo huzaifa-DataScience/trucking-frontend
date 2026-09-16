@@ -8,7 +8,9 @@ import * as biddingPartiesApi from "@/lib/api/endpoints/biddingParties";
 import type { BidPartyLookup } from "@/lib/api/endpoints/biddingParties";
 import { PartyNameCombobox } from "@/components/bidding/PartyNameCombobox";
 import { BidAdditionalDetailsSection } from "@/components/bidding/BidAdditionalDetailsSection";
+import { BidAttachmentsSection } from "@/components/bidding/BidAttachmentsSection";
 import { TimePicker } from "@/components/ui/TimePicker";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
@@ -147,7 +149,7 @@ function contactsForCompany(
 /** Stage 1 — Intake (FRONTEND_INTAKE.md). Bid clerk. Incomplete OK. */
 export function BidIntakeStage() {
   const router = useRouter();
-  const { setBidHeader } = useBidSheet();
+  const { setBidHeader, uploadAttachment, deleteAttachment } = useBidSheet();
   const confirmDialog = useConfirmDialog();
   const {
     bid,
@@ -720,12 +722,12 @@ export function BidIntakeStage() {
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Due date</span>
-          <input
-            type="date"
+          <DatePicker
+            ariaLabel="Due date"
             className={inputClass}
             disabled={!editable}
             value={draft.dueDate ?? ""}
-            onChange={(e) => setField("dueDate", e.target.value || null)}
+            onChange={(v) => setField("dueDate", v || null)}
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -967,14 +969,14 @@ export function BidIntakeStage() {
                 />
                 <label className="flex flex-col gap-1">
                   <span className={labelClass}>Received</span>
-                  <input
-                    type="date"
+                  <DatePicker
+                    ariaLabel="Received"
                     className={inputClass}
                     disabled={!editable}
                     value={inv.receivedAt?.slice(0, 10) ?? ""}
-                    onChange={(e) =>
+                    onChange={(v) =>
                       patchInvitation(index, {
-                        receivedAt: e.target.value || null,
+                        receivedAt: v || null,
                       })
                     }
                   />
@@ -1189,17 +1191,17 @@ export function BidIntakeStage() {
                         </label>
                         <label className="flex flex-col gap-1">
                           <span className={labelClass}>Received</span>
-                          <input
-                            type="date"
+                          <DatePicker
+                            ariaLabel="Received"
                             className={inputClass}
                             disabled={!editable}
                             value={ad.receivedAt?.slice(0, 10) ?? ""}
-                            onChange={(e) => {
+                            onChange={(v) => {
                               const next = addenda.map((row, i) =>
                                 i === adIndex
                                   ? {
                                       ...row,
-                                      receivedAt: e.target.value || null,
+                                      receivedAt: v || null,
                                     }
                                   : row
                               );
@@ -1743,12 +1745,13 @@ export function BidIntakeStage() {
         disabled={!editable}
       />
 
-      <p className="text-xs text-ink/45">
-        Docs: upload invitation / drawings / specs / addenda as bid attachments
-        (`label=invitation|drawings|specifications|addenda`), then put ids on
-        the invitation row. GCs / mechanicals above stay light — Post-Bid for
-        follow-up.
-      </p>
+      <BidAttachmentsSection
+        attachments={bid.attachments ?? []}
+        isEditable={editable}
+        uploading={saving}
+        onUpload={async (file, label) => uploadAttachment(file, label)}
+        onDelete={async (id) => deleteAttachment(id)}
+      />
     </div>
   );
 }
