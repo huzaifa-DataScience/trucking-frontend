@@ -673,9 +673,9 @@ export function BidIntakeStage() {
           <span className={labelClass}>Bid / estimate #</span>
           <input
             className={inputClass}
-            disabled
+            disabled={!editable}
             value={bid.estimateNumber ?? ""}
-            readOnly
+            onChange={(e) => setBidHeader({ estimateNumber: e.target.value })}
           />
         </label>
         <label className="flex flex-col gap-1">
