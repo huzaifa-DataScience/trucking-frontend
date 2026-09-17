@@ -117,6 +117,11 @@ export function useProcessDraft() {
       }
       const updated = await biddingApi.patchBid(bid.id, {
         process: snapshot,
+        // Header fields (Estimate #, Bid name) are edited on the Intake tab via
+        // setBidHeader, but that only updates local state — this is the actual
+        // save, so they must be sent explicitly or the edit is lost on persist.
+        estimateNumber: bid.estimateNumber ?? undefined,
+        bidName: bid.bidName ?? undefined,
         // Dual-bind Setup ↔ Proposal calculator flags
         baseBid: {
           ...(bid.baseBid ?? {}),
