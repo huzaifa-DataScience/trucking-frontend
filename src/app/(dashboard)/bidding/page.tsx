@@ -220,9 +220,12 @@ export default function BiddingListPage() {
   /** Show every crew — GET /bids?teamId=all (when user is normally team-scoped). */
   const [showAllTeams, setShowAllTeams] = useState(false);
 
+  /** Scoped per-user so switching accounts on the same browser doesn't leak someone else's saved views. */
+  const savedViewsKey = user ? `${BIDDING_SAVED_VIEWS_KEY}:${user.id}` : null;
+
   useEffect(() => {
-    setSavedViews(loadSavedViews(BIDDING_SAVED_VIEWS_KEY));
-  }, []);
+    setSavedViews(savedViewsKey ? loadSavedViews(savedViewsKey) : []);
+  }, [savedViewsKey]);
 
   /** Options for "dynamic" select filter fields (Estimator, Bid Clerk, Take Off Person, Office, …) —
    * derived from values already present on loaded bids, since these have no separate fixed lookup list.
@@ -280,8 +283,13 @@ export default function BiddingListPage() {
     ]
   );
 
+  /** Guards against an earlier in-flight fetch resolving after a newer one and
+   * clobbering fresher data — e.g. one fired before auth/role context settled. */
+  const bidsRequestSeqRef = useRef(0);
+
   // Backend auto-scopes by JWT teamId; pass teamId=all only when toggled.
   const loadBids = useCallback(async () => {
+    const seq = ++bidsRequestSeqRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -293,12 +301,14 @@ export default function BiddingListPage() {
         outcome: listParams.outcome,
         teamId: listParams.teamId,
       });
+      if (seq !== bidsRequestSeqRef.current) return; // a newer request superseded this one
       setBids(list);
     } catch (e) {
+      if (seq !== bidsRequestSeqRef.current) return;
       setError(getApiErrorMessage(e, "Failed to load bids"));
       setBids([]);
     } finally {
-      setLoading(false);
+      if (seq === bidsRequestSeqRef.current) setLoading(false);
     }
   }, [listParams]);
 
@@ -414,7 +424,7 @@ export default function BiddingListPage() {
     const view: SavedView = { id: newId(), name, groups };
     const next = [...savedViews, view];
     setSavedViews(next);
-    saveSavedViews(BIDDING_SAVED_VIEWS_KEY, next);
+    if (savedViewsKey) saveSavedViews(savedViewsKey, next);
     setFilterOpen(false);
     // Saving only creates the chips — it does not apply the filter to the table.
   };
@@ -443,7 +453,7 @@ export default function BiddingListPage() {
   const removeSavedView = (id: string) => {
     const next = savedViews.filter((v) => v.id !== id);
     setSavedViews(next);
-    saveSavedViews(BIDDING_SAVED_VIEWS_KEY, next);
+    if (savedViewsKey) saveSavedViews(savedViewsKey, next);
     setActiveConditionKeys((prev) => {
       const nextKeys = prev.filter((k) => !k.startsWith(`${id}::`));
       if (nextKeys.length !== prev.length) setFilterGroups(groupsForActiveKeys(nextKeys, next));
@@ -701,18 +711,18 @@ export default function BiddingListPage() {
         />
       ) : viewMode === "list" ? (
         <div className="overflow-x-auto rounded-xl border border-ink/[0.08] bg-surface">
-          <table className="w-full min-w-[860px] border-collapse text-left">
+          <table className="w-full min-w-[860px] table-fixed border-collapse text-left">
             <thead>
               <tr className="border-b border-ink/[0.08] bg-ink/[0.02] text-xs font-semibold text-ink/50">
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Estimate #</th>
-                <th className="px-4 py-3">Company</th>
-                <th className="px-4 py-3">Estimator</th>
-                <th className="px-4 py-3">Work type · Stage</th>
-                <th className="px-4 py-3">Outcome</th>
-                <th className="px-4 py-3">Base bid</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Updated</th>
+                <th className="w-[20%] px-4 py-3">Name</th>
+                <th className="w-[8%] px-4 py-3">Estimate #</th>
+                <th className="w-[10%] px-4 py-3">Company</th>
+                <th className="w-[10%] px-4 py-3">Estimator</th>
+                <th className="w-[14%] px-4 py-3">Work type · Stage</th>
+                <th className="w-[9%] px-4 py-3">Outcome</th>
+                <th className="w-[9%] px-4 py-3">Base bid</th>
+                <th className="w-[9%] px-4 py-3">Status</th>
+                <th className="w-[11%] px-4 py-3">Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -721,7 +731,7 @@ export default function BiddingListPage() {
                   key={bid.id}
                   className={`border-b border-ink/[0.06] text-sm transition hover:bg-brand/[0.03] ${idx % 2 === 1 ? "bg-ink/[0.012]" : ""}`}
                 >
-                  <td className="max-w-[20rem] px-4 py-3">
+                  <td className="px-4 py-3">
                     <Link
                       href={`/bidding/${bid.id}?stage=intake`}
                       className="block truncate font-semibold text-ink hover:text-brand"
@@ -729,20 +739,20 @@ export default function BiddingListPage() {
                       {bid.bidName || "Untitled estimate"}
                     </Link>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-ink/50">{bid.estimateNumber}</td>
-                  <td className="max-w-[12rem] truncate px-4 py-3 text-ink/70">{bid.companyName}</td>
-                  <td className="max-w-[10rem] truncate px-4 py-3 text-ink/70">{bid.estimator || "—"}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-ink/70">
+                  <td className="truncate px-4 py-3 font-mono text-xs text-ink/50">{bid.estimateNumber}</td>
+                  <td className="truncate px-4 py-3 text-ink/70">{bid.companyName}</td>
+                  <td className="truncate px-4 py-3 text-ink/70">{bid.estimator || "—"}</td>
+                  <td className="truncate px-4 py-3 text-ink/70">
                     {formatWorkType(bid.workType ?? undefined)} · {formatProcessStage(bid.processStage ?? undefined)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-ink/70">{formatOutcome(bid.outcomeStatus ?? undefined)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-ink/70">
+                  <td className="truncate px-4 py-3 text-ink/70">{formatOutcome(bid.outcomeStatus ?? undefined)}</td>
+                  <td className="truncate px-4 py-3 text-ink/70">
                     {bid.baseBidAmount != null ? formatMoney(bid.baseBidAmount) : "—"}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3">
+                  <td className="truncate px-4 py-3">
                     {status === "draft" && bid.status === "draft" ? null : <BidStatusBadge status={bid.status} />}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-ink/50">{formatDate(bid.updatedAt.slice(0, 10))}</td>
+                  <td className="truncate px-4 py-3 text-ink/50">{formatDate(bid.updatedAt.slice(0, 10))}</td>
                 </tr>
               ))}
             </tbody>

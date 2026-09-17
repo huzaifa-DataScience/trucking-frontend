@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { LogoLoader } from "@/components/ui/LogoLoader";
-import { SkeletonChatBubbles } from "@/components/ui/Skeleton";
+import { Skeleton, SkeletonChatBubbles } from "@/components/ui/Skeleton";
 import { ChatComposer } from "./ChatComposer";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { ChatTypeIcon } from "./ChatTypeIcon";
@@ -130,9 +129,12 @@ export function ChatThreadPanel({
           </svg>
         </button>
         {loading && !conversation ? (
-          <div className="flex flex-1 items-center gap-3 py-1">
-            <LogoLoader size={24} />
-            <span className="text-sm text-ink/45">Loading conversation…</span>
+          <div className="flex flex-1 items-center gap-3 py-1" role="status" aria-label="Loading conversation">
+            <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
+            <div className="min-w-0 flex-1">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="mt-2 h-3 w-24" />
+            </div>
           </div>
         ) : conversation ? (
           <>

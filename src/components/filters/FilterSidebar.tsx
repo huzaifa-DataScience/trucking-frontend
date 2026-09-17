@@ -24,6 +24,21 @@ function TrashIcon() {
   );
 }
 
+function SelectChevron() {
+  return (
+    <svg
+      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function FieldControl({
   field,
   condition,
@@ -37,30 +52,33 @@ function FieldControl({
 }) {
   const inputClass =
     "h-10 w-full rounded-lg border border-ink/10 bg-surface px-3 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
-  const selectClass = `${inputClass} pr-8`;
+  const selectClass = `${inputClass} appearance-none pr-9`;
 
   if (field.kind === "select") {
     const options = field.dynamic ? dynamicOptions?.[field.key] ?? [] : field.options ?? [];
     return (
-      <select
-        className={selectClass}
-        value={condition?.value ?? ""}
-        onChange={(e) => {
-          const value = e.target.value;
-          if (!value) {
-            onChange(null);
-            return;
-          }
-          onChange({ id: condition?.id ?? newId(), field: field.key, op: "is", value });
-        }}
-      >
-        <option value="">{field.placeholder ?? `Select ${field.label.toLowerCase()}`}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          className={selectClass}
+          value={condition?.value ?? ""}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (!value) {
+              onChange(null);
+              return;
+            }
+            onChange({ id: condition?.id ?? newId(), field: field.key, op: "is", value });
+          }}
+        >
+          <option value="">{field.placeholder ?? `Select ${field.label.toLowerCase()}`}</option>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <SelectChevron />
+      </div>
     );
   }
 
@@ -86,29 +104,32 @@ function FieldControl({
       <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-ink/10 p-3">
         <div>
           <span className="mb-1 block text-[11px] text-ink/40">Filter by fixed date</span>
-          <select
-            className={selectClass}
-            value={preset}
-            onChange={(e) => {
-              const next = e.target.value;
-              if (next === CUSTOM_DATE_RANGE) {
-                // Keep any dates already picked, just switch back to manual entry.
-                if (condition) onChange({ ...condition, preset: undefined });
-                return;
-              }
-              const def = DATE_PRESETS.find((p) => p.value === next);
-              if (!def) return;
-              const { start, end } = def.range();
-              onChange({ id: condition?.id ?? newId(), field: field.key, op: "between", start, end, preset: next });
-            }}
-          >
-            <option value={CUSTOM_DATE_RANGE}>Custom date range</option>
-            {DATE_PRESETS.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              className={selectClass}
+              value={preset}
+              onChange={(e) => {
+                const next = e.target.value;
+                if (next === CUSTOM_DATE_RANGE) {
+                  // Keep any dates already picked, just switch back to manual entry.
+                  if (condition) onChange({ ...condition, preset: undefined });
+                  return;
+                }
+                const def = DATE_PRESETS.find((p) => p.value === next);
+                if (!def) return;
+                const { start, end } = def.range();
+                onChange({ id: condition?.id ?? newId(), field: field.key, op: "between", start, end, preset: next });
+              }}
+            >
+              <option value={CUSTOM_DATE_RANGE}>Custom date range</option>
+              {DATE_PRESETS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+            <SelectChevron />
+          </div>
         </div>
 
         <div className="flex min-w-0 gap-2">

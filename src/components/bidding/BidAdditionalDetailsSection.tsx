@@ -1,8 +1,85 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { BidFormField, BidTextInput, BidNumberInput, BidSelect } from "@/components/bidding/BidFormField";
+import * as biddingApi from "@/lib/api/endpoints/bidding";
 import type { ProcessAdditionalDetails, ProcessSalesActivities } from "@/lib/bidding/process-types";
+
+const nameInputClass =
+  "mt-1.5 w-full rounded-xl border border-ink/10 bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink/30 focus:border-brand focus:ring-2 focus:ring-brand/20";
+
+const TAKEOFF_PERSON_FIELDS: [keyof ProcessAdditionalDetails, string][] = [
+  ["takeOffPerson", "Take off person"],
+  ["takeOffPerson2", "Take off person 2"],
+  ["takeOffPerson3", "Take off person 3"],
+];
+
+/** Free-text name field with a suggestion dropdown from the estimator/crew roster. */
+function NameTypeahead({
+  id,
+  value,
+  onChange,
+  roster,
+  disabled,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  roster: string[];
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const q = value.trim().toLowerCase();
+  const hits = !q ? roster : roster.filter((n) => n.toLowerCase().includes(q));
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <input
+        id={id}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        disabled={disabled}
+        autoComplete="off"
+        className={nameInputClass}
+      />
+      {open && !disabled && hits.length > 0 ? (
+        <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-xl border border-ink/[0.08] bg-white py-1 shadow-[0_12px_32px_-8px_rgba(1,1,1,0.18)]">
+          {hits.slice(0, 20).map((name) => (
+            <li key={name}>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(name);
+                  setOpen(false);
+                }}
+                className="block w-full px-3 py-2 text-left text-sm text-ink hover:bg-brand/[0.06]"
+              >
+                {name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 
 const TEXT_FIELDS: [keyof ProcessAdditionalDetails, string][] = [
   ["bidNumber", "Bid number"],
@@ -13,9 +90,6 @@ const TEXT_FIELDS: [keyof ProcessAdditionalDetails, string][] = [
   ["altWebLocation2", "Alternate web location 2"],
   ["altWebLocation3", "Alternate web location 3"],
   ["wbdUsername", "WBD username"],
-  ["takeOffPerson", "Take off person"],
-  ["takeOffPerson2", "Take off person 2"],
-  ["takeOffPerson3", "Take off person 3"],
   ["awl1Username", "AWL 1 username"],
   ["awl2Username", "AWL 2 username"],
   ["awl3Username", "AWL 3 username"],
@@ -156,6 +230,18 @@ export function BidAdditionalDetailsSection({
   const setSa = <K extends keyof ProcessSalesActivities>(key: K, value: ProcessSalesActivities[K]) =>
     onSalesActivitiesChange({ ...salesActivities, [key]: value });
 
+  const [estimatorRoster, setEstimatorRoster] = useState<string[]>([]);
+  useEffect(() => {
+    void biddingApi
+      .getBiddingContacts()
+      .then((contacts) => {
+        const names = [...new Set(contacts.map((c) => c.name).filter((n): n is string => Boolean(n?.trim())))];
+        names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+        setEstimatorRoster(names);
+      })
+      .catch(() => setEstimatorRoster([]));
+  }, []);
+
   const selectField = (
     key: keyof ProcessAdditionalDetails,
     label: string,
@@ -179,7 +265,7 @@ export function BidAdditionalDetailsSection({
           title="Additional details"
           subtitle="FollowupCRM-parity fields — Status, Bid Bond, Wage Rate, Source, and reporting details not covered elsewhere. Office is the bid's own Company (GOEL / GOEL DC / DCB)."
         />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
           {selectField("salesStatus", "Status", SALES_STATUS_OPTIONS)}
           {selectField("subBuildingType", "Sub building type", SUB_BUILDING_TYPE_OPTIONS)}
           {selectField("source", "Source", LEAD_SOURCE_OPTIONS)}
@@ -191,6 +277,18 @@ export function BidAdditionalDetailsSection({
                 id={`ad-${key}`}
                 value={(additionalDetails[key] as string | null) ?? ""}
                 onChange={(v) => setAd(key, (v || null) as ProcessAdditionalDetails[typeof key])}
+                disabled={disabled}
+              />
+            </BidFormField>
+          ))}
+
+          {TAKEOFF_PERSON_FIELDS.map(([key, label]) => (
+            <BidFormField key={key} label={label} htmlFor={`ad-${key}`}>
+              <NameTypeahead
+                id={`ad-${key}`}
+                value={(additionalDetails[key] as string | null) ?? ""}
+                onChange={(v) => setAd(key, (v || null) as ProcessAdditionalDetails[typeof key])}
+                roster={estimatorRoster}
                 disabled={disabled}
               />
             </BidFormField>
@@ -268,18 +366,17 @@ export function BidAdditionalDetailsSection({
 
           {DATE_FIELDS.map(([key, label]) => (
             <BidFormField key={key} label={label} htmlFor={`ad-${key}`}>
-              <input
-                id={`ad-${key}`}
-                type="date"
+              <DatePicker
+                ariaLabel={label}
                 value={(additionalDetails[key] as string | null) ?? ""}
-                onChange={(e) => setAd(key, (e.target.value || null) as ProcessAdditionalDetails[typeof key])}
+                onChange={(v) => setAd(key, (v || null) as ProcessAdditionalDetails[typeof key])}
                 disabled={disabled}
-                className="mt-1.5 w-full rounded-xl border border-ink/10 bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-1.5 w-full rounded-xl border border-ink/10 bg-surface px-3.5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               />
             </BidFormField>
           ))}
 
-          <div className="sm:col-span-2">
+          <div className="col-span-full max-w-2xl">
             <BidFormField label="Comments" htmlFor="ad-comments">
               <BidTextInput
                 id="ad-comments"
@@ -297,16 +394,15 @@ export function BidAdditionalDetailsSection({
           title="Sales activities"
           subtitle="Follow Up, Technical, and Job Start/End live with their existing sections above — these are the remaining pipeline dates."
         />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
           {SALES_ACTIVITY_DATE_FIELDS.map(([key, label]) => (
             <BidFormField key={key} label={label} htmlFor={`sa-${key}`}>
-              <input
-                id={`sa-${key}`}
-                type="date"
+              <DatePicker
+                ariaLabel={label}
                 value={(salesActivities[key] as string | null) ?? ""}
-                onChange={(e) => setSa(key, (e.target.value || null) as ProcessSalesActivities[typeof key])}
+                onChange={(v) => setSa(key, (v || null) as ProcessSalesActivities[typeof key])}
                 disabled={disabled}
-                className="mt-1.5 w-full rounded-xl border border-ink/10 bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-1.5 w-full rounded-xl border border-ink/10 bg-surface px-3.5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               />
             </BidFormField>
           ))}

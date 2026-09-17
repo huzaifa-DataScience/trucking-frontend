@@ -135,7 +135,7 @@ export function BidAwardTab() {
       </div>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
+      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
         {(
           [
             ["jobNumber", "Job number"],

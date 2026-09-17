@@ -115,7 +115,7 @@ export function BidOutcomeStage() {
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
         {CHOICES.map((c) => {
           const on = current === c.value;
           return (

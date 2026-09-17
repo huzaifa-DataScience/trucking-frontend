@@ -64,7 +64,7 @@ export function BidSheetHeaderSection({
             : "Estimate header — job link, bid date, submit date, and time estimate (hours)."
         }
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
         <BidFormField
           label="Linked job"
           htmlFor="job"
@@ -93,7 +93,7 @@ export function BidSheetHeaderSection({
           ) : (
             <BidTextInput
               id="est-num"
-              value={bid.estimateNumber}
+              value={bid.estimateNumber ?? ""}
               onChange={onEstimateNumber}
               disabled={identityDisabled}
             />

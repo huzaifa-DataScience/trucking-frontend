@@ -105,6 +105,21 @@ interface SortState {
   dir: "ASC" | "DESC";
 }
 
+function SelectChevron() {
+  return (
+    <svg
+      className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function toggleSort(current: SortState, key: string): SortState {
   if (current.by !== key) return { by: key, dir: "ASC" };
   return { by: key, dir: current.dir === "ASC" ? "DESC" : "ASC" };
@@ -706,32 +721,38 @@ export default function BillingsPage() {
               </label>
               <label className="flex items-center gap-2 text-xs text-stone-600 dark:text-stone-400">
                 <span>Contract status</span>
-                <select
-                  value={contractsFilters.contractStatus}
-                  onChange={(e) =>
-                    setContractsFilters((prev) => ({ ...prev, contractStatus: e.target.value }))
-                  }
-                  className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-                >
-                  <option value="ALL">Any</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="INACTIVE">Inactive</option>
-                  <option value="ARCHIVED">Archived</option>
-                </select>
+                <span className="relative inline-block">
+                  <select
+                    value={contractsFilters.contractStatus}
+                    onChange={(e) =>
+                      setContractsFilters((prev) => ({ ...prev, contractStatus: e.target.value }))
+                    }
+                    className="appearance-none rounded-lg border border-stone-300 bg-white px-2 py-1 pr-6 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                  >
+                    <option value="ALL">Any</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                    <option value="ARCHIVED">Archived</option>
+                  </select>
+                  <SelectChevron />
+                </span>
               </label>
               <label className="flex items-center gap-2 text-xs text-stone-600 dark:text-stone-400">
                 <span>Pay app status</span>
-                <select
-                  value={contractsFilters.payAppStatus}
-                  onChange={(e) =>
-                    setContractsFilters((prev) => ({ ...prev, payAppStatus: e.target.value }))
-                  }
-                  className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-                >
-                  <option value="ALL">Any</option>
-                  <option value="SUBMITTED_SYNCED_PAID">Submitted / Synced / Paid</option>
-                  <option value="DRAFT">Draft</option>
-                </select>
+                <span className="relative inline-block">
+                  <select
+                    value={contractsFilters.payAppStatus}
+                    onChange={(e) =>
+                      setContractsFilters((prev) => ({ ...prev, payAppStatus: e.target.value }))
+                    }
+                    className="appearance-none rounded-lg border border-stone-300 bg-white px-2 py-1 pr-6 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                  >
+                    <option value="ALL">Any</option>
+                    <option value="SUBMITTED_SYNCED_PAID">Submitted / Synced / Paid</option>
+                    <option value="DRAFT">Draft</option>
+                  </select>
+                  <SelectChevron />
+                </span>
               </label>
               <button
                 type="button"

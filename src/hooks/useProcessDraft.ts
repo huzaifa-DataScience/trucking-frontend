@@ -167,11 +167,14 @@ export function useProcessDraft() {
     return () => registerProcessSave(null);
   }, [persist, registerProcessSave]);
 
-  // Keep context in sync — do not clear processDirty when `dirty` flips
-  // (that raced Save). Clear only on unmount when leaving the stage.
+  // Reconcile from the draft fingerprint so hydration/stage transitions cannot
+  // leave a stale dirty flag behind.
   useEffect(() => {
-    setProcessDirty(dirty);
-  }, [dirty, setProcessDirty]);
+    const currentFp = processFingerprint(draftRef.current);
+    const actualDirty = editable && currentFp !== savedFp.current;
+    if (dirty !== actualDirty) setDirty(actualDirty);
+    setProcessDirty(actualDirty);
+  }, [dirty, draft, editable, setProcessDirty]);
 
   useEffect(() => {
     return () => setProcessDirty(false);

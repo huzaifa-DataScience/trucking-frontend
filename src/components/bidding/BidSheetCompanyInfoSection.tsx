@@ -37,7 +37,7 @@ export function BidSheetCompanyInfoSection({
           ) : null
         }
       />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
         <BidFormField label="Company name" htmlFor="ci-name">
           <BidTextInput
             id="ci-name"
@@ -55,7 +55,7 @@ export function BidSheetCompanyInfoSection({
             disabled={!isEditable}
           />
         </BidFormField>
-        <div className="sm:col-span-2">
+        <div className="col-span-full max-w-2xl">
           <BidFormField label="Address" htmlFor="ci-address">
             <BidTextInput
               id="ci-address"
@@ -139,7 +139,7 @@ export function BidSheetCompanyInfoSection({
             ]}
           />
         </BidFormField>
-        <div className="sm:col-span-2">
+        <div className="col-span-full max-w-2xl">
           <BidFormField label="Notes" htmlFor="ci-notes">
             <BidTextInput
               id="ci-notes"

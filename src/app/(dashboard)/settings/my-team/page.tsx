@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardHeader } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import * as authApi from "@/lib/api/endpoints/auth";
 import type {
@@ -240,6 +241,25 @@ function SlotPersonPicker({
   );
 }
 
+function MyTeamSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex max-w-sm flex-col gap-1.5">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-11 w-full rounded-xl" />
+      </div>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+        {AUTH_TEAM_SLOT_KEYS.map((key) => (
+          <div key={key} className="flex flex-col gap-1.5">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-11 w-full rounded-xl" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function contactsFromAuthTeam(team: AuthTeam | null): BidContactLookup[] {
   if (!team?.contacts) return [];
   const raw = team.contacts;
@@ -388,7 +408,7 @@ export default function MyTeamPage() {
 
   if (!canView) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <div className="flex w-full max-w-2xl flex-col gap-6">
         <PageHeader
           title="My team"
           subtitle="Captains build their estimating crew here."
@@ -408,7 +428,7 @@ export default function MyTeamPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <PageHeader
         title="My team"
         subtitle={
@@ -423,20 +443,27 @@ export default function MyTeamPage() {
       />
 
       <Card>
-        <CardHeader
-          title={team?.teamName || "Estimating crew"}
-          subtitle={
-            team?.teamId != null || team?.id != null
-              ? `Team #${team.teamId ?? team.id}`
-              : "No team yet — save once to create"
-          }
-        />
+        {loading ? (
+          <div className="mb-4 flex flex-col gap-1.5">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-56" />
+          </div>
+        ) : (
+          <CardHeader
+            title={team?.teamName || "Estimating crew"}
+            subtitle={
+              team?.teamId != null || team?.id != null
+                ? `Team #${team.teamId ?? team.id}`
+                : "No team yet — save once to create"
+            }
+          />
+        )}
 
         {loading ? (
-          <p className="text-sm text-ink/45">Loading…</p>
+          <MyTeamSkeleton />
         ) : (
           <div className="flex flex-col gap-4">
-            <label className="flex flex-col gap-1.5">
+            <label className="flex max-w-sm flex-col gap-1.5">
               <span className="text-xs font-medium text-ink/55">Captain</span>
               <p className="rounded-xl border border-ink/[0.06] bg-canvas/40 px-3.5 py-2.5 text-sm font-medium text-ink">
                 {captainLabel}
@@ -446,7 +473,7 @@ export default function MyTeamPage() {
               </p>
             </label>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
               {AUTH_TEAM_SLOT_KEYS.map((key) => (
                 <SlotPersonPicker
                   key={key}

@@ -153,7 +153,7 @@ export function BidEstimatingSetupStage() {
         </p>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
         <label className="flex flex-col gap-1">
           <span className={labelClass}>MBE preference</span>
           <input
@@ -193,7 +193,7 @@ export function BidEstimatingSetupStage() {
           />
           <span className="text-sm text-ink/80">PLA project</span>
         </label>
-        <label className="flex flex-col gap-1 sm:col-span-2">
+        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
           <span className={labelClass}>
             Wage decision # (not the Estimate wage rate)
           </span>
@@ -243,7 +243,7 @@ export function BidEstimatingSetupStage() {
 
         <div className="border-t border-ink/[0.06] pt-5">
           <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink/45">Insurance</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
             <CheckboxRow
               label="OCIP covers WC"
               disabled={!editable}
@@ -271,7 +271,7 @@ export function BidEstimatingSetupStage() {
 
         <div>
           <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink/45">Site logistics</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
             <CheckboxRow
               label="Lifts needed"
               disabled={!editable}
@@ -311,8 +311,8 @@ export function BidEstimatingSetupStage() {
         </div>
       </section>
 
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
-        <h3 className="sm:col-span-2 text-sm font-semibold text-ink">
+      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+        <h3 className="col-span-full text-sm font-semibold text-ink">
           Technical review
         </h3>
         <label className="flex flex-col gap-1">
@@ -333,7 +333,7 @@ export function BidEstimatingSetupStage() {
             onChange={(e) => setReview({ reviewedBy: e.target.value || null })}
           />
         </label>
-        <label className="flex flex-col gap-1 sm:col-span-2">
+        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
           <span className={labelClass}>Review date</span>
           <input
             type="date"
@@ -343,7 +343,7 @@ export function BidEstimatingSetupStage() {
             onChange={(e) => setReview({ reviewDate: e.target.value || null })}
           />
         </label>
-        <label className="flex flex-col gap-1 sm:col-span-2">
+        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
           <span className={labelClass}>Comments</span>
           <textarea
             className={`${inputClass} min-h-[72px]`}
@@ -354,7 +354,7 @@ export function BidEstimatingSetupStage() {
         </label>
 
         <div
-          className={`sm:col-span-2 flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
+          className={`col-span-full flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
             review.approvedForTakeoff
               ? "border-emerald-600/25 bg-emerald-50/80"
               : "border-ink/[0.08] bg-canvas/40"

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
-function AppShellSkeleton() {
+export function AppShellSkeleton() {
   return (
     <div className="flex min-h-dvh w-full overflow-hidden bg-canvas" role="status" aria-label="Loading">
       {/* Sidebar */}

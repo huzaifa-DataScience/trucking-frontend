@@ -2,7 +2,7 @@
 
 import { type ReactNode } from "react";
 import Link from "next/link";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RestrictedState } from "@/components/ui/RestrictedState";
 import { useWorkforce } from "@/contexts/WorkforceContext";
@@ -21,11 +21,7 @@ export function WorkforceGate({
   const { status, me, loading, error } = useWorkforce();
 
   if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center py-24">
-        <LogoLoader />
-      </div>
-    );
+    return <TableSkeleton rows={8} toolbar={false} />;
   }
 
   if (error || !status) {

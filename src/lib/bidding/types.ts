@@ -305,6 +305,7 @@ export interface BidTeam {
   captainUserId?: number | null;
   assistantEstimator?: string | null;
   bidClerk: string | null;
+  assistantManager: string | null;
   duct1: string | null;
   duct2: string | null;
   hydronic1: string | null;

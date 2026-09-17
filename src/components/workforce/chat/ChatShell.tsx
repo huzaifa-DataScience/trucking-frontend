@@ -68,12 +68,20 @@ export function ChatShell() {
   );
 
   const handleCreateChannel = useCallback(
-    async (title: string) => {
-      const conv = await chat.createChannel(title);
-      router.push(`${BASE_HREF}/${encodeURIComponent(conv.conversationId)}`, { scroll: false });
-      return conv;
+    async (title: string, memberIds?: number[]) => {
+      const res = await chat.createChannel(title, memberIds);
+      if (memberIds?.length && res.connecteam && res.connecteam.sent === false) {
+        showToast(
+          res.connecteam.error ?? "Channel created, but members could not be added to Connecteam.",
+          "info"
+        );
+      }
+      router.push(`${BASE_HREF}/${encodeURIComponent(res.conversation.conversationId)}`, {
+        scroll: false,
+      });
+      return res.conversation;
     },
-    [chat, router]
+    [chat, router, showToast]
   );
 
   const showInboxOnMobile = !conversationId;

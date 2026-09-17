@@ -13,7 +13,15 @@ function toOptions(list: LookupItem[]): { value: string; label: string }[] {
   return list.map(toOption);
 }
 
-export function useLookups(companyId?: string) {
+type LookupField = "jobs" | "materials" | "haulers" | "truckTypes" | "ourEntities";
+const ALL_FIELDS: LookupField[] = ["jobs", "materials", "haulers", "truckTypes", "ourEntities"];
+
+/**
+ * Pass `include` to skip lookups a caller doesn't need — this hook is mounted on every
+ * page via Header's global search, so fetching all 5 unconditionally means every page
+ * load fires unused hauler/truck-type/entity requests alongside the ones it actually uses.
+ */
+export function useLookups(companyId?: string, include: LookupField[] = ALL_FIELDS) {
   const [jobs, setJobs] = useState<LookupItem[]>([]);
   const [materials, setMaterials] = useState<LookupItem[]>([]);
   const [haulers, setHaulers] = useState<LookupItem[]>([]);
@@ -22,19 +30,22 @@ export function useLookups(companyId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  const includeKey = include.join(",");
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
     const params = companyId ? { companyId } : undefined;
+    const want = new Set(includeKey.split(",") as LookupField[]);
 
     Promise.all([
-      lookupsApi.getJobs(params),
-      lookupsApi.getMaterials(params),
-      lookupsApi.getHaulers(params),
-      lookupsApi.getTruckTypes(params),
-      lookupsApi.getOurEntities(),
+      want.has("jobs") ? lookupsApi.getJobs(params) : Promise.resolve<LookupItem[]>([]),
+      want.has("materials") ? lookupsApi.getMaterials(params) : Promise.resolve<LookupItem[]>([]),
+      want.has("haulers") ? lookupsApi.getHaulers(params) : Promise.resolve<LookupItem[]>([]),
+      want.has("truckTypes") ? lookupsApi.getTruckTypes(params) : Promise.resolve<LookupItem[]>([]),
+      want.has("ourEntities") ? lookupsApi.getOurEntities() : Promise.resolve<LookupItem[]>([]),
     ])
       .then(([j, m, h, t, e]) => {
         if (!cancelled) {
@@ -55,7 +66,7 @@ export function useLookups(companyId?: string) {
     return () => {
       cancelled = true;
     };
-  }, [companyId]);
+  }, [companyId, includeKey]);
 
   const filterOptions: FilterOptions = {
     jobs: [{ value: "all", label: "All" }, ...toOptions(jobs)],

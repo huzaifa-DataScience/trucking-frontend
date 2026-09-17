@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { SkeletonCardGrid } from "@/components/ui/Skeleton";
+import { Skeleton, SkeletonCardGrid } from "@/components/ui/Skeleton";
 import { RestrictedState } from "@/components/ui/RestrictedState";
 import { useBiddingAccess } from "@/hooks/useBiddingAccess";
 import { useBiddingLookups } from "@/hooks/useBiddingLookups";
@@ -178,7 +178,19 @@ export function MyPlateDashboard() {
         </div>
       ) : null}
 
-      {counts ? (
+      {loading && !plate ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-ink/[0.08] bg-surface px-4 py-3"
+            >
+              <Skeleton className="h-3 w-12" />
+              <Skeleton className="mt-2 h-7 w-10" />
+            </div>
+          ))}
+        </div>
+      ) : counts ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {(
             [
@@ -222,7 +234,16 @@ export function MyPlateDashboard() {
                 : ""}
             </Link>
           </div>
-          {(messages?.items?.length ?? 0) === 0 ? (
+          {loading && !plate ? (
+            <div className="flex flex-col gap-1.5">
+              {Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="px-2.5 py-2">
+                  <Skeleton className="h-3.5 w-1/3" />
+                  <Skeleton className="mt-2 h-3 w-2/3" />
+                </div>
+              ))}
+            </div>
+          ) : (messages?.items?.length ?? 0) === 0 ? (
             <p className="text-sm text-ink/45">No recent messages.</p>
           ) : (
             <ul className="flex flex-col gap-1.5">
@@ -255,11 +276,22 @@ export function MyPlateDashboard() {
         <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4">
           <div className="mb-3 flex items-baseline justify-between gap-2">
             <h2 className="text-sm font-semibold text-ink">Notifications</h2>
-            <span className="text-xs text-ink/40">
-              {notifications.length} item{notifications.length === 1 ? "" : "s"}
-            </span>
+            {loading && !plate ? null : (
+              <span className="text-xs text-ink/40">
+                {notifications.length} item{notifications.length === 1 ? "" : "s"}
+              </span>
+            )}
           </div>
-          {notifications.length === 0 ? (
+          {loading && !plate ? (
+            <div className="flex flex-col gap-1.5">
+              {Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="px-2.5 py-2">
+                  <Skeleton className="h-3.5 w-1/3" />
+                  <Skeleton className="mt-2 h-3 w-2/3" />
+                </div>
+              ))}
+            </div>
+          ) : notifications.length === 0 ? (
             <p className="text-sm text-ink/45">No alerts right now.</p>
           ) : (
             <ul className="flex flex-col gap-1.5">

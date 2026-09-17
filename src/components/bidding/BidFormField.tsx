@@ -2,9 +2,25 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-ink/10 bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink/30 focus:border-brand focus:ring-2 focus:ring-brand/20";
+const selectClass = `${inputClass} pr-9`;
 
 const tableNumberClass =
   "w-full rounded-lg border border-ink/10 px-2 py-1 text-right font-mono text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand/20";
+
+function SelectChevron() {
+  return (
+    <svg
+      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function formatNumberDisplay(value: number | undefined, allowEmpty: boolean): string {
   if (value == null || Number.isNaN(value)) return allowEmpty ? "" : "0";
@@ -132,18 +148,21 @@ export function BidSelect({
   disabled?: boolean;
 }) {
   return (
-    <select
-      id={id}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-      className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-50`}
-    >
+    <div className="relative">
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className={`${selectClass} appearance-none disabled:cursor-not-allowed disabled:opacity-50`}
+      >
       {options.map((o) => (
         <option key={o.value} value={o.value}>
           {o.label}
         </option>
       ))}
-    </select>
+      </select>
+      <SelectChevron />
+    </div>
   );
 }
