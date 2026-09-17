@@ -21,7 +21,13 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
 
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const { jobs: allJobs, materials: allMaterials } = useLookups(companyId ?? undefined);
+  // Search bar only ever reads jobs/materials — skip haulers/truckTypes/ourEntities,
+  // which every other page load was fetching unused (competing with real requests
+  // like the bid list for the same limited DB connections).
+  const { jobs: allJobs, materials: allMaterials } = useLookups(companyId ?? undefined, [
+    "jobs",
+    "materials",
+  ]);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ApiTicketRow[]>([]);

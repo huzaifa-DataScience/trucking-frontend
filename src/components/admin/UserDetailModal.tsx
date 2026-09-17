@@ -18,6 +18,21 @@ interface UserDetailModalProps {
   onSave: (id: number, role: UserRole, status: UserStatus) => Promise<void>;
 }
 
+function SelectChevron() {
+  return (
+    <svg
+      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function UserDetailModal({
   user,
   isOpen,
@@ -98,50 +113,48 @@ export function UserDetailModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-xl border border-stone-200 bg-white shadow-xl dark:border-stone-700 dark:bg-stone-900"
+        className="w-full max-w-lg rounded-2xl border border-ink/[0.08] bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-stone-200 px-6 py-4 dark:border-stone-700">
-          <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">
-            User Details
-          </h2>
+        <div className="flex items-center justify-between border-b border-ink/[0.08] px-6 py-4">
+          <h2 className="text-lg font-semibold text-ink">User Details</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-2 py-1 text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+            aria-label="Close"
+            className="rounded-lg p-1.5 text-ink/40 transition hover:bg-ink/[0.06] hover:text-ink"
           >
-            ×
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
         <div className="px-6 py-4">
           <dl className="space-y-4">
             <div>
-              <dt className="text-xs font-medium text-stone-500 dark:text-stone-400">
-                Email
-              </dt>
-              <dd className="mt-1 text-sm text-stone-900 dark:text-stone-100">
-                {user.email}
-              </dd>
+              <dt className="text-xs font-medium text-ink/45">Email</dt>
+              <dd className="mt-1 text-sm text-ink">{user.email}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-stone-500 dark:text-stone-400">
-                Role
-              </dt>
+              <dt className="text-xs font-medium text-ink/45">Role</dt>
               <dd className="mt-1">
-                <select
-                  value={role}
-                  onChange={(e) =>
-                    setRole(normalizeAppRole(e.target.value) as AppRoleId)
-                  }
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-800 dark:text-stone-100"
-                >
-                  {roleOptions.map((id) => (
-                    <option key={id} value={id}>
-                      {APP_ROLE_LABELS[id]}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1.5 text-[11px] text-stone-500">
+                <div className="relative">
+                  <select
+                    value={role}
+                    onChange={(e) =>
+                      setRole(normalizeAppRole(e.target.value) as AppRoleId)
+                    }
+                    className="w-full appearance-none rounded-lg border border-ink/10 bg-surface px-3 py-2 pr-9 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+                  >
+                    {roleOptions.map((id) => (
+                      <option key={id} value={id}>
+                        {APP_ROLE_LABELS[id]}
+                      </option>
+                    ))}
+                  </select>
+                  <SelectChevron />
+                </div>
+                <p className="mt-1.5 text-[11px] text-ink/40">
                   Assigning a role picks their bidding home queues (clerk /
                   captain / AE / PM / ops). No separate team or dashboard
                   picker on the user.
@@ -149,31 +162,30 @@ export function UserDetailModal({
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-stone-500 dark:text-stone-400">
-                Status
-              </dt>
+              <dt className="text-xs font-medium text-ink/45">Status</dt>
               <dd className="mt-1">
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as UserStatus)}
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-800 dark:text-stone-100"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="rejected">Rejected</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as UserStatus)}
+                    className="w-full appearance-none rounded-lg border border-ink/10 bg-surface px-3 py-2 pr-9 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                  <SelectChevron />
+                </div>
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-stone-500 dark:text-stone-400">
-                Permissions
-              </dt>
+              <dt className="text-xs font-medium text-ink/45">Permissions</dt>
               <dd className="mt-1">
                 {permissionsLoading ? (
-                  <p className="text-sm text-stone-500">Loading…</p>
+                  <p className="text-sm text-ink/45">Loading…</p>
                 ) : permissions.length === 0 ? (
-                  <p className="text-sm text-stone-500">
+                  <p className="text-sm text-ink/45">
                     None on this user (from role matrix after next login).
                   </p>
                 ) : (
@@ -181,44 +193,30 @@ export function UserDetailModal({
                     {permissions.map((p) => (
                       <li
                         key={p}
-                        className="rounded-md bg-stone-100 px-2 py-0.5 font-mono text-[11px] text-stone-700 dark:bg-stone-800 dark:text-stone-300"
+                        className="rounded-md bg-ink/[0.05] px-2 py-0.5 font-mono text-[11px] text-ink/70"
                       >
                         {p}
                       </li>
                     ))}
                   </ul>
                 )}
-                <p className="mt-1.5 text-[11px] text-stone-500">
-                  Read-only. Change the role to change permissions and the
-                  bidding home plate (`GET /bids/my-plate`). Do not PATCH
-                  permissions per user, and do not add a second dashboard
-                  picker here.
-                </p>
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-stone-500 dark:text-stone-400">
-                Created
-              </dt>
-              <dd className="mt-1 text-sm text-stone-900 dark:text-stone-100">
-                {formatDate(user.createdAt)}
-              </dd>
+              <dt className="text-xs font-medium text-ink/45">Created</dt>
+              <dd className="mt-1 text-sm text-ink">{formatDate(user.createdAt)}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-stone-500 dark:text-stone-400">
-                Last Login
-              </dt>
-              <dd className="mt-1 text-sm text-stone-900 dark:text-stone-100">
-                {formatDate(user.lastLoginAt)}
-              </dd>
+              <dt className="text-xs font-medium text-ink/45">Last Login</dt>
+              <dd className="mt-1 text-sm text-ink">{formatDate(user.lastLoginAt)}</dd>
             </div>
           </dl>
         </div>
-        <div className="flex justify-end gap-3 border-t border-stone-200 px-6 py-4 dark:border-stone-700">
+        <div className="flex justify-end gap-3 border-t border-ink/[0.08] px-6 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 dark:border-stone-600 dark:text-stone-300 dark:hover:bg-stone-800"
+            className="rounded-lg border border-ink/15 bg-surface px-4 py-2 text-sm font-semibold text-ink/70 transition hover:bg-ink/[0.04]"
           >
             Cancel
           </button>
@@ -226,7 +224,7 @@ export function UserDetailModal({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-secondary disabled:opacity-50"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-secondary disabled:pointer-events-none disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save Changes"}
           </button>

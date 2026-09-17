@@ -48,7 +48,7 @@ export function BidLostStage() {
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
+      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Date</span>
           <input
@@ -137,7 +137,7 @@ export function BidLostStage() {
           />
           <span className="text-sm text-ink/80">Possible rebid</span>
         </label>
-        <label className="flex flex-col gap-1 sm:col-span-2">
+        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
           <span className={labelClass}>Notes</span>
           <textarea
             className={`${inputClass} min-h-[72px]`}

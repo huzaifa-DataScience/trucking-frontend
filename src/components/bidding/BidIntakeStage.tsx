@@ -8,7 +8,9 @@ import * as biddingPartiesApi from "@/lib/api/endpoints/biddingParties";
 import type { BidPartyLookup } from "@/lib/api/endpoints/biddingParties";
 import { PartyNameCombobox } from "@/components/bidding/PartyNameCombobox";
 import { BidAdditionalDetailsSection } from "@/components/bidding/BidAdditionalDetailsSection";
+import { BidAttachmentsSection } from "@/components/bidding/BidAttachmentsSection";
 import { TimePicker } from "@/components/ui/TimePicker";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
@@ -36,6 +38,21 @@ function TrashIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function SelectChevron() {
+  return (
+    <svg
+      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -147,7 +164,7 @@ function contactsForCompany(
 /** Stage 1 — Intake (FRONTEND_INTAKE.md). Bid clerk. Incomplete OK. */
 export function BidIntakeStage() {
   const router = useRouter();
-  const { setBidHeader } = useBidSheet();
+  const { setBidHeader, uploadAttachment, deleteAttachment } = useBidSheet();
   const confirmDialog = useConfirmDialog();
   const {
     bid,
@@ -161,6 +178,7 @@ export function BidIntakeStage() {
     inputClass,
     labelClass,
   } = useProcessDraft();
+  const selectClass = `${inputClass} appearance-none pr-9`;
   const [meta, setMeta] = useState<ProcessMeta | null>(null);
   const [dupHits, setDupHits] = useState<BidListItem[]>([]);
   const [dupSearching, setDupSearching] = useState(false);
@@ -430,9 +448,9 @@ export function BidIntakeStage() {
     const p = party(draft[key] as ProcessParty);
     const isMechanical = key === "mechanicalEngineer";
     return (
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
-        <h3 className="sm:col-span-2 text-sm font-semibold text-ink">{title}</h3>
-        <p className="sm:col-span-2 -mt-1 text-xs text-ink/45">
+      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+        <h3 className="col-span-full text-sm font-semibold text-ink">{title}</h3>
+        <p className="col-span-full -mt-1 text-xs text-ink/45">
           {isMechanical
             ? "Pick from saved list — also fills the first invitation. Or type a new name."
             : "Pick from saved list, or type a new name."}
@@ -549,22 +567,25 @@ export function BidIntakeStage() {
         ))}
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Preferred contact</span>
-          <select
-            className={inputClass}
-            disabled={!editable}
-            value={p.preferredContact ?? ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              setField(key, {
-                ...p,
-                preferredContact: v === "email" || v === "phone" ? v : null,
-              });
-            }}
-          >
-            <option value="">—</option>
-            <option value="email">Email</option>
-            <option value="phone">Phone</option>
-          </select>
+          <div className="relative">
+            <select
+              className={selectClass}
+              disabled={!editable}
+              value={p.preferredContact ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                setField(key, {
+                  ...p,
+                  preferredContact: v === "email" || v === "phone" ? v : null,
+                });
+              }}
+            >
+              <option value="">—</option>
+              <option value="email">Email</option>
+              <option value="phone">Phone</option>
+            </select>
+            <SelectChevron />
+          </div>
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Preferred value</span>
@@ -647,7 +668,7 @@ export function BidIntakeStage() {
         </div>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Bid / estimate #</span>
           <input
@@ -659,26 +680,29 @@ export function BidIntakeStage() {
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Bid type (mandatory)</span>
-          <select
-            className={inputClass}
-            disabled={!editable}
-            value={draft.bidKind ?? ""}
-            onChange={(e) =>
-              setField(
-                "bidKind",
-                (e.target.value || null) as typeof draft.bidKind
-              )
-            }
-          >
-            <option value="">—</option>
-            {bidKinds.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              className={selectClass}
+              disabled={!editable}
+              value={draft.bidKind ?? ""}
+              onChange={(e) =>
+                setField(
+                  "bidKind",
+                  (e.target.value || null) as typeof draft.bidKind
+                )
+              }
+            >
+              <option value="">—</option>
+              {bidKinds.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <SelectChevron />
+          </div>
         </label>
-        <label className="flex flex-col gap-1 sm:col-span-2">
+        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
           <span className={labelClass}>
             Bid name (architect name on drawings)
           </span>
@@ -720,12 +744,12 @@ export function BidIntakeStage() {
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Due date</span>
-          <input
-            type="date"
+          <DatePicker
+            ariaLabel="Due date"
             className={inputClass}
             disabled={!editable}
             value={draft.dueDate ?? ""}
-            onChange={(e) => setField("dueDate", e.target.value || null)}
+            onChange={(v) => setField("dueDate", v || null)}
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -739,60 +763,69 @@ export function BidIntakeStage() {
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Work type</span>
-          <select
-            className={inputClass}
-            disabled={!editable}
-            value={draft.workType ?? ""}
-            onChange={(e) =>
-              setField(
-                "workType",
-                (e.target.value || null) as typeof draft.workType
-              )
-            }
-          >
-            <option value="">—</option>
-            {workTypes.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              className={selectClass}
+              disabled={!editable}
+              value={draft.workType ?? ""}
+              onChange={(e) =>
+                setField(
+                  "workType",
+                  (e.target.value || null) as typeof draft.workType
+                )
+              }
+            >
+              <option value="">—</option>
+              {workTypes.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <SelectChevron />
+          </div>
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Building type</span>
-          <select
-            className={inputClass}
-            disabled={!editable}
-            value={draft.constructionType ?? ""}
-            onChange={(e) =>
-              setField("constructionType", e.target.value || null)
-            }
-          >
-            <option value="">—</option>
-            {buildingTypes.map((o) => (
-              <option key={o.id ?? o.name} value={o.name}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              className={selectClass}
+              disabled={!editable}
+              value={draft.constructionType ?? ""}
+              onChange={(e) =>
+                setField("constructionType", e.target.value || null)
+              }
+            >
+              <option value="">—</option>
+              {buildingTypes.map((o) => (
+                <option key={o.id ?? o.name} value={o.name}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+            <SelectChevron />
+          </div>
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Project type</span>
-          <select
-            className={inputClass}
-            disabled={!editable}
-            value={draft.constructionSubtype ?? ""}
-            onChange={(e) =>
-              setField("constructionSubtype", e.target.value || null)
-            }
-          >
-            <option value="">—</option>
-            {projectTypes.map((o) => (
-              <option key={o.id ?? o.name} value={o.name}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              className={selectClass}
+              disabled={!editable}
+              value={draft.constructionSubtype ?? ""}
+              onChange={(e) =>
+                setField("constructionSubtype", e.target.value || null)
+              }
+            >
+              <option value="">—</option>
+              {projectTypes.map((o) => (
+                <option key={o.id ?? o.name} value={o.name}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+            <SelectChevron />
+          </div>
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Impacted SF</span>
@@ -852,12 +885,12 @@ export function BidIntakeStage() {
         </label>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
-          <h3 className="sm:col-span-2 text-sm font-semibold text-ink">
+      <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(420px,1fr))]">
+        <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+          <h3 className="col-span-full text-sm font-semibold text-ink">
             Project address
           </h3>
-          <p className="sm:col-span-2 -mt-1 text-xs text-ink/45">
+          <p className="col-span-full -mt-1 text-xs text-ink/45">
             Paste the full US line in Address line 1 — backend fills city / state /
             ZIP when those are empty. Do not clear line 1.
           </p>
@@ -872,7 +905,7 @@ export function BidIntakeStage() {
           ).map(([k, label]) => (
             <label
               key={k}
-              className={`flex flex-col gap-1 ${k === "line1" ? "sm:col-span-2" : ""}`}
+              className={`flex flex-col gap-1 ${k === "line1" ? "col-span-full max-w-2xl" : ""}`}
             >
               <span className={labelClass}>{label}</span>
               <input
@@ -887,7 +920,7 @@ export function BidIntakeStage() {
         {renderPartySection("owner", "Owner", "owner")}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(420px,1fr))]">
         {renderPartySection("architect", "Architect", "architect")}
         {renderPartySection("mechanicalEngineer", "Mechanical", "mechanical")}
       </div>
@@ -926,7 +959,7 @@ export function BidIntakeStage() {
             return (
               <div
                 key={inv.id ?? index}
-                className="grid gap-3 rounded-xl border border-ink/[0.06] bg-canvas/30 p-3 sm:grid-cols-2"
+                className="grid gap-3 rounded-xl border border-ink/[0.06] bg-canvas/30 p-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]"
               >
                 <PartyNameCombobox
                   label="Company"
@@ -967,14 +1000,14 @@ export function BidIntakeStage() {
                 />
                 <label className="flex flex-col gap-1">
                   <span className={labelClass}>Received</span>
-                  <input
-                    type="date"
+                  <DatePicker
+                    ariaLabel="Received"
                     className={inputClass}
                     disabled={!editable}
                     value={inv.receivedAt?.slice(0, 10) ?? ""}
-                    onChange={(e) =>
+                    onChange={(v) =>
                       patchInvitation(index, {
-                        receivedAt: e.target.value || null,
+                        receivedAt: v || null,
                       })
                     }
                   />
@@ -1056,25 +1089,28 @@ export function BidIntakeStage() {
                 </label>
                 <label className="flex flex-col gap-1">
                   <span className={labelClass}>Preferred contact</span>
-                  <select
-                    className={inputClass}
-                    disabled={!editable}
-                    value={inv.contact?.preferredContact ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      patchInvitation(index, {
-                        contact: {
-                          ...(inv.contact ?? {}),
-                          preferredContact:
-                            v === "email" || v === "phone" ? v : null,
-                        },
-                      });
-                    }}
-                  >
-                    <option value="">—</option>
-                    <option value="email">Email</option>
-                    <option value="phone">Phone</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      className={selectClass}
+                      disabled={!editable}
+                      value={inv.contact?.preferredContact ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        patchInvitation(index, {
+                          contact: {
+                            ...(inv.contact ?? {}),
+                            preferredContact:
+                              v === "email" || v === "phone" ? v : null,
+                          },
+                        });
+                      }}
+                    >
+                      <option value="">—</option>
+                      <option value="email">Email</option>
+                      <option value="phone">Phone</option>
+                    </select>
+                    <SelectChevron />
+                  </div>
                 </label>
                 <label className="flex flex-col gap-1">
                   <span className={labelClass}>Preferred value</span>
@@ -1086,7 +1122,7 @@ export function BidIntakeStage() {
                     placeholder="Matches email or phone"
                   />
                 </label>
-                <label className="flex flex-col gap-1 sm:col-span-2">
+                <label className="flex max-w-2xl flex-col gap-1 col-span-full">
                   <span className={labelClass}>
                     Invitation email (paste full)
                   </span>
@@ -1103,7 +1139,7 @@ export function BidIntakeStage() {
                     }
                   />
                 </label>
-                <label className="flex flex-col gap-1 sm:col-span-2">
+                <label className="flex max-w-2xl flex-col gap-1 col-span-full">
                   <span className={labelClass}>Clerk notes</span>
                   <textarea
                     className={`${inputClass} min-h-[3.5rem] resize-y`}
@@ -1117,7 +1153,7 @@ export function BidIntakeStage() {
                     }
                   />
                 </label>
-                <label className="flex flex-col gap-1 sm:col-span-2">
+                <label className="flex max-w-2xl flex-col gap-1 col-span-full">
                   <span className={labelClass}>Inviter drawing link</span>
                   <input
                     className={inputClass}
@@ -1140,7 +1176,7 @@ export function BidIntakeStage() {
                   />
                 </label>
 
-                <div className="sm:col-span-2 flex flex-col gap-2 rounded-lg border border-ink/[0.05] bg-surface/60 p-2.5">
+                <div className="col-span-full flex flex-col gap-2 rounded-lg border border-ink/[0.05] bg-surface/60 p-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-ink/60">
                       Addenda from this inviter
@@ -1189,17 +1225,17 @@ export function BidIntakeStage() {
                         </label>
                         <label className="flex flex-col gap-1">
                           <span className={labelClass}>Received</span>
-                          <input
-                            type="date"
+                          <DatePicker
+                            ariaLabel="Received"
                             className={inputClass}
                             disabled={!editable}
                             value={ad.receivedAt?.slice(0, 10) ?? ""}
-                            onChange={(e) => {
+                            onChange={(v) => {
                               const next = addenda.map((row, i) =>
                                 i === adIndex
                                   ? {
                                       ...row,
-                                      receivedAt: e.target.value || null,
+                                      receivedAt: v || null,
                                     }
                                   : row
                               );
@@ -1263,7 +1299,7 @@ export function BidIntakeStage() {
                     type="button"
                     aria-label="Remove invitation"
                     title="Remove invitation"
-                    className="flex shrink-0 items-center justify-self-end rounded-md p-1.5 text-danger/70 hover:text-danger sm:col-span-2"
+                    className="flex shrink-0 items-center justify-self-end rounded-md p-1.5 text-danger/70 hover:text-danger col-span-full"
                     onClick={() => {
                       void (async () => {
                         const ok = await confirmDialog({
@@ -1485,21 +1521,24 @@ export function BidIntakeStage() {
                     className="border-t border-ink/[0.06]"
                   >
                     <td className="px-1.5 py-1.5">
-                      <select
-                        className={inputClass}
-                        disabled={!editable}
-                        value={t.role ?? ""}
-                        onChange={(e) =>
-                          patchTier(index, { role: e.target.value || null })
-                        }
-                      >
-                        <option value="">—</option>
-                        {tierRoles.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <select
+                          className={selectClass}
+                          disabled={!editable}
+                          value={t.role ?? ""}
+                          onChange={(e) =>
+                            patchTier(index, { role: e.target.value || null })
+                          }
+                        >
+                          <option value="">—</option>
+                          {tierRoles.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                        <SelectChevron />
+                      </div>
                     </td>
                     <td className="px-1.5 py-1.5">
                       <input
@@ -1514,29 +1553,32 @@ export function BidIntakeStage() {
                       />
                     </td>
                     <td className="px-1.5 py-1.5">
-                      <select
-                        className={inputClass}
-                        disabled={!editable}
-                        value={
-                          t.hasTheJob == null
-                            ? ""
-                            : t.hasTheJob
-                              ? "yes"
-                              : "no"
-                        }
-                        onChange={(e) =>
-                          patchTier(index, {
-                            hasTheJob:
-                              e.target.value === ""
-                                ? null
-                                : e.target.value === "yes",
-                          })
-                        }
-                      >
-                        <option value="">?</option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
+                      <div className="relative">
+                        <select
+                          className={selectClass}
+                          disabled={!editable}
+                          value={
+                            t.hasTheJob == null
+                              ? ""
+                              : t.hasTheJob
+                                ? "yes"
+                                : "no"
+                          }
+                          onChange={(e) =>
+                            patchTier(index, {
+                              hasTheJob:
+                                e.target.value === ""
+                                  ? null
+                                  : e.target.value === "yes",
+                            })
+                          }
+                        >
+                          <option value="">?</option>
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                        <SelectChevron />
+                      </div>
                     </td>
                     <td className="px-1.5 py-1.5">
                       <input
@@ -1743,12 +1785,13 @@ export function BidIntakeStage() {
         disabled={!editable}
       />
 
-      <p className="text-xs text-ink/45">
-        Docs: upload invitation / drawings / specs / addenda as bid attachments
-        (`label=invitation|drawings|specifications|addenda`), then put ids on
-        the invitation row. GCs / mechanicals above stay light — Post-Bid for
-        follow-up.
-      </p>
+      <BidAttachmentsSection
+        attachments={bid.attachments ?? []}
+        isEditable={editable}
+        uploading={saving}
+        onUpload={async (file, label) => uploadAttachment(file, label)}
+        onDelete={async (id) => deleteAttachment(id)}
+      />
     </div>
   );
 }
