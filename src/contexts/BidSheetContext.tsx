@@ -465,6 +465,7 @@ export function BidSheetProvider({
                 }
               : prev
           );
+          setDirty(false);
         } catch (e) {
           setError(getApiErrorMessage(e, "Failed to link job"));
           return;
@@ -487,7 +488,11 @@ export function BidSheetProvider({
           setError(getApiErrorMessage(e, "Failed to prefill company info"));
         }
       }
-      scheduleAutoSave();
+      if (options?.prefillCompany && jobId) {
+        scheduleAutoSave();
+      } else {
+        setDirty(false);
+      }
     },
     [bidId, scheduleAutoSave]
   );
@@ -608,6 +613,7 @@ export function BidSheetProvider({
       });
       updated.systems = normalizeSystems(updated.systems);
       setBid((prev) => (prev ? { ...prev, ...updated } : updated));
+      setDirty(false);
     } catch (e) {
       setError(getApiErrorMessage(e, "Failed to save cover sheet"));
       throw e;

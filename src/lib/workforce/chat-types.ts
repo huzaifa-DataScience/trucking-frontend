@@ -83,6 +83,8 @@ export interface SendMessageResponse {
 export interface CreateConversationBody {
   title: string;
   type?: ConversationType;
+  /** Connecteam user ids to add as members. Needs write-through enabled to create a real Connecteam group. */
+  assignedUserIds?: number[];
 }
 
 export interface CreateConversationResponse {

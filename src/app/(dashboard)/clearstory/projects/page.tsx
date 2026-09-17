@@ -40,6 +40,7 @@ import {
 } from "@/lib/filters/types";
 import { PROJECTS_SAVED_VIEWS_KEY, PROJECT_FILTER_FIELDS } from "@/lib/clearstory/projectFilters";
 import { newId } from "@/lib/bidding/newId";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Match COR tables: the table scrolls (X+Y) inside a bounded region.
 const TABLE_SCROLL =
@@ -152,6 +153,7 @@ function collectProjectColumnKeys(rows: ClearstoryProjectRowAllColumns[]): strin
 }
 
 export default function ClearstoryProjectsPage() {
+  const { user } = useAuth();
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -187,9 +189,12 @@ export default function ClearstoryProjectsPage() {
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [activeConditionKeys, setActiveConditionKeys] = useState<string[]>([]);
 
+  /** Scoped per-user so switching accounts on the same browser doesn't leak someone else's saved views. */
+  const savedViewsKey = user ? `${PROJECTS_SAVED_VIEWS_KEY}:${user.id}` : null;
+
   useEffect(() => {
-    setSavedViews(loadSavedViews(PROJECTS_SAVED_VIEWS_KEY));
-  }, []);
+    setSavedViews(savedViewsKey ? loadSavedViews(savedViewsKey) : []);
+  }, [savedViewsKey]);
 
   const applyFilterGroups = (groups: FilterGroup[]) => {
     setActiveConditionKeys([]);
@@ -201,7 +206,7 @@ export default function ClearstoryProjectsPage() {
     const view: SavedView = { id: newId(), name, groups };
     const next = [...savedViews, view];
     setSavedViews(next);
-    saveSavedViews(PROJECTS_SAVED_VIEWS_KEY, next);
+    if (savedViewsKey) saveSavedViews(savedViewsKey, next);
     setFilterOpen(false);
     // Saving only creates the chips — it does not apply the filter to the table.
   };
@@ -230,7 +235,7 @@ export default function ClearstoryProjectsPage() {
   const removeSavedView = (id: string) => {
     const next = savedViews.filter((v) => v.id !== id);
     setSavedViews(next);
-    saveSavedViews(PROJECTS_SAVED_VIEWS_KEY, next);
+    if (savedViewsKey) saveSavedViews(savedViewsKey, next);
     setActiveConditionKeys((prev) => {
       const nextKeys = prev.filter((k) => !k.startsWith(`${id}::`));
       if (nextKeys.length !== prev.length) setFilterGroups(groupsForActiveKeys(nextKeys, next));

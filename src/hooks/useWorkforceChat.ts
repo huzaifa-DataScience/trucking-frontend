@@ -396,10 +396,14 @@ export function useWorkforceChat(
   );
 
   const createChannel = useCallback(
-    async (title: string) => {
-      const res = await connecteamApi.createConversation({ title, type: "team" });
+    async (title: string, memberIds?: number[]) => {
+      const res = await connecteamApi.createConversation({
+        title,
+        type: "team",
+        assignedUserIds: memberIds?.length ? memberIds : undefined,
+      });
       setConversations((prev) => upsertConversationInInbox(prev, res.conversation));
-      return res.conversation;
+      return res;
     },
     []
   );
