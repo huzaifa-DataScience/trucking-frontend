@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { WorkforceUserSummary } from "@/lib/workforce/types";
 import { userInitials } from "@/lib/workforce/display";
 
@@ -12,8 +13,12 @@ export function UserAvatar({
 }) {
   const initials = userInitials(user);
   const src = user?.profilePictureUrl;
+  const [imgFailed, setImgFailed] = useState(false);
+  useEffect(() => {
+    setImgFailed(false);
+  }, [src]);
 
-  if (src) {
+  if (src && !imgFailed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -23,6 +28,7 @@ export function UserAvatar({
         height={size}
         className="shrink-0 rounded-full object-cover ring-1 ring-ink/10"
         style={{ width: size, height: size }}
+        onError={() => setImgFailed(true)}
       />
     );
   }

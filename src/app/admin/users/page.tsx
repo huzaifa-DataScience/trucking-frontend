@@ -11,6 +11,9 @@ import { APP_ROLE_IDS, APP_ROLE_LABELS } from "@/lib/auth/roles";
 import { useAuth } from "@/contexts/AuthContext";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { StatusPill, type StatusTone } from "@/components/ui/StatusPill";
+import { PageHeader } from "@/components/dashboard/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 const PAGE_SIZE = 25;
 
@@ -49,6 +52,21 @@ function useUrlFilters(): [UserFilters, (filters: Partial<UserFilters>) => void]
   );
 
   return [filters, updateFilters];
+}
+
+function SelectChevron() {
+  return (
+    <svg
+      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 export default function AdminUsersPage() {
@@ -279,12 +297,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-stone-900 dark:text-stone-100">User Management</h2>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Manage users, approve signups, and control access.
-        </p>
-      </div>
+      <PageHeader title="User Management" subtitle="Manage users, approve signups, and control access." />
 
       {pendingTotal > 0 && (
         <div className="rounded-2xl border border-warning-border bg-warning-tint p-4">
@@ -337,63 +350,69 @@ export default function AdminUsersPage() {
       )}
 
       {/* Filters */}
-      <div className="sticky top-14 z-20 -mx-6 -mt-6 flex flex-wrap items-end gap-4 border-b border-stone-200/80 bg-white/95 px-6 py-4 backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
-        <div className="flex flex-wrap items-end gap-4 flex-1">
-          <label className="flex flex-col gap-1 flex-1 min-w-[200px]">
-            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Search</span>
+      <div className="sticky top-14 z-20 -mx-6 -mt-6 flex flex-wrap items-end gap-4 border-b border-ink/[0.08] bg-surface/95 px-6 py-4 backdrop-blur">
+        <div className="flex flex-1 flex-wrap items-end gap-4">
+          <label className="flex min-w-[200px] flex-1 flex-col gap-1">
+            <span className="text-xs font-medium text-ink/45">Search</span>
             <input
               type="text"
-              placeholder="Search by email..."
+              placeholder="Search by email…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className="rounded-lg border border-ink/10 bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Status</span>
-            <select
-              value={filters.status || "all"}
-              onChange={(e) => setFilters({ status: e.target.value as UserStatus | "all" })}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-            >
-              <option value="all">All</option>
-              <option value="pending">Pending</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="rejected">Rejected</option>
-            </select>
+            <span className="text-xs font-medium text-ink/45">Status</span>
+            <div className="relative">
+              <select
+                value={filters.status || "all"}
+                onChange={(e) => setFilters({ status: e.target.value as UserStatus | "all" })}
+                className="w-full appearance-none rounded-lg border border-ink/10 bg-surface px-3 py-2 pr-9 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+              >
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <SelectChevron />
+            </div>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Role</span>
-            <select
-              value={filters.role || "all"}
-              onChange={(e) => setFilters({ role: e.target.value as UserRole | "all" })}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-            >
-              <option value="all">All</option>
-              {APP_ROLE_IDS.map((id) => (
-                <option key={id} value={id}>
-                  {APP_ROLE_LABELS[id]}
-                </option>
-              ))}
-            </select>
+            <span className="text-xs font-medium text-ink/45">Role</span>
+            <div className="relative">
+              <select
+                value={filters.role || "all"}
+                onChange={(e) => setFilters({ role: e.target.value as UserRole | "all" })}
+                className="w-full appearance-none rounded-lg border border-ink/10 bg-surface px-3 py-2 pr-9 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+              >
+                <option value="all">All</option>
+                {APP_ROLE_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {APP_ROLE_LABELS[id]}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Start Date</span>
-            <input
-              type="date"
+            <span className="text-xs font-medium text-ink/45">Start Date</span>
+            <DatePicker
+              ariaLabel="Start date"
               value={filters.startDate || ""}
-              onChange={(e) => setFilters({ startDate: e.target.value || undefined })}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              onChange={(v) => setFilters({ startDate: v || undefined })}
+              className="min-h-9 rounded-lg px-3 py-2 text-sm"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-stone-500 dark:text-stone-400">End Date</span>
-            <input
-              type="date"
+            <span className="text-xs font-medium text-ink/45">End Date</span>
+            <DatePicker
+              ariaLabel="End date"
               value={filters.endDate || ""}
-              onChange={(e) => setFilters({ endDate: e.target.value || undefined })}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              onChange={(v) => setFilters({ endDate: v || undefined })}
+              className="min-h-9 rounded-lg px-3 py-2 text-sm"
             />
           </label>
           {activeFiltersCount > 0 && (
@@ -402,7 +421,7 @@ export default function AdminUsersPage() {
               onClick={() => {
                 setFilters({ status: "all", role: "all", search: undefined, startDate: undefined, endDate: undefined });
               }}
-              className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 dark:border-stone-600 dark:text-stone-300 dark:hover:bg-stone-800"
+              className="rounded-lg border border-ink/10 bg-surface px-3 py-2 text-sm font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand"
             >
               Clear Filters ({activeFiltersCount})
             </button>
@@ -412,29 +431,29 @@ export default function AdminUsersPage() {
 
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center justify-between rounded-lg border border-brand/30 bg-brand/8 px-4 py-3 dark:border-brand/40 dark:bg-brand/15">
-          <span className="text-sm font-medium text-ink dark:text-white">
-            {selectedIds.size} user(s) selected
+        <div className="flex items-center justify-between rounded-xl border border-brand/30 bg-brand/[0.06] px-4 py-3">
+          <span className="text-sm font-semibold text-ink">
+            {selectedIds.size} user{selectedIds.size === 1 ? "" : "s"} selected
           </span>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setConfirmAction({ type: "bulk-approve", userIds: Array.from(selectedIds) })}
-              className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+              className="rounded-lg bg-success px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-success/90"
             >
               Approve Selected
             </button>
             <button
               type="button"
               onClick={() => setConfirmAction({ type: "bulk-reject", userIds: Array.from(selectedIds) })}
-              className="rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-700"
+              className="rounded-lg border border-ink/15 bg-surface px-3 py-1.5 text-sm font-semibold text-ink/70 transition hover:bg-ink/[0.04]"
             >
               Reject Selected
             </button>
             <button
               type="button"
               onClick={() => setConfirmAction({ type: "bulk-delete", userIds: Array.from(selectedIds) })}
-              className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+              className="rounded-lg bg-danger px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-danger/90"
             >
               Delete Selected
             </button>
@@ -443,7 +462,7 @@ export default function AdminUsersPage() {
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
+        <div className="rounded-xl border border-danger-border bg-danger-tint px-4 py-3 text-sm text-danger">
           {error.message}
         </div>
       )}
@@ -451,44 +470,41 @@ export default function AdminUsersPage() {
       {loading && <TableSkeleton rows={8} />}
 
       {!loading && users.length === 0 && (
-        <div className="rounded-lg border border-stone-200 bg-white px-6 py-12 text-center dark:border-stone-800 dark:bg-stone-900/50">
-          <p className="text-stone-600 dark:text-stone-400">No users found</p>
-          <p className="mt-1 text-sm text-stone-500 dark:text-stone-500">Try adjusting your filters</p>
-        </div>
+        <EmptyState message="No users found — try adjusting your filters." />
       )}
 
       {!loading && users.length > 0 && (
         <>
-          <div className="rounded-xl border border-stone-200/80 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900/50">
+          <div className="rounded-xl border border-ink/[0.08] bg-surface shadow-[0_1px_2px_rgba(1,1,1,0.04)]">
             <div className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0">
               <div className="inline-block min-w-full align-middle">
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
-                      <th className="sticky top-0 z-10 whitespace-nowrap bg-stone-50 px-3 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400">
+                    <tr className="border-b border-ink/[0.08] bg-ink/[0.02] text-xs font-semibold text-ink/50">
+                      <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
                         <input
                           type="checkbox"
                           checked={selectedIds.size === users.length && users.length > 0}
                           onChange={toggleSelectAll}
-                          className="rounded border-stone-300"
+                          className="rounded border-ink/20 accent-brand"
                         />
                       </th>
-                      <th className="sticky top-0 z-10 whitespace-nowrap bg-stone-50 px-3 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400">
+                      <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
                         Email
                       </th>
-                      <th className="sticky top-0 z-10 whitespace-nowrap bg-stone-50 px-3 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400">
+                      <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
                         Role
                       </th>
-                      <th className="sticky top-0 z-10 whitespace-nowrap bg-stone-50 px-3 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400">
+                      <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
                         Status
                       </th>
-                      <th className="sticky top-0 z-10 whitespace-nowrap bg-stone-50 px-3 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400">
+                      <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
                         Created
                       </th>
-                      <th className="sticky top-0 z-10 whitespace-nowrap bg-stone-50 px-3 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400">
+                      <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
                         Last Login
                       </th>
-                      <th className="sticky top-0 z-10 whitespace-nowrap bg-stone-50 px-3 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400">
+                      <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
                         Actions
                       </th>
                     </tr>
@@ -499,8 +515,8 @@ export default function AdminUsersPage() {
                       return (
                         <tr
                           key={user.id}
-                          className={`border-b border-stone-100 hover:bg-stone-50 dark:border-stone-800 dark:hover:bg-stone-800/50 ${
-                            selectedIds.has(user.id) ? "bg-blue-50/50 dark:bg-blue-950/20" : ""
+                          className={`border-b border-ink/[0.05] transition hover:bg-brand/[0.03] ${
+                            selectedIds.has(user.id) ? "bg-brand/[0.05]" : ""
                           }`}
                         >
                           <td className="px-3 py-2">
@@ -508,32 +524,32 @@ export default function AdminUsersPage() {
                               type="checkbox"
                               checked={selectedIds.has(user.id)}
                               onChange={() => toggleSelect(user.id)}
-                              className="rounded border-stone-300"
+                              className="rounded border-ink/20 accent-brand"
                             />
                           </td>
                           <td className="px-3 py-2">
                             <button
                               type="button"
                               onClick={() => setDetailUser(user)}
-                              className="font-medium text-brand hover:underline dark:text-brand"
+                              className="font-medium text-brand hover:underline"
                             >
                               {user.email}
                             </button>
                           </td>
                           <td className="px-3 py-2">{getRoleBadge(user.role)}</td>
                           <td className="px-3 py-2">{getStatusBadge(user.status)}</td>
-                          <td className="px-3 py-2 text-stone-600 dark:text-stone-400">{formatDate(user.createdAt)}</td>
-                          <td className="px-3 py-2 text-stone-600 dark:text-stone-400">
+                          <td className="px-3 py-2 text-ink/60">{formatDate(user.createdAt)}</td>
+                          <td className="px-3 py-2 text-ink/60">
                             {user.lastLoginAt ? formatDate(user.lastLoginAt) : "Never"}
                           </td>
                           <td className="px-3 py-2">
-                            <div className="flex gap-1">
+                            <div className="flex gap-1.5">
                               {user.status === "pending" && (
                                 <>
                                   <button
                                     type="button"
                                     onClick={() => handleApprove(user.id)}
-                                    className="rounded bg-green-600 px-2 py-1 text-xs font-medium text-white hover:bg-green-700"
+                                    className="rounded-lg bg-success px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-success/90"
                                   >
                                     Approve
                                   </button>
@@ -542,7 +558,7 @@ export default function AdminUsersPage() {
                                     onClick={() =>
                                       setConfirmAction({ type: "reject", userIds: [user.id], userEmail: user.email })
                                     }
-                                    className="rounded bg-orange-600 px-2 py-1 text-xs font-medium text-white hover:bg-orange-700"
+                                    className="rounded-lg border border-ink/15 bg-surface px-2.5 py-1 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04]"
                                   >
                                     Reject
                                   </button>
@@ -553,7 +569,7 @@ export default function AdminUsersPage() {
                                   <button
                                     type="button"
                                     onClick={() => setDetailUser(user)}
-                                    className="rounded border border-stone-300 px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 dark:border-stone-600 dark:text-stone-300"
+                                    className="rounded-lg border border-ink/15 bg-surface px-2.5 py-1 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04]"
                                   >
                                     Edit
                                   </button>
@@ -563,7 +579,7 @@ export default function AdminUsersPage() {
                                       onClick={() =>
                                         handleUpdate(user.id, user.role, "inactive").catch(() => {})
                                       }
-                                      className="rounded bg-gray-600 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700"
+                                      className="rounded-lg border border-danger/30 px-2.5 py-1 text-xs font-semibold text-danger transition hover:bg-danger/[0.06]"
                                     >
                                       Deactivate
                                     </button>
@@ -575,14 +591,14 @@ export default function AdminUsersPage() {
                                   <button
                                     type="button"
                                     onClick={() => handleUpdate(user.id, user.role, "active").catch(() => {})}
-                                    className="rounded bg-green-600 px-2 py-1 text-xs font-medium text-white hover:bg-green-700"
+                                    className="rounded-lg bg-success px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-success/90"
                                   >
                                     Activate
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setDetailUser(user)}
-                                    className="rounded border border-stone-300 px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 dark:border-stone-600 dark:text-stone-300"
+                                    className="rounded-lg border border-ink/15 bg-surface px-2.5 py-1 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04]"
                                   >
                                     Edit
                                   </button>
@@ -593,7 +609,7 @@ export default function AdminUsersPage() {
                                   <button
                                     type="button"
                                     onClick={() => handleApprove(user.id)}
-                                    className="rounded bg-green-600 px-2 py-1 text-xs font-medium text-white hover:bg-green-700"
+                                    className="rounded-lg bg-success px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-success/90"
                                   >
                                     Approve
                                   </button>
@@ -603,7 +619,7 @@ export default function AdminUsersPage() {
                                       onClick={() =>
                                         setConfirmAction({ type: "delete", userIds: [user.id], userEmail: user.email })
                                       }
-                                      className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
+                                      className="rounded-lg bg-danger px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-danger/90"
                                     >
                                       Delete
                                     </button>
@@ -613,7 +629,7 @@ export default function AdminUsersPage() {
                               <button
                                 type="button"
                                 onClick={() => setDetailUser(user)}
-                                className="rounded border border-stone-300 px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 dark:border-stone-600 dark:text-stone-300"
+                                className="rounded-lg border border-ink/15 bg-surface px-2.5 py-1 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04]"
                               >
                                 View
                               </button>
@@ -626,28 +642,28 @@ export default function AdminUsersPage() {
                 </table>
               </div>
             </div>
-            <div className="flex flex-col gap-3 border-t border-stone-200/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-stone-800">
-              <span className="text-xs text-stone-500 dark:text-stone-400">
+            <div className="flex flex-col gap-3 border-t border-ink/[0.08] px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+              <span className="text-xs text-ink/45">
                 Showing {(filters.page! - 1) * PAGE_SIZE + 1}-
                 {Math.min(filters.page! * PAGE_SIZE, total)} of {total} users
               </span>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setFilters({ page: Math.max(1, filters.page! - 1) })}
                   disabled={filters.page === 1}
-                  className="rounded border border-stone-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-stone-600"
+                  className="rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-sm font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
                 >
                   Previous
                 </button>
-                <span className="flex items-center px-3 py-1.5 text-sm text-stone-600 dark:text-stone-400">
+                <span className="flex items-center px-3 py-1.5 text-sm text-ink/60">
                   Page {filters.page} of {totalPages}
                 </span>
                 <button
                   type="button"
                   onClick={() => setFilters({ page: Math.min(totalPages, filters.page! + 1) })}
                   disabled={(filters.page ?? 1) >= totalPages}
-                  className="rounded border border-stone-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-stone-600"
+                  className="rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-sm font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
                 >
                   Next
                 </button>

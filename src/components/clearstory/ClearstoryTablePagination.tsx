@@ -91,21 +91,33 @@ export function ClearstoryTablePagination({
         <label htmlFor={`${idPrefix}-page-size`} className="sr-only">
           Page size
         </label>
-        <select
-          id={`${idPrefix}-page-size`}
-          value={pageSize}
-          onChange={(e) => {
-            onPageSizeChange(Number(e.target.value));
-            onPageChange(1);
-          }}
-          className="rounded-lg border border-ink/12 bg-white px-3 py-2 text-sm font-medium text-ink shadow-sm"
-        >
-          {pageSizeOptions.map((n) => (
-            <option key={n} value={n}>
-              {n} per page
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            id={`${idPrefix}-page-size`}
+            value={pageSize}
+            onChange={(e) => {
+              onPageSizeChange(Number(e.target.value));
+              onPageChange(1);
+            }}
+            className="appearance-none rounded-lg border border-ink/12 bg-white px-3 py-2 pr-9 text-sm font-medium text-ink shadow-sm"
+          >
+            {pageSizeOptions.map((n) => (
+              <option key={n} value={n}>
+                {n} per page
+              </option>
+            ))}
+          </select>
+          <svg
+            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            aria-hidden
+          >
+            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
 
         <nav className="flex items-center gap-1" aria-label={ariaLabel}>
           <button

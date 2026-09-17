@@ -8,8 +8,7 @@ import { WorkforceGate } from "@/components/workforce/WorkforceGate";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { KpiStat } from "@/components/ui/KpiStat";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { SkeletonStatRow } from "@/components/ui/Skeleton";
-import { LogoLoader } from "@/components/ui/LogoLoader";
+import { Skeleton, SkeletonListRows, SkeletonStatRow, SkeletonTableRows } from "@/components/ui/Skeleton";
 import { UserAvatar } from "@/components/workforce/UserAvatar";
 import { WorkforceScrollPanel } from "@/components/workforce/WorkforceScrollPanel";
 import Link from "next/link";
@@ -83,8 +82,8 @@ function OverviewContent() {
         <Card>
           <CardHeader title="Hours by job" subtitle="From workforce mirror — may lag sync." />
           {loading ? (
-            <div className="flex justify-center py-8">
-              <LogoLoader size={28} />
+            <div className="py-2">
+              <SkeletonTableRows rows={4} />
             </div>
           ) : hoursRows.length === 0 ? (
             <p className="text-sm text-ink/45">No hours reported yet.</p>
@@ -138,9 +137,7 @@ function OverviewContent() {
         <Card>
           <CardHeader title="On site now" subtitle="Open shifts (no clock-out yet)." />
           {loading ? (
-            <div className="flex justify-center py-8">
-              <LogoLoader size={28} />
-            </div>
+            <SkeletonListRows rows={4} />
           ) : openShifts.length === 0 ? (
             <p className="text-sm text-ink/45">No one clocked in.</p>
           ) : (
@@ -183,6 +180,25 @@ function OverviewContent() {
   );
 }
 
+function OverviewSkeleton() {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-6 py-2" role="status" aria-label="Loading workforce overview">
+      <Skeleton className="h-6 w-40" />
+      <SkeletonStatRow count={4} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader title="Hours by job" subtitle="From workforce mirror — may lag sync." />
+          <SkeletonTableRows rows={4} />
+        </Card>
+        <Card>
+          <CardHeader title="On site now" subtitle="Open shifts (no clock-out yet)." />
+          <SkeletonListRows rows={4} />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export default function WorkforceOverviewPage() {
   const router = useRouter();
   const { isAdmin } = useAuth();
@@ -199,20 +215,8 @@ export default function WorkforceOverviewPage() {
     }
   }, [loading, isAdmin, me?.linked, router]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center py-24">
-        <LogoLoader />
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="flex flex-1 items-center justify-center py-24">
-        <LogoLoader />
-      </div>
-    );
+  if (loading || !isAdmin) {
+    return <OverviewSkeleton />;
   }
 
   return (
