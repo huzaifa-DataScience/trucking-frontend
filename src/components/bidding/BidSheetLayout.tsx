@@ -165,7 +165,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
         />
       </div>
 
-      <div className="flex min-h-0 w-full max-w-[1520px] flex-1 flex-col">
+      <div className="flex min-h-0 w-full flex-1 flex-col">
         {children}
       </div>
     </div>

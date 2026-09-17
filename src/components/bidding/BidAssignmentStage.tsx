@@ -209,8 +209,8 @@ export function BidAssignmentStage() {
         </p>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2">
-        <label className="flex items-center gap-2 sm:col-span-2">
+      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+        <label className="flex items-center gap-2 col-span-full">
           <input
             type="checkbox"
             disabled={!editable}
@@ -221,7 +221,7 @@ export function BidAssignmentStage() {
             Pursue this bid (uncheck = no bid)
           </span>
         </label>
-        <label className="flex flex-col gap-1 sm:col-span-2">
+        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
           <span className={labelClass}>Captain (pick first)</span>
           <select
             className={inputClass}
@@ -250,7 +250,7 @@ export function BidAssignmentStage() {
             they have a crew.
           </span>
         </label>
-        <label className="flex flex-col gap-1 sm:col-span-2">
+        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
           <span className={labelClass}>Team</span>
           <select
             className={inputClass}
@@ -370,7 +370,7 @@ export function BidAssignmentStage() {
         <p className="mt-0.5 mb-3 text-xs text-ink/45">
           1 or 2 people per scope. Team/captain pick prefills blank roles.
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
           {TAKEOFF_ROLES.map((role) => (
             <label key={role} className="flex flex-col gap-1">
               <span className={labelClass}>{role}</span>

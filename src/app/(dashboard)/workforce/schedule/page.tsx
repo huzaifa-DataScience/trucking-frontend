@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { WorkforceGate } from "@/components/workforce/WorkforceGate";
 import { Card, CardHeader } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { WorkforcePagination } from "@/components/workforce/WorkforcePagination";
@@ -91,25 +92,37 @@ export default function WorkforceSchedulePage() {
         />
 
         {schedulers.length > 1 ? (
-          <div>
-            <label htmlFor="sched" className="text-xs font-medium text-ink/45">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="sched" className="block text-xs font-medium text-ink/45">
               Scheduler
             </label>
-            <select
-              id="sched"
-              value={schedulerId ?? ""}
-              onChange={(e) => {
-                setSchedulerId(Number(e.target.value));
-                setPage(1);
-              }}
-              className="mt-1 rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm"
-            >
-              {schedulers.map((s) => (
-                <option key={s.schedulerId} value={s.schedulerId}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative w-full max-w-xs">
+              <select
+                id="sched"
+                value={schedulerId ?? ""}
+                onChange={(e) => {
+                  setSchedulerId(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="w-full appearance-none rounded-xl border border-ink/10 bg-surface px-3 py-2 pr-9 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+              >
+                {schedulers.map((s) => (
+                  <option key={s.schedulerId} value={s.schedulerId}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <svg
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                aria-hidden
+              >
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
           </div>
         ) : null}
 
@@ -118,9 +131,7 @@ export default function WorkforceSchedulePage() {
         {loading ? (
           <TableSkeleton rows={8} toolbar={false} />
         ) : shifts.length === 0 ? (
-          <Card className="p-8 text-center text-sm text-ink/45">
-            No scheduled shifts in this view.
-          </Card>
+          <EmptyState message="No scheduled shifts in this view." />
         ) : (
           <Card>
             <CardHeader title="Shifts" subtitle={`${total} total`} />

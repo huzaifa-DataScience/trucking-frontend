@@ -124,6 +124,7 @@ export async function getProfile(): Promise<AuthUser | null> {
 /** Captain My team — GET/PATCH /auth/team (slot roster, not lookups/bidding/teams). */
 export type AuthTeamSlotKey =
   | "bidClerk"
+  | "assistantManager"
   | "duct1"
   | "duct2"
   | "hydronic1"
@@ -133,6 +134,7 @@ export type AuthTeamSlotKey =
 
 export const AUTH_TEAM_SLOT_KEYS: AuthTeamSlotKey[] = [
   "bidClerk",
+  "assistantManager",
   "duct1",
   "duct2",
   "hydronic1",
@@ -143,6 +145,7 @@ export const AUTH_TEAM_SLOT_KEYS: AuthTeamSlotKey[] = [
 
 export const AUTH_TEAM_SLOT_LABELS: Record<AuthTeamSlotKey, string> = {
   bidClerk: "Bid clerk",
+  assistantManager: "Assistant manager",
   duct1: "Duct 1",
   duct2: "Duct 2",
   hydronic1: "Hydronic 1",

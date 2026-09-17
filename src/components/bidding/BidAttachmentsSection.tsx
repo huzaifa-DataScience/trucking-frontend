@@ -124,33 +124,32 @@ export function BidAttachmentsSection({
     <Card>
       <CardHeader
         title="Attachments"
-        subtitle="Site photos, screenshots, PDFs, and CSV exports — up to 10 MB each."
-        action={
-          isEditable ? (
-            <>
-              <input
-                ref={inputRef}
-                type="file"
-                accept={ACCEPT}
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  void handleFiles(e.target.files);
-                  e.target.value = "";
-                }}
-              />
-              <button
-                type="button"
-                disabled={uploading || attachments.length >= MAX_FILES}
-                onClick={() => inputRef.current?.click()}
-                className="rounded-lg border border-ink/10 px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04] disabled:opacity-50"
-              >
-                {uploading ? "Uploading…" : "Add file"}
-              </button>
-            </>
-          ) : null
-        }
+        subtitle="Site photos, screenshots, PDFs, and CSV exports, up to 10 MB each."
       />
+
+      {isEditable ? (
+        <div className="mb-4">
+          <input
+            ref={inputRef}
+            type="file"
+            accept={ACCEPT}
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              void handleFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            disabled={uploading || attachments.length >= MAX_FILES}
+            onClick={() => inputRef.current?.click()}
+            className="rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04] disabled:opacity-50"
+          >
+            {uploading ? "Uploading…" : "Add file"}
+          </button>
+        </div>
+      ) : null}
 
       {localError ? (
         <p className="mb-3 text-xs text-danger">{localError}</p>
@@ -159,7 +158,7 @@ export function BidAttachmentsSection({
       {attachments.length === 0 ? (
         <p className="text-sm text-ink/45">No attachments yet.</p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
           {attachments.map((att) => (
             <li
               key={att.id}
