@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { getBaseUrl } from "@/lib/api/config";
 import type { AuthUser } from "@/lib/auth/types";
 
@@ -26,13 +29,18 @@ export function AvatarCircle({
   size?: keyof typeof SIZE_CLASSES;
 }) {
   const dims = SIZE_CLASSES[size];
-  if (user?.avatarUrl) {
+  const [imgFailed, setImgFailed] = useState(false);
+  useEffect(() => {
+    setImgFailed(false);
+  }, [user?.avatarUrl]);
+  if (user?.avatarUrl && !imgFailed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={`${getBaseUrl()}${user.avatarUrl}`}
         alt=""
         className={`${dims} shrink-0 rounded-full object-cover ring-2 ring-white/80`}
+        onError={() => setImgFailed(true)}
       />
     );
   }

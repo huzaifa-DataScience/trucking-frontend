@@ -4,8 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { WorkforceGate } from "@/components/workforce/WorkforceGate";
 import { Card, CardHeader } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusPill } from "@/components/ui/StatusPill";
-import { TableSkeleton } from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { UserAvatar } from "@/components/workforce/UserAvatar";
 import { WorkforcePagination } from "@/components/workforce/WorkforcePagination";
 import { WorkforceScrollPanel } from "@/components/workforce/WorkforceScrollPanel";
@@ -95,10 +96,8 @@ export default function WorkforceCrewPage() {
 
         <Card>
           <CardHeader title="Roster" subtitle={`${total} total`} />
-          {loading ? (
-            <TableSkeleton rows={6} toolbar={false} />
-          ) : users.length === 0 ? (
-            <p className="text-sm text-ink/45">No crew members match your search.</p>
+          {!loading && users.length === 0 ? (
+            <EmptyState message="No crew members match your search." />
           ) : (
             <>
               <WorkforceScrollPanel>
@@ -113,62 +112,87 @@ export default function WorkforceCrewPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((u) => (
-                      <tr key={u.userId} className="border-b border-ink/[0.05]">
-                        <td className="py-2.5 pl-3 pr-3">
-                          <div className="flex items-center gap-2.5">
-                            <UserAvatar user={u} size={28} />
-                            <span className="font-medium">{userDisplayName(u)}</span>
-                          </div>
-                        </td>
-                        <td className="py-2.5 pr-3 text-ink/60">{u.email ?? "—"}</td>
-                        <td className="py-2.5 pr-3 font-mono text-xs">{u.employeeId ?? "—"}</td>
-                        <td className="py-2.5 pr-3">
-                          {u.appUserId ? (
-                            <StatusPill tone="success" label="Linked" />
-                          ) : (
-                            <StatusPill tone="warning" label="Not linked" />
-                          )}
-                        </td>
-                        {isAdmin ? (
-                          <td className="py-2.5 pr-3">
-                            {!u.appUserId && linkingId === u.userId ? (
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  placeholder="App user ID"
-                                  value={appUserIdInput}
-                                  onChange={(e) => setAppUserIdInput(e.target.value)}
-                                  className="w-28 rounded-lg border border-ink/10 px-2 py-1 text-xs"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => void handleLink(u.userId)}
-                                  className="text-xs font-semibold text-brand hover:underline"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setLinkingId(null)}
-                                  className="text-xs text-ink/40"
-                                >
-                                  Cancel
-                                </button>
+                    {loading
+                      ? Array.from({ length: 6 }, (_, i) => (
+                          <tr key={i} className="border-b border-ink/[0.05]">
+                            <td className="py-2.5 pl-3 pr-3">
+                              <div className="flex items-center gap-2.5">
+                                <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+                                <Skeleton className="h-4 w-28" />
                               </div>
-                            ) : !u.appUserId ? (
-                              <button
-                                type="button"
-                                onClick={() => setLinkingId(u.userId)}
-                                className="text-xs font-semibold text-brand hover:underline"
-                              >
-                                Link…
-                              </button>
+                            </td>
+                            <td className="py-2.5 pr-3">
+                              <Skeleton className="h-4 w-36" />
+                            </td>
+                            <td className="py-2.5 pr-3">
+                              <Skeleton className="h-4 w-16" />
+                            </td>
+                            <td className="py-2.5 pr-3">
+                              <Skeleton className="h-4 w-20" />
+                            </td>
+                            {isAdmin ? (
+                              <td className="py-2.5 pr-3">
+                                <Skeleton className="h-4 w-12" />
+                              </td>
                             ) : null}
-                          </td>
-                        ) : null}
-                      </tr>
-                    ))}
+                          </tr>
+                        ))
+                      : users.map((u) => (
+                          <tr key={u.userId} className="border-b border-ink/[0.05]">
+                            <td className="py-2.5 pl-3 pr-3">
+                              <div className="flex items-center gap-2.5">
+                                <UserAvatar user={u} size={28} />
+                                <span className="font-medium">{userDisplayName(u)}</span>
+                              </div>
+                            </td>
+                            <td className="py-2.5 pr-3 text-ink/60">{u.email ?? "—"}</td>
+                            <td className="py-2.5 pr-3 font-mono text-xs">{u.employeeId ?? "—"}</td>
+                            <td className="py-2.5 pr-3">
+                              {u.appUserId ? (
+                                <StatusPill tone="success" label="Linked" />
+                              ) : (
+                                <StatusPill tone="warning" label="Not linked" />
+                              )}
+                            </td>
+                            {isAdmin ? (
+                              <td className="py-2.5 pr-3">
+                                {!u.appUserId && linkingId === u.userId ? (
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="number"
+                                      placeholder="App user ID"
+                                      value={appUserIdInput}
+                                      onChange={(e) => setAppUserIdInput(e.target.value)}
+                                      className="w-28 rounded-lg border border-ink/10 px-2 py-1 text-xs"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleLink(u.userId)}
+                                      className="text-xs font-semibold text-brand hover:underline"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setLinkingId(null)}
+                                      className="text-xs text-ink/40"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : !u.appUserId ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setLinkingId(u.userId)}
+                                    className="text-xs font-semibold text-brand hover:underline"
+                                  >
+                                    Link…
+                                  </button>
+                                ) : null}
+                              </td>
+                            ) : null}
+                          </tr>
+                        ))}
                   </tbody>
                 </table>
               </WorkforceScrollPanel>
@@ -182,13 +206,6 @@ export default function WorkforceCrewPage() {
             </>
           )}
         </Card>
-
-        {isAdmin ? (
-          <p className="text-xs text-ink/40">
-            Portal user IDs are listed under Admin → User Management. Email match also links
-            automatically on the backend.
-          </p>
-        ) : null}
       </div>
     </WorkforceGate>
   );

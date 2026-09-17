@@ -254,11 +254,7 @@ export function BidSheetForm() {
           showResultsRail ? "bid-workspace min-h-0 flex-1" : "min-h-0 flex-1"
         }
       >
-        <div
-          className={`bid-workspace-form space-y-5 pb-8 ${
-            showResultsRail ? "" : "mx-auto w-full max-w-[960px]"
-          }`}
-        >
+        <div className="bid-workspace-form space-y-5 pb-8">
           {activeTab === "sheet" ? (
             <>
           <BidSheetHeaderSection
@@ -292,7 +288,7 @@ export function BidSheetForm() {
               title="Team"
               subtitle="From Assignment — crew auto-fills from GET /lookups/bidding/teams by teamId. Not picked here."
             />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
               <BidFormField label="Team" htmlFor="team-ro">
                 <p
                   id="team-ro"
@@ -319,7 +315,7 @@ export function BidSheetForm() {
               </BidFormField>
             </div>
             {teamFromAssignment ? (
-              <div className="mt-4 grid gap-3 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] p-4 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="mt-4 grid gap-3 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] p-4 grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
                 {(
                   [
                     ["Bid clerk", teamFromAssignment.bidClerk],
@@ -352,7 +348,7 @@ export function BidSheetForm() {
               title="Project identity"
               subtitle="From Intake — building / project type, impacted SF, state. Calculator fields stay below."
             />
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
               <BidFormField label="Building type" htmlFor="btype-ro">
                 <p
                   id="btype-ro"
@@ -436,7 +432,7 @@ export function BidSheetForm() {
               title="Wage rate"
               subtitle="B8 wage → F9–F11; composite labor rate is Excel D10 (TOTAL BIDDING LABOR RATE)."
             />
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
               <BidFormField label="Wage rate" htmlFor="wage">
                 <BidSelect
                   id="wage"
@@ -455,11 +451,11 @@ export function BidSheetForm() {
                 />
               </BidFormField>
               {burdenedRate ? (
-                <div className="rounded-xl border border-brand/20 bg-brand/[0.04] p-4 lg:col-span-2">
+                <div className="rounded-xl border border-brand/20 bg-brand/[0.04] p-4 col-span-full">
                   <p className="text-sm font-semibold text-ink">
                     Burdened: {formatMoneyPrecise(burdenedRate.burdenedRate)}/hr
                   </p>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <div className="mt-3 grid gap-2 grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
                     <ComputedField label="Wage" value={formatMoneyPrecise(burdenedRate.wage)} />
                     <ComputedField
                       label="Burden"
@@ -498,7 +494,7 @@ export function BidSheetForm() {
                 </div>
               ) : null}
             </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="mt-4 grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
               <BidFormField
                 label="Labor rate composite / hr"
                 htmlFor="composite"
@@ -524,7 +520,7 @@ export function BidSheetForm() {
                 </div>
               ) : null}
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
               <BoolSelect
                 id="citizen"
                 label="Citizen project"
@@ -568,7 +564,7 @@ export function BidSheetForm() {
 
           <Card>
             <CardHeader title="Schedule & margin" subtitle="Hours, duration, and margin (D4, F4–F5, B12–B13)." />
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
               <BidFormField
                 label="Margin"
                 htmlFor="margin"
@@ -646,7 +642,7 @@ export function BidSheetForm() {
 
           <Card>
             <CardHeader title="Parking & lifts" subtitle="Parking/lift $/hr shown in results panel." />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
               <BoolSelect
                 id="parking"
                 label="Parking"

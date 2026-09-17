@@ -1,8 +1,68 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { ChatAttachment } from "@/lib/workforce/chat-types";
 
+function ImagePreviewModal({
+  attachment,
+  onClose,
+}: {
+  attachment: ChatAttachment;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (!attachment.url) return null;
+  const name = attachment.fileName ?? "photo";
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={name}
+      onClick={onClose}
+    >
+      <div className="absolute right-4 top-4 flex gap-2">
+        <a
+          href={attachment.url}
+          download={name}
+          onClick={(e) => e.stopPropagation()}
+          className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/20"
+        >
+          Download
+        </a>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close preview"
+          className="rounded-lg bg-white/10 p-1.5 text-white backdrop-blur transition hover:bg-white/20"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={attachment.url}
+        alt={name}
+        className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
+
 export function ChatMessageAttachments({ attachments }: { attachments: ChatAttachment[] }) {
+  const [preview, setPreview] = useState<ChatAttachment | null>(null);
+
   if (!attachments.length) return null;
 
   return (
@@ -11,21 +71,20 @@ export function ChatMessageAttachments({ attachments }: { attachments: ChatAttac
         const name = a.fileName ?? "file";
         if (a.type === "image" && a.url) {
           return (
-            <a
+            <button
               key={`${a.url}-${i}`}
-              href={a.url}
-              target="_blank"
-              rel="noopener noreferrer"
+              type="button"
+              onClick={() => setPreview(a)}
               className="block overflow-hidden rounded-lg ring-1 ring-black/10"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={a.url}
                 alt={name}
-                className="max-h-48 max-w-full object-cover"
+                className="max-h-80 max-w-full object-cover"
                 loading="lazy"
               />
-            </a>
+            </button>
           );
         }
         if (a.url) {
@@ -50,6 +109,7 @@ export function ChatMessageAttachments({ attachments }: { attachments: ChatAttac
           </span>
         );
       })}
+      {preview ? <ImagePreviewModal attachment={preview} onClose={() => setPreview(null)} /> : null}
     </div>
   );
 }

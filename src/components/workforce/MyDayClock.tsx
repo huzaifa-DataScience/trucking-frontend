@@ -268,23 +268,35 @@ export function MyDayClock() {
           <label htmlFor="clock-select" className="text-xs font-semibold uppercase tracking-wider text-ink/40">
             Time clock
           </label>
-          <select
-            id="clock-select"
-            value={timeClockId ?? ""}
-            onChange={(e) => {
-              const id = Number(e.target.value);
-              setTimeClockId(id);
-              setStoredTimeClockId(id);
-              void loadState();
-            }}
-            className="mt-2 w-full rounded-xl border border-ink/10 bg-surface px-3 py-2.5 text-sm"
-          >
-            {clocks.map((c) => (
-              <option key={c.timeClockId} value={c.timeClockId}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative mt-2">
+            <select
+              id="clock-select"
+              value={timeClockId ?? ""}
+              onChange={(e) => {
+                const id = Number(e.target.value);
+                setTimeClockId(id);
+                setStoredTimeClockId(id);
+                void loadState();
+              }}
+              className="w-full appearance-none rounded-xl border border-ink/10 bg-surface px-3 py-2.5 pr-9 text-sm"
+            >
+              {clocks.map((c) => (
+                <option key={c.timeClockId} value={c.timeClockId}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <svg
+              className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden
+            >
+              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
         </Card>
       ) : null}
 

@@ -339,6 +339,24 @@ export async function deleteBiddingTeam(id: number): Promise<void> {
   await del(`/lookups/bidding/teams/${id}`);
 }
 
+export type TeamCrewSlot =
+  | "bidClerk"
+  | "assistantManager"
+  | "duct1"
+  | "duct2"
+  | "hydronic1"
+  | "hydronic2"
+  | "plumbing1"
+  | "plumbing2";
+
+/** Admin edit of crew slot names — pass "" or null to clear a slot. */
+export async function updateBiddingTeamCrew(
+  id: number,
+  slots: Partial<Record<TeamCrewSlot, string | null>>
+): Promise<BidTeam> {
+  return patch<BidTeam>(`/lookups/bidding/teams/${id}`, slots);
+}
+
 export async function getBiddingWageBurdenedRate(id: number): Promise<BurdenedRateResult> {
   return get<BurdenedRateResult>(`/lookups/bidding/wage-rates/${id}/burdened-rate`);
 }
