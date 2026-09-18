@@ -26,17 +26,17 @@ function HeroEstimate({
 }) {
   return (
     <div
-      className={`flex-1 rounded-xl px-3 py-3 ${
+      className={`min-w-0 flex-1 rounded-xl px-3 py-3 ${
         variant === "pj"
           ? "bg-brand/15 ring-1 ring-brand/25"
           : "bg-white/10 ring-1 ring-white/10"
       }`}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/55">{label}</p>
-      <p className="mt-1 font-mono text-xl font-bold tracking-tight text-white lg:text-2xl">
+      <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-white/55">{label}</p>
+      <p className="mt-1 truncate font-mono text-xl font-bold tracking-tight text-white lg:text-2xl">
         {value}
       </p>
-      <p className="mt-0.5 text-xs text-white/50">{sub}</p>
+      <p className="mt-0.5 truncate text-xs text-white/50">{sub}</p>
     </div>
   );
 }
