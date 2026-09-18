@@ -404,7 +404,7 @@ export async function fetchBidAttachmentBlob(downloadPath: string): Promise<Blob
   return getBlob(downloadPath);
 }
 
-/** Upload image/PDF — draft bids only. Field name must be `file`. */
+/** Upload image/PDF/Word doc — draft bids only. Field name must be `file`. */
 export async function uploadBidAttachment(
   bidId: string,
   file: File,
