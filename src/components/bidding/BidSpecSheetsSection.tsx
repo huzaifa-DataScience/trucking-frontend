@@ -2564,7 +2564,7 @@ export function BidSpecSheetsSection({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-sm font-semibold text-ink">
-                        Schedule photos
+                        Schedule attachments
                       </p>
                       <p className="text-xs text-ink/45">
                         Client schedule scans (images, PDF, or Word) — click a thumbnail to view
@@ -2589,14 +2589,14 @@ export function BidSpecSheetsSection({
                           onClick={() => fileRef.current?.click()}
                           className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-xs font-semibold text-ink/70 hover:bg-ink/[0.03] disabled:opacity-40"
                         >
-                          {uploading ? "Uploading…" : "Upload file"}
+                          {uploading ? "Uploading…" : "Upload attachment"}
                         </button>
                       </>
                     ) : null}
                   </div>
 
                   {(active.imageAttachmentIds ?? []).length === 0 ? (
-                    <p className="mt-3 text-sm text-ink/40">No photos yet.</p>
+                    <p className="mt-3 text-sm text-ink/40">No attachments yet.</p>
                   ) : (
                     <div className="mt-3 flex flex-wrap gap-3">
                       {(active.imageAttachmentIds ?? []).map((id) => {
