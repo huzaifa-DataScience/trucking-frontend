@@ -113,6 +113,7 @@ export function BidTextInput({
   placeholder,
   type = "text",
   disabled = false,
+  autoComplete,
 }: {
   id: string;
   value: string;
@@ -120,6 +121,7 @@ export function BidTextInput({
   placeholder?: string;
   type?: string;
   disabled?: boolean;
+  autoComplete?: string;
 }) {
   return (
     <input
@@ -129,6 +131,7 @@ export function BidTextInput({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       disabled={disabled}
+      autoComplete={autoComplete}
       className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-50`}
     />
   );

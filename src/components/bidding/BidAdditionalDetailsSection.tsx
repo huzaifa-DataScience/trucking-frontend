@@ -278,6 +278,7 @@ export function BidAdditionalDetailsSection({
                 value={(additionalDetails[key] as string | null) ?? ""}
                 onChange={(v) => setAd(key, (v || null) as ProcessAdditionalDetails[typeof key])}
                 disabled={disabled}
+                autoComplete="off"
               />
             </BidFormField>
           ))}
@@ -302,6 +303,7 @@ export function BidAdditionalDetailsSection({
                 value={(additionalDetails[key] as string | null) ?? ""}
                 onChange={(v) => setAd(key, (v || null) as ProcessAdditionalDetails[typeof key])}
                 disabled={disabled}
+                autoComplete="new-password"
               />
             </BidFormField>
           ))}
