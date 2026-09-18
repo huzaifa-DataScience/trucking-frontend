@@ -59,6 +59,14 @@ import {
 } from "@/lib/bidding/specSheetMap";
 import { newId } from "@/lib/bidding/newId";
 
+const WORD_DOC_MIMES = new Set([
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+function isWordDoc(mimeType: string): boolean {
+  return WORD_DOC_MIMES.has(mimeType);
+}
+
 /** Prefer local row values; only take missing codes/unit from server echo. */
 function mergeIncomingSheets(
   local: SpecSheet[],
@@ -294,6 +302,7 @@ function SpecImageThumb({
   }
 
   const isPdf = attachment.mimeType === "application/pdf";
+  const isDoc = isWordDoc(attachment.mimeType);
 
   return (
     <button
@@ -301,9 +310,9 @@ function SpecImageThumb({
       onClick={() => onOpen(url, attachment)}
       className="group relative block overflow-hidden rounded-xl border border-ink/[0.08] text-left transition hover:border-brand/40"
     >
-      {isPdf ? (
+      {isPdf || isDoc ? (
         <div className="flex h-28 w-36 flex-col items-center justify-center gap-1 bg-ink/[0.04] text-xs font-medium text-ink/55">
-          PDF
+          {isPdf ? "PDF" : "DOC"}
           <span className="max-w-[8rem] truncate px-2 text-[10px] text-ink/40">
             {attachment.fileName}
           </span>
@@ -338,6 +347,7 @@ function SpecImageLightbox({
   if (!current) return null;
 
   const isPdf = current.attachment.mimeType === "application/pdf";
+  const isDoc = isWordDoc(current.attachment.mimeType);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -386,6 +396,22 @@ function SpecImageLightbox({
               src={current.url}
               className="h-[75vh] w-full bg-white"
             />
+          ) : isDoc ? (
+            <div className="flex h-[40vh] w-full max-w-md flex-col items-center justify-center gap-4 bg-white px-6 py-10 text-center">
+              <p className="text-sm font-medium text-ink">
+                {current.attachment.fileName}
+              </p>
+              <p className="text-xs text-ink/50">
+                Word documents can&apos;t be previewed inline.
+              </p>
+              <a
+                href={current.url}
+                download={current.attachment.fileName}
+                className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand/90"
+              >
+                Download
+              </a>
+            </div>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -2541,7 +2567,7 @@ export function BidSpecSheetsSection({
                         Schedule photos
                       </p>
                       <p className="text-xs text-ink/45">
-                        Client schedule scans — click a thumbnail to view
+                        Client schedule scans (images, PDF, or Word) — click a thumbnail to view
                       </p>
                     </div>
                     {editable ? (
@@ -2549,7 +2575,7 @@ export function BidSpecSheetsSection({
                         <input
                           ref={fileRef}
                           type="file"
-                          accept="image/jpeg,image/png,image/webp,application/pdf"
+                          accept="image/jpeg,image/png,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.doc,.docx"
                           className="hidden"
                           onChange={(e) => {
                             const f = e.target.files?.[0];
@@ -2563,7 +2589,7 @@ export function BidSpecSheetsSection({
                           onClick={() => fileRef.current?.click()}
                           className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-xs font-semibold text-ink/70 hover:bg-ink/[0.03] disabled:opacity-40"
                         >
-                          {uploading ? "Uploading…" : "Upload image"}
+                          {uploading ? "Uploading…" : "Upload file"}
                         </button>
                       </>
                     ) : null}

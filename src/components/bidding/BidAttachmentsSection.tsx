@@ -8,7 +8,15 @@ import type { BidAttachment } from "@/lib/bidding/types";
 
 const MAX_FILES = 20;
 const MAX_BYTES = 10 * 1024 * 1024;
-const ACCEPT = "image/jpeg,image/png,image/webp,application/pdf,text/csv,.csv";
+const ACCEPT =
+  "image/jpeg,image/png,image/webp,application/pdf,text/csv,.csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.doc,.docx";
+const WORD_DOC_MIMES = new Set([
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+function isWordDoc(mimeType: string): boolean {
+  return WORD_DOC_MIMES.has(mimeType);
+}
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -53,6 +61,14 @@ function AttachmentPreview({ attachment }: { attachment: BidAttachment }) {
     return (
       <div className="flex h-24 items-center justify-center rounded-lg bg-ink/[0.04] text-xs font-medium text-ink/50">
         CSV
+      </div>
+    );
+  }
+
+  if (isWordDoc(attachment.mimeType)) {
+    return (
+      <div className="flex h-24 items-center justify-center rounded-lg bg-ink/[0.04] text-xs font-medium text-ink/50">
+        DOC
       </div>
     );
   }
@@ -124,7 +140,7 @@ export function BidAttachmentsSection({
     <Card>
       <CardHeader
         title="Attachments"
-        subtitle="Site photos, screenshots, PDFs, and CSV exports, up to 10 MB each."
+        subtitle="Site photos, screenshots, PDFs, Word docs, and CSV exports, up to 10 MB each."
       />
 
       {isEditable ? (
