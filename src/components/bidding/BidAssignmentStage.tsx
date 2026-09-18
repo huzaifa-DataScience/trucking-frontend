@@ -10,6 +10,7 @@ import type {
   TakeoffRole,
 } from "@/lib/bidding/process-types";
 import type { BidCaptainLookup, BidContactLookup, BidTeam } from "@/lib/bidding/types";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 const TAKEOFF_ROLES: TakeoffRole[] = [
   "duct1",
@@ -341,26 +342,22 @@ export function BidAssignmentStage() {
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Internal estimate due</span>
-          <input
-            type="date"
+          <DatePicker
+            ariaLabel="Internal estimate due"
             className={inputClass}
             disabled={!editable}
             value={a.internalEstimateDue?.slice(0, 10) ?? ""}
-            onChange={(e) =>
-              setAssignment({ internalEstimateDue: e.target.value || null })
-            }
+            onChange={(v) => setAssignment({ internalEstimateDue: v || null })}
           />
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Internal review due</span>
-          <input
-            type="date"
+          <DatePicker
+            ariaLabel="Internal review due"
             className={inputClass}
             disabled={!editable}
             value={a.internalReviewDue?.slice(0, 10) ?? ""}
-            onChange={(e) =>
-              setAssignment({ internalReviewDue: e.target.value || null })
-            }
+            onChange={(v) => setAssignment({ internalReviewDue: v || null })}
           />
         </label>
       </section>
