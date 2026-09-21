@@ -57,7 +57,9 @@ function conditionMatches(row: Record<string, unknown>, c: FilterCondition): boo
     return fieldValue(row, c.field).toLowerCase().includes(c.value.trim().toLowerCase());
   }
   // between (date range) — inclusive; an empty bound means unbounded on that side.
-  const raw = fieldValue(row, c.field);
+  // New intake bids often have no bid date yet; match the list API's effective
+  // date fallback so a recent bid is not hidden by a null BidDate.
+  const raw = fieldValue(row, c.field) || (c.field === "bidDate" ? fieldValue(row, "updatedAt") : "");
   if (!raw) return false;
   const t = new Date(raw.slice(0, 10)).getTime();
   if (Number.isNaN(t)) return false;

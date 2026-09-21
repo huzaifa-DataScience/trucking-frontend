@@ -187,6 +187,7 @@ export function BidAttachmentsSection({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [localUploading, setLocalUploading] = useState(false);
   const [pendingCategory, setPendingCategory] = useState("project_documents");
   const [pendingDrawingCategory, setPendingDrawingCategory] = useState(
     drawingCategoryOptions?.[0]?.value ?? ""
@@ -211,10 +212,15 @@ export function BidAttachmentsSection({
       }
 
       for (const file of Array.from(files)) {
-        if (mode === "drawings") {
-          await onUpload(file, { label: "drawings", drawingCategory: pendingDrawingCategory || undefined });
-        } else {
-          await onUpload(file, { category: pendingCategory });
+        setLocalUploading(true);
+        try {
+          if (mode === "drawings") {
+            await onUpload(file, { label: "drawings", drawingCategory: pendingDrawingCategory || undefined });
+          } else {
+            await onUpload(file, { category: pendingCategory });
+          }
+        } finally {
+          setLocalUploading(false);
         }
       }
     },
@@ -277,11 +283,11 @@ export function BidAttachmentsSection({
           )}
           <button
             type="button"
-            disabled={uploading || attachments.length >= MAX_FILES}
+            disabled={uploading || localUploading || attachments.length >= MAX_FILES}
             onClick={() => inputRef.current?.click()}
             className="rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04] disabled:opacity-50"
           >
-            {uploading ? "Uploading…" : "Add file"}
+            {uploading || localUploading ? "Uploading…" : "Add file"}
           </button>
         </div>
       ) : null}
