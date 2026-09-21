@@ -58,6 +58,9 @@ export async function listBids(params?: {
   ownerProjectNumber?: string;
   mechanicalEngineerProjectNumber?: string;
   teamId?: number | "all";
+  bidDateFrom?: string;
+  bidDateTo?: string;
+  clientCompanyName?: string;
 }): Promise<BidListItem[]> {
   return get<BidListItem[]>("/bids", {
     status: params?.status,
@@ -69,6 +72,9 @@ export async function listBids(params?: {
     ownerProjectNumber: params?.ownerProjectNumber,
     mechanicalEngineerProjectNumber: params?.mechanicalEngineerProjectNumber,
     teamId: params?.teamId,
+    bidDateFrom: params?.bidDateFrom,
+    bidDateTo: params?.bidDateTo,
+    clientCompanyName: params?.clientCompanyName,
   });
 }
 
@@ -83,6 +89,9 @@ export async function exportBids(params?: {
   ownerProjectNumber?: string;
   mechanicalEngineerProjectNumber?: string;
   teamId?: number | "all";
+  bidDateFrom?: string;
+  bidDateTo?: string;
+  clientCompanyName?: string;
 }): Promise<Blob> {
   return getBlob("/bids/export", {
     status: params?.status,
@@ -94,6 +103,9 @@ export async function exportBids(params?: {
     ownerProjectNumber: params?.ownerProjectNumber,
     mechanicalEngineerProjectNumber: params?.mechanicalEngineerProjectNumber,
     teamId: params?.teamId,
+    bidDateFrom: params?.bidDateFrom,
+    bidDateTo: params?.bidDateTo,
+    clientCompanyName: params?.clientCompanyName,
   });
 }
 
@@ -408,13 +420,15 @@ export async function fetchBidAttachmentBlob(downloadPath: string): Promise<Blob
 export async function uploadBidAttachment(
   bidId: string,
   file: File,
-  label?: string
+  opts?: { label?: string; category?: string; drawingCategory?: string }
 ): Promise<BidAttachment> {
   const url = getApiUrl(`/bids/${bidId}/attachments`);
   const token = getAccessToken();
   const form = new FormData();
   form.append("file", file);
-  if (label?.trim()) form.append("label", label.trim());
+  if (opts?.label?.trim()) form.append("label", opts.label.trim());
+  if (opts?.category) form.append("category", opts.category);
+  if (opts?.drawingCategory) form.append("drawingCategory", opts.drawingCategory);
 
   const response = await fetch(url, {
     method: "POST",

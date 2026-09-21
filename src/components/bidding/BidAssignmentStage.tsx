@@ -15,8 +15,10 @@ import { DatePicker } from "@/components/ui/DatePicker";
 const TAKEOFF_ROLES: TakeoffRole[] = [
   "duct1",
   "duct2",
+  "duct3",
   "hydronic1",
   "hydronic2",
+  "hydronic3",
   "plumbing1",
   "plumbing2",
   "vrf",

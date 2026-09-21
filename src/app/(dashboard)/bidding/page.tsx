@@ -39,7 +39,6 @@ type SortKey =
   | "estimator"
   | "status"
   | "workType"
-  | "baseBid"
   | "contractAmount"
   | "jobStartDate"
   | "office";
@@ -101,7 +100,6 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "estimator", label: "Estimator" },
   { value: "status", label: "Status" },
   { value: "workType", label: "Work type" },
-  { value: "baseBid", label: "Base bid" },
   { value: "contractAmount", label: "Contract amount" },
   { value: "jobStartDate", label: "Job start date" },
   { value: "office", label: "Office" },
@@ -326,6 +324,25 @@ export default function BiddingListPage() {
     }
   };
 
+  /**
+   * Best-effort: pull bidDate/clientCompanyName out of the sidebar filters for the
+   * server export, so it isn't silently narrower than what's on screen. Only when
+   * exactly one group is active — multiple OR'd groups can't be losslessly flattened
+   * into query params, so those fall back to unfiltered-by-these-two on the server
+   * (same as before; the on-screen list/client export still apply them correctly).
+   */
+  const singleGroupSidebarFilters = () => {
+    if (filterGroups.length !== 1) return {};
+    const conditions = filterGroups[0].conditions;
+    const bidDateCond = conditions.find((c) => c.field === "bidDate" && c.op === "between");
+    const companyCond = conditions.find((c) => c.field === "clientCompanyName" && c.op === "is");
+    return {
+      bidDateFrom: bidDateCond?.start || undefined,
+      bidDateTo: bidDateCond?.end || undefined,
+      clientCompanyName: companyCond?.value || undefined,
+    };
+  };
+
   const runExport = async () => {
     setExporting(true);
     try {
@@ -337,6 +354,7 @@ export default function BiddingListPage() {
         outcome: listParams.outcome,
         status: listParams.status,
         teamId: listParams.teamId,
+        ...singleGroupSidebarFilters(),
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -373,8 +391,6 @@ export default function BiddingListPage() {
           return a.status.localeCompare(b.status);
         case "workType":
           return (a.workType ?? "").localeCompare(b.workType ?? "");
-        case "baseBid":
-          return (b.baseBidAmount ?? -Infinity) - (a.baseBidAmount ?? -Infinity);
         case "contractAmount":
           return (b.contractAmount ?? -Infinity) - (a.contractAmount ?? -Infinity);
         case "jobStartDate":
@@ -395,8 +411,8 @@ export default function BiddingListPage() {
           "Bid name": b.bidName,
           Contractor: b.clientCompanyName ?? "",
           Estimator: b.estimator ?? "",
-          "Base bid": b.baseBidAmount ?? "",
           "Contract amount": b.contractAmount ?? "",
+          "Cash expense": b.cashExpense ?? "",
           "Job start date": b.jobStartDate ?? "",
           "Job end date": b.jobEndDate ?? "",
           Status: b.status,
@@ -495,7 +511,7 @@ export default function BiddingListPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 ui-animate-in">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 ui-animate-in">
       <PageHeader
         title="Estimates"
         subtitle="Track each estimate from Intake through Outcome. Awarded or Lost bids continue on from their final outcome."
@@ -711,18 +727,19 @@ export default function BiddingListPage() {
         />
       ) : viewMode === "list" ? (
         <div className="overflow-x-auto rounded-xl border border-ink/[0.08] bg-surface">
-          <table className="w-full min-w-[860px] table-fixed border-collapse text-left">
+          <table className="w-full min-w-[1180px] table-fixed border-collapse text-left">
             <thead>
               <tr className="border-b border-ink/[0.08] bg-ink/[0.02] text-xs font-semibold text-ink/50">
-                <th className="w-[20%] px-4 py-3">Name</th>
-                <th className="w-[8%] px-4 py-3">Estimate #</th>
-                <th className="w-[10%] px-4 py-3">Company</th>
-                <th className="w-[10%] px-4 py-3">Estimator</th>
-                <th className="w-[14%] px-4 py-3">Work type · Stage</th>
-                <th className="w-[9%] px-4 py-3">Outcome</th>
-                <th className="w-[9%] px-4 py-3">Base bid</th>
-                <th className="w-[9%] px-4 py-3">Status</th>
-                <th className="w-[11%] px-4 py-3">Updated</th>
+                <th className="w-[16%] whitespace-nowrap px-4 py-3">Name</th>
+                <th className="w-[8%] whitespace-nowrap px-4 py-3">Estimate #</th>
+                <th className="w-[8%] whitespace-nowrap px-4 py-3">Deadline</th>
+                <th className="w-[8%] whitespace-nowrap px-4 py-3">Company</th>
+                <th className="w-[10%] whitespace-nowrap px-4 py-3">Estimator</th>
+                <th className="w-[12%] whitespace-nowrap px-4 py-3">Work type · Stage</th>
+                <th className="w-[9%] whitespace-nowrap px-4 py-3">Outcome</th>
+                <th className="w-[9%] whitespace-nowrap px-4 py-3">Base bid</th>
+                <th className="w-[9%] whitespace-nowrap px-4 py-3">Status</th>
+                <th className="w-[11%] whitespace-nowrap px-4 py-3">Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -740,6 +757,7 @@ export default function BiddingListPage() {
                     </Link>
                   </td>
                   <td className="truncate px-4 py-3 font-mono text-xs text-ink/50">{bid.estimateNumber}</td>
+                  <td className="truncate px-4 py-3 text-ink/70">{bid.dueDate ? formatDate(bid.dueDate) : "—"}</td>
                   <td className="truncate px-4 py-3 text-ink/70">{bid.companyName}</td>
                   <td className="truncate px-4 py-3 text-ink/70">{bid.estimator || "—"}</td>
                   <td className="truncate px-4 py-3 text-ink/70">

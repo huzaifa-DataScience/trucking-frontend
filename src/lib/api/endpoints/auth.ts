@@ -331,6 +331,29 @@ export async function patchAuthTeam(body: {
   return { team: normalizeAuthTeam(data) };
 }
 
+/** Updates the current user's name. Throws with a user-facing message on failure. */
+export async function updateProfile(updates: { firstName?: string | null; lastName?: string | null }): Promise<AuthUser> {
+  const token = getAccessToken();
+  if (!token) throw new Error("Not signed in");
+
+  const res = await fetch(`${BASE()}/auth/profile`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updates),
+  });
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
+    message?: string | string[];
+  };
+  if (!res.ok) {
+    const msg = Array.isArray(data.message) ? data.message.join(" ") : data.message;
+    throw new Error(msg || "Couldn't update your name. Please try again.");
+  }
+  return normalizeUser(data);
+}
+
 /** Uploads/replaces the current user's profile photo. Throws with a user-facing message on failure. */
 export async function uploadAvatar(file: File): Promise<AuthUser> {
   const token = getAccessToken();
