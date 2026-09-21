@@ -259,6 +259,17 @@ export default function BiddingListPage() {
   const promptPickCrew =
     (role === "captain" || role === "assistant_estimator") && !hasCrew;
 
+  const sidebarDateFilters = useMemo(() => {
+    if (filterGroups.length !== 1) return {};
+    const condition = filterGroups[0].conditions.find(
+      (item) => item.field === "bidDate" && item.op === "between"
+    );
+    return {
+      bidDateFrom: condition?.start || undefined,
+      bidDateTo: condition?.end || undefined,
+    };
+  }, [filterGroups]);
+
   const listParams = useMemo(
     () => ({
       entityId: entityId && !Number.isNaN(entityId) ? entityId : undefined,
@@ -268,6 +279,7 @@ export default function BiddingListPage() {
       outcome: outcome || undefined,
       status: status === "all" ? undefined : status,
       teamId: isTeamScopedRole && showAllTeams ? ("all" as const) : undefined,
+      ...sidebarDateFilters,
     }),
     [
       entityId,
@@ -278,6 +290,7 @@ export default function BiddingListPage() {
       status,
       isTeamScopedRole,
       showAllTeams,
+      sidebarDateFilters,
     ]
   );
 
@@ -298,6 +311,8 @@ export default function BiddingListPage() {
         processStage: listParams.processStage,
         outcome: listParams.outcome,
         teamId: listParams.teamId,
+        bidDateFrom: listParams.bidDateFrom,
+        bidDateTo: listParams.bidDateTo,
       });
       if (seq !== bidsRequestSeqRef.current) return; // a newer request superseded this one
       setBids(list);
