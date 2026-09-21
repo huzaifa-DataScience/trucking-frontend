@@ -1368,7 +1368,7 @@ export function BidSpecSheetsSection({
     setUploading(true);
     setUploadError(null);
     try {
-      await uploadAttachment(file, SPEC_SHEET_IMAGE_LABEL);
+      await uploadAttachment(file, { label: SPEC_SHEET_IMAGE_LABEL });
       const updated = await biddingApi.getBid(bid.id);
       applyBidDetail(updated);
       const newest = [...(updated.attachments ?? [])]

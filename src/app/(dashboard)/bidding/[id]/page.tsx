@@ -6,6 +6,8 @@ import { BidSheetForm } from "@/components/bidding/BidSheetForm";
 import { BidIntakeStage } from "@/components/bidding/BidIntakeStage";
 import { BidAssignmentStage } from "@/components/bidding/BidAssignmentStage";
 import { BidEstimatingSetupStage } from "@/components/bidding/BidEstimatingSetupStage";
+import { BidDrawingsStage } from "@/components/bidding/BidDrawingsStage";
+import { BidTakeoffComparisonPanel } from "@/components/bidding/BidTakeoffComparisonPanel";
 import { BidSpecSheetsStage } from "@/components/bidding/BidSpecSheetsStage";
 import { BidIntelTab } from "@/components/bidding/BidIntelTab";
 import { BidOutcomeStage } from "@/components/bidding/BidOutcomeStage";
@@ -67,10 +69,17 @@ function BidWorkspaceInner() {
       return <BidAssignmentStage />;
     case "estimating_setup":
       return <BidEstimatingSetupStage />;
+    case "drawings":
+      return <BidDrawingsStage />;
     case "spec_sheets":
       return <BidSpecSheetsStage />;
     case "takeoff":
-      return <SpecsPage bidId={bidId} embedded />;
+      return (
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+          <BidTakeoffComparisonPanel />
+          <SpecsPage bidId={bidId} embedded />
+        </div>
+      );
     case "proposal":
       return <BidSheetForm />;
     case "post_bid":

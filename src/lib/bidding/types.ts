@@ -60,6 +60,8 @@ export interface BidListItem {
   assistantEstimator?: string | null;
   /** PJ estimate grand total, mirrored from the latest client calc snapshot. */
   baseBidAmount?: number | null;
+  /** Cash expense entered on intake for list/report filtering. */
+  cashExpense?: number | null;
 
   // --- FollowupCRM filter-parity fields ---
   contactCell?: string | null;
@@ -172,6 +174,8 @@ export interface BidAttachment {
   mimeType: BidAttachmentMime;
   sizeBytes: number;
   label: string | null;
+  category?: string | null;
+  drawingCategory?: string | null;
   sortOrder: number;
   downloadPath: string;
   createdAt: string;
@@ -417,6 +421,10 @@ export interface BidInsights {
   marginPercent: number;
   completionPercent: number;
   isRecalculating?: boolean;
+  /** Divisor for Cost/SF — process.impactedGsf (life-safety impacted/renovated SF, not whole-building). */
+  gsfImpacted: number | null;
+  costPerSfMike: number | null;
+  costPerSfPj: number | null;
 }
 
 export type PayrollBurdenRateType = "pct_wage" | "capped_annual" | "per_hour";

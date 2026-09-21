@@ -280,6 +280,7 @@ export const FILTER_FIELDS: FilterFieldDef[] = [
   },
   { key: "fringe", label: "Fringe", section: "Project Data", kind: "text" },
   { key: "costPerEstimate", label: "Cost per estimate", section: "Project Data", kind: "text" },
+  { key: "cashExpense", label: "Cash Expense", section: "Project Data", kind: "text" },
   { key: "bidBondAmountRequested", label: "Bid Bond Amount Requested", section: "Project Data", kind: "text" },
   { key: "wageRateAmount", label: "Wage Rate Amount", section: "Project Data", kind: "text" },
   {
@@ -311,7 +312,6 @@ export const FILTER_FIELDS: FilterFieldDef[] = [
   { key: "engineerProjectNumber", label: "Engineer Project #", section: "Project Data", kind: "text" },
 
   // --- Record Details ---
-  { key: "baseBidAmount", label: "Base Bid", section: "Record Details", kind: "text" },
   { key: "contractAmount", label: "Contract Amount", section: "Record Details", kind: "text" },
   { key: "contractDate", label: "Contract Date", section: "Record Details", kind: "dateRange" },
   { key: "loginDate", label: "Login Date", section: "Record Details", kind: "dateRange" },

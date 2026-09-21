@@ -743,10 +743,10 @@ export function BidSheetForm() {
 
           {activeTab === "files" ? (
             <BidAttachmentsSection
-              attachments={bid.attachments ?? []}
+              attachments={(bid.attachments ?? []).filter((a) => a.label !== "drawings")}
               isEditable={isEditable}
               uploading={saving}
-              onUpload={async (file, label) => uploadAttachment(file, label)}
+              onUpload={async (file, opts) => uploadAttachment(file, opts)}
               onDelete={async (id) => deleteAttachment(id)}
             />
           ) : null}

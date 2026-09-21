@@ -105,6 +105,7 @@ const PASSWORD_FIELDS: [keyof ProcessAdditionalDetails, string][] = [
 ];
 
 const NUMBER_FIELDS: [keyof ProcessAdditionalDetails, string][] = [
+  ["cashExpense", "Cash expense"],
   ["wageRateAmount", "Wage rate amount"],
   ["grossSqFootage", "Gross sq footage"],
   ["fringe", "Fringe"],
