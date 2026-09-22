@@ -120,8 +120,28 @@ function emptyGcOrMech(): ProcessGcOrMech {
     preferredContact: null,
     hasTheJob: null,
     stillBidding: null,
+    bidPrice: null,
+    contractorStatus: null,
+    proposalStatus: null,
   };
 }
+
+const CONTRACTOR_STATUS_OPTIONS: { value: NonNullable<ProcessGcOrMech["contractorStatus"]>; label: string }[] = [
+  { value: "invited", label: "Invited" },
+  { value: "bidding", label: "Bidding" },
+  { value: "declined_to_bid", label: "Declined to bid" },
+  { value: "no_response", label: "No response" },
+  { value: "awarded", label: "Awarded the job" },
+  { value: "not_awarded", label: "Not awarded" },
+];
+
+const PROPOSAL_STATUS_OPTIONS: { value: NonNullable<ProcessGcOrMech["proposalStatus"]>; label: string }[] = [
+  { value: "not_submitted", label: "Not submitted" },
+  { value: "submitted", label: "Submitted" },
+  { value: "revised", label: "Revised" },
+  { value: "accepted", label: "Accepted" },
+  { value: "rejected", label: "Rejected" },
+];
 
 /** Unique companies from invite_contact parties for company-first typeahead. */
 function companyOptionsFromParties(
@@ -713,6 +733,35 @@ export function BidIntakeStage() {
             onChange={(e) => setDrawingName(e.target.value)}
             placeholder="e.g. Weinberg USP 800 Pharmacy"
           />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>Drawing category</span>
+          <div className="relative">
+            <select
+              className={selectClass}
+              disabled={!editable}
+              value={draft.drawingCategory ?? ""}
+              onChange={(e) =>
+                setField(
+                  "drawingCategory",
+                  (e.target.value || null) as typeof draft.drawingCategory
+                )
+              }
+            >
+              <option value="">—</option>
+              {(meta?.drawingCategories ?? []).map((id) => (
+                <option key={id} value={id}>
+                  {meta?.drawingCategoryLabels?.[id] ?? id}
+                </option>
+              ))}
+            </select>
+            <SelectChevron />
+          </div>
+          {draft.drawingCategory && meta?.drawingCategoryPercents?.[draft.drawingCategory] ? (
+            <p className="text-[10px] text-ink/40">
+              {meta.drawingCategoryPercents[draft.drawingCategory]} design completeness
+            </p>
+          ) : null}
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Owner / architect</span>
@@ -1377,10 +1426,10 @@ export function BidIntakeStage() {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-ink">
-              Owner / federal links
+              Project document hub
             </h3>
             <p className="text-xs text-ink/45">
-              Public owner set + extras — more than one OK.
+              O-drive replacement: keep owner, federal, portal, and other project document links here. Upload files in Attachments or Drawings.
             </p>
           </div>
           {editable ? (
@@ -1409,7 +1458,7 @@ export function BidIntakeStage() {
               <input
                 className={inputClass}
                 disabled={!editable}
-                placeholder="URL"
+                placeholder="O-drive / portal / document URL"
                 value={link.url}
                 onChange={(e) => {
                   const next = documentLinks.map((l, i) =>
@@ -1704,6 +1753,36 @@ export function BidIntakeStage() {
                         );
                       }}
                     />
+                    <input
+                      className={`${inputClass} min-w-[8rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Contact name"
+                      value={row.contactName ?? ""}
+                      onChange={(e) => {
+                        const contactName = e.target.value || null;
+                        setList(list.map((r, i) => (i === index ? { ...r, contactName } : r)));
+                      }}
+                    />
+                    <input
+                      className={`${inputClass} min-w-[10rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Email"
+                      value={row.email ?? ""}
+                      onChange={(e) => {
+                        const email = e.target.value || null;
+                        setList(list.map((r, i) => (i === index ? { ...r, email } : r)));
+                      }}
+                    />
+                    <input
+                      className={`${inputClass} min-w-[8rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Phone"
+                      value={row.phone ?? ""}
+                      onChange={(e) => {
+                        const phone = e.target.value || null;
+                        setList(list.map((r, i) => (i === index ? { ...r, phone } : r)));
+                      }}
+                    />
                     <label className="flex items-center gap-1.5 text-xs text-ink/70">
                       <input
                         type="checkbox"
@@ -1746,6 +1825,49 @@ export function BidIntakeStage() {
                       />
                       Still bidding
                     </label>
+                    <input
+                      type="number"
+                      className={`${inputClass} w-28`}
+                      disabled={!editable}
+                      placeholder="Bid price"
+                      value={row.bidPrice ?? ""}
+                      onChange={(e) => {
+                        const bidPrice = e.target.value === "" ? null : Number(e.target.value);
+                        setList(list.map((r, i) => (i === index ? { ...r, bidPrice } : r)));
+                      }}
+                    />
+                    <select
+                      className={`${inputClass} w-40`}
+                      disabled={!editable}
+                      value={row.contractorStatus ?? ""}
+                      onChange={(e) => {
+                        const contractorStatus = (e.target.value || null) as ProcessGcOrMech["contractorStatus"];
+                        setList(list.map((r, i) => (i === index ? { ...r, contractorStatus } : r)));
+                      }}
+                    >
+                      <option value="">Contractor status</option>
+                      {CONTRACTOR_STATUS_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className={`${inputClass} w-40`}
+                      disabled={!editable}
+                      value={row.proposalStatus ?? ""}
+                      onChange={(e) => {
+                        const proposalStatus = (e.target.value || null) as ProcessGcOrMech["proposalStatus"];
+                        setList(list.map((r, i) => (i === index ? { ...r, proposalStatus } : r)));
+                      }}
+                    >
+                      <option value="">Proposal status</option>
+                      {PROPOSAL_STATUS_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
                     {editable ? (
                       <button
                         type="button"
@@ -1786,10 +1908,10 @@ export function BidIntakeStage() {
       />
 
       <BidAttachmentsSection
-        attachments={bid.attachments ?? []}
+        attachments={(bid.attachments ?? []).filter((a) => a.label !== "drawings")}
         isEditable={editable}
         uploading={saving}
-        onUpload={async (file, label) => uploadAttachment(file, label)}
+        onUpload={async (file, opts) => uploadAttachment(file, opts)}
         onDelete={async (id) => deleteAttachment(id)}
       />
     </div>

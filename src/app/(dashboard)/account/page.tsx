@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -24,6 +24,41 @@ export default function AccountPage() {
 
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [nameSuccess, setNameSuccess] = useState(false);
+
+  // Resync from the loaded user once (and again if the session switches accounts),
+  // but not on every refreshUser() so we don't clobber an in-progress edit.
+  useEffect(() => {
+    setFirstName(user?.firstName ?? "");
+    setLastName(user?.lastName ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const nameDirty = (user?.firstName ?? "") !== firstName || (user?.lastName ?? "") !== lastName;
+
+  const handleSaveName = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setNameError(null);
+      setNameSuccess(false);
+      setNameBusy(true);
+      try {
+        await authApi.updateProfile({ firstName: firstName.trim(), lastName: lastName.trim() });
+        await refreshUser();
+        setNameSuccess(true);
+      } catch (err) {
+        setNameError(err instanceof Error ? err.message : "Couldn't update your name.");
+      } finally {
+        setNameBusy(false);
+      }
+    },
+    [firstName, lastName, refreshUser]
+  );
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -107,7 +142,7 @@ export default function AccountPage() {
   if (!user) return null;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <PageHeader title="Account" subtitle="Manage your profile photo and password." />
 
       <Card>
@@ -124,7 +159,7 @@ export default function AccountPage() {
                 type="button"
                 onClick={handlePickPhoto}
                 disabled={photoBusy}
-                className="rounded-xl bg-brand px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary disabled:opacity-50"
+                className="cursor-pointer rounded-xl bg-brand px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {photoBusy ? "Uploading…" : user.avatarUrl ? "Change photo" : "Add photo"}
               </button>
@@ -149,6 +184,41 @@ export default function AccountPage() {
             onChange={handlePhotoSelected}
           />
         </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="Your name" subtitle="Shown in the header and anywhere your name appears." />
+        <form onSubmit={handleSaveName} className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-ink/55">First name</span>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              maxLength={200}
+              className="w-48 rounded-xl border border-ink/10 bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand/15"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-ink/55">Last name</span>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              maxLength={200}
+              className="w-48 rounded-xl border border-ink/10 bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand/15"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={nameBusy || !nameDirty}
+            className="cursor-pointer rounded-xl bg-brand px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {nameBusy ? "Saving…" : "Save name"}
+          </button>
+        </form>
+        {nameError ? <p className="mt-2 text-xs text-danger">{nameError}</p> : null}
+        {nameSuccess && !nameDirty ? <p className="mt-2 text-xs text-success">Name updated.</p> : null}
       </Card>
 
       <Card>
@@ -179,7 +249,7 @@ export default function AccountPage() {
       <Card>
         <CardHeader title="Change password" subtitle="You'll stay signed in on this device." />
         <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5">
+          <label className="flex max-w-md flex-col gap-1.5">
             <span className="text-xs font-medium text-ink/55">Current password</span>
             <input
               type="password"
@@ -190,7 +260,7 @@ export default function AccountPage() {
               className="rounded-xl border border-ink/10 bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand/15"
             />
           </label>
-          <label className="flex flex-col gap-1.5">
+          <label className="flex max-w-md flex-col gap-1.5">
             <span className="text-xs font-medium text-ink/55">New password</span>
             <input
               type="password"
@@ -202,7 +272,7 @@ export default function AccountPage() {
               className="rounded-xl border border-ink/10 bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand/15"
             />
           </label>
-          <label className="flex flex-col gap-1.5">
+          <label className="flex max-w-md flex-col gap-1.5">
             <span className="text-xs font-medium text-ink/55">Confirm new password</span>
             <input
               type="password"

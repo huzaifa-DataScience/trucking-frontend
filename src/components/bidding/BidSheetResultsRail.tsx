@@ -125,6 +125,18 @@ export function BidSheetResultsRail({
             </div>
           ) : null}
 
+          {hasComputed && insights.gsfImpacted != null ? (
+            <div className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-xs text-white/60">
+              <span>
+                Cost/SF <span className="text-white/35">({insights.gsfImpacted.toLocaleString()} impacted SF)</span>
+              </span>
+              <span className="font-mono text-white/85">
+                {insights.costPerSfMike != null ? formatMoneyPrecise(insights.costPerSfMike) : "—"} (MIKE) ·{" "}
+                {insights.costPerSfPj != null ? formatMoneyPrecise(insights.costPerSfPj) : "—"} (PJ)
+              </span>
+            </div>
+          ) : null}
+
           <div>
             <div className="mb-1 flex justify-between text-[10px] uppercase tracking-wider text-white/40">
               <span>Bid progress</span>
