@@ -117,6 +117,7 @@ export type LeadSource =
  */
 export interface ProcessAdditionalDetails {
   bidNumber?: string | null;
+  cashExpense?: number | null;
   winningCompetitor?: string | null;
   mikeEstimateRef?: string | null;
   websiteForBiddingDocs?: string | null;
@@ -174,8 +175,10 @@ export interface ProcessSalesActivities {
 export type TakeoffRole =
   | "duct1"
   | "duct2"
+  | "duct3"
   | "hydronic1"
   | "hydronic2"
+  | "hydronic3"
   | "plumbing1"
   | "plumbing2"
   | "vrf"
@@ -218,6 +221,20 @@ export interface ProcessCompetitor {
   atBid?: boolean | null;
 }
 
+export interface ProcessFollowUpCallAttempt {
+  ordinal: number;
+  dateOfCall?: string | null;
+  remarks?: string | null;
+}
+
+export interface ProcessFollowUpCompany {
+  id: string;
+  companyName?: string | null;
+  contactName?: string | null;
+  phone?: string | null;
+  callAttempts?: ProcessFollowUpCallAttempt[];
+}
+
 export interface ProcessIntelligence {
   followUpOwner?: string | null;
   nextFollowUpDate?: string | null;
@@ -228,6 +245,8 @@ export interface ProcessIntelligence {
   customerFeedback?: string | null;
   currentProjectStatus?: string | null;
   competitors?: ProcessCompetitor[];
+  /** Up to 10 companies, each with up to 5 dated call attempts. */
+  followUpCalls?: ProcessFollowUpCompany[];
   notes?: string | null;
 }
 
@@ -511,10 +530,24 @@ export interface ProcessWhoElseBidding {
   notes?: string | null;
 }
 
+export type ContractorStatus =
+  | "invited"
+  | "bidding"
+  | "declined_to_bid"
+  | "no_response"
+  | "awarded"
+  | "not_awarded"
+  | null;
+
+export type ProposalStatus = "not_submitted" | "submitted" | "revised" | "accepted" | "rejected" | null;
+
 export interface ProcessGcOrMech extends ProcessParty {
   hasTheJob?: boolean | null;
   receivedProposalBy?: string | null;
   stillBidding?: boolean | null;
+  bidPrice?: number | null;
+  contractorStatus?: ContractorStatus;
+  proposalStatus?: ProposalStatus;
 }
 
 export interface ProcessInviteContact {
@@ -533,6 +566,7 @@ export interface BidProcess {
   workType?: WorkType;
   bidKind?: BidKind;
   drawingName?: string | null;
+  drawingCategory?: "sd" | "dd" | "ifb" | "ifp" | "ifc" | "ifr" | null;
   /** Title-block owner/architect # — duplicate key */
   ownerProjectNumber?: string | null;
   /** Engineer of Record — mechanical (title-block #) — duplicate key */
@@ -671,6 +705,12 @@ export interface ProcessMeta {
   };
   clearances?: ProcessMetaEnumOption[] | string[];
   attachmentLabels?: string[] | Record<string, string>;
+  attachmentCategories?: string[];
+  drawingCategories?: string[];
+  drawingCategoryLabels?: Record<string, string>;
+  drawingCategoryPercents?: Record<string, string>;
+  contractorStatuses?: string[];
+  proposalStatuses?: string[];
   hqExampleTiers?: ProcessContractTier[];
   defaults?: Record<string, unknown>;
   specSheetTemplates?: SpecSheetTemplateMeta[];
@@ -779,11 +819,12 @@ export interface WageDecision {
   [key: string]: unknown;
 }
 
-/** UI chrome stages — Spec sheets after Setup, before Takeoff. */
+/** UI chrome stages — Drawings after Setup, then Spec sheets, before Takeoff. */
 export type BidChromeStage =
   | "intake"
   | "assignment"
   | "estimating_setup"
+  | "drawings"
   | "spec_sheets"
   | "takeoff"
   | "proposal"
@@ -793,7 +834,7 @@ export type BidChromeStage =
   | "lost"
   | "production";
 
-/** Pre strip — Spec sheets after Setup; Outcome last. */
+/** Pre strip — Drawings then Spec sheets after Setup; Outcome last. */
 export const BID_HANDOFF_STAGES: {
   id: Exclude<BidChromeStage, "award" | "lost" | "production">;
   label: string;
@@ -802,11 +843,12 @@ export const BID_HANDOFF_STAGES: {
   { id: "intake", label: "Intake", short: "1 Intake" },
   { id: "assignment", label: "Assignment", short: "2 Assignment" },
   { id: "estimating_setup", label: "Setup", short: "3 Setup" },
-  { id: "spec_sheets", label: "Spec sheets", short: "4 Spec sheets" },
-  { id: "takeoff", label: "Takeoff", short: "5 Takeoff" },
-  { id: "proposal", label: "Proposal", short: "6 Proposal" },
-  { id: "post_bid", label: "Post-Bid", short: "7 Post-Bid" },
-  { id: "result", label: "Outcome", short: "8 Outcome" },
+  { id: "drawings", label: "Drawings", short: "4 Drawings" },
+  { id: "spec_sheets", label: "Spec sheets", short: "5 Spec sheets" },
+  { id: "takeoff", label: "Takeoff", short: "6 Takeoff" },
+  { id: "proposal", label: "Proposal", short: "7 Proposal" },
+  { id: "post_bid", label: "Post-Bid", short: "8 Post-Bid" },
+  { id: "result", label: "Outcome", short: "9 Outcome" },
 ];
 
 const LEGACY_STAGE: Record<string, BidChromeStage> = {
@@ -822,6 +864,7 @@ const LEGACY_TAB: Record<string, BidChromeStage> = {
   setup: "intake",
   estimate: "proposal",
   specs: "takeoff",
+  drawings: "drawings",
   "spec-sheets": "spec_sheets",
   spec_sheets: "spec_sheets",
   intel: "post_bid",
@@ -840,6 +883,7 @@ export function normalizeProcessStage(
     s === "intake" ||
     s === "assignment" ||
     s === "estimating_setup" ||
+    s === "drawings" ||
     s === "spec_sheets" ||
     s === "takeoff" ||
     s === "proposal" ||
@@ -884,6 +928,7 @@ export function formatProcessStage(s: string | null | undefined): string {
     intake: "Intake",
     assignment: "Assignment",
     estimating_setup: "Setup",
+    drawings: "Drawings",
     spec_sheets: "Spec sheets",
     takeoff: "Takeoff",
     proposal: "Proposal",

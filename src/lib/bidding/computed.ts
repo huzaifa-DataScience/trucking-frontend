@@ -15,15 +15,22 @@ export function insightsFromBid(
   opts?: { isRecalculating?: boolean }
 ): BidInsights {
   const c = bid.computed ?? {};
+  const mikeEstimate = num(c, "baseBid.mikeEstimate");
+  const pjEstimate = num(c, "baseBid.pjEstimate");
+  const gsfImpacted = bid.process?.impactedGsf ?? null;
+  const hasGsf = gsfImpacted != null && gsfImpacted > 0;
   return {
-    mikeEstimate: num(c, "baseBid.mikeEstimate"),
-    pjEstimate: num(c, "baseBid.pjEstimate"),
+    mikeEstimate,
+    pjEstimate,
     costPerHourMike: num(c, "baseBid.costPerHourMike"),
     costPerHourPj: num(c, "baseBid.costPerHourPj"),
     marginPercent:
       num(c, "baseBid.marginPercent") || (bid.baseBid?.marginPercent ?? 0),
     completionPercent: Math.round(num(c, "insights.completionPercent", 0)),
     isRecalculating: opts?.isRecalculating,
+    gsfImpacted,
+    costPerSfMike: hasGsf ? mikeEstimate / gsfImpacted : null,
+    costPerSfPj: hasGsf ? pjEstimate / gsfImpacted : null,
   };
 }
 

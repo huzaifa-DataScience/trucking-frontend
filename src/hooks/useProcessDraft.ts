@@ -150,14 +150,17 @@ export function useProcessDraft() {
         insulationSpecs:
           updated.process?.insulationSpecs ?? snapshot.insulationSpecs ?? null,
       };
-      draftRef.current = mergedProcess;
-      savedFp.current = processFingerprint(mergedProcess);
-      setDraftState(mergedProcess);
-      setDirty(false);
-      setProcessDirty(false);
+      const changedDuringSave = processFingerprint(draftRef.current) !== processFingerprint(snapshot);
+      if (!changedDuringSave) {
+        draftRef.current = mergedProcess;
+        savedFp.current = processFingerprint(mergedProcess);
+        setDraftState(mergedProcess);
+        setDirty(false);
+        setProcessDirty(false);
+      }
       applyBidDetail({
         ...updated,
-        process: mergedProcess,
+        process: changedDuringSave ? { ...(updated.process ?? {}), ...draftRef.current } : mergedProcess,
       });
     } catch (e) {
       setError(getApiErrorMessage(e, "Failed to save"));
@@ -171,6 +174,17 @@ export function useProcessDraft() {
     registerProcessSave(persist);
     return () => registerProcessSave(null);
   }, [persist, registerProcessSave]);
+
+  // Persist intake/setup edits shortly after the user pauses. The explicit Save
+  // action remains available for an immediate flush, but refreshes should not
+  // discard a completed field edit.
+  useEffect(() => {
+    if (!dirty || !editable) return;
+    const timer = setTimeout(() => {
+      void persist().catch(() => undefined);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [dirty, editable, persist, draft]);
 
   // Reconcile from the draft fingerprint so hydration/stage transitions cannot
   // leave a stale dirty flag behind.

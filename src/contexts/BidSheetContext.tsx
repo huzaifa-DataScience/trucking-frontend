@@ -81,7 +81,10 @@ type BidSheetContextValue = {
   saveCoverSheet: () => Promise<void>;
   markSubmitted: () => Promise<void>;
   reopenAsDraft: () => Promise<void>;
-  uploadAttachment: (file: File, label?: string) => Promise<void>;
+  uploadAttachment: (
+    file: File,
+    opts?: { label?: string; category?: string; drawingCategory?: string }
+  ) => Promise<void>;
   deleteAttachment: (attachmentId: number) => Promise<void>;
 };
 
@@ -645,7 +648,7 @@ export function BidSheetProvider({
   }, [savePatch]);
 
   const uploadAttachment = useCallback(
-    async (file: File, label?: string) => {
+    async (file: File, opts?: { label?: string; category?: string; drawingCategory?: string }) => {
       // Attachments until archived (API) — process/spec photos after submit OK
       if (bidRef.current?.status === "archived") {
         setError("Attachments cannot be added on an archived bid.");
@@ -654,7 +657,7 @@ export function BidSheetProvider({
       setSaving(true);
       setError(null);
       try {
-        await biddingApi.uploadBidAttachment(bidId, file, label);
+        await biddingApi.uploadBidAttachment(bidId, file, opts);
         await loadBid({ silent: true });
       } catch (e) {
         setError(getApiErrorMessage(e, "Failed to upload attachment"));
@@ -713,6 +716,9 @@ export function BidSheetProvider({
             marginPercent: 0,
             completionPercent: 0,
             isRecalculating: saving,
+            gsfImpacted: null,
+            costPerSfMike: null,
+            costPerSfPj: null,
           },
     [bid, saving]
   );
