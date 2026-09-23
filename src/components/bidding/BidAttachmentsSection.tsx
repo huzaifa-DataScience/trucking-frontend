@@ -7,7 +7,7 @@ import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import type { BidAttachment } from "@/lib/bidding/types";
 
 const MAX_FILES = 20;
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = 100 * 1024 * 1024;
 const ACCEPT =
   "image/jpeg,image/png,image/webp,application/pdf,text/csv,.csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.doc,.docx";
 const WORD_DOC_MIMES = new Set([
@@ -206,7 +206,7 @@ export function BidAttachmentsSection({
 
       for (const file of Array.from(files)) {
         if (file.size > MAX_BYTES) {
-          setLocalError(`${file.name} exceeds 10 MB.`);
+          setLocalError(`${file.name} exceeds 100 MB.`);
           return;
         }
       }
@@ -239,7 +239,7 @@ export function BidAttachmentsSection({
         subtitle={
           mode === "drawings"
             ? "Every drawing on this bid, by revision phase."
-            : "Site photos, screenshots, PDFs, Word docs, and CSV exports, up to 10 MB each."
+            : "Site photos, screenshots, PDFs, Word docs, and CSV exports, up to 100 MB each."
         }
       />
 
