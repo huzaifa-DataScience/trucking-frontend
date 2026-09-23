@@ -94,13 +94,17 @@ export function describeCondition(fields: FilterFieldDef[], c: FilterCondition):
   if (c.op === "is") {
     if (field?.kind === "checkbox") return label;
     const opt = field?.options?.find((o) => o.value === c.value);
-    return `${label} is ${opt?.label ?? c.value ?? "…"}`;
+    return `${label} is: ${opt?.label ?? c.value ?? "…"}`;
   }
   if (c.op === "in") {
     const labels = (c.values ?? []).map((v) => field?.options?.find((o) => o.value === v)?.label ?? v);
     if (labels.length === 0) return `${label} …`;
-    if (labels.length === 1) return `${label} is ${labels[0]}`;
-    return `${label} is any of ${labels.join(", ")}`;
+    if (labels.length === 1) return `${label} is: ${labels[0]}`;
+    // A colon (not "is") makes clear everything after it is one OR'd group scoped
+    // to this field — "A, B, or C" reads unambiguously even at 4+ values, unlike
+    // "is any of A, B, C" which some readers parse as "equals A and B and C".
+    if (labels.length === 2) return `${label}: ${labels[0]} or ${labels[1]}`;
+    return `${label}: ${labels.slice(0, -1).join(", ")}, or ${labels[labels.length - 1]}`;
   }
   if (c.op === "contains") {
     return `${label} contains "${c.value ?? ""}"`;

@@ -81,7 +81,7 @@ function FieldControl({
             >
               <input
                 type="checkbox"
-                className="h-3.5 w-3.5 shrink-0 rounded border-ink/20 text-brand focus:ring-brand/40"
+                className="h-3.5 w-3.5 shrink-0 rounded-none border-ink/20 text-brand focus:ring-brand/40"
                 checked={selected.includes(o.value)}
                 onChange={() => toggle(o.value)}
               />
