@@ -426,9 +426,24 @@ export default function BiddingListPage() {
   };
 
   const findCondition = (views: SavedView[], key: string): FilterCondition | undefined => {
-    const [viewId, conditionId] = key.split("::");
+    // "::" also separates a per-value chip's id (base condition id + "::" + value,
+    // built in SavedViewTabs for multi-select conditions) — split only the viewId
+    // off the front and keep the rest joined so that suffix survives intact.
+    const sep = key.indexOf("::");
+    if (sep === -1) return undefined;
+    const viewId = key.slice(0, sep);
+    const conditionId = key.slice(sep + 2);
     const view = views.find((v) => v.id === viewId);
-    return view?.groups.flatMap((g) => g.conditions).find((c) => c.id === conditionId);
+    const conditions = view?.groups.flatMap((g) => g.conditions) ?? [];
+    const direct = conditions.find((c) => c.id === conditionId);
+    if (direct) return direct;
+    // Per-value virtual chip — condition ids are UUIDs (fixed 36 chars), so the
+    // base id is unambiguous even if the value itself contains "::".
+    const baseId = conditionId.slice(0, 36);
+    const value = conditionId.slice(38);
+    const base = conditions.find((c) => c.id === baseId);
+    if (!base || base.op !== "in" || !base.values?.includes(value)) return undefined;
+    return { id: conditionId, field: base.field, op: "is", value };
   };
 
   const groupsForActiveKeys = (keys: string[], views: SavedView[]): FilterGroup[] =>

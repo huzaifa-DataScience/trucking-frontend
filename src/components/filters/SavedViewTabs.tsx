@@ -48,23 +48,38 @@ export function SavedViewTabs({
               {conditions.length === 0 ? (
                 <span className="text-xs text-ink/35">(no criteria)</span>
               ) : (
-                conditions.map((c) => {
-                  const active = activeKeys.includes(conditionKey(v.id, c.id));
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => onToggleCondition(v.id, c)}
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                        active
-                          ? "border-brand/40 bg-brand/10 text-brand"
-                          : "border-ink/10 bg-canvas text-ink/60 hover:border-ink/20 hover:text-ink"
-                      }`}
-                    >
-                      {describeCondition(fields, c)}
-                    </button>
-                  );
+                // A multi-select ("in") condition gets one chip per value, each
+                // independently toggleable, instead of one combined "A or B" chip.
+                conditions.flatMap((c) => {
+                  const chips =
+                    c.op === "in" && (c.values?.length ?? 0) > 1
+                      ? (c.values ?? []).map(
+                          (val): FilterCondition => ({
+                            id: `${c.id}::${val}`,
+                            field: c.field,
+                            op: "is",
+                            value: val,
+                          })
+                        )
+                      : [c];
+                  return chips.map((chip) => {
+                    const active = activeKeys.includes(conditionKey(v.id, chip.id));
+                    return (
+                      <button
+                        key={chip.id}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => onToggleCondition(v.id, chip)}
+                        className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${
+                          active
+                            ? "border-brand/40 bg-brand/10 text-brand"
+                            : "border-ink/10 bg-canvas text-ink/60 hover:border-ink/20 hover:text-ink"
+                        }`}
+                      >
+                        {describeCondition(fields, chip)}
+                      </button>
+                    );
+                  });
                 })
               )}
             </div>
