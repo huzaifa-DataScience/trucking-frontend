@@ -339,51 +339,6 @@ export default function BiddingListPage() {
     }
   };
 
-  /**
-   * Best-effort: pull bidDate/clientCompanyName out of the sidebar filters for the
-   * server export, so it isn't silently narrower than what's on screen. Only when
-   * exactly one group is active — multiple OR'd groups can't be losslessly flattened
-   * into query params, so those fall back to unfiltered-by-these-two on the server
-   * (same as before; the on-screen list/client export still apply them correctly).
-   */
-  const singleGroupSidebarFilters = () => {
-    if (filterGroups.length !== 1) return {};
-    const conditions = filterGroups[0].conditions;
-    const bidDateCond = conditions.find((c) => c.field === "bidDate" && c.op === "between");
-    const companyCond = conditions.find((c) => c.field === "clientCompanyName" && c.op === "is");
-    return {
-      bidDateFrom: bidDateCond?.start || undefined,
-      bidDateTo: bidDateCond?.end || undefined,
-      clientCompanyName: companyCond?.value || undefined,
-    };
-  };
-
-  const runExport = async () => {
-    setExporting(true);
-    try {
-      const blob = await biddingApi.exportBids({
-        entityId: listParams.entityId,
-        search: listParams.search,
-        workType: listParams.workType,
-        processStage: listParams.processStage,
-        outcome: listParams.outcome,
-        status: listParams.status,
-        teamId: listParams.teamId,
-        ...singleGroupSidebarFilters(),
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "bids.xlsx";
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      setError(getApiErrorMessage(e, "Export failed"));
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const counts = useMemo(() => {
     const byStatus: Record<BidStatus, number> = { draft: 0, submitted: 0, archived: 0 };
     for (const bid of bids) byStatus[bid.status] += 1;
@@ -418,8 +373,14 @@ export default function BiddingListPage() {
     });
   }, [bids, status, sortKey, filterGroups]);
 
-  const exportToExcel = useCallback(() => {
-    import("xlsx").then((XLSX) => {
+  // Always exports exactly what's on screen (`visibleBids` already applies every
+  // active filter group OR'd together, plus search/status/sort) — a prior split
+  // between this and a separate server-side export could silently disagree with
+  // the on-screen filtered set whenever more than one filter group was active.
+  const exportToExcel = useCallback(async () => {
+    setExporting(true);
+    try {
+      const XLSX = await import("xlsx");
       const ws = XLSX.utils.json_to_sheet(
         visibleBids.map((b) => ({
           "Estimate #": b.estimateNumber,
@@ -442,7 +403,11 @@ export default function BiddingListPage() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Estimates");
       XLSX.writeFile(wb, "estimates-export.xlsx");
-    });
+    } catch (e) {
+      setError(getApiErrorMessage(e, "Export failed"));
+    } finally {
+      setExporting(false);
+    }
   }, [visibleBids]);
 
   const applyFilterGroups = (groups: FilterGroup[]) => {
@@ -550,7 +515,7 @@ export default function BiddingListPage() {
             <button
               type="button"
               disabled={exporting || loading}
-              onClick={() => void runExport()}
+              onClick={() => void exportToExcel()}
               className={buttonClasses("secondary")}
             >
               {exporting ? "Exporting…" : "Export"}
@@ -639,6 +604,36 @@ export default function BiddingListPage() {
             </div>
           </div>
 
+          <div className="w-36 shrink-0">
+            <FilterSelect
+              prefix="Work type"
+              value={workType}
+              onChange={setWorkType}
+              options={WORK_TYPE_FILTERS}
+              ariaLabel="Filter by work type"
+            />
+          </div>
+
+          <div className="w-36 shrink-0">
+            <FilterSelect
+              prefix="Stage"
+              value={processStage}
+              onChange={setProcessStage}
+              options={STAGE_FILTERS}
+              ariaLabel="Filter by stage"
+            />
+          </div>
+
+          <div className="w-36 shrink-0">
+            <FilterSelect
+              prefix="Outcome"
+              value={outcome}
+              onChange={setOutcome}
+              options={OUTCOME_FILTERS}
+              ariaLabel="Filter by outcome"
+            />
+          </div>
+
           <div className="w-44 shrink-0">
             <FilterSelect
               prefix="Sort"
@@ -667,15 +662,15 @@ export default function BiddingListPage() {
 
           <button
             type="button"
-            onClick={exportToExcel}
-            disabled={visibleBids.length === 0}
+            onClick={() => void exportToExcel()}
+            disabled={exporting || visibleBids.length === 0}
             title="Export the currently filtered/sorted list to Excel"
             className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-ink/10 bg-surface px-3.5 text-sm font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Export
+            {exporting ? "Exporting…" : "Export"}
           </button>
 
           <div className="flex h-10 shrink-0 items-center gap-0.5 rounded-lg border border-ink/10 bg-surface p-1">

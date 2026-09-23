@@ -56,28 +56,39 @@ function FieldControl({
 
   if (field.kind === "select") {
     const options = field.dynamic ? dynamicOptions?.[field.key] ?? [] : field.options ?? [];
+    const selected = condition?.values ?? (condition?.value ? [condition.value] : []);
+    const toggle = (value: string) => {
+      const next = selected.includes(value)
+        ? selected.filter((v) => v !== value)
+        : [...selected, value];
+      if (next.length === 0) {
+        onChange(null);
+        return;
+      }
+      onChange({ id: condition?.id ?? newId(), field: field.key, op: "in", values: next });
+    };
     return (
-      <div className="relative">
-        <select
-          className={selectClass}
-          value={condition?.value ?? ""}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (!value) {
-              onChange(null);
-              return;
-            }
-            onChange({ id: condition?.id ?? newId(), field: field.key, op: "is", value });
-          }}
-        >
-          <option value="">{field.placeholder ?? `Select ${field.label.toLowerCase()}`}</option>
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <SelectChevron />
+      <div className="max-h-44 overflow-y-auto rounded-lg border border-ink/10 bg-surface p-1.5">
+        {options.length === 0 ? (
+          <p className="px-2 py-1.5 text-xs text-ink/35">
+            {field.placeholder ?? `Select ${field.label.toLowerCase()}`}
+          </p>
+        ) : (
+          options.map((o) => (
+            <label
+              key={o.value}
+              className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink transition hover:bg-ink/[0.04]"
+            >
+              <input
+                type="checkbox"
+                className="h-3.5 w-3.5 shrink-0 rounded border-ink/20 text-brand focus:ring-brand/40"
+                checked={selected.includes(o.value)}
+                onChange={() => toggle(o.value)}
+              />
+              <span className="min-w-0 truncate">{o.label}</span>
+            </label>
+          ))
+        )}
       </div>
     );
   }
