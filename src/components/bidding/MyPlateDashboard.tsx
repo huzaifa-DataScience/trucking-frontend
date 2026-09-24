@@ -15,10 +15,10 @@ import {
   formatProcessStage,
   type MyPlateColumn,
   type MyPlateGroup,
-  type MyPlateNotification,
   type MyPlateResponse,
   type MyPlateRow,
 } from "@/lib/bidding/process-types";
+import { chatHref } from "@/lib/bidding/notifications";
 
 const DEFAULT_COLUMNS: MyPlateColumn[] = [
   { key: "estimateNumber", label: "Bid #" },
@@ -51,26 +51,6 @@ function normalizeColumns(
 function rowHref(row: MyPlateRow): string {
   const stage = String(row.processStage ?? "intake").trim() || "intake";
   return `/bidding/${row.id}?stage=${encodeURIComponent(stage)}`;
-}
-
-function chatHref(conversationId: string): string {
-  return `/workforce/chat/${encodeURIComponent(conversationId)}`;
-}
-
-function notificationHref(n: MyPlateNotification): string | null {
-  if (n.kind === "message" && n.conversationId) {
-    return chatHref(String(n.conversationId));
-  }
-  if (n.kind === "comment_mention" && n.bidId != null && String(n.bidId).trim()) {
-    const q = new URLSearchParams({ notes: "1" });
-    if (n.commentId != null) q.set("commentId", String(n.commentId));
-    return `/bidding/${n.bidId}?${q.toString()}`;
-  }
-  if (n.bidId != null && String(n.bidId).trim()) {
-    const stage = String(n.processStage || "intake").trim() || "intake";
-    return `/bidding/${n.bidId}?stage=${encodeURIComponent(stage)}`;
-  }
-  return null;
 }
 
 function cellText(
@@ -137,7 +117,6 @@ export function MyPlateDashboard() {
   const groups = useMemo(() => plate?.groups ?? [], [plate]);
   const counts = plate?.counts;
   const messages = plate?.messages;
-  const notifications = plate?.notifications ?? [];
 
   if (!canRead) {
     return (
@@ -179,8 +158,8 @@ export function MyPlateDashboard() {
       ) : null}
 
       {loading && !plate ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {Array.from({ length: 5 }, (_, i) => (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
             <div
               key={i}
               className="rounded-2xl border border-ink/[0.08] bg-surface px-4 py-3"
@@ -191,14 +170,13 @@ export function MyPlateDashboard() {
           ))}
         </div>
       ) : counts ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {(
             [
               ["due", "Due"],
               ["upcoming", "Upcoming"],
               ["assigned", "Assigned"],
               ["unreadMessages", "Unread"],
-              ["notifications", "Alerts"],
             ] as const
           ).map(([key, label]) => {
             const n = counts[key];
@@ -220,7 +198,7 @@ export function MyPlateDashboard() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4">
         <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4">
           <div className="mb-3 flex items-baseline justify-between gap-2">
             <h2 className="text-sm font-semibold text-ink">Messages</h2>
@@ -269,62 +247,6 @@ export function MyPlateDashboard() {
                   </Link>
                 </li>
               ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4">
-          <div className="mb-3 flex items-baseline justify-between gap-2">
-            <h2 className="text-sm font-semibold text-ink">Notifications</h2>
-            {loading && !plate ? null : (
-              <span className="text-xs text-ink/40">
-                {notifications.length} item{notifications.length === 1 ? "" : "s"}
-              </span>
-            )}
-          </div>
-          {loading && !plate ? (
-            <div className="flex flex-col gap-1.5">
-              {Array.from({ length: 3 }, (_, i) => (
-                <div key={i} className="px-2.5 py-2">
-                  <Skeleton className="h-3.5 w-1/3" />
-                  <Skeleton className="mt-2 h-3 w-2/3" />
-                </div>
-              ))}
-            </div>
-          ) : notifications.length === 0 ? (
-            <p className="text-sm text-ink/45">No alerts right now.</p>
-          ) : (
-            <ul className="flex flex-col gap-1.5">
-              {notifications.slice(0, 8).map((n, i) => {
-                const href = notificationHref(n);
-                const body = (
-                  <>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-ink/40">
-                      {n.kind}
-                    </p>
-                    <p className="text-sm font-semibold text-ink">
-                      {n.title || "Update"}
-                    </p>
-                    {n.body ? (
-                      <p className="text-xs text-ink/50">{n.body}</p>
-                    ) : null}
-                  </>
-                );
-                return (
-                  <li key={`${n.kind}-${n.bidId ?? n.conversationId ?? i}`}>
-                    {href ? (
-                      <Link
-                        href={href}
-                        className="block rounded-xl px-2.5 py-2 transition hover:bg-ink/[0.03]"
-                      >
-                        {body}
-                      </Link>
-                    ) : (
-                      <div className="rounded-xl px-2.5 py-2">{body}</div>
-                    )}
-                  </li>
-                );
-              })}
             </ul>
           )}
         </section>
