@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { AvatarCircle } from "@/components/ui/AvatarCircle";
 import { useAuth } from "@/contexts/AuthContext";
 import * as authApi from "@/lib/api/endpoints/auth";
 import { roleLabel } from "@/lib/auth/roles";
@@ -20,10 +19,6 @@ function canSeeMyTeamLink(role: string | undefined): boolean {
 
 export default function AccountPage() {
   const { user, refreshUser } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [photoBusy, setPhotoBusy] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -67,44 +62,6 @@ export default function AccountPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
-  const handlePickPhoto = useCallback(() => {
-    setPhotoError(null);
-    fileInputRef.current?.click();
-  }, []);
-
-  const handlePhotoSelected = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      e.target.value = "";
-      if (!file) return;
-      setPhotoBusy(true);
-      setPhotoError(null);
-      try {
-        await authApi.uploadAvatar(file);
-        await refreshUser();
-      } catch (err) {
-        setPhotoError(err instanceof Error ? err.message : "Couldn't upload photo.");
-      } finally {
-        setPhotoBusy(false);
-      }
-    },
-    [refreshUser]
-  );
-
-  const handleRemovePhoto = useCallback(async () => {
-    if (!window.confirm("Remove your profile photo?")) return;
-    setPhotoBusy(true);
-    setPhotoError(null);
-    try {
-      await authApi.deleteAvatar();
-      await refreshUser();
-    } catch (err) {
-      setPhotoError(err instanceof Error ? err.message : "Couldn't remove photo.");
-    } finally {
-      setPhotoBusy(false);
-    }
-  }, [refreshUser]);
-
   const handleChangePassword = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -143,48 +100,7 @@ export default function AccountPage() {
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <PageHeader title="Account" subtitle="Manage your profile photo and password." />
-
-      <Card>
-        <CardHeader title="Profile photo" subtitle="Shown in the header and anywhere your name appears." />
-        <div className="flex items-center gap-5">
-          <AvatarCircle user={user} size="xl" />
-          <div className="flex min-w-0 flex-col gap-2">
-            <p className="truncate text-sm font-semibold text-ink">
-              {user.displayName || [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email}
-            </p>
-            <p className="truncate text-xs text-ink/45">{user.email}</p>
-            <div className="mt-1 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handlePickPhoto}
-                disabled={photoBusy}
-                className="cursor-pointer rounded-xl bg-brand px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {photoBusy ? "Uploading…" : user.avatarUrl ? "Change photo" : "Add photo"}
-              </button>
-              {user.avatarUrl ? (
-                <button
-                  type="button"
-                  onClick={handleRemovePhoto}
-                  disabled={photoBusy}
-                  className="rounded-xl border border-ink/15 bg-surface px-3.5 py-2 text-sm font-medium text-ink/70 transition hover:bg-ink/[0.05] hover:text-ink disabled:opacity-50"
-                >
-                  Remove
-                </button>
-              ) : null}
-            </div>
-            {photoError ? <p className="text-xs text-danger">{photoError}</p> : null}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            className="hidden"
-            onChange={handlePhotoSelected}
-          />
-        </div>
-      </Card>
+      <PageHeader title="Account" subtitle="Manage your name and password." />
 
       <Card>
         <CardHeader title="Your name" subtitle="Shown in the header and anywhere your name appears." />
