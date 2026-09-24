@@ -10,6 +10,7 @@ import { getJobTickets } from "@/lib/api/endpoints/job-dashboard";
 import type { ApiTicketRow } from "@/lib/api/types";
 import { useLookups } from "@/hooks/useLookups";
 import { AvatarCircle } from "@/components/ui/AvatarCircle";
+import { NotificationBell } from "@/components/dashboard/NotificationBell";
 
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { companyId, company, setCompanyId, companies } = useCompany();
@@ -310,6 +311,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         <div className="order-2 flex shrink-0 items-center justify-end gap-2 sm:order-3 sm:flex-1 sm:gap-3">
           {user ? (
             <>
+              <NotificationBell />
               <div className="hidden h-9 w-px bg-ink/10 sm:block" aria-hidden />
               <div className="relative flex items-center" ref={menuRef}>
               <button
