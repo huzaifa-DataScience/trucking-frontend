@@ -32,18 +32,35 @@ function ItemChip({ item, onOpen, compact }: { item: CalendarItem; onOpen: (i: C
   );
 }
 
+/** Empty space in a day cell: click to add an event on that day. */
+function AddOnDay({ day, onCreateDay }: { day: string; onCreateDay: (day: string) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onCreateDay(day)}
+      className="group flex min-h-6 w-full flex-1 items-start justify-center rounded-md pt-0.5 text-[11px] font-semibold text-transparent transition hover:bg-ink/[0.03] hover:text-ink/40 focus-visible:text-ink/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+      aria-label={`Add event on ${fromYmd(day).toDateString()}`}
+    >
+      + Add event
+    </button>
+  );
+}
+
 export function MonthView({
   anchor,
   today,
   byDay,
   onOpen,
   onPickDay,
+  onCreateDay,
 }: {
   anchor: string;
   today: string;
   byDay: Map<string, CalendarItem[]>;
   onOpen: (i: CalendarItem) => void;
   onPickDay: (day: string) => void;
+  /** Omitted when viewing someone else's (read-only) calendar. */
+  onCreateDay?: (day: string) => void;
 }) {
   const month = fromYmd(anchor).getMonth();
   return (
@@ -64,7 +81,7 @@ export function MonthView({
             return (
               <div
                 key={day}
-                className={`min-h-[7.5rem] border-b border-r border-ink/[0.06] p-1.5 ${inMonth ? "" : "bg-ink/[0.02]"}`}
+                className={`flex min-h-[7.5rem] flex-col border-b border-r border-ink/[0.06] p-1.5 ${inMonth ? "" : "bg-ink/[0.02]"}`}
               >
                 <button
                   type="button"
@@ -90,6 +107,7 @@ export function MonthView({
                     </button>
                   ) : null}
                 </div>
+                {onCreateDay ? <AddOnDay day={day} onCreateDay={onCreateDay} /> : null}
               </div>
             );
           })}
@@ -104,11 +122,13 @@ export function WeekView({
   today,
   byDay,
   onOpen,
+  onCreateDay,
 }: {
   anchor: string;
   today: string;
   byDay: Map<string, CalendarItem[]>;
   onOpen: (i: CalendarItem) => void;
+  onCreateDay?: (day: string) => void;
 }) {
   const start = startOfWeek(anchor);
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
@@ -119,7 +139,7 @@ export function WeekView({
           const d = fromYmd(day);
           const items = byDay.get(day) ?? [];
           return (
-            <div key={day} className="min-h-[24rem] p-2">
+            <div key={day} className="flex min-h-[24rem] flex-col p-2">
               <div className="mb-2 text-center">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-ink/45">{WEEKDAYS[d.getDay()]}</p>
                 <p
@@ -131,11 +151,12 @@ export function WeekView({
                 </p>
               </div>
               <div className="space-y-1">
-                {items.length === 0 ? <p className="pt-2 text-center text-xs text-ink/30">—</p> : null}
+                {items.length === 0 && !onCreateDay ? <p className="pt-2 text-center text-xs text-ink/30">—</p> : null}
                 {items.map((item) => (
                   <ItemChip key={`${day}-${item.id}`} item={item} onOpen={onOpen} />
                 ))}
               </div>
+              {onCreateDay ? <AddOnDay day={day} onCreateDay={onCreateDay} /> : null}
             </div>
           );
         })}

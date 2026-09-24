@@ -129,7 +129,7 @@ export default function CalendarPage() {
     <div className="space-y-5">
       <PageHeader
         title={viewingSelf ? "My calendar" : `${data?.person.name ?? "Calendar"}`}
-        subtitle="Bid deadlines, takeoff work, tracked time, shifts, tasks, time off and your own events."
+        subtitle="Bid deadlines, takeoff work, shifts, tasks, time off and your own events."
         action={
           viewingSelf ? (
             <Button variant="primary" onClick={() => setEditor({ editing: null, day: anchor })}>
@@ -238,9 +238,16 @@ export default function CalendarPage() {
                 setAnchor(day);
                 setView("agenda");
               }}
+              onCreateDay={viewingSelf ? (day) => setEditor({ editing: null, day }) : undefined}
             />
           ) : view === "week" ? (
-            <WeekView anchor={anchor} today={today} byDay={byDay} onOpen={setOpen} />
+            <WeekView
+              anchor={anchor}
+              today={today}
+              byDay={byDay}
+              onOpen={setOpen}
+              onCreateDay={viewingSelf ? (day) => setEditor({ editing: null, day }) : undefined}
+            />
           ) : (
             <AgendaView days={agendaDays} today={today} byDay={byDay} onOpen={setOpen} />
           )}
