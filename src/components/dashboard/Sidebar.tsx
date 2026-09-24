@@ -56,7 +56,7 @@ function viewFromPathname(pathname: string): ViewMode {
   ) {
     return "mike";
   }
-  if (pathname.startsWith("/dashboard")) return "dashboard";
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/calendar")) return "dashboard";
   if (pathname.startsWith("/bidding")) return "bidding";
   if (pathname.startsWith("/billings") || pathname.startsWith("/clearstory")) return "billings";
   return "operations";
@@ -140,6 +140,12 @@ const dashboardNavItems: SidebarNavItem[] = [
     Icon: NavIconChart,
     exact: true,
     biddingPermission: "bidding:read",
+  },
+  {
+    href: "/calendar",
+    label: "My calendar",
+    Icon: NavIconCalendar,
+    // Everyone has a personal calendar — no permission gate.
   },
 ];
 
@@ -351,7 +357,9 @@ export function Sidebar({
       return operationsNavItems.some((i) => navItemVisible(user, i));
     }
     if (value === "billings") return canSeeBillings;
-    if (value === "dashboard" || value === "bidding" || value === "mike") {
+    // Dashboard holds the personal calendar, which every login gets.
+    if (value === "dashboard") return true;
+    if (value === "bidding" || value === "mike") {
       return canBidding(user, "bidding:read");
     }
     if (value === "settings") {
@@ -377,7 +385,9 @@ export function Sidebar({
     } catch {
       /* ignore */
     }
-    router.push(defaultHrefForView(value));
+    router.push(
+      value === "dashboard" && !canBidding(user, "bidding:read") ? "/calendar" : defaultHrefForView(value)
+    );
   };
 
   function itemsForView(view: ViewMode): SidebarNavItem[] {

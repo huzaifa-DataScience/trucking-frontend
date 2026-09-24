@@ -175,21 +175,20 @@ export function BidAssignmentStage() {
     if (team) seedTakeoffFromTeam(team);
   };
 
-  const upsertRole = (role: TakeoffRole, assigneeName: string) => {
+  const upsertRole = (role: TakeoffRole, patch: Partial<ProcessTakeoffAssignment>) => {
     const next = [...rows];
     const i = next.findIndex((r) => r.role === role);
     const row: ProcessTakeoffAssignment = {
       ...(i >= 0 ? next[i] : { role }),
+      ...patch,
       role,
-      assigneeName: assigneeName || null,
     };
     if (i >= 0) next[i] = row;
     else next.push(row);
     setField("takeoffAssignments", next);
   };
 
-  const assigneeFor = (role: TakeoffRole) =>
-    rows.find((r) => r.role === role)?.assigneeName ?? "";
+  const rowFor = (role: TakeoffRole) => rows.find((r) => r.role === role);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
@@ -367,20 +366,39 @@ export function BidAssignmentStage() {
       <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
         <h3 className="text-sm font-semibold text-ink">Takeoff assignments</h3>
         <p className="mt-0.5 mb-3 text-xs text-ink/45">
-          1 or 2 people per scope. Team/captain pick prefills blank roles.
+          1 or 2 people per scope. Team/captain pick prefills blank roles. The
+          assignee sees the assigned and due dates on their calendar.
         </p>
-        <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-          {TAKEOFF_ROLES.map((role) => (
-            <label key={role} className="flex flex-col gap-1">
-              <span className={labelClass}>{role}</span>
-              <input
-                className={inputClass}
-                disabled={!editable}
-                value={assigneeFor(role)}
-                onChange={(e) => upsertRole(role, e.target.value)}
-              />
-            </label>
-          ))}
+        <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
+          {TAKEOFF_ROLES.map((role) => {
+            const row = rowFor(role);
+            const assignedAt = row?.assigneeName?.trim() ? row.assignedAt?.slice(0, 10) : null;
+            return (
+              <div key={role} className="flex flex-col gap-1">
+                <span className={labelClass}>{role}</span>
+                <div className="grid grid-cols-[minmax(0,1fr)_9.5rem] gap-2">
+                  <input
+                    className={inputClass}
+                    disabled={!editable}
+                    aria-label={`${role} assignee`}
+                    placeholder="Assignee"
+                    value={row?.assigneeName ?? ""}
+                    onChange={(e) => upsertRole(role, { assigneeName: e.target.value || null })}
+                  />
+                  <DatePicker
+                    ariaLabel={`${role} takeoff due`}
+                    className={inputClass}
+                    disabled={!editable}
+                    value={row?.dueAt?.slice(0, 10) ?? ""}
+                    onChange={(v) => upsertRole(role, { dueAt: v || null })}
+                  />
+                </div>
+                {assignedAt ? (
+                  <span className="text-[11px] text-ink/40">Assigned {assignedAt}</span>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       </section>
     </div>
