@@ -1,100 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { BidFormField, BidTextInput, BidNumberInput, BidSelect } from "@/components/bidding/BidFormField";
-import * as biddingApi from "@/lib/api/endpoints/bidding";
 import type { ProcessAdditionalDetails, ProcessSalesActivities } from "@/lib/bidding/process-types";
 
-const nameInputClass =
-  "mt-1.5 w-full rounded-xl border border-ink/10 bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink/30 focus:border-brand focus:ring-2 focus:ring-brand/20";
-
-const TAKEOFF_PERSON_FIELDS: [keyof ProcessAdditionalDetails, string][] = [
-  ["takeOffPerson", "Take off person"],
-  ["takeOffPerson2", "Take off person 2"],
-  ["takeOffPerson3", "Take off person 3"],
-];
-
-/** Free-text name field with a suggestion dropdown from the estimator/crew roster. */
-function NameTypeahead({
-  id,
-  value,
-  onChange,
-  roster,
-  disabled,
-}: {
-  id: string;
-  value: string;
-  onChange: (v: string) => void;
-  roster: string[];
-  disabled?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-
-  const q = value.trim().toLowerCase();
-  const hits = !q ? roster : roster.filter((n) => n.toLowerCase().includes(q));
-
-  return (
-    <div ref={wrapRef} className="relative">
-      <input
-        id={id}
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        disabled={disabled}
-        autoComplete="off"
-        className={nameInputClass}
-      />
-      {open && !disabled && hits.length > 0 ? (
-        <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-xl border border-ink/[0.08] bg-white py-1 shadow-[0_12px_32px_-8px_rgba(1,1,1,0.18)]">
-          {hits.slice(0, 20).map((name) => (
-            <li key={name}>
-              <button
-                type="button"
-                onClick={() => {
-                  onChange(name);
-                  setOpen(false);
-                }}
-                className="block w-full px-3 py-2 text-left text-sm text-ink hover:bg-brand/[0.06]"
-              >
-                {name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
-  );
-}
-
 const TEXT_FIELDS: [keyof ProcessAdditionalDetails, string][] = [
-  ["bidNumber", "Bid number"],
-  ["winningCompetitor", "Winning competitor"],
-  ["mikeEstimateRef", "MIKE est. #"],
-  ["websiteForBiddingDocs", "Website for bidding docs"],
-  ["altWebLocation1", "Alternate web location 1"],
-  ["altWebLocation2", "Alternate web location 2"],
-  ["altWebLocation3", "Alternate web location 3"],
   ["wbdUsername", "WBD username"],
   ["awl1Username", "AWL 1 username"],
   ["awl2Username", "AWL 2 username"],
   ["awl3Username", "AWL 3 username"],
-  ["projectNumberIfAwarded", "Project # (if awarded)"],
-  ["engineerProjectNumber", "Engineer project #"],
 ];
 
 const PASSWORD_FIELDS: [keyof ProcessAdditionalDetails, string][] = [
@@ -106,16 +21,12 @@ const PASSWORD_FIELDS: [keyof ProcessAdditionalDetails, string][] = [
 
 const NUMBER_FIELDS: [keyof ProcessAdditionalDetails, string][] = [
   ["cashExpense", "Cash expense"],
-  ["wageRateAmount", "Wage rate amount"],
   ["grossSqFootage", "Gross sq footage"],
-  ["fringe", "Fringe"],
   ["costPerEstimate", "Cost per estimate"],
   ["bidBondAmountRequested", "Bid bond amount requested"],
 ];
 
 const DATE_FIELDS: [keyof ProcessAdditionalDetails, string][] = [
-  ["preBidDate", "Pre bid"],
-  ["estimatorBidDate", "Estimator bid date"],
   ["contractDate", "Contract date"],
   ["loginDate", "Login date"],
   ["deadDate", "Dead date"],
@@ -132,20 +43,6 @@ const SALES_ACTIVITY_DATE_FIELDS: [keyof ProcessSalesActivities, string][] = [
   ["mandatoryPreBid", "Mandatory pre-bid"],
 ];
 
-const SALES_STATUS_OPTIONS = [
-  { value: "evaluate_whether_to_bid", label: "Evaluate whether to bid" },
-  { value: "not_pursued", label: "Not pursued" },
-  { value: "bid_in_process", label: "Bid in process" },
-  { value: "no_bid", label: "No Bid" },
-  { value: "prospective_future_bid", label: "Prospective Future bid" },
-  { value: "post_bid", label: "Post Bid" },
-  { value: "rebid_budget", label: "Rebid- budget" },
-  { value: "long_shot", label: "Long Shot" },
-  { value: "in_the_running_to_win", label: "In the Running to win" },
-  { value: "lost", label: "Lost" },
-  { value: "won", label: "Won" },
-];
-
 const SUB_BUILDING_TYPE_OPTIONS = [
   { value: "other", label: "Other" },
   { value: "parochial", label: "Parochial" },
@@ -154,19 +51,6 @@ const SUB_BUILDING_TYPE_OPTIONS = [
   { value: "public_elementary_school", label: "Public - Elementary School" },
   { value: "public_high_school", label: "Public - High School" },
   { value: "public_middle_junior_high_school", label: "Public - Middle/Junior High School" },
-];
-
-const TRADE_BID_TYPE_OPTIONS = [
-  { value: "insulation_sub", label: "Insulation - Sub" },
-  { value: "demolition_sub", label: "Demolition - Sub" },
-  { value: "general_construction", label: "General Construction" },
-  { value: "demolition_prime", label: "Demolition - Prime" },
-  { value: "insulation_prime", label: "Insulation - Prime" },
-  { value: "concrete", label: "Concrete" },
-  { value: "masonry", label: "Masonry" },
-  { value: "wastewater", label: "Wastewater" },
-  { value: "pass_thru", label: "Pass-Thru" },
-  { value: "other_services", label: "Other Services" },
 ];
 
 const LEAD_SOURCE_OPTIONS = [
@@ -195,17 +79,6 @@ const LEAD_SOURCE_OPTIONS = [
   { value: "bidclerk", label: "BidClerk" },
 ];
 
-const OCIP_CCIP_OPTIONS = [
-  { value: "not_applicable", label: "Not Applicable" },
-  { value: "yes_gl_workmans_comp", label: "Yes - GL & Workman Comp" },
-  { value: "yes_gl_only", label: "Yes - GL Only" },
-];
-
-const WAGE_RATE_CATEGORY_OPTIONS = [
-  { value: "wage_rate_pw_dba", label: "Wage Rate (PW/DBA)" },
-  { value: "non_wage_scale", label: "Non-Wage Scale" },
-];
-
 const BID_BOND_STATUS_OPTIONS = [
   { value: "not_ordered", label: "Not Ordered - Estimator needs to do" },
   { value: "ordered_not_received", label: "Ordered - from Surety not received" },
@@ -231,18 +104,6 @@ export function BidAdditionalDetailsSection({
   const setSa = <K extends keyof ProcessSalesActivities>(key: K, value: ProcessSalesActivities[K]) =>
     onSalesActivitiesChange({ ...salesActivities, [key]: value });
 
-  const [estimatorRoster, setEstimatorRoster] = useState<string[]>([]);
-  useEffect(() => {
-    void biddingApi
-      .getBiddingContacts()
-      .then((contacts) => {
-        const names = [...new Set(contacts.map((c) => c.name).filter((n): n is string => Boolean(n?.trim())))];
-        names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-        setEstimatorRoster(names);
-      })
-      .catch(() => setEstimatorRoster([]));
-  }, []);
-
   const selectField = (
     key: keyof ProcessAdditionalDetails,
     label: string,
@@ -264,13 +125,11 @@ export function BidAdditionalDetailsSection({
       <Card>
         <CardHeader
           title="Additional details"
-          subtitle="FollowupCRM-parity fields — Status, Bid Bond, Wage Rate, Source, and reporting details not covered elsewhere. Office is the bid's own Company (GOEL / GOEL DC / DCB)."
+          subtitle="Fields that are not already on Intake, Assignment, Setup, Proposal, or Outcome."
         />
         <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-          {selectField("salesStatus", "Status", SALES_STATUS_OPTIONS)}
           {selectField("subBuildingType", "Sub building type", SUB_BUILDING_TYPE_OPTIONS)}
           {selectField("source", "Source", LEAD_SOURCE_OPTIONS)}
-          {selectField("tradeBidType", "Bid type", TRADE_BID_TYPE_OPTIONS)}
 
           {TEXT_FIELDS.map(([key, label]) => (
             <BidFormField key={key} label={label} htmlFor={`ad-${key}`}>
@@ -280,18 +139,6 @@ export function BidAdditionalDetailsSection({
                 onChange={(v) => setAd(key, (v || null) as ProcessAdditionalDetails[typeof key])}
                 disabled={disabled}
                 autoComplete="off"
-              />
-            </BidFormField>
-          ))}
-
-          {TAKEOFF_PERSON_FIELDS.map(([key, label]) => (
-            <BidFormField key={key} label={label} htmlFor={`ad-${key}`}>
-              <NameTypeahead
-                id={`ad-${key}`}
-                value={(additionalDetails[key] as string | null) ?? ""}
-                onChange={(v) => setAd(key, (v || null) as ProcessAdditionalDetails[typeof key])}
-                roster={estimatorRoster}
-                disabled={disabled}
               />
             </BidFormField>
           ))}
@@ -320,52 +167,7 @@ export function BidAdditionalDetailsSection({
             </BidFormField>
           ))}
 
-          {selectField("wageRateCategory", "Wage rate category", WAGE_RATE_CATEGORY_OPTIONS)}
           {selectField("bidBondStatus", "Bid bond status", BID_BOND_STATUS_OPTIONS)}
-          {selectField("ocipCcipStatus", "OCIP/CCIP", OCIP_CCIP_OPTIONS)}
-
-          <BidFormField label="Budget bid" htmlFor="ad-budgetBid">
-            <BidSelect
-              id="ad-budgetBid"
-              value={additionalDetails.budgetBid ?? ""}
-              onChange={(v) => setAd("budgetBid", (v || null) as ProcessAdditionalDetails["budgetBid"])}
-              disabled={disabled}
-              options={[
-                { value: "", label: "—" },
-                { value: "yes", label: "Yes" },
-                { value: "no", label: "No" },
-                { value: "unknown", label: "Unknown" },
-              ]}
-            />
-          </BidFormField>
-
-          <BidFormField label="US citizen only" htmlFor="ad-usCitizenOnly">
-            <BidSelect
-              id="ad-usCitizenOnly"
-              value={additionalDetails.usCitizenOnly == null ? "" : additionalDetails.usCitizenOnly ? "yes" : "no"}
-              onChange={(v) => setAd("usCitizenOnly", v === "" ? null : v === "yes")}
-              disabled={disabled}
-              options={[
-                { value: "", label: "—" },
-                { value: "yes", label: "Yes" },
-                { value: "no", label: "No" },
-              ]}
-            />
-          </BidFormField>
-
-          <BidFormField label="Rebid" htmlFor="ad-rebid">
-            <BidSelect
-              id="ad-rebid"
-              value={additionalDetails.rebid == null ? "" : additionalDetails.rebid ? "yes" : "no"}
-              onChange={(v) => setAd("rebid", v === "" ? null : v === "yes")}
-              disabled={disabled}
-              options={[
-                { value: "", label: "—" },
-                { value: "yes", label: "Yes" },
-                { value: "no", label: "No" },
-              ]}
-            />
-          </BidFormField>
 
           {DATE_FIELDS.map(([key, label]) => (
             <BidFormField key={key} label={label} htmlFor={`ad-${key}`}>
@@ -378,17 +180,6 @@ export function BidAdditionalDetailsSection({
               />
             </BidFormField>
           ))}
-
-          <div className="col-span-full max-w-2xl">
-            <BidFormField label="Comments" htmlFor="ad-comments">
-              <BidTextInput
-                id="ad-comments"
-                value={additionalDetails.comments ?? ""}
-                onChange={(v) => setAd("comments", v || null)}
-                disabled={disabled}
-              />
-            </BidFormField>
-          </div>
         </div>
       </Card>
 
