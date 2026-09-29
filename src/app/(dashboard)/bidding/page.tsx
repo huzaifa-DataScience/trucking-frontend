@@ -34,25 +34,32 @@ import { newId } from "@/lib/bidding/newId";
 type StatusFilter = "all" | BidStatus;
 type SortKey =
   | "updated"
+  | "name"
   | "estimate"
+  | "drawingNumber"
+  | "dueDate"
   | "bidDate"
   | "estimator"
   | "status"
+  | "stage"
+  | "outcome"
   | "workType"
+  | "baseBid"
   | "contractAmount"
   | "jobStartDate"
   | "office";
+type SortDir = "asc" | "desc";
 type ViewMode = "tiles" | "list";
 
 const VIEW_MODE_KEY = "bidding-view-mode";
 
 function loadViewMode(): ViewMode {
-  if (typeof window === "undefined") return "tiles";
+  if (typeof window === "undefined") return "list";
   try {
     const v = window.localStorage.getItem(VIEW_MODE_KEY);
-    return v === "list" ? "list" : "tiles";
+    return v === "tiles" ? "tiles" : "list";
   } catch {
-    return "tiles";
+    return "list";
   }
 }
 
@@ -94,16 +101,70 @@ const OUTCOME_FILTERS = [
 ];
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "bidDate", label: "Bid date" },
+  { value: "name", label: "Name" },
+  { value: "drawingNumber", label: "Drawing #" },
+  { value: "dueDate", label: "Deadline" },
+  { value: "office", label: "Company" },
+  { value: "estimator", label: "Estimator" },
+  { value: "stage", label: "Status" },
+  { value: "outcome", label: "Outcome" },
+  { value: "baseBid", label: "Base bid" },
+  { value: "status", label: "Record" },
   { value: "updated", label: "Last updated" },
   { value: "estimate", label: "Estimate #" },
-  { value: "bidDate", label: "Bid date" },
-  { value: "estimator", label: "Estimator" },
-  { value: "status", label: "Status" },
   { value: "workType", label: "Work type" },
   { value: "contractAmount", label: "Contract amount" },
   { value: "jobStartDate", label: "Job start date" },
-  { value: "office", label: "Office" },
 ];
+
+function defaultSortDir(key: SortKey): SortDir {
+  if (
+    key === "bidDate" ||
+    key === "dueDate" ||
+    key === "updated" ||
+    key === "jobStartDate" ||
+    key === "baseBid" ||
+    key === "contractAmount"
+  ) {
+    return "desc";
+  }
+  return "asc";
+}
+
+function SortableTh({
+  label,
+  column,
+  active,
+  dir,
+  onSort,
+  className,
+}: {
+  label: string;
+  column: SortKey;
+  active: boolean;
+  dir: SortDir;
+  onSort: (key: SortKey) => void;
+  className?: string;
+}) {
+  return (
+    <th className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className={`inline-flex items-center gap-1 text-left font-semibold ${
+          active ? "text-ink" : "text-ink/50 hover:text-ink"
+        }`}
+        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      >
+        {label}
+        <span aria-hidden className="text-[10px]">
+          {active ? (dir === "asc" ? "↑" : "↓") : "↕"}
+        </span>
+      </button>
+    </th>
+  );
+}
 
 /** Bordered filter chip with a custom dropdown that always opens below the trigger (native <select> lets the browser decide, which can open upward). */
 function FilterSelect({
@@ -205,8 +266,10 @@ export default function BiddingListPage() {
   const [workType, setWorkType] = useState("");
   const [processStage, setProcessStage] = useState("");
   const [outcome, setOutcome] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("updated");
+  const [sortKey, setSortKey] = useState<SortKey>("bidDate");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [viewMode, setViewMode] = useState<ViewMode>(() => loadViewMode());
+  const [estimatorOptions, setEstimatorOptions] = useState<{ value: string; label: string }[]>([]);
   const [bids, setBids] = useState<BidListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -225,9 +288,19 @@ export default function BiddingListPage() {
     setSavedViews(savedViewsKey ? loadSavedViews(savedViewsKey) : []);
   }, [savedViewsKey]);
 
-  /** Options for "dynamic" select filter fields (Estimator, Bid Clerk, Take Off Person, Office, …) —
-   * derived from values already present on loaded bids, since these have no separate fixed lookup list.
-   * "Office" here is the bid's own Company/OurEntity (GOEL / GOEL DC / DCB), not a separate concept. */
+  useEffect(() => {
+    void biddingApi
+      .getBiddingCaptains()
+      .then((captains) => {
+        const names = [...new Set(captains.map((c) => c.name).filter((n) => n.trim()))];
+        names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+        setEstimatorOptions(names.map((name) => ({ value: name, label: name })));
+      })
+      .catch(() => setEstimatorOptions([]));
+  }, []);
+
+  /** Estimator options come from captains, not contacts?role=estimator.
+   * Other dynamic selects still come from values already on loaded bids. */
   const dynamicOptions = useMemo(() => {
     const uniqueOptions = (key: keyof BidListItem) => {
       const seen = new Set<string>();
@@ -238,7 +311,7 @@ export default function BiddingListPage() {
       return [...seen].sort().map((v) => ({ value: v, label: v }));
     };
     return {
-      estimator: uniqueOptions("estimator"),
+      estimator: estimatorOptions.length > 0 ? estimatorOptions : uniqueOptions("estimator"),
       bidClerk: uniqueOptions("bidClerk"),
       takeOffPerson: uniqueOptions("takeOffPerson"),
       takeOffPerson2: uniqueOptions("takeOffPerson2"),
@@ -247,7 +320,7 @@ export default function BiddingListPage() {
       contactName: uniqueOptions("contactName"),
       companyName: uniqueOptions("companyName"),
     };
-  }, [bids]);
+  }, [bids, estimatorOptions]);
 
   const entityId = companyId ? Number(companyId) : undefined;
   const role = user?.role;
@@ -279,6 +352,7 @@ export default function BiddingListPage() {
       outcome: outcome || undefined,
       status: status === "all" ? undefined : status,
       teamId: isTeamScopedRole && showAllTeams ? ("all" as const) : undefined,
+      sort: sortKey === "bidDate" ? "bidDate" : undefined,
       ...sidebarDateFilters,
     }),
     [
@@ -290,6 +364,7 @@ export default function BiddingListPage() {
       status,
       isTeamScopedRole,
       showAllTeams,
+      sortKey,
       sidebarDateFilters,
     ]
   );
@@ -313,6 +388,7 @@ export default function BiddingListPage() {
         teamId: listParams.teamId,
         bidDateFrom: listParams.bidDateFrom,
         bidDateTo: listParams.bidDateTo,
+        sort: listParams.sort,
       });
       if (seq !== bidsRequestSeqRef.current) return; // a newer request superseded this one
       setBids(list);
@@ -395,28 +471,43 @@ export default function BiddingListPage() {
       rowMatchesGroups(b as unknown as Record<string, unknown>, filterGroups)
     );
     return [...filtered].sort((a, b) => {
-      switch (sortKey) {
-        case "estimate":
-          return a.estimateNumber.localeCompare(b.estimateNumber, undefined, { numeric: true });
-        case "bidDate":
-          return (b.bidDate ?? "").localeCompare(a.bidDate ?? "");
-        case "estimator":
-          return (a.estimator ?? "").localeCompare(b.estimator ?? "");
-        case "status":
-          return a.status.localeCompare(b.status);
-        case "workType":
-          return (a.workType ?? "").localeCompare(b.workType ?? "");
-        case "contractAmount":
-          return (b.contractAmount ?? -Infinity) - (a.contractAmount ?? -Infinity);
-        case "jobStartDate":
-          return (a.jobStartDate ?? "").localeCompare(b.jobStartDate ?? "");
-        case "office":
-          return (a.companyName ?? "").localeCompare(b.companyName ?? "");
-        default:
-          return b.updatedAt.localeCompare(a.updatedAt);
-      }
+      const cmp = (() => {
+        switch (sortKey) {
+          case "name":
+            return (a.bidName ?? "").localeCompare(b.bidName ?? "", undefined, { sensitivity: "base" });
+          case "estimate":
+            return a.estimateNumber.localeCompare(b.estimateNumber, undefined, { numeric: true });
+          case "drawingNumber":
+            return (a.drawingNumber ?? "").localeCompare(b.drawingNumber ?? "", undefined, { numeric: true });
+          case "dueDate":
+            return (a.dueDate ?? "").localeCompare(b.dueDate ?? "");
+          case "bidDate":
+            return (a.bidDate ?? "").localeCompare(b.bidDate ?? "");
+          case "estimator":
+            return (a.estimator ?? "").localeCompare(b.estimator ?? "", undefined, { sensitivity: "base" });
+          case "status":
+            return a.status.localeCompare(b.status);
+          case "stage":
+            return (a.processStage ?? "").localeCompare(b.processStage ?? "");
+          case "outcome":
+            return (a.outcomeStatus ?? "").localeCompare(b.outcomeStatus ?? "");
+          case "workType":
+            return (a.workType ?? "").localeCompare(b.workType ?? "");
+          case "baseBid":
+            return (a.baseBidAmount ?? -Infinity) - (b.baseBidAmount ?? -Infinity);
+          case "contractAmount":
+            return (a.contractAmount ?? -Infinity) - (b.contractAmount ?? -Infinity);
+          case "jobStartDate":
+            return (a.jobStartDate ?? "").localeCompare(b.jobStartDate ?? "");
+          case "office":
+            return (a.companyName ?? "").localeCompare(b.companyName ?? "", undefined, { sensitivity: "base" });
+          default:
+            return a.updatedAt.localeCompare(b.updatedAt);
+        }
+      })();
+      return sortDir === "desc" ? -cmp : cmp;
     });
-  }, [bids, status, sortKey, filterGroups]);
+  }, [bids, status, sortKey, sortDir, filterGroups]);
 
   const exportToExcel = useCallback(() => {
     import("xlsx").then((XLSX) => {
@@ -631,7 +722,7 @@ export default function BiddingListPage() {
               </span>
               <input
                 type="search"
-                placeholder="Search estimate #, job, company…"
+                placeholder="Search name, estimate #, drawing #, architect, owner…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-10 w-full rounded-lg border border-ink/10 bg-surface pl-9 pr-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
@@ -643,7 +734,11 @@ export default function BiddingListPage() {
             <FilterSelect
               prefix="Sort"
               value={sortKey}
-              onChange={(v) => setSortKey(v as SortKey)}
+              onChange={(v) => {
+                const key = v as SortKey;
+                setSortKey(key);
+                setSortDir(defaultSortDir(key));
+              }}
               options={SORT_OPTIONS}
               ariaLabel="Sort estimates"
             />
@@ -745,16 +840,37 @@ export default function BiddingListPage() {
           <table className="w-full min-w-[1180px] table-fixed border-collapse text-left">
             <thead>
               <tr className="border-b border-ink/[0.08] bg-ink/[0.02] text-xs font-semibold text-ink/50">
-                <th className="w-[16%] whitespace-nowrap px-4 py-3">Name</th>
-                <th className="w-[8%] whitespace-nowrap px-4 py-3">Estimate #</th>
-                <th className="w-[8%] whitespace-nowrap px-4 py-3">Deadline</th>
-                <th className="w-[8%] whitespace-nowrap px-4 py-3">Company</th>
-                <th className="w-[10%] whitespace-nowrap px-4 py-3">Estimator</th>
-                <th className="w-[12%] whitespace-nowrap px-4 py-3">Work type · Stage</th>
-                <th className="w-[9%] whitespace-nowrap px-4 py-3">Outcome</th>
-                <th className="w-[9%] whitespace-nowrap px-4 py-3">Base bid</th>
-                <th className="w-[9%] whitespace-nowrap px-4 py-3">Status</th>
-                <th className="w-[11%] whitespace-nowrap px-4 py-3">Updated</th>
+                {(
+                  [
+                    ["name", "Name", "w-[18%]"],
+                    ["drawingNumber", "Drawing #", "w-[8%]"],
+                    ["dueDate", "Deadline", "w-[8%]"],
+                    ["office", "Company", "w-[8%]"],
+                    ["estimator", "Estimator", "w-[10%]"],
+                    ["stage", "Status", "w-[12%]"],
+                    ["outcome", "Outcome", "w-[9%]"],
+                    ["baseBid", "Base bid", "w-[9%]"],
+                    ["status", "Record", "w-[9%]"],
+                    ["updated", "Updated", "w-[11%]"],
+                  ] as const
+                ).map(([column, label, width]) => (
+                  <SortableTh
+                    key={column}
+                    label={label}
+                    column={column}
+                    active={sortKey === column}
+                    dir={sortDir}
+                    onSort={(key) => {
+                      if (sortKey === key) {
+                        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                        return;
+                      }
+                      setSortKey(key);
+                      setSortDir(defaultSortDir(key));
+                    }}
+                    className={`${width} whitespace-nowrap px-4 py-3`}
+                  />
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -768,15 +884,15 @@ export default function BiddingListPage() {
                       href={`/bidding/${bid.id}?stage=intake`}
                       className="block truncate font-semibold text-ink hover:text-brand"
                     >
-                      {bid.bidName || "Untitled estimate"}
+                      {[bid.bidName, bid.estimateNumber].filter(Boolean).join(" · ") || "Untitled estimate"}
                     </Link>
                   </td>
-                  <td className="truncate px-4 py-3 font-mono text-xs text-ink/50">{bid.estimateNumber}</td>
+                  <td className="truncate px-4 py-3 font-mono text-xs text-ink/50">{bid.drawingNumber || "—"}</td>
                   <td className="truncate px-4 py-3 text-ink/70">{bid.dueDate ? formatDate(bid.dueDate) : "—"}</td>
                   <td className="truncate px-4 py-3 text-ink/70">{bid.companyName}</td>
                   <td className="truncate px-4 py-3 text-ink/70">{bid.estimator || "—"}</td>
                   <td className="truncate px-4 py-3 text-ink/70">
-                    {formatWorkType(bid.workType ?? undefined)} · {formatProcessStage(bid.processStage ?? undefined)}
+                    {formatProcessStage(bid.processStage ?? undefined) || "—"}
                   </td>
                   <td className="truncate px-4 py-3 text-ink/70">{formatOutcome(bid.outcomeStatus ?? undefined)}</td>
                   <td className="truncate px-4 py-3 text-ink/70">

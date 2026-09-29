@@ -48,6 +48,7 @@ export interface BidListItem {
   workType?: WorkType | string | null;
   /** Intake duplicate typeahead — FRONTEND_INTAKE.md */
   drawingName?: string | null;
+  drawingNumber?: string | null;
   ownerProjectNumber?: string | null;
   mechanicalEngineerProjectNumber?: string | null;
   relatedBidId?: number | null;

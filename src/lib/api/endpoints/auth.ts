@@ -144,7 +144,7 @@ export const AUTH_TEAM_SLOT_KEYS: AuthTeamSlotKey[] = [
 ];
 
 export const AUTH_TEAM_SLOT_LABELS: Record<AuthTeamSlotKey, string> = {
-  bidClerk: "Bid clerk",
+  bidClerk: "Assistant Estimator",
   assistantManager: "Assistant manager",
   duct1: "Duct 1",
   duct2: "Duct 2",

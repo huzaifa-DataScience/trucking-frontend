@@ -7,16 +7,6 @@ import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
 import type { ProcessMeta } from "@/lib/bidding/process-types";
 
-/** Fallback phases when process-meta has not loaded — same set as Intake / mock. */
-const FALLBACK_PHASES: { value: string; label: string }[] = [
-  { value: "sd", label: "SD · Schematic design" },
-  { value: "dd", label: "DD · Design development" },
-  { value: "ifb", label: "IFB" },
-  { value: "ifp", label: "IFP" },
-  { value: "ifc", label: "IFC · 100% CD" },
-  { value: "ifr", label: "IFR" },
-];
-
 /** Chrome tab after Setup, before Spec sheets — every drawing (attachments), by revision phase. */
 export function BidDrawingsStage() {
   const { bid, editable, saving } = useProcessDraft();
@@ -29,18 +19,16 @@ export function BidDrawingsStage() {
 
   if (!bid) return null;
 
-  const fromMeta = (meta?.drawingCategories ?? []).map((id) => ({
+  // Main: always include CD when meta omits it; keep percent labels for the phase UI.
+  const categoryIds = meta?.drawingCategories?.length
+    ? meta.drawingCategories
+    : ["sd", "dd", "cd", "ifb", "ifp", "ifc", "ifr"];
+  const withCd = categoryIds.includes("cd") ? categoryIds : [...categoryIds, "cd"];
+  const drawingCategoryOptions = withCd.map((id) => ({
     value: id,
-    label: meta?.drawingCategoryLabels?.[id] ?? id,
+    label: meta?.drawingCategoryLabels?.[id] ?? (id === "cd" ? "CD" : id),
     percent: meta?.drawingCategoryPercents?.[id] ?? null,
   }));
-  const drawingCategoryOptions =
-    fromMeta.length > 0
-      ? fromMeta
-      : FALLBACK_PHASES.map((p) => ({
-          ...p,
-          percent: meta?.drawingCategoryPercents?.[p.value] ?? null,
-        }));
 
   const drawings = (bid.attachments ?? []).filter((a) => a.label === "drawings");
 
