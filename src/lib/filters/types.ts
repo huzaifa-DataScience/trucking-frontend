@@ -23,8 +23,10 @@ export type FilterOp = "is" | "contains" | "between";
 export interface FilterCondition {
   id: string;
   field: string;
-  op: FilterOp;
+  op: FilterOp | "in";
   value?: string;
+  /** Multi-select. No cap — any number of options. */
+  values?: string[];
   start?: string;
   end?: string;
   /** For "between" conditions built from a relative-date preset (Today, Last 7 Days, …) — the preset's value, for display and re-selection. */
@@ -48,6 +50,11 @@ function fieldValue(row: Record<string, unknown>, key: string): string {
 }
 
 function conditionMatches(row: Record<string, unknown>, c: FilterCondition): boolean {
+  if (c.op === "in" || (c.values && c.values.length > 0)) {
+    const picked = (c.values ?? []).map((v) => v.toLowerCase());
+    if (picked.length === 0) return true;
+    return picked.includes(fieldValue(row, c.field).toLowerCase());
+  }
   if (c.op === "is") {
     if (!c.value) return true;
     return fieldValue(row, c.field).toLowerCase() === c.value.toLowerCase();
@@ -84,6 +91,13 @@ export function rowMatchesGroups(row: Record<string, unknown>, groups: FilterGro
 export function describeCondition(fields: FilterFieldDef[], c: FilterCondition): string {
   const field = fields.find((f) => f.key === c.field);
   const label = field?.label ?? c.field;
+  if (c.op === "in" || (c.values && c.values.length > 0)) {
+    const labels = (c.values ?? []).map((v) => {
+      const opt = field?.options?.find((o) => o.value === v);
+      return opt?.label ?? v;
+    });
+    return `${label} is ${labels.join(", ") || "…"}`;
+  }
   if (c.op === "is") {
     if (field?.kind === "checkbox") return label;
     const opt = field?.options?.find((o) => o.value === c.value);

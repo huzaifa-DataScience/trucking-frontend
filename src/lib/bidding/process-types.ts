@@ -566,7 +566,8 @@ export interface BidProcess {
   workType?: WorkType;
   bidKind?: BidKind;
   drawingName?: string | null;
-  drawingCategory?: "sd" | "dd" | "ifb" | "ifp" | "ifc" | "ifr" | null;
+  drawingNumber?: string | null;
+  drawingCategory?: "sd" | "dd" | "cd" | "ifb" | "ifp" | "ifc" | "ifr" | null;
   /** Title-block owner/architect # — duplicate key */
   ownerProjectNumber?: string | null;
   /** Engineer of Record — mechanical (title-block #) — duplicate key */
@@ -682,6 +683,7 @@ export interface ProcessMeta {
     cascade?: string[];
     jobIdOnIntake?: boolean;
     hideJobIdOnIntake?: boolean;
+    hideBidClerk?: boolean;
     fillAddressFromLine1?: boolean;
     preferredContact?: boolean;
     inviteBody?: boolean;
@@ -705,6 +707,7 @@ export interface ProcessMeta {
   };
   clearances?: ProcessMetaEnumOption[] | string[];
   attachmentLabels?: string[] | Record<string, string>;
+  attachmentMaxBytes?: number;
   attachmentCategories?: string[];
   drawingCategories?: string[];
   drawingCategoryLabels?: Record<string, string>;

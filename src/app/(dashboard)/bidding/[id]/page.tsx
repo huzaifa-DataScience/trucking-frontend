@@ -8,6 +8,8 @@ import { BidAssignmentStage } from "@/components/bidding/BidAssignmentStage";
 import { BidEstimatingSetupStage } from "@/components/bidding/BidEstimatingSetupStage";
 import { BidDrawingsStage } from "@/components/bidding/BidDrawingsStage";
 import { BidTakeoffComparisonPanel } from "@/components/bidding/BidTakeoffComparisonPanel";
+import { BidSystemsInputTable } from "@/components/bidding/BidSystemsInputTable";
+import { parseSystemsComputed } from "@/lib/bidding/parse-computed";
 import { BidSpecSheetsStage } from "@/components/bidding/BidSpecSheetsStage";
 import { BidIntelTab } from "@/components/bidding/BidIntelTab";
 import { BidOutcomeStage } from "@/components/bidding/BidOutcomeStage";
@@ -22,7 +24,7 @@ import { parseChromeStage } from "@/lib/bidding/process-types";
 function BidWorkspaceInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { bid } = useBidSheet();
+  const { bid, isEditable, updateSystemRow } = useBidSheet();
   const bidId = bid?.id ?? "";
   const stage = parseChromeStage(
     searchParams.get("stage"),
@@ -54,7 +56,7 @@ function BidWorkspaceInner() {
     }
   }, [bid, bidId, router, stage]);
 
-  if (!bidId) {
+  if (!bid) {
     return (
       <div className="flex-1 py-2">
         <FormSkeleton fields={5} />
@@ -77,6 +79,12 @@ function BidWorkspaceInner() {
       return (
         <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
           <BidTakeoffComparisonPanel />
+          <BidSystemsInputTable
+            systems={bid.systems ?? []}
+            systemsComputed={parseSystemsComputed(bid.computed)}
+            isEditable={isEditable}
+            onUpdateRow={updateSystemRow}
+          />
           <SpecsPage bidId={bidId} embedded />
         </div>
       );

@@ -380,6 +380,18 @@ export function BidSheetProvider({
             },
           };
         }
+        if (key === "liftsNeeded") {
+          next = {
+            ...next,
+            process: {
+              ...(next.process ?? prev.process ?? {}),
+              lifts: {
+                ...(prev.process?.lifts ?? {}),
+                needed: Boolean(value),
+              },
+            },
+          };
+        }
         // Contract: baseBid.bidDate is the Proposal editor; keep header in sync
         if (key === "bidDate") {
           next = {
