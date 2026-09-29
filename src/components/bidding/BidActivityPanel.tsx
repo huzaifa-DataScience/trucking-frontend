@@ -14,6 +14,10 @@ import { SkeletonListRows } from "@/components/ui/Skeleton";
  */
 function formatActivityWhat(e: BidActivityEntry): { lead: string; fieldCount: number | null } {
   const rawSummary = String(e.summary || e.message || e.area || "").trim();
+  // Human summaries ("Changed owner company") stay as written. Only collapse field dumps.
+  if (rawSummary && !/^process updated\b/i.test(rawSummary)) {
+    return { lead: rawSummary, fieldCount: null };
+  }
   const match = rawSummary.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
   const lead = (match ? match[1] : rawSummary).trim() || "Update";
 

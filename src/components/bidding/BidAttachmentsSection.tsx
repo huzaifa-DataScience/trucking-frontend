@@ -7,7 +7,7 @@ import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import type { BidAttachment } from "@/lib/bidding/types";
 
 const MAX_FILES = 20;
-const MAX_BYTES = 10 * 1024 * 1024;
+const DEFAULT_MAX_BYTES = 50 * 1024 * 1024;
 const ACCEPT =
   "image/jpeg,image/png,image/webp,application/pdf,text/csv,.csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.doc,.docx";
 const WORD_DOC_MIMES = new Set([
@@ -21,6 +21,7 @@ function isWordDoc(mimeType: string): boolean {
 const ATTACHMENT_CATEGORY_OPTIONS: { value: string; label: string }[] = [
   { value: "project_documents", label: "Project Documents" },
   { value: "proposal", label: "Proposal" },
+  { value: "master-scan", label: "Master scan" },
 ];
 
 function formatBytes(n: number): string {
@@ -193,6 +194,18 @@ export function BidAttachmentsSection({
     drawingCategoryOptions?.[0]?.value ?? ""
   );
   const confirmDialog = useConfirmDialog();
+  const [maxBytes, setMaxBytes] = useState(DEFAULT_MAX_BYTES);
+
+  useEffect(() => {
+    void biddingApi
+      .getProcessMeta()
+      .then((meta) => {
+        if (typeof meta.attachmentMaxBytes === "number" && meta.attachmentMaxBytes > 0) {
+          setMaxBytes(meta.attachmentMaxBytes);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   const handleFiles = useCallback(
     async (files: FileList | null) => {
@@ -205,8 +218,8 @@ export function BidAttachmentsSection({
       }
 
       for (const file of Array.from(files)) {
-        if (file.size > MAX_BYTES) {
-          setLocalError(`${file.name} exceeds 10 MB.`);
+        if (file.size > maxBytes) {
+          setLocalError(`${file.name} exceeds ${Math.round(maxBytes / (1024 * 1024))} MB.`);
           return;
         }
       }
@@ -224,7 +237,7 @@ export function BidAttachmentsSection({
         }
       }
     },
-    [attachments.length, onUpload, mode, pendingCategory, pendingDrawingCategory]
+    [attachments.length, onUpload, mode, pendingCategory, pendingDrawingCategory, maxBytes]
   );
 
   const bucketed =
@@ -239,7 +252,7 @@ export function BidAttachmentsSection({
         subtitle={
           mode === "drawings"
             ? "Every drawing on this bid, by revision phase."
-            : "Site photos, screenshots, PDFs, Word docs, and CSV exports, up to 10 MB each."
+            : `Site photos, screenshots, PDFs, Word docs, and CSV exports, up to ${Math.round(maxBytes / (1024 * 1024))} MB each.`
         }
       />
 

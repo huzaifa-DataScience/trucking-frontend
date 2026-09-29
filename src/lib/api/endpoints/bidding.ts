@@ -61,6 +61,8 @@ export async function listBids(params?: {
   bidDateFrom?: string;
   bidDateTo?: string;
   clientCompanyName?: string;
+  /** e.g. bidDate — server orders the list. */
+  sort?: string;
 }): Promise<BidListItem[]> {
   return get<BidListItem[]>("/bids", {
     status: params?.status,
@@ -75,6 +77,7 @@ export async function listBids(params?: {
     bidDateFrom: params?.bidDateFrom,
     bidDateTo: params?.bidDateTo,
     clientCompanyName: params?.clientCompanyName,
+    sort: params?.sort,
   });
 }
 

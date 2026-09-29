@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
+import { useBidSheet } from "@/contexts/BidSheetContext";
 import {
   clearanceOptionsFromMeta,
   type ProcessMeta,
@@ -68,39 +69,6 @@ function CheckboxRow({
   );
 }
 
-/** Compact currency input — leading $ prefix, capped width, 8px radius. */
-/** Compact currency input — leading $ prefix, capped width, 8px radius. */
-function CurrencyField({
-  label,
-  value,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  value: number | null | undefined;
-  disabled?: boolean;
-  onChange: (v: number | null) => void;
-}) {
-  return (
-    <label className="flex max-w-[360px] flex-col gap-1.5">
-      <span className="text-xs font-semibold text-ink/60">{label}</span>
-      <div className="relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink/40">$</span>
-        <input
-          type="number"
-          step="0.01"
-          inputMode="decimal"
-          placeholder="0.00"
-          disabled={disabled}
-          value={value ?? ""}
-          onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-          className="h-11 w-full rounded-lg border border-ink/10 bg-surface py-2 pl-7 pr-3 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
-        />
-      </div>
-    </label>
-  );
-}
-
 /** Stage 3 — Estimating Setup (wage decision ≠ wage rate). Spec sheets = next tab. */
 export function BidEstimatingSetupStage() {
   const {
@@ -115,6 +83,7 @@ export function BidEstimatingSetupStage() {
     inputClass,
     labelClass,
   } = useProcessDraft();
+  const { setBaseBidField, selectWageRate, lookups } = useBidSheet();
   const [meta, setMeta] = useState<ProcessMeta | null>(null);
   const [decisions, setDecisions] = useState<WageDecision[]>([]);
 
@@ -127,6 +96,10 @@ export function BidEstimatingSetupStage() {
   }, []);
 
   if (!bid) return null;
+
+  const b = bid.baseBid ?? {};
+  const wageRateId = lookups.wageRates.find((w) => w.rateLabel === b.wageRateLabel)?.id ?? "";
+  const num = (value: unknown) => (typeof value === "number" ? value : "");
 
   const clearances = clearanceOptionsFromMeta(meta);
   const review: ProcessTechnicalReview = { ...(draft.technicalReview ?? {}) };
@@ -142,8 +115,8 @@ export function BidEstimatingSetupStage() {
         <p className="mt-1 text-xs text-ink/40">
           {saving ? "Saving…" : dirty ? "Unsaved changes" : editable ? "Save to keep changes" : "Read only"}
           {" · "}
-          Identity (building / GSF / company) is on Intake — Setup stays editable for
-          PLA, OCIP, wage decision, clearance.
+          Identity (building / GSF / company) is on Intake — wage rate, schedule,
+          parking, and lifts are filled here.
         </p>
       </header>
 
@@ -271,44 +244,169 @@ export function BidEstimatingSetupStage() {
 
         <div>
           <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink/45">Site logistics</h3>
+          <p className="mb-3 text-xs text-ink/40">
+            Calculator inputs. Percents are decimals (0.5 = 50%). Parking people: 1 = 100%.
+          </p>
           <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-            <CheckboxRow
-              label="Lifts needed"
-              disabled={!editable}
-              checked={Boolean(draft.lifts?.needed)}
-              onChange={(v) =>
-                setDraft({
-                  ...draft,
-                  lifts: { ...(draft.lifts ?? {}), needed: v },
-                })
-              }
-            />
-            {draft.lifts?.needed ? (
-              <CurrencyField
-                label="Lift cost"
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
                 disabled={!editable}
-                value={draft.lifts?.addMoney}
-                onChange={(v) =>
-                  setDraft({
-                    ...draft,
-                    lifts: { ...(draft.lifts ?? {}), addMoney: v },
-                  })
+                checked={Boolean(b.parking)}
+                onChange={(e) => setBaseBidField("parking", e.target.checked)}
+              />
+              <span className="text-sm text-ink/80">Parking?</span>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={labelClass}>% who park (1 = 100%)</span>
+              <input
+                type="number"
+                step="0.01"
+                className={inputClass}
+                disabled={!editable}
+                value={num(b.parkingPeoplePercent)}
+                onChange={(e) =>
+                  setBaseBidField(
+                    "parkingPeoplePercent",
+                    e.target.value === "" ? undefined : Number(e.target.value)
+                  )
                 }
               />
-            ) : null}
-            <CurrencyField
-              label="Parking cost"
-              disabled={!editable}
-              value={draft.parking?.total}
-              onChange={(v) =>
-                setDraft({
-                  ...draft,
-                  parking: { ...(draft.parking ?? {}), total: v },
-                })
-              }
-            />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={labelClass}>Parking cost / day</span>
+              <input
+                type="number"
+                step="0.01"
+                className={inputClass}
+                disabled={!editable}
+                value={num(b.parkingCostPerDay)}
+                onChange={(e) =>
+                  setBaseBidField(
+                    "parkingCostPerDay",
+                    e.target.value === "" ? undefined : Number(e.target.value)
+                  )
+                }
+              />
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                disabled={!editable}
+                checked={Boolean(b.liftsNeeded)}
+                onChange={(e) => {
+                  setBaseBidField("liftsNeeded", e.target.checked);
+                  setDraft({
+                    ...draft,
+                    lifts: { ...(draft.lifts ?? {}), needed: e.target.checked },
+                  });
+                }}
+              />
+              <span className="text-sm text-ink/80">Lifts needed</span>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={labelClass}>Lift % (0.5 = 50%)</span>
+              <input
+                type="number"
+                step="0.01"
+                className={inputClass}
+                disabled={!editable}
+                value={num(b.liftPercentage)}
+                onChange={(e) =>
+                  setBaseBidField(
+                    "liftPercentage",
+                    e.target.value === "" ? undefined : Number(e.target.value)
+                  )
+                }
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={labelClass}>Lift cost / 4 weeks</span>
+              <input
+                type="number"
+                step="0.01"
+                className={inputClass}
+                disabled={!editable}
+                value={num(b.liftCostPer4Weeks)}
+                onChange={(e) =>
+                  setBaseBidField(
+                    "liftCostPer4Weeks",
+                    e.target.value === "" ? undefined : Number(e.target.value)
+                  )
+                }
+              />
+            </label>
           </div>
         </div>
+      </section>
+
+      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+        <h3 className="col-span-full text-sm font-semibold text-ink">Wage and schedule</h3>
+        <p className="col-span-full -mt-2 text-xs text-ink/40">
+          Estimate wage rate is not the wage decision above. Margin and escalation are decimals (0.25 = 25%).
+        </p>
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>Wage rate</span>
+          <select
+            className={inputClass}
+            disabled={!editable}
+            value={wageRateId === "" ? "" : String(wageRateId)}
+            onChange={(e) => {
+              if (e.target.value) void selectWageRate(Number(e.target.value));
+            }}
+          >
+            <option value="">Select wage rate…</option>
+            {lookups.wageRates.map((w) => (
+              <option key={w.id} value={String(w.id)}>
+                {w.displayLabel || w.rateLabel}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            disabled={!editable}
+            checked={Boolean(b.citizenProject)}
+            onChange={(e) => setBaseBidField("citizenProject", e.target.checked)}
+          />
+          <span className="text-sm text-ink/80">Citizen project</span>
+        </label>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            disabled={!editable}
+            checked={Boolean(b.apprenticeable)}
+            onChange={(e) => setBaseBidField("apprenticeable", e.target.checked)}
+          />
+          <span className="text-sm text-ink/80">Apprenticeable</span>
+        </label>
+        {(
+          [
+            ["marginPercent", "Margin (0.25 = 25%)"],
+            ["hoursPerDay", "Hours / day"],
+            ["daysPerWeek", "Days / week"],
+            ["durationMonths", "Duration (months)"],
+            ["startInMonths", "Start in # months"],
+            ["backcheckHours", "Backcheck hours"],
+            ["averageNoPeople", "Average # people"],
+            ["materialEscalationPerYear", "Material escalation / year"],
+          ] as const
+        ).map(([key, label]) => (
+          <label key={key} className="flex flex-col gap-1">
+            <span className={labelClass}>{label}</span>
+            <input
+              type="number"
+              step="0.01"
+              className={inputClass}
+              disabled={!editable}
+              value={num(b[key])}
+              onChange={(e) =>
+                setBaseBidField(key, e.target.value === "" ? undefined : Number(e.target.value))
+              }
+            />
+          </label>
+        ))}
       </section>
 
       <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">

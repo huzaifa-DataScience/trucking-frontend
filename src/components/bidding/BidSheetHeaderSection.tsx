@@ -60,7 +60,7 @@ export function BidSheetHeaderSection({
         title="Cover sheet"
         subtitle={
           identityLocked
-            ? "Proposal output — company / estimate # / bid name from Intake. Dates & hours stay editable."
+            ? "Proposal output — job, bid date, and hours come from Intake and Assignment. Submit date stays here."
             : "Estimate header — job link, bid date, submit date, and time estimate (hours)."
         }
       />
@@ -68,7 +68,11 @@ export function BidSheetHeaderSection({
         <BidFormField
           label="Linked job"
           htmlFor="job"
-          hint="Change anytime while draft — Trimble / Qty Received follow the new job."
+          hint={
+            identityLocked
+              ? "Set on Intake"
+              : "Change anytime while draft — Trimble / Qty Received follow the new job."
+          }
         >
           <BidSelect
             id="job"
@@ -79,7 +83,7 @@ export function BidSheetHeaderSection({
               onJobChange(jobId, prefill);
             }}
             options={jobOptions}
-            disabled={!isEditable}
+            disabled={identityDisabled}
           />
         </BidFormField>
         <BidFormField label="Estimate number" htmlFor="est-num">
@@ -142,13 +146,13 @@ export function BidSheetHeaderSection({
             />
           )}
         </BidFormField>
-        <BidFormField label="Bid date" htmlFor="bid-date">
+        <BidFormField label="Bid date" htmlFor="bid-date" hint={identityLocked ? "Set on Intake" : undefined}>
           <BidTextInput
             id="bid-date"
             type="date"
             value={bidDate}
             onChange={onBidDate}
-            disabled={!isEditable}
+            disabled={identityDisabled}
           />
         </BidFormField>
         <BidFormField
@@ -164,12 +168,16 @@ export function BidSheetHeaderSection({
             disabled={false}
           />
         </BidFormField>
-        <BidFormField label="Time estimate (hrs)" htmlFor="time-est">
+        <BidFormField
+          label="Time estimate (hrs)"
+          htmlFor="time-est"
+          hint={identityLocked ? "Set on Assignment" : undefined}
+        >
           <BidNumberInput
             id="time-est"
             value={bid.timeEstimate ?? undefined}
             onChange={onTimeEstimate}
-            disabled={false}
+            disabled={identityDisabled}
           />
         </BidFormField>
       </div>

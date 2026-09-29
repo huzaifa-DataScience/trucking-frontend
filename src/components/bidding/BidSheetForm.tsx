@@ -151,6 +151,8 @@ export function BidSheetForm() {
   const warnings = parseWarnings(c);
   /** Proposal screen is output + calculator — identity is RO (process-meta.proposalEditor). */
   const identityLocked = processMeta?.proposalEditor?.isOutput !== false;
+  /** Job, dates, wage, schedule, parking, and Mike grid are filled on earlier tabs. */
+  const capturedEarlier = identityLocked;
   const assignment = bid.process?.assignment;
   const teamFromAssignment =
     selectedTeam ??
@@ -318,7 +320,6 @@ export function BidSheetForm() {
               <div className="mt-4 grid gap-3 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] p-4 grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
                 {(
                   [
-                    ["Bid clerk", teamFromAssignment.bidClerk],
                     ["Duct 1", teamFromAssignment.duct1],
                     ["Duct 2", teamFromAssignment.duct2],
                     ["Hydronic 1", teamFromAssignment.hydronic1],
@@ -422,7 +423,7 @@ export function BidSheetForm() {
                 label="Sales tax applicable"
                 value={b.salesTaxApplicable as boolean | undefined}
                 onChange={(v) => setBaseBidField("salesTaxApplicable", v)}
-                disabled={!isEditable}
+                disabled={!isEditable || capturedEarlier}
               />
             </div>
           </Card>
@@ -430,7 +431,7 @@ export function BidSheetForm() {
           <Card>
             <CardHeader
               title="Wage rate"
-              subtitle="B8 wage → F9–F11; composite labor rate is Excel D10 (TOTAL BIDDING LABOR RATE)."
+              subtitle="Set on Setup. Composite labor rate stays editable here (Excel D10)."
             />
             <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
               <BidFormField label="Wage rate" htmlFor="wage">
@@ -440,7 +441,7 @@ export function BidSheetForm() {
                   onChange={(v) => {
                     if (v) void selectWageRate(Number(v));
                   }}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                   options={[
                     { value: "", label: "Select wage rate…" },
                     ...lookups.wageRates.map((w) => ({
@@ -526,14 +527,14 @@ export function BidSheetForm() {
                 label="Citizen project"
                 value={b.citizenProject as boolean | undefined}
                 onChange={(v) => setBaseBidField("citizenProject", v)}
-                disabled={!isEditable}
+                disabled={!isEditable || capturedEarlier}
               />
               <BoolSelect
                 id="apprentice"
                 label="Apprenticeable"
                 value={b.apprenticeable as boolean | undefined}
                 onChange={(v) => setBaseBidField("apprenticeable", v)}
-                disabled={!isEditable}
+                disabled={!isEditable || capturedEarlier}
               />
               <BoolSelect
                 id="pla"
@@ -563,7 +564,7 @@ export function BidSheetForm() {
           </Card>
 
           <Card>
-            <CardHeader title="Schedule & margin" subtitle="Hours, duration, and margin (D4, F4–F5, B12–B13)." />
+            <CardHeader title="Schedule & margin" subtitle="Filled on Setup. Shown here for the calculator output." />
             <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
               <BidFormField
                 label="Margin"
@@ -574,7 +575,7 @@ export function BidSheetForm() {
                   id="margin"
                   value={b.marginPercent as number | undefined}
                   onChange={(v) => setBaseBidField("marginPercent", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
               <BidFormField label="Hours / day" htmlFor="hpd">
@@ -582,7 +583,7 @@ export function BidSheetForm() {
                   id="hpd"
                   value={b.hoursPerDay as number | undefined}
                   onChange={(v) => setBaseBidField("hoursPerDay", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
               <BidFormField label="Days / week" htmlFor="dpw">
@@ -590,7 +591,7 @@ export function BidSheetForm() {
                   id="dpw"
                   value={b.daysPerWeek as number | undefined}
                   onChange={(v) => setBaseBidField("daysPerWeek", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
               <BidFormField label="Duration (months)" htmlFor="dur">
@@ -598,7 +599,7 @@ export function BidSheetForm() {
                   id="dur"
                   value={b.durationMonths as number | undefined}
                   onChange={(v) => setBaseBidField("durationMonths", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
               <BidFormField label="Start in # months from bid" htmlFor="startmo">
@@ -606,7 +607,7 @@ export function BidSheetForm() {
                   id="startmo"
                   value={b.startInMonths as number | undefined}
                   onChange={(v) => setBaseBidField("startInMonths", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
               <BidFormField label="Backcheck hours" htmlFor="backcheck">
@@ -614,7 +615,7 @@ export function BidSheetForm() {
                   id="backcheck"
                   value={b.backcheckHours as number | undefined}
                   onChange={(v) => setBaseBidField("backcheckHours", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
               <BidFormField label="Average # people" htmlFor="avgpeople">
@@ -622,7 +623,7 @@ export function BidSheetForm() {
                   id="avgpeople"
                   value={b.averageNoPeople as number | undefined}
                   onChange={(v) => setBaseBidField("averageNoPeople", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
               <BidFormField
@@ -634,21 +635,21 @@ export function BidSheetForm() {
                   id="esc"
                   value={b.materialEscalationPerYear as number | undefined}
                   onChange={(v) => setBaseBidField("materialEscalationPerYear", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
             </div>
           </Card>
 
           <Card>
-            <CardHeader title="Parking & lifts" subtitle="Parking/lift $/hr shown in results panel." />
+            <CardHeader title="Parking & lifts" subtitle="Filled on Setup. Results still use these calculator inputs." />
             <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
               <BoolSelect
                 id="parking"
                 label="Parking"
                 value={b.parking as boolean | undefined}
                 onChange={(v) => setBaseBidField("parking", v)}
-                disabled={!isEditable}
+                disabled={!isEditable || capturedEarlier}
               />
               <BidFormField
                 label="% people that park"
@@ -659,7 +660,7 @@ export function BidSheetForm() {
                   id="parkpct"
                   value={b.parkingPeoplePercent as number | undefined}
                   onChange={(v) => setBaseBidField("parkingPeoplePercent", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
               <BidFormField label="Parking cost / day" htmlFor="parkcost">
@@ -667,7 +668,7 @@ export function BidSheetForm() {
                   id="parkcost"
                   value={b.parkingCostPerDay as number | undefined}
                   onChange={(v) => setBaseBidField("parkingCostPerDay", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
               <BoolSelect
@@ -675,7 +676,7 @@ export function BidSheetForm() {
                 label="Lifts needed"
                 value={b.liftsNeeded as boolean | undefined}
                 onChange={(v) => setBaseBidField("liftsNeeded", v)}
-                disabled={!isEditable}
+                disabled={!isEditable || capturedEarlier}
               />
               <BidFormField
                 label="Lift %"
@@ -686,7 +687,7 @@ export function BidSheetForm() {
                   id="liftpct"
                   value={b.liftPercentage as number | undefined}
                   onChange={(v) => setBaseBidField("liftPercentage", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
               <BidFormField label="Lift cost / 4 weeks" htmlFor="liftcost">
@@ -694,7 +695,7 @@ export function BidSheetForm() {
                   id="liftcost"
                   value={b.liftCostPer4Weeks as number | undefined}
                   onChange={(v) => setBaseBidField("liftCostPer4Weeks", v)}
-                  disabled={!isEditable}
+                  disabled={!isEditable || capturedEarlier}
                 />
               </BidFormField>
             </div>
@@ -703,7 +704,7 @@ export function BidSheetForm() {
           <BidSystemsInputTable
             systems={bid.systems}
             systemsComputed={systemsComputed}
-            isEditable={isEditable}
+            isEditable={isEditable && !capturedEarlier}
             onUpdateRow={updateSystemRow}
           />
             </>
