@@ -293,8 +293,8 @@ body {
 
 @media (min-width: 1280px) {
   .bid-workspace {
-    grid-template-columns: minmax(0, 3fr) minmax(280px, 1fr);
-    gap: 1.75rem;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 1.125rem;
   }
 }
 

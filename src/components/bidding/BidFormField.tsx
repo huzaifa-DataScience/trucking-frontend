@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 const inputClass =
-  "mt-1.5 w-full rounded-xl border border-ink/10 bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink/30 focus:border-brand focus:ring-2 focus:ring-brand/20";
-const selectClass = `${inputClass} pr-9`;
+  "mt-1.5 box-border h-11 w-full min-w-0 rounded-xl border border-ink/10 bg-white px-3.5 text-[15px] font-medium text-ink outline-none transition placeholder:text-ink/30 focus:border-brand focus:ring-2 focus:ring-brand/15";
+const selectClass = `${inputClass} appearance-none pr-9`;
 
 const tableNumberClass =
-  "w-full rounded-lg border border-ink/10 px-2 py-1 text-right font-mono text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand/20";
+  "box-border h-[42px] w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-right font-mono text-sm tabular-nums outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/10 disabled:opacity-40";
 
 function SelectChevron() {
   return (
@@ -97,7 +97,7 @@ export function BidFormField({
 }) {
   return (
     <div className="min-w-0">
-      <label htmlFor={htmlFor} className="block text-xs font-semibold text-ink/70">
+      <label htmlFor={htmlFor} className="block text-xs font-semibold text-ink/50">
         {label}
       </label>
       {children}

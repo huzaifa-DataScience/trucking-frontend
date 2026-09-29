@@ -67,6 +67,65 @@ function isWordDoc(mimeType: string): boolean {
   return WORD_DOC_MIMES.has(mimeType);
 }
 
+function CheckIcon() {
+  return (
+    <svg
+      className="h-3 w-3 text-white"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={3}
+      aria-hidden
+    >
+      <path
+        d="M5 13l4 4L19 7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Brand-orange checkbox — matches Setup / Assignment. */
+function SpecCheckbox({
+  checked,
+  disabled,
+  onChange,
+  children,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+  children: ReactNode;
+}) {
+  return (
+    <label
+      className={`group inline-flex w-fit items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors duration-150 ${
+        disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+      } ${checked ? "bg-brand/[0.07]" : "hover:bg-ink/[0.03]"}`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="peer sr-only"
+      />
+      <span
+        aria-hidden
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border-[1.5px] transition-all duration-150 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand ${
+          checked
+            ? "border-brand bg-brand ring-2 ring-brand/20"
+            : "border-ink/25 bg-white group-hover:border-brand/40"
+        }`}
+      >
+        {checked ? <CheckIcon /> : null}
+      </span>
+      <span className="text-sm font-medium text-ink/85">{children}</span>
+    </label>
+  );
+}
+
 /** Prefer local row values; only take missing codes/unit from server echo. */
 function mergeIncomingSheets(
   local: SpecSheet[],
@@ -141,7 +200,10 @@ function CodeChip({ code }: { code: string | null | undefined }) {
     return <span className="text-xs text-ink/30">—</span>;
   }
   return (
-    <span className="inline-block rounded bg-ink/[0.06] px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-ink/55">
+    <span
+      title={code}
+      className="inline-block max-w-full truncate rounded-md bg-ink/[0.06] px-2 py-1 text-[10px] font-bold tracking-wide text-ink/50"
+    >
       {code}
     </span>
   );
@@ -175,7 +237,36 @@ function dimLabel(opt: SpecSizeOption): string {
   return opt.label?.trim() || `${opt.value}"`;
 }
 
-type SpecColDef = { key: string; label: string; defaultWidth: number };
+type SpecColDef = {
+  key: string;
+  label: string;
+  defaultWidth: number;
+  /** Insulation slot index 0–3 → mock tint colors */
+  insTone?: 0 | 1 | 2 | 3;
+};
+
+/** Match mock: Ins1 orange, Ins2 blue, Ins3 green, Ins4 purple */
+const INS_TONE = [
+  {
+    th: "bg-[#fff6ed] text-[#9a3412]",
+    td: "bg-[#fff6ed]/70",
+  },
+  {
+    th: "bg-[#eff6ff] text-[#1e40af]",
+    td: "bg-[#eff6ff]/70",
+  },
+  {
+    th: "bg-[#f0fdf4] text-[#166534]",
+    td: "bg-[#f0fdf4]/70",
+  },
+  {
+    th: "bg-[#faf5ff] text-[#6b21a8]",
+    td: "bg-[#faf5ff]/70",
+  },
+] as const;
+
+const CELL =
+  "border-r border-ink/[0.04] px-3 py-3.5 align-middle";
 
 function buildSpecColDefs(opts: {
   maxInsulationCols: number;
@@ -183,42 +274,53 @@ function buildSpecColDefs(opts: {
   editable: boolean;
 }): SpecColDef[] {
   const cols: SpecColDef[] = [
-    { key: "system", label: "System", defaultWidth: 140 },
-    { key: "systemCode", label: "Code", defaultWidth: 56 },
-    { key: "unit", label: "Unit", defaultWidth: 48 },
-    { key: "area", label: "Area", defaultWidth: 110 },
-    { key: "areaCode", label: "Code", defaultWidth: 56 },
-    { key: "family", label: "Family", defaultWidth: 110 },
-    { key: "layers", label: "Layers", defaultWidth: 64 },
+    { key: "system", label: "System", defaultWidth: 200 },
+    { key: "systemCode", label: "Code", defaultWidth: 80 },
+    { key: "unit", label: "Unit", defaultWidth: 72 },
+    { key: "area", label: "Area", defaultWidth: 160 },
+    { key: "areaCode", label: "Code", defaultWidth: 80 },
+    { key: "family", label: "Family", defaultWidth: 220 },
+    { key: "layers", label: "Layers", defaultWidth: 96 },
   ];
   for (let i = 0; i < opts.maxInsulationCols; i++) {
+    const tone = Math.min(i, 3) as 0 | 1 | 2 | 3;
     cols.push(
-      { key: `ins-${i}`, label: `Insulation ${i + 1}`, defaultWidth: 140 },
-      { key: `insCode-${i}`, label: "Code", defaultWidth: 56 }
+      {
+        key: `ins-${i}`,
+        label: `Insulation ${i + 1}`,
+        defaultWidth: 200,
+        insTone: tone,
+      },
+      {
+        key: `insCode-${i}`,
+        label: "Code",
+        defaultWidth: 80,
+        insTone: tone,
+      }
     );
   }
   cols.push(
-    { key: "mike", label: "Mike code", defaultWidth: 100 },
-    { key: "facing", label: "Facing", defaultWidth: 88 },
-    { key: "covering", label: "Covering", defaultWidth: 100 }
+    { key: "mike", label: "Mike code", defaultWidth: 168 },
+    { key: "facing", label: "Facing", defaultWidth: 136 },
+    { key: "covering", label: "Covering", defaultWidth: 190 }
   );
   if (opts.showDuctShape) {
-    cols.push({ key: "shape", label: "Shape", defaultWidth: 88 });
+    cols.push({ key: "shape", label: "Shape", defaultWidth: 120 });
   }
   cols.push(
-    { key: "from", label: "From", defaultWidth: 80 },
-    { key: "to", label: "To", defaultWidth: 80 },
-    { key: "width", label: 'Width"', defaultWidth: 72 },
-    { key: "thick", label: 'Thick"', defaultWidth: 72 },
-    { key: "mfr", label: "Mfr", defaultWidth: 110 },
-    { key: "preferred", label: "Preferred", defaultWidth: 100 },
-    { key: "accessories", label: "Accessories", defaultWidth: 120 },
-    { key: "section", label: "§", defaultWidth: 56 },
-    { key: "paragraph", label: "¶", defaultWidth: 56 },
-    { key: "notes", label: "Notes", defaultWidth: 140 }
+    { key: "from", label: "From", defaultWidth: 108 },
+    { key: "to", label: "To", defaultWidth: 108 },
+    { key: "width", label: 'Width"', defaultWidth: 100 },
+    { key: "thick", label: 'Thick"', defaultWidth: 100 },
+    { key: "mfr", label: "Mfr", defaultWidth: 168 },
+    { key: "preferred", label: "Preferred", defaultWidth: 140 },
+    { key: "accessories", label: "Accessories", defaultWidth: 180 },
+    { key: "section", label: "§", defaultWidth: 88 },
+    { key: "paragraph", label: "¶", defaultWidth: 88 },
+    { key: "notes", label: "Notes", defaultWidth: 220 }
   );
   if (opts.editable) {
-    cols.push({ key: "actions", label: "", defaultWidth: 64 });
+    cols.push({ key: "actions", label: "", defaultWidth: 96 });
   }
   return cols;
 }
@@ -227,14 +329,18 @@ function ResizableTh({
   label,
   width,
   onResize,
+  toneClass,
 }: {
   label: string;
   width: number;
   onResize: (next: number) => void;
+  toneClass?: string;
 }) {
   return (
     <th
-      className="relative whitespace-nowrap px-1 py-1.5"
+      className={`relative whitespace-nowrap border-r border-ink/[0.04] px-3 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.05em] ${
+        toneClass ?? "bg-[#f7f8fa] text-ink/40"
+      }`}
       style={{ width, minWidth: 40, maxWidth: width }}
     >
       {label}
@@ -447,7 +553,19 @@ function SpecImageLightbox({
 }
 
 function selectClass(disabled: boolean) {
-  return `w-full min-w-[6rem] rounded border border-ink/10 bg-surface px-1.5 py-1 text-xs text-ink outline-none focus:border-brand ${
+  return `box-border h-11 w-full min-w-0 rounded-lg border border-transparent bg-transparent px-2.5 text-[13px] font-medium leading-normal text-ink outline-none transition hover:border-brand/40 hover:bg-white focus:border-brand/50 focus:bg-white focus:ring-2 focus:ring-brand/10 ${
+    disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"
+  }`;
+}
+
+/** Native tooltip when the control truncates long values. */
+function fullTextTitle(text: string | null | undefined): string | undefined {
+  const t = (text ?? "").trim();
+  return t.length > 0 ? t : undefined;
+}
+
+function fieldClass(disabled: boolean) {
+  return `box-border h-11 w-full min-w-0 rounded-xl border border-ink/10 bg-white px-3.5 text-sm font-medium text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15 ${
     disabled ? "opacity-60" : ""
   }`;
 }
@@ -489,7 +607,7 @@ function ManufacturerAllowedSelect({
   return (
     <select
       disabled={!editable}
-      className={`${selectClass(!editable)} min-w-[8rem]`}
+      className={selectClass(!editable)}
       value=""
       onChange={(e) => {
         const id = e.target.value;
@@ -503,7 +621,7 @@ function ManufacturerAllowedSelect({
             preferred && nextAllowed.includes(preferred) ? preferred : null,
         });
       }}
-      title="Pick again to unselect"
+      title={fullTextTitle(allowedLabels.join(", "))}
     >
       <option value="">{summary}</option>
       {options.map((opt) => (
@@ -543,7 +661,7 @@ function ManufacturerPreferredSelect({
   return (
     <select
       disabled={!editable || allowedIds.length === 0}
-      className={`${selectClass(!editable || allowedIds.length === 0)} min-w-[8rem]`}
+      className={selectClass(!editable || allowedIds.length === 0)}
       value={preferredValue}
       onChange={(e) =>
         onChange({
@@ -551,7 +669,9 @@ function ManufacturerPreferredSelect({
           manufacturerPreferred: e.target.value || null,
         })
       }
-      title="Preferred (not cheapest)"
+      title={fullTextTitle(
+        preferredValue ? labelFor(preferredValue) : undefined
+      )}
     >
       <option value="">—</option>
       {allowedIds.map((id) => (
@@ -1460,67 +1580,51 @@ export function BidSpecSheetsSection({
           <p className="mt-0.5 mb-3 text-xs text-ink/45">
             Which client spec books apply — separate from the rules table below.
           </p>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {INSULATION_SPEC_KEYS.map(({ key, label }) => (
-              <label
+              <SpecCheckbox
                 key={key}
-                className="inline-flex items-center gap-2 text-sm text-ink/80"
+                disabled={!editable}
+                checked={Boolean(specs[key])}
+                onChange={(next) =>
+                  onInsulationSpecsChange({
+                    ...specs,
+                    [key]: next,
+                  })
+                }
               >
-                <input
-                  type="checkbox"
-                  disabled={!editable}
-                  checked={Boolean(specs[key])}
-                  onChange={(e) =>
-                    onInsulationSpecsChange({
-                      ...specs,
-                      [key]: e.target.checked,
-                    })
-                  }
-                />
                 {label}
-              </label>
+              </SpecCheckbox>
             ))}
           </div>
         </section>
       ) : null}
 
       {onBuyAmericanChange || onAPlusChange ? (
-        <section className="flex flex-wrap gap-x-6 gap-y-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
+        <section className="flex flex-wrap gap-x-4 gap-y-2 rounded-2xl border border-ink/[0.08] bg-surface p-5">
           {onBuyAmericanChange ? (
-            <label className="inline-flex items-center gap-2 text-sm text-ink/80">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={buyAmericanChecked}
-                onChange={(e) =>
-                  onBuyAmericanChange(e.target.checked ? true : null)
-                }
-              />
-              <span>
-                <span className="font-semibold text-ink">Buy American?</span>
-                <span className="ml-1.5 text-ink/45">
-                  Project-level · federal work
-                </span>
+            <SpecCheckbox
+              disabled={!editable}
+              checked={buyAmericanChecked}
+              onChange={(next) => onBuyAmericanChange(next ? true : null)}
+            >
+              <span className="font-semibold text-ink">Buy American?</span>
+              <span className="ml-1.5 font-normal text-ink/45">
+                Project-level · federal work
               </span>
-            </label>
+            </SpecCheckbox>
           ) : null}
           {onAPlusChange ? (
-            <label className="inline-flex items-center gap-2 text-sm text-ink/80">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={aPlusChecked}
-                onChange={(e) =>
-                  onAPlusChange(e.target.checked ? true : null)
-                }
-              />
-              <span>
-                <span className="font-semibold text-ink">A+</span>
-                <span className="ml-1.5 text-ink/45">
-                  Bid-level · Setup only
-                </span>
+            <SpecCheckbox
+              disabled={!editable}
+              checked={aPlusChecked}
+              onChange={(next) => onAPlusChange(next ? true : null)}
+            >
+              <span className="font-semibold text-ink">A+</span>
+              <span className="ml-1.5 font-normal text-ink/45">
+                Bid-level · Setup only
               </span>
-            </label>
+            </SpecCheckbox>
           ) : null}
         </section>
       ) : null}
@@ -1694,7 +1798,7 @@ export function BidSpecSheetsSection({
                     </span>
                     <input
                       disabled={!editable}
-                      className={selectClass(!editable)}
+                      className={fieldClass(!editable)}
                       value={active.title}
                       onChange={(e) =>
                         replaceSheet(active.id, {
@@ -1709,7 +1813,7 @@ export function BidSpecSheetsSection({
                     </span>
                     <input
                       disabled={!editable}
-                      className={selectClass(!editable)}
+                      className={fieldClass(!editable)}
                       placeholder="230700"
                       value={active.specNumber ?? ""}
                       onChange={(e) =>
@@ -1730,9 +1834,9 @@ export function BidSpecSheetsSection({
                   ) : null}
                 </div>
 
-                <div className="overflow-x-auto rounded-xl border border-ink/[0.08]">
+                <div className="overflow-x-auto rounded-[14px] border border-ink/[0.07] bg-white">
                   <table
-                    className="w-max min-w-full border-collapse text-left text-xs leading-tight"
+                    className="w-max min-w-full border-separate border-spacing-0 text-left text-[13px] leading-normal"
                     style={{ tableLayout: "fixed" }}
                   >
                     <colgroup>
@@ -1745,7 +1849,7 @@ export function BidSpecSheetsSection({
                         />
                       ))}
                     </colgroup>
-                    <thead className="bg-ink/[0.03] text-[11px] font-semibold text-ink/55">
+                    <thead className="sticky top-0 z-[2]">
                       <tr>
                         {specColDefs.map((c) => (
                           <ResizableTh
@@ -1753,6 +1857,11 @@ export function BidSpecSheetsSection({
                             label={c.label}
                             width={widthFor(c.key, c.defaultWidth)}
                             onResize={(next) => setColWidth(c.key, next)}
+                            toneClass={
+                              c.insTone != null
+                                ? INS_TONE[c.insTone].th
+                                : undefined
+                            }
                           />
                         ))}
                       </tr>
@@ -1806,14 +1915,13 @@ export function BidSpecSheetsSection({
                         return (
                           <tr
                             key={row.id}
-                            className="relative border-t border-ink/[0.06] align-middle"
-                            style={
-                              rowH
-                                ? { height: rowH, minHeight: rowH }
-                                : undefined
-                            }
+                            className="relative border-b border-ink/[0.05] align-middle transition-colors hover:bg-brand/[0.03]"
+                            style={{
+                              height: rowH ?? 64,
+                              minHeight: rowH ?? 64,
+                            }}
                           >
-                            <td className="relative px-1 py-0.5">
+                            <td className={`relative ${CELL}`}>
                               <span
                                 role="separator"
                                 aria-orientation="horizontal"
@@ -1839,6 +1947,7 @@ export function BidSpecSheetsSection({
                                     systemsLoading
                                   )}
                                   value={row.systemName ?? ""}
+                                  title={fullTextTitle(row.systemName)}
                                   onChange={(e) =>
                                     pickSystem(active.id, row, e.target.value)
                                   }
@@ -1860,13 +1969,13 @@ export function BidSpecSheetsSection({
                                 </select>
                               </CellBusy>
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <CodeChip code={row.systemCode} />
                             </td>
-                            <td className="px-1 py-0.5 text-xs text-ink/50">
+                            <td className={`${CELL} text-sm text-ink/50`}>
                               {row.unit ?? "—"}
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <CellBusy busy={areasLoading && canArea}>
                                 <select
                                   disabled={
@@ -1877,6 +1986,7 @@ export function BidSpecSheetsSection({
                                     areasLoading && canArea
                                   )}
                                   value={row.areaName ?? ""}
+                                  title={fullTextTitle(row.areaName)}
                                   onChange={(e) =>
                                     pickArea(active.id, row, e.target.value)
                                   }
@@ -1898,16 +2008,21 @@ export function BidSpecSheetsSection({
                                 </select>
                               </CellBusy>
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <CodeChip code={row.areaCode} />
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <select
                                 disabled={!editable || !canFamily}
                                 className={selectClass(
                                   !editable || !canFamily
                                 )}
                                 value={row.insulationFamily ?? ""}
+                                title={fullTextTitle(
+                                  familyOptions.find(
+                                    (f) => f.id === row.insulationFamily
+                                  )?.label ?? row.insulationFamily
+                                )}
                                 onChange={(e) =>
                                   pickFamily(active.id, row, e.target.value)
                                 }
@@ -1920,7 +2035,7 @@ export function BidSpecSheetsSection({
                                 ))}
                               </select>
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <select
                                 disabled={!editable || !canLayers}
                                 className={selectClass(
@@ -1968,7 +2083,9 @@ export function BidSpecSheetsSection({
                                     : null);
                                 return (
                                   <Fragment key={`${row.id}-ins-${i}`}>
-                                    <td className="px-1 py-0.5">
+                                    <td
+                                      className={`${CELL} ${INS_TONE[Math.min(i, 3) as 0 | 1 | 2 | 3].td}`}
+                                    >
                                       {activeSlot ? (
                                         <CellBusy busy={matsLoading}>
                                           <select
@@ -1980,6 +2097,13 @@ export function BidSpecSheetsSection({
                                               matsLoading
                                             )}
                                             value={displayName ?? ""}
+                                            title={fullTextTitle(
+                                              displayName
+                                                ? displayCode
+                                                  ? `${displayName} (${displayCode})`
+                                                  : displayName
+                                                : null
+                                            )}
                                             onChange={(e) =>
                                               pickMaterialAtLayer(
                                                 active.id,
@@ -2021,7 +2145,9 @@ export function BidSpecSheetsSection({
                                         </span>
                                       )}
                                     </td>
-                                    <td className="px-1 py-0.5">
+                                    <td
+                                      className={`${CELL} ${INS_TONE[Math.min(i, 3) as 0 | 1 | 2 | 3].td}`}
+                                    >
                                       {activeSlot ? (
                                         <CodeChip code={displayCode} />
                                       ) : (
@@ -2034,17 +2160,20 @@ export function BidSpecSheetsSection({
                                 );
                               }
                             )}
-                            <td className="px-1 py-0.5">
-                              <div className="flex min-w-[6.5rem] gap-1">
+                            <td className={CELL}>
+                              <div className="flex min-w-0 gap-1">
                                 <CellBusy busy={mikeBusy}>
                                   <input
                                     disabled={!editable || mikeBusy}
                                     className={`${cellBusySelectClass(
                                       !editable || mikeBusy,
                                       mikeBusy
-                                    )} w-20`}
+                                    )} w-full`}
                                     placeholder="FGA"
-                                    title="Mike code — fills Insulation 1"
+                                    title={
+                                      fullTextTitle(mikeCodeByRow[row.id]) ??
+                                      "Mike code — fills Insulation 1"
+                                    }
                                     value={mikeCodeByRow[row.id] ?? ""}
                                     onChange={(e) =>
                                       setMikeCodeByRow((prev) => ({
@@ -2079,7 +2208,7 @@ export function BidSpecSheetsSection({
                                 </button>
                               </div>
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <CellBusy
                                 busy={facingsLoading && canLayersFinish}
                               >
@@ -2096,6 +2225,10 @@ export function BidSpecSheetsSection({
                                     facingsLoading && canLayersFinish
                                   )}
                                   value={row.facing ?? ""}
+                                  title={fullTextTitle(
+                                    facings.find((f) => f.value === row.facing)
+                                      ?.label ?? row.facing
+                                  )}
                                   onChange={(e) =>
                                     patchRow(active.id, row.id, {
                                       facing: e.target.value || null,
@@ -2119,13 +2252,18 @@ export function BidSpecSheetsSection({
                                 </select>
                               </CellBusy>
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <select
                                 disabled={!editable || !canLayersFinish}
                                 className={selectClass(
                                   !editable || !canLayersFinish
                                 )}
                                 value={row.jacket ?? ""}
+                                title={fullTextTitle(
+                                  coveringOptions.find(
+                                    (c) => c.id === row.jacket
+                                  )?.label ?? row.jacket
+                                )}
                                 onChange={(e) =>
                                   patchRow(active.id, row.id, {
                                     jacket: e.target.value || null,
@@ -2141,7 +2279,7 @@ export function BidSpecSheetsSection({
                               </select>
                             </td>
                             {showDuctShape ? (
-                              <td className="px-1 py-0.5">
+                              <td className={CELL}>
                                 <select
                                   disabled={!editable || !canLayersFinish}
                                   className={selectClass(
@@ -2164,7 +2302,7 @@ export function BidSpecSheetsSection({
                                 </select>
                               </td>
                             ) : null}
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <CellBusy busy={dimsLoading && canSize}>
                                 {showPipeSizes ? (
                                   row.sizeMin === sizeRangeMin &&
@@ -2240,7 +2378,7 @@ export function BidSpecSheetsSection({
                                     max={sizeRangeMax}
                                     disabled={!editable || !canSize}
                                     placeholder="any"
-                                    className={`${selectClass(!editable || !canSize)} w-20`}
+                                    className={`${selectClass(!editable || !canSize)} w-full`}
                                     value={row.sizeMin ?? ""}
                                     onChange={(e) =>
                                       patchRow(active.id, row.id, {
@@ -2255,7 +2393,7 @@ export function BidSpecSheetsSection({
                                 )}
                               </CellBusy>
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <CellBusy busy={dimsLoading && canSize}>
                                 {showPipeSizes ? (
                                   row.sizeMin === sizeRangeMin &&
@@ -2306,7 +2444,7 @@ export function BidSpecSheetsSection({
                                     max={sizeRangeMax}
                                     disabled={!editable || !canSize}
                                     placeholder="any"
-                                    className={`${selectClass(!editable || !canSize)} w-20`}
+                                    className={`${selectClass(!editable || !canSize)} w-full`}
                                     value={row.sizeMax ?? ""}
                                     onChange={(e) =>
                                       patchRow(active.id, row.id, {
@@ -2321,7 +2459,7 @@ export function BidSpecSheetsSection({
                                 )}
                               </CellBusy>
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <input
                                 type="number"
                                 step="any"
@@ -2330,7 +2468,7 @@ export function BidSpecSheetsSection({
                                 disabled={!editable || !canSize}
                                 placeholder="—"
                                 title={`Width ${sizeRangeMin}–${sizeRangeMax} in`}
-                                className={`${selectClass(!editable || !canSize)} w-20`}
+                                className={`${selectClass(!editable || !canSize)} w-full`}
                                 value={row.widthIn ?? ""}
                                 onChange={(e) =>
                                   patchRow(active.id, row.id, {
@@ -2341,7 +2479,7 @@ export function BidSpecSheetsSection({
                                 }
                               />
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <CellBusy busy={dimsLoading && canSize}>
                                 {rowThicks.length === 0 && !dimsLoading ? (
                                   <span className="text-xs text-ink/35">—</span>
@@ -2390,7 +2528,7 @@ export function BidSpecSheetsSection({
                                 )}
                               </CellBusy>
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <ManufacturerAllowedSelect
                                 options={manufacturerOptions}
                                 allowed={row.manufacturersAllowed ?? []}
@@ -2401,7 +2539,7 @@ export function BidSpecSheetsSection({
                                 }
                               />
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <ManufacturerPreferredSelect
                                 options={manufacturerOptions}
                                 allowed={row.manufacturersAllowed ?? []}
@@ -2412,10 +2550,10 @@ export function BidSpecSheetsSection({
                                 }
                               />
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <input
                                 disabled={!editable}
-                                className={`${selectClass(!editable)} min-w-[6rem]`}
+                                className={selectClass(!editable)}
                                 value={row.accessories ?? ""}
                                 onChange={(e) =>
                                   patchRow(active.id, row.id, {
@@ -2425,10 +2563,10 @@ export function BidSpecSheetsSection({
                                 }
                               />
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <input
                                 disabled={!editable}
-                                className={`${selectClass(!editable)} w-20`}
+                                className={`${selectClass(!editable)} w-full`}
                                 placeholder="230700"
                                 value={row.specSection ?? ""}
                                 onChange={(e) =>
@@ -2439,10 +2577,10 @@ export function BidSpecSheetsSection({
                                 }
                               />
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <input
                                 disabled={!editable}
-                                className={`${selectClass(!editable)} w-14`}
+                                className={`${selectClass(!editable)} w-full`}
                                 placeholder="2.6"
                                 value={row.specParagraph ?? ""}
                                 onChange={(e) =>
@@ -2453,7 +2591,7 @@ export function BidSpecSheetsSection({
                                 }
                               />
                             </td>
-                            <td className="px-1 py-0.5">
+                            <td className={CELL}>
                               <input
                                 disabled={!editable}
                                 className={selectClass(!editable)}
@@ -2467,15 +2605,15 @@ export function BidSpecSheetsSection({
                               />
                             </td>
                             {editable ? (
-                              <td className="px-1 py-0.5">
-                                <div className="flex flex-row items-center gap-0.5">
+                              <td className={CELL}>
+                                <div className="flex flex-row items-center gap-1">
                                   {allowCopyRow ? (
                                     <button
                                       type="button"
                                       title="Copy row"
                                       aria-label="Copy row"
                                       onClick={() => copyRow(row.id)}
-                                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-ink/45 transition hover:bg-ink/[0.06] hover:text-brand"
+                                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink/45 transition hover:bg-ink/[0.06] hover:text-brand"
                                     >
                                       <svg
                                         viewBox="0 0 24 24"
@@ -2503,7 +2641,7 @@ export function BidSpecSheetsSection({
                                     title="Delete row"
                                     aria-label="Delete row"
                                     onClick={() => removeRow(row.id)}
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-danger/70 transition hover:bg-danger-tint/40 hover:text-danger"
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-danger/70 transition hover:bg-danger-tint/40 hover:text-danger"
                                   >
                                     <svg
                                       viewBox="0 0 24 24"

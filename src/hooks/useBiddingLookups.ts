@@ -58,7 +58,8 @@ export function useBiddingLookups() {
       biddingApi.getBiddingProjectTypes(),
       biddingApi.getBiddingBuildingTypes(),
       biddingApi.getBiddingPreferences(),
-      biddingApi.getBiddingOffices(),
+      // Not served by every backend; a 404 here must not blank teams, wage rates and companies.
+      biddingApi.getBiddingOffices().catch(() => []),
       lookupsApi.getOurEntities(),
       lookupsApi.getJobs(),
     ])

@@ -238,7 +238,7 @@ export function useProcessDraft() {
     error,
     editable,
     inputClass:
-      "h-11 w-full rounded-lg border border-[#D0D5DD] bg-surface px-3.5 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:opacity-60 dark:border-ink/15",
+      "h-12 w-full min-w-0 rounded-xl border border-[#D0D5DD] bg-surface px-4 text-[15px] text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:opacity-60 dark:border-ink/15",
     labelClass: "text-[13px] font-semibold text-ink/70",
   };
 }

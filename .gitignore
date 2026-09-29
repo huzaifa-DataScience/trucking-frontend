@@ -24,6 +24,7 @@
 .DS_Store
 .venv-xlsx/
 *.pem
+.ignore/
 
 # debug
 npm-debug.log*

@@ -1,7 +1,10 @@
 "use client";
 
 function formatSavedAt(d: Date): string {
-  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return d.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 /** Save / submit actions — pinned to the bottom of the bid sheet page. */
@@ -40,52 +43,59 @@ export function BidSheetToolbar({
           </ul>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-ink/[0.08] bg-surface/80 p-2 shadow-[0_1px_3px_rgba(1,1,1,0.04)] backdrop-blur-sm">
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-ink/[0.07] bg-white/95 px-3 py-2.5 shadow-[0_-4px_20px_-10px_rgba(1,1,1,0.2)] backdrop-blur-md">
+        <p
+          className={`mr-auto text-xs ${
+            dirty ? "font-semibold text-amber-700" : "text-ink/45"
+          }`}
+        >
+          {dirty ? (
+            "Unsaved changes"
+          ) : lastSavedAt ? (
+            <>Saved {formatSavedAt(lastSavedAt)} · Totals on the right after you calculate</>
+          ) : (
+            <>Totals appear on the right after you calculate</>
+          )}
+        </p>
+        <button
+          type="button"
+          onClick={onVerifyServer}
+          disabled={saving}
+          className="rounded-[10px] border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:border-brand/45 hover:text-[#c2410c] disabled:opacity-45"
+          title="Run the server calculation to double-check the totals"
+        >
+          Verify on server
+        </button>
         <button
           type="button"
           onClick={onPreview}
           disabled={!isEditable}
-          className="rounded-xl px-4 py-2.5 text-sm font-medium text-ink transition hover:bg-ink/[0.04] disabled:opacity-45"
+          className="rounded-[10px] border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:border-brand/45 hover:text-[#c2410c] disabled:opacity-45"
         >
           Preview calculate
         </button>
         <button
           type="button"
           onClick={onSave}
-          disabled={saving || !isEditable}
-          className="rounded-xl border border-ink/10 bg-canvas px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-brand/30 hover:bg-brand/[0.04] disabled:opacity-45"
+          disabled={saving || (isEditable === false && status === "archived")}
+          className="rounded-[10px] bg-brand px-3.5 py-2 text-[13px] font-semibold text-white transition hover:bg-[#f26620] disabled:opacity-45"
         >
-          {saving ? "Saving…" : "Save & calculate"}
+          {saving
+            ? "Saving…"
+            : isEditable
+              ? "Save & calculate"
+              : "Save cover sheet"}
         </button>
         {status === "draft" ? (
           <button
             type="button"
             onClick={onSubmit}
             disabled={saving || !isEditable}
-            className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_2px_8px_rgba(255,123,17,0.35)] transition hover:bg-brand-secondary hover:shadow-[0_4px_14px_rgba(255,123,17,0.4)] disabled:opacity-45"
+            className="rounded-[10px] bg-ink px-3.5 py-2 text-[13px] font-semibold text-white transition hover:bg-ink/90 disabled:opacity-45"
           >
             Mark submitted
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={onVerifyServer}
-          disabled={saving}
-          className="rounded-xl px-4 py-2.5 text-sm font-medium text-ink/70 transition hover:bg-ink/[0.04] disabled:opacity-45"
-          title="Run legacy server engine for audit reconciliation"
-        >
-          Verify on server
-        </button>
-        <div className="hidden h-8 w-px bg-ink/10 sm:block" aria-hidden />
-        <p className="hidden text-xs text-ink/40 sm:block">
-          {dirty ? (
-            <span className="text-amber-700">Unsaved changes — click Save</span>
-          ) : lastSavedAt ? (
-            <>Saved {formatSavedAt(lastSavedAt)}</>
-          ) : (
-            <>Results update on the right after calculate</>
-          )}
-        </p>
       </div>
     </div>
   );
