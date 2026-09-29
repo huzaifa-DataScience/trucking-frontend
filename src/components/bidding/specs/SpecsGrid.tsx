@@ -79,15 +79,18 @@ export function SpecsGrid({
 
   const showRollCols = lines.some(isRollLine);
 
+  const actionColClass =
+    "sticky right-0 z-[2] min-w-[4.75rem] whitespace-nowrap bg-surface px-3 shadow-[-6px_0_12px_-4px_rgba(1,1,1,0.08)]";
+
   return (
-    <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
-      <table className="min-w-[1600px] w-full border-collapse text-left text-xs">
+    <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-x-contain rounded-2xl border border-ink/[0.08] bg-surface pb-2 pr-1 shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+      <table className="w-max min-w-[1680px] border-collapse text-left text-xs">
         <thead className="sticky top-0 z-10 bg-surface">
           <tr className="border-b border-ink/[0.08] text-[10px] uppercase tracking-wide text-ink/40">
-            <th className="px-2 py-2.5 font-semibold">Type</th>
-            <th className="px-2 py-2.5 font-semibold">System</th>
-            <th className="px-2 py-2.5 font-semibold">Area</th>
-            <th className="sticky left-0 z-[1] bg-surface px-2 py-2.5 font-semibold shadow-[2px_0_0_rgba(0,0,0,0.04)]">
+            <th className="min-w-[7rem] px-2 py-2.5 font-semibold">Type</th>
+            <th className="min-w-[9rem] px-2 py-2.5 font-semibold">System</th>
+            <th className="min-w-[9rem] px-2 py-2.5 font-semibold">Area</th>
+            <th className="sticky left-0 z-[1] min-w-[9rem] bg-surface px-2 py-2.5 font-semibold shadow-[2px_0_0_rgba(0,0,0,0.04)]">
               Insulation
             </th>
             <th className="px-2 py-2.5 font-semibold">Size</th>
@@ -113,11 +116,15 @@ export function SpecsGrid({
                 <th className="min-w-[8rem] px-2 py-2.5 font-semibold">Recv summary</th>
               </>
             ) : null}
-            <th className="min-w-[14rem] px-2 py-2.5 font-semibold">
+            <th className="min-w-[12rem] max-w-[16rem] px-2 py-2.5 font-semibold">
               Structshare options
             </th>
-            <th className="px-2 py-2.5 font-semibold">Notes</th>
-            {canWrite ? <th className="px-2 py-2.5" /> : null}
+            <th className="min-w-[8rem] px-2 py-2.5 font-semibold">Notes</th>
+            {canWrite ? (
+              <th className={`${actionColClass} py-2.5 text-[10px] font-semibold uppercase tracking-wide text-ink/40`}>
+                Del
+              </th>
+            ) : null}
           </tr>
         </thead>
         <tbody className="divide-y divide-ink/[0.05]">
@@ -135,6 +142,7 @@ export function SpecsGrid({
               onPatch={onPatch}
               onDelete={onDelete}
               onOpenCatalog={onOpenCatalog}
+              actionColClass={actionColClass}
             />
           ))}
         </tbody>
@@ -155,6 +163,7 @@ function SpecsLineRow({
   onPatch,
   onDelete,
   onOpenCatalog,
+  actionColClass,
 }: {
   line: SpecLine;
   systems: SpecSystem[];
@@ -167,6 +176,7 @@ function SpecsLineRow({
   onPatch: (lineId: number, patch: Partial<SpecLine>) => void;
   onDelete: (lineId: number) => void;
   onOpenCatalog: (line: SpecLine) => void;
+  actionColClass: string;
 }) {
   const [draft, setDraft] = useState({
     type: line.type ?? "",
@@ -240,7 +250,7 @@ function SpecsLineRow({
       : facings;
 
   const cellInput =
-    "w-full min-w-[4.5rem] rounded-md border border-transparent bg-transparent px-1 py-1 text-xs text-ink outline-none hover:border-ink/10 focus:border-brand focus:bg-canvas disabled:opacity-60";
+    "box-border h-10 w-full min-w-0 cursor-pointer rounded-md border border-transparent bg-transparent px-2 text-xs text-ink outline-none hover:border-ink/10 focus:border-brand focus:bg-canvas disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <tr className={`align-top ${busy ? "opacity-60" : ""}`}>
@@ -249,6 +259,7 @@ function SpecsLineRow({
           className={cellInput}
           disabled={!canWrite}
           value={draft.type}
+          title={draft.type || undefined}
           onChange={(e) => schedulePatch("type", e.target.value)}
         >
           <option value="">—</option>
@@ -264,6 +275,7 @@ function SpecsLineRow({
           className={cellInput}
           disabled={!canWrite}
           value={draft.systemName}
+          title={draft.systemName || undefined}
           onChange={(e) => schedulePatch("systemName", e.target.value)}
         >
           {systems.map((s) => (
@@ -281,6 +293,7 @@ function SpecsLineRow({
           className={cellInput}
           disabled={!canWrite}
           value={draft.areaName}
+          title={draft.areaName || undefined}
           onChange={(e) => schedulePatch("areaName", e.target.value)}
         >
           {areas.map((a) => (
@@ -298,6 +311,7 @@ function SpecsLineRow({
           className={cellInput}
           disabled={!canWrite}
           value={draft.insulation}
+          title={draft.insulation || undefined}
           onChange={(e) => schedulePatch("insulation", e.target.value)}
         >
           {materials.map((m) => (
@@ -412,13 +426,13 @@ function SpecsLineRow({
         />
       </td>
       {canWrite ? (
-        <td className="px-2 py-2">
+        <td className={`${actionColClass} py-2 align-middle`}>
           <button
             type="button"
             onClick={() => {
               if (confirm("Delete this Spec line?")) onDelete(line.id);
             }}
-            className="text-[10px] font-semibold text-danger/80 hover:text-danger"
+            className="rounded-md px-2 py-1.5 text-[11px] font-semibold text-danger/80 transition hover:bg-danger-tint/30 hover:text-danger"
           >
             Del
           </button>
@@ -444,12 +458,12 @@ function StructshareOptionsCell({
   const list = Array.isArray(options) ? options : [];
   if (list.length === 0) {
     return (
-      <div className="flex items-center gap-2 px-1">
+      <div className="flex h-10 items-center gap-2 px-1">
         <span className="text-ink/35">—</span>
         <button
           type="button"
           onClick={onBrowseCatalog}
-          className="text-[10px] font-semibold text-ink/40 hover:text-brand"
+          className="cursor-pointer text-[10px] font-semibold text-ink/40 hover:text-brand"
         >
           Catalog
         </button>
@@ -459,23 +473,33 @@ function StructshareOptionsCell({
 
   const preview = list[0]?.itemName ?? "";
   const more = list.length - 1;
+  const meta = [
+    `${list.length} item${list.length === 1 ? "" : "s"}`,
+    matchMode || null,
+    more > 0 ? `+${more}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <details className="group relative max-w-[18rem]">
-      <summary className="cursor-pointer list-none rounded-lg border border-ink/10 bg-canvas px-2 py-1.5 text-[11px] text-ink marker:content-none [&::-webkit-details-marker]:hidden">
-        <span className="line-clamp-2 font-medium leading-snug">{preview}</span>
-        <span className="mt-0.5 block text-[10px] text-ink/45">
-          {list.length} item{list.length === 1 ? "" : "s"}
-          {matchMode ? ` · ${matchMode}` : ""}
-          {more > 0 ? ` · +${more} more` : ""}
+    <details className="group relative max-w-[16rem]">
+      <summary
+        title={preview}
+        className="flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-md border border-ink/10 bg-canvas px-2 text-[11px] text-ink marker:content-none hover:border-ink/20 [&::-webkit-details-marker]:hidden"
+      >
+        <span className="min-w-0 flex-1 truncate font-medium">{preview}</span>
+        <span className="shrink-0 text-[10px] text-ink/45">{meta}</span>
+        <span className="shrink-0 text-ink/30 transition group-open:rotate-180" aria-hidden>
+          ▾
         </span>
       </summary>
-      <div className="absolute left-0 z-20 mt-1 max-h-48 w-[min(22rem,70vw)] overflow-auto rounded-xl border border-ink/10 bg-surface p-2 shadow-lg">
-        <ul className="space-y-1.5 text-[11px] text-ink/80">
+      <div className="absolute left-0 z-20 mt-1 max-h-52 w-[min(22rem,70vw)] overflow-auto rounded-xl border border-ink/10 bg-surface p-2 shadow-lg">
+        <ul className="space-y-1 text-[11px] text-ink/80">
           {list.map((o, i) => (
             <li
               key={`${o.itemName}-${i}`}
-              className="rounded-md px-1.5 py-1 leading-snug hover:bg-canvas"
+              title={o.itemName}
+              className="rounded-md px-1.5 py-1.5 leading-snug hover:bg-canvas"
             >
               {o.itemName}
             </li>
@@ -484,7 +508,7 @@ function StructshareOptionsCell({
         <button
           type="button"
           onClick={onBrowseCatalog}
-          className="mt-2 w-full rounded-lg border border-ink/10 px-2 py-1.5 text-[10px] font-semibold text-ink/55 hover:text-brand"
+          className="mt-2 w-full cursor-pointer rounded-lg border border-ink/10 px-2 py-1.5 text-[10px] font-semibold text-ink/55 hover:text-brand"
         >
           Open catalog (admin price)
         </button>

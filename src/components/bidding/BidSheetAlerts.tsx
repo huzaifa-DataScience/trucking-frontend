@@ -3,7 +3,6 @@
 export function BidSheetAlerts({
   error,
   warnings,
-  hasComputed,
   isEditable,
   status,
   saving,
@@ -11,13 +10,12 @@ export function BidSheetAlerts({
 }: {
   error: string | null;
   warnings: string[];
-  hasComputed: boolean;
   isEditable: boolean;
   status: string;
   saving: boolean;
   onReopen: () => void;
 }) {
-  if (!error && warnings.length === 0 && hasComputed && isEditable) return null;
+  if (!error && warnings.length === 0 && isEditable) return null;
 
   return (
     <div className="space-y-3">
@@ -38,13 +36,6 @@ export function BidSheetAlerts({
               <li key={w}>{w}</li>
             ))}
           </ul>
-        </div>
-      ) : null}
-
-      {!hasComputed ? (
-        <div className="rounded-xl border border-dashed border-brand/25 bg-brand/[0.03] px-4 py-3 text-sm text-ink/70">
-          Fill the form, then <strong className="text-ink">Preview calculate</strong> — live totals
-          appear in the results panel.
         </div>
       ) : null}
 

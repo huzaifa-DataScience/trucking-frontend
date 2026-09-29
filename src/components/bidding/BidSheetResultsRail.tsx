@@ -90,7 +90,7 @@ export function BidSheetResultsRail({
             ) : hasComputed ? (
               <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
             ) : (
-              <span className="text-[10px] text-white/35">Awaiting calculate</span>
+              <span className="text-[10px] text-white/45">Not calculated yet</span>
             )}
           </div>
         </div>
@@ -98,15 +98,15 @@ export function BidSheetResultsRail({
         <div className="space-y-3 p-4">
           <div className="flex gap-2">
             <HeroEstimate
-              label="MIKE"
+              label="MIKE estimate"
               value={hasComputed ? formatMoney(insights.mikeEstimate) : "—"}
-              sub={hasComputed ? `${formatMoney(insights.costPerHourMike)}/hr` : "H48"}
+              sub={hasComputed ? `${formatMoney(insights.costPerHourMike)}/hr` : "Not calculated"}
               variant="mike"
             />
             <HeroEstimate
-              label="PJ"
+              label="PJ estimate"
               value={hasComputed ? formatMoney(insights.pjEstimate) : "—"}
-              sub={hasComputed ? `${formatMoney(insights.costPerHourPj)}/hr` : "H47"}
+              sub={hasComputed ? `${formatMoney(insights.costPerHourPj)}/hr` : "Not calculated"}
               variant="pj"
             />
           </div>
@@ -158,14 +158,15 @@ export function BidSheetResultsRail({
       {canViewSummary ? (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.05)]">
         <div className="border-b border-ink/[0.06] px-4 py-3">
-          <h2 className="text-sm font-semibold text-ink">Calculation detail</h2>
-          <p className="mt-0.5 text-xs text-ink/45">Excel rows 37–49 · D10–D13</p>
+          <h2 className="text-sm font-semibold text-ink">How it adds up</h2>
+          <p className="mt-0.5 text-xs text-ink/45">Labor rate build-up and totals</p>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
           {!hasComputed ? (
             <p className="px-2 py-8 text-center text-sm text-ink/45">
-              Run Preview or Save & calculate to populate results.
+              Not calculated yet. Use <strong className="text-ink/70">Preview calculate</strong> or{" "}
+              <strong className="text-ink/70">Save &amp; calculate</strong> below to see the totals.
             </p>
           ) : (
             <div className="bid-stagger divide-y divide-ink/[0.06]">

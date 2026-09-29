@@ -22,7 +22,7 @@ export function BidSheetTabNav({
     <div
       role="tablist"
       aria-label="Bid sheet sections"
-      className="flex flex-wrap items-center gap-2 rounded-2xl border border-ink/[0.08] bg-surface/80 p-2 shadow-[0_1px_3px_rgba(1,1,1,0.04)] backdrop-blur-sm"
+      className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]"
     >
       {TABS.map((t) => {
         const isActive = active === t.id;
@@ -37,17 +37,17 @@ export function BidSheetTabNav({
             role="tab"
             aria-selected={isActive}
             onClick={() => onChange(t.id)}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm transition disabled:opacity-45 ${
+            className={`-mb-px inline-flex items-center gap-2 border-b-2 pb-2.5 pt-1 text-sm transition disabled:opacity-45 ${
               isActive
-                ? "bg-brand font-semibold text-white shadow-[0_2px_8px_rgba(255,123,17,0.35)]"
-                : "font-medium text-ink hover:bg-ink/[0.04]"
+                ? "border-ink font-semibold text-ink"
+                : "border-transparent font-medium text-ink/55 hover:text-ink"
             }`}
           >
             {t.label}
             {badge ? (
               <span
                 className={`min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none ${
-                  isActive ? "bg-white/25 text-white" : "bg-ink/[0.08] text-ink/50"
+                  isActive ? "bg-ink text-white" : "bg-ink/[0.08] text-ink/50"
                 }`}
               >
                 {badge}

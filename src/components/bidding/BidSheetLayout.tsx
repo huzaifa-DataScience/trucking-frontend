@@ -153,10 +153,15 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
               <span className="hidden text-sm text-ink/45 sm:inline">
                 {bid.companyName}
               </span>
-              <BidSaveButton />
+              {/* Proposal owns save via sticky “Save & calculate” toolbar */}
+              {stage !== "proposal" ? <BidSaveButton /> : null}
             </div>
           }
         />
+      </div>
+
+      {/* Sibling of the long form body — sticky only works while its ancestor still spans the scroll. */}
+      <div className="sticky top-[4.75rem] z-[25] -mx-4 border-b border-ink/[0.08] bg-canvas px-4 sm:-mx-6 sm:top-[3.75rem] sm:px-6 lg:-mx-8 lg:px-8">
         <BidStageStrip
           bidId={bid.id}
           active={stage}

@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { ComputedField } from "@/components/bidding/ComputedField";
 import {
   BidFormField,
   BidNumberInput,
   BidSelect,
-  BidTextInput,
 } from "@/components/bidding/BidFormField";
 import { BidSheetAlerts } from "@/components/bidding/BidSheetAlerts";
 import { BidSheetHeaderSection } from "@/components/bidding/BidSheetHeaderSection";
@@ -83,6 +80,8 @@ export function BidSheetForm() {
     verifyServerCalc,
     saveNow,
     saveCoverSheet,
+    saveProcess,
+    processDirty,
     markSubmitted,
     reopenAsDraft,
     uploadAttachment,
@@ -206,22 +205,17 @@ export function BidSheetForm() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 ui-animate-in">
-      <nav aria-label="Breadcrumb" className="text-xs text-ink/45">
-        <Link href="/bidding" className="font-medium transition-colors hover:text-ink">
-          Bidding
-        </Link>
-        <span aria-hidden className="mx-1.5 text-ink/25">
-          /
-        </span>
-        <span className="font-mono font-medium text-ink/60">
-          {bid.estimateNumber || "Estimate"}
-        </span>
-      </nav>
+      <header className="shrink-0">
+        <h2 className="text-base font-semibold text-ink">Proposal</h2>
+        <p className="mt-1 text-[13px] text-ink/45">
+          Cover sheet + calculator. Identity and team are read-only here — edit
+          on Intake / Assignment.
+        </p>
+      </header>
 
       <BidSheetAlerts
         error={error}
         warnings={warnings}
-        hasComputed={hasComputed}
         isEditable={isEditable}
         status={bid.status}
         saving={saving}
@@ -230,7 +224,8 @@ export function BidSheetForm() {
 
       {!isEditable && canRead && bid.status === "draft" ? (
         <div className="rounded-xl border border-ink/[0.08] bg-ink/[0.03] px-4 py-2.5 text-xs text-ink/60">
-          View-only — you need <span className="font-mono">{PERMISSIONS.biddingWrite}</span> to edit
+          View-only — you need{" "}
+          <span className="font-mono">{PERMISSIONS.biddingWrite}</span> to edit
           this draft.
         </div>
       ) : null}
@@ -254,7 +249,7 @@ export function BidSheetForm() {
           showResultsRail ? "bid-workspace min-h-0 flex-1" : "min-h-0 flex-1"
         }
       >
-        <div className="bid-workspace-form space-y-5 pb-8">
+        <div className="bid-workspace-form space-y-[18px] pb-8">
           {activeTab === "sheet" ? (
             <>
           <BidSheetHeaderSection
@@ -272,27 +267,16 @@ export function BidSheetForm() {
             onJobChange={(jobId, prefill) => void setJobId(jobId, { prefillCompany: prefill })}
           />
 
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => void (isEditable ? saveNow() : saveCoverSheet())}
-              disabled={saving}
-              className="rounded-xl border border-ink/10 px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04] disabled:opacity-50"
-            >
-              {saving ? "Saving…" : isEditable ? "Save" : "Save cover sheet"}
-            </button>
-          </div>
-
           <Card>
             <CardHeader
               title="Team"
-              subtitle="From Assignment — crew auto-fills from GET /lookups/bidding/teams by teamId. Not picked here."
+              subtitle="From Assignment — crew auto-fills from team lookup. Not picked here."
             />
-            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <BidFormField label="Team" htmlFor="team-ro">
                 <p
                   id="team-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-3 text-[15px] font-medium text-ink"
                 >
                   {teamLabel}
                 </p>
@@ -300,7 +284,7 @@ export function BidSheetForm() {
               <BidFormField label="Captain" htmlFor="captain-ro">
                 <p
                   id="captain-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-3 text-[15px] font-medium text-ink"
                 >
                   {captainLabel}
                 </p>
@@ -308,14 +292,14 @@ export function BidSheetForm() {
               <BidFormField label="Assistant estimator" htmlFor="asst-ro">
                 <p
                   id="asst-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-3 text-[15px] font-medium text-ink"
                 >
                   {aeLabel}
                 </p>
               </BidFormField>
             </div>
             {teamFromAssignment ? (
-              <div className="mt-4 grid gap-3 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] p-4 grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
+              <div className="mt-3 grid gap-2.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] p-3 grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
                 {(
                   [
                     ["Bid clerk", teamFromAssignment.bidClerk],
@@ -328,17 +312,19 @@ export function BidSheetForm() {
                   ] as const
                 ).map(([label, val]) => (
                   <div key={label}>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/35">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-ink/35">
                       {label}
                     </p>
-                    <p className="mt-0.5 text-sm font-medium text-ink">{val ?? "—"}</p>
+                    <p className="mt-0.5 text-[13px] font-semibold text-ink">
+                      {val ?? "—"}
+                    </p>
                   </div>
                 ))}
               </div>
             ) : (
               <p className="mt-3 text-xs text-ink/45">
-                No assigned team yet — set captain / team on Assignment (or Settings →
-                My team for the captain’s crew).
+                No assigned team yet — set captain / team on Assignment (or
+                Settings → My team for the captain’s crew).
               </p>
             )}
           </Card>
@@ -348,11 +334,11 @@ export function BidSheetForm() {
               title="Project identity"
               subtitle="From Intake — building / project type, impacted SF, state. Calculator fields stay below."
             />
-            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <BidFormField label="Building type" htmlFor="btype-ro">
                 <p
                   id="btype-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-3 text-[15px] font-medium text-ink"
                 >
                   {bid.process?.constructionType || "—"}
                 </p>
@@ -360,7 +346,7 @@ export function BidSheetForm() {
               <BidFormField label="Project type" htmlFor="ptype-ro">
                 <p
                   id="ptype-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-3 text-[15px] font-medium text-ink"
                 >
                   {bid.process?.constructionSubtype || "—"}
                 </p>
@@ -368,18 +354,18 @@ export function BidSheetForm() {
               <BidFormField label="Impacted SF (GSF)" htmlFor="gsf-ro">
                 <p
                   id="gsf-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-3 text-[15px] font-medium text-ink"
                 >
                   {impactedGsf != null ? impactedGsf.toLocaleString() : "—"}
                 </p>
-                <span className="mt-1 block text-[10px] text-ink/40">
+                <span className="mt-1 block text-[11px] text-ink/40">
                   Copied to baseBid.gsfOfBuilding for calc — edit on Intake
                 </span>
               </BidFormField>
               <BidFormField label="Project state" htmlFor="state-ro">
                 <p
                   id="state-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-3 text-[15px] font-medium text-ink"
                 >
                   {projectStateRo || "—"}
                 </p>
@@ -388,7 +374,7 @@ export function BidSheetForm() {
                 <BidFormField label="State sales tax" htmlFor="stax-ro">
                   <p
                     id="stax-ro"
-                    className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 font-mono text-sm text-ink"
+                    className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-3 font-mono text-[15px] font-medium text-ink"
                   >
                     {formatPercentDecimal(stateTax)}
                   </p>
@@ -397,7 +383,7 @@ export function BidSheetForm() {
               <BidFormField
                 label="MBE / preference"
                 htmlFor="pref"
-                hint="Also on Setup (process.mbePreference) — kept in sync"
+                hint="Also on Setup — kept in sync"
               >
                 <BidSelect
                   id="pref"
@@ -451,37 +437,58 @@ export function BidSheetForm() {
                 />
               </BidFormField>
               {burdenedRate ? (
-                <div className="rounded-xl border border-brand/20 bg-brand/[0.04] p-4 col-span-full">
-                  <p className="text-sm font-semibold text-ink">
+                <div className="col-span-full mt-1 rounded-xl border border-brand/20 bg-brand/[0.04] p-3">
+                  <p className="text-[13px] font-semibold text-ink">
                     Burdened: {formatMoneyPrecise(burdenedRate.burdenedRate)}/hr
                   </p>
-                  <div className="mt-3 grid gap-2 grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
-                    <ComputedField label="Wage" value={formatMoneyPrecise(burdenedRate.wage)} />
-                    <ComputedField
-                      label="Burden"
-                      value={formatMoneyPrecise(burdenedRate.totalBurden)}
-                    />
-                    <ComputedField
-                      label="Total"
-                      value={formatMoneyPrecise(burdenedRate.burdenedRate)}
-                      emphasis
-                    />
+                  <div className="mt-2.5 grid grid-cols-3 gap-2">
+                    <div className="rounded-[10px] border border-ink/[0.07] bg-white px-2.5 py-2">
+                      <span className="block text-[10px] font-bold uppercase tracking-[0.04em] text-ink/40">
+                        Wage
+                      </span>
+                      <b className="mt-0.5 block font-mono text-sm font-semibold">
+                        {formatMoneyPrecise(burdenedRate.wage)}
+                      </b>
+                    </div>
+                    <div className="rounded-[10px] border border-ink/[0.07] bg-white px-2.5 py-2">
+                      <span className="block text-[10px] font-bold uppercase tracking-[0.04em] text-ink/40">
+                        Burden
+                      </span>
+                      <b className="mt-0.5 block font-mono text-sm font-semibold">
+                        {formatMoneyPrecise(burdenedRate.totalBurden)}
+                      </b>
+                    </div>
+                    <div className="rounded-[10px] border border-ink/[0.07] bg-white px-2.5 py-2">
+                      <span className="block text-[10px] font-bold uppercase tracking-[0.04em] text-ink/40">
+                        Total
+                      </span>
+                      <b className="mt-0.5 block font-mono text-sm font-semibold">
+                        {formatMoneyPrecise(burdenedRate.burdenedRate)}
+                      </b>
+                    </div>
                   </div>
                   {burdenedRate.lines.length > 0 ? (
-                    <div className="mt-4 overflow-x-auto">
+                    <div className="mt-2.5 overflow-x-auto">
                       <table className="w-full min-w-[280px] text-left text-xs">
                         <thead>
-                          <tr className="border-b border-ink/10 text-ink/45">
-                            <th className="py-1.5 pr-2 font-medium">Code</th>
-                            <th className="py-1.5 pr-2 font-medium">Line</th>
-                            <th className="py-1.5 text-right font-medium">$/hr</th>
+                          <tr className="border-b border-ink/[0.07] text-[10px] uppercase tracking-[0.04em] text-ink/40">
+                            <th className="py-1.5 pr-2 font-bold">Code</th>
+                            <th className="py-1.5 pr-2 font-bold">Line</th>
+                            <th className="py-1.5 text-right font-bold">$/hr</th>
                           </tr>
                         </thead>
                         <tbody>
                           {burdenedRate.lines.map((line) => (
-                            <tr key={line.code} className="border-b border-ink/[0.05]">
-                              <td className="py-1.5 pr-2 font-mono text-ink/60">{line.code}</td>
-                              <td className="py-1.5 pr-2 text-ink/70">{line.label}</td>
+                            <tr
+                              key={line.code}
+                              className="border-b border-ink/[0.05]"
+                            >
+                              <td className="py-1.5 pr-2 font-mono text-ink/60">
+                                {line.code}
+                              </td>
+                              <td className="py-1.5 pr-2 text-ink/70">
+                                {line.label}
+                              </td>
                               <td className="py-1.5 text-right font-mono text-ink">
                                 {formatMoneyPrecise(line.amountPerHour)}
                               </td>
@@ -564,7 +571,7 @@ export function BidSheetForm() {
 
           <Card>
             <CardHeader title="Schedule & margin" subtitle="Hours, duration, and margin (D4, F4–F5, B12–B13)." />
-            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <BidFormField
                 label="Margin"
                 htmlFor="margin"
@@ -642,7 +649,7 @@ export function BidSheetForm() {
 
           <Card>
             <CardHeader title="Parking & lifts" subtitle="Parking/lift $/hr shown in results panel." />
-            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <BoolSelect
                 id="parking"
                 label="Parking"
@@ -710,10 +717,10 @@ export function BidSheetForm() {
           ) : null}
 
           {activeTab === "company" ? (
-            <div className="space-y-4">
+            <>
               {!bid.jobId ? (
-                <p className="rounded-xl border border-ink/[0.08] bg-ink/[0.02] px-4 py-3 text-xs text-ink/55">
-                  Link a job on the{" "}
+                <p className="rounded-xl border border-ink/[0.08] bg-ink/[0.02] px-4 py-2.5 text-xs text-ink/55">
+                  Link a job on{" "}
                   <button
                     type="button"
                     onClick={() => setActiveTab("sheet")}
@@ -721,11 +728,17 @@ export function BidSheetForm() {
                   >
                     Bidding sheet
                   </button>{" "}
-                  tab to enable &ldquo;Prefill from job&rdquo;.
+                  to enable Prefill from job.
                 </p>
               ) : null}
               <BidSheetCompanyInfoSection
                 bid={bid}
+                jobLabel={
+                  bid.jobId
+                    ? (lookups.jobs.find((j) => j.id === bid.jobId)?.name ??
+                      `Job #${bid.jobId}`)
+                    : null
+                }
                 isEditable={isEditable}
                 prefillLoading={prefillLoading}
                 onFieldChange={(key, value) => setCompanyInfoField(key, value)}
@@ -738,7 +751,7 @@ export function BidSheetForm() {
                   }
                 }}
               />
-            </div>
+            </>
           ) : null}
 
           {activeTab === "files" ? (
@@ -770,7 +783,17 @@ export function BidSheetForm() {
           status={bid.status}
           serverVerifyWarnings={serverVerifyWarnings}
           onPreview={previewCalculate}
-          onSave={() => void saveNow()}
+          onSave={() =>
+            void (async () => {
+              if (!isEditable) {
+                await saveCoverSheet();
+                return;
+              }
+              // Match header Save + sheet calc: flush process draft then calculator.
+              if (processDirty) await saveProcess();
+              await saveNow();
+            })()
+          }
           onSubmit={() => void markSubmitted()}
           onVerifyServer={() => void verifyServerCalc()}
         />

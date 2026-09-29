@@ -1,8 +1,15 @@
 "use client";
 
 import { Card, CardHeader } from "@/components/ui/Card";
-import { BidFormField, BidTextInput, BidSelect } from "@/components/bidding/BidFormField";
+import {
+  BidFormField,
+  BidTextInput,
+  BidSelect,
+} from "@/components/bidding/BidFormField";
 import type { BidCompanyInfo, BidDetail } from "@/lib/bidding/types";
+
+const notesClass =
+  "mt-1.5 box-border min-h-[88px] w-full min-w-0 resize-y rounded-xl border border-ink/10 bg-white px-3.5 py-3 text-[15px] font-medium text-ink outline-none transition placeholder:text-ink/30 focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:cursor-not-allowed disabled:opacity-50";
 
 export function BidSheetCompanyInfoSection({
   bid,
@@ -10,43 +17,52 @@ export function BidSheetCompanyInfoSection({
   onFieldChange,
   onPrefillFromJob,
   prefillLoading,
+  jobLabel,
 }: {
   bid: BidDetail;
   isEditable: boolean;
   onFieldChange: (key: keyof BidCompanyInfo, value: string) => void;
   onPrefillFromJob: () => void;
   prefillLoading?: boolean;
+  /** Shown in subtitle when a Trimble job is linked. */
+  jobLabel?: string | null;
 }) {
   const info = bid.companyInfo ?? {};
+
+  const subtitle = jobLabel
+    ? `Client / GC on the bid packet. Linked job: ${jobLabel} — use Prefill to copy job address book fields.`
+    : "Client / GC on the bid packet — not your bidding entity (GOEL / GOEL DC / DCB). Link a job on Bidding sheet to prefill.";
 
   return (
     <Card>
       <CardHeader
         title="Client / GC"
-        subtitle="Who this bid is for — separate from your company (GOEL / GOEL DC / DCB)."
+        subtitle={subtitle}
         action={
           bid.jobId ? (
             <button
               type="button"
               onClick={() => void onPrefillFromJob()}
               disabled={!isEditable || prefillLoading}
-              className="rounded-lg border border-ink/10 px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04] disabled:opacity-50"
+              className="shrink-0 rounded-lg border border-ink/10 px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04] disabled:opacity-50"
             >
               {prefillLoading ? "Loading…" : "Prefill from job"}
             </button>
           ) : null
         }
       />
-      <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-        <BidFormField label="Company name" htmlFor="ci-name">
-          <BidTextInput
-            id="ci-name"
-            value={info.companyName ?? ""}
-            onChange={(v) => onFieldChange("companyName", v)}
-            disabled={!isEditable}
-            placeholder="ABC Mechanical"
-          />
-        </BidFormField>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="md:col-span-2 xl:col-span-3">
+          <BidFormField label="Company name" htmlFor="ci-name">
+            <BidTextInput
+              id="ci-name"
+              value={info.companyName ?? ""}
+              onChange={(v) => onFieldChange("companyName", v)}
+              disabled={!isEditable}
+              placeholder="ABC Mechanical"
+            />
+          </BidFormField>
+        </div>
         <BidFormField label="Contact name" htmlFor="ci-contact">
           <BidTextInput
             id="ci-contact"
@@ -55,7 +71,22 @@ export function BidSheetCompanyInfoSection({
             disabled={!isEditable}
           />
         </BidFormField>
-        <div className="col-span-full max-w-2xl">
+        <BidFormField label="Parent / Child" htmlFor="ci-parent-child">
+          <BidSelect
+            id="ci-parent-child"
+            value={info.parentChild ?? ""}
+            onChange={(v) => onFieldChange("parentChild", v)}
+            disabled={!isEditable}
+            options={[
+              { value: "", label: "—" },
+              { value: "parents_only", label: "Parents Only" },
+              { value: "children_only", label: "Children Only" },
+              { value: "both", label: "Both" },
+              { value: "exclude", label: "Exclude" },
+            ]}
+          />
+        </BidFormField>
+        <div className="md:col-span-2 xl:col-span-3">
           <BidFormField label="Address" htmlFor="ci-address">
             <BidTextInput
               id="ci-address"
@@ -73,24 +104,22 @@ export function BidSheetCompanyInfoSection({
             disabled={!isEditable}
           />
         </BidFormField>
-        <div className="grid grid-cols-2 gap-4">
-          <BidFormField label="State" htmlFor="ci-state">
-            <BidTextInput
-              id="ci-state"
-              value={info.state ?? ""}
-              onChange={(v) => onFieldChange("state", v)}
-              disabled={!isEditable}
-            />
-          </BidFormField>
-          <BidFormField label="ZIP" htmlFor="ci-zip">
-            <BidTextInput
-              id="ci-zip"
-              value={info.zip ?? ""}
-              onChange={(v) => onFieldChange("zip", v)}
-              disabled={!isEditable}
-            />
-          </BidFormField>
-        </div>
+        <BidFormField label="State" htmlFor="ci-state">
+          <BidTextInput
+            id="ci-state"
+            value={info.state ?? ""}
+            onChange={(v) => onFieldChange("state", v)}
+            disabled={!isEditable}
+          />
+        </BidFormField>
+        <BidFormField label="ZIP" htmlFor="ci-zip">
+          <BidTextInput
+            id="ci-zip"
+            value={info.zip ?? ""}
+            onChange={(v) => onFieldChange("zip", v)}
+            disabled={!isEditable}
+          />
+        </BidFormField>
         <BidFormField label="Contact email" htmlFor="ci-email">
           <BidTextInput
             id="ci-email"
@@ -124,29 +153,16 @@ export function BidSheetCompanyInfoSection({
             disabled={!isEditable}
           />
         </BidFormField>
-        <BidFormField label="Parent / Child" htmlFor="ci-parent-child">
-          <BidSelect
-            id="ci-parent-child"
-            value={info.parentChild ?? ""}
-            onChange={(v) => onFieldChange("parentChild", v)}
-            disabled={!isEditable}
-            options={[
-              { value: "", label: "—" },
-              { value: "parents_only", label: "Parents Only" },
-              { value: "children_only", label: "Children Only" },
-              { value: "both", label: "Both" },
-              { value: "exclude", label: "Exclude" },
-            ]}
-          />
-        </BidFormField>
-        <div className="col-span-full max-w-2xl">
+        <div className="md:col-span-2 xl:col-span-3">
           <BidFormField label="Notes" htmlFor="ci-notes">
-            <BidTextInput
+            <textarea
               id="ci-notes"
+              className={notesClass}
               value={info.notes ?? ""}
-              onChange={(v) => onFieldChange("notes", v)}
+              onChange={(e) => onFieldChange("notes", e.target.value)}
               disabled={!isEditable}
               placeholder="GC on this job, special terms…"
+              rows={3}
             />
           </BidFormField>
         </div>

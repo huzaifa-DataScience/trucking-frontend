@@ -1,5 +1,6 @@
 "use client";
 
+import { DatePicker } from "@/components/ui/DatePicker";
 import { useEffect, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
@@ -335,12 +336,12 @@ export function BidEstimatingSetupStage() {
         </label>
         <label className="flex max-w-2xl flex-col gap-1 col-span-full">
           <span className={labelClass}>Review date</span>
-          <input
-            type="date"
+          <DatePicker
+            ariaLabel="Review date"
             className={inputClass}
             disabled={!editable}
             value={review.reviewDate?.slice(0, 10) ?? ""}
-            onChange={(e) => setReview({ reviewDate: e.target.value || null })}
+            onChange={(v) => setReview({ reviewDate: v || null })}
           />
         </label>
         <label className="flex max-w-2xl flex-col gap-1 col-span-full">

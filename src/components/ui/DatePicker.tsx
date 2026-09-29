@@ -1,5 +1,6 @@
 "use client";
 
+import { useLayoutEffect, useRef, useState } from "react";
 import { parseDate, type CalendarDate } from "@internationalized/date";
 import {
   Button,
@@ -28,6 +29,9 @@ import {
  * Value/onChange use the same "YYYY-MM-DD" string format the native input
  * produced (parses/serializes via @internationalized/date), so it drops in
  * wherever startDate/endDate-style fields already live.
+ *
+ * By default the calendar popover stays compact. Set `matchFieldWidth` when
+ * the popover should align to the trigger width (e.g. proposal bid dates).
  */
 
 function parseDateValue(value: string | null | undefined): CalendarDate | null {
@@ -42,13 +46,15 @@ function parseDateValue(value: string | null | undefined): CalendarDate | null {
 const segmentClass =
   "rounded px-0.5 tabular-nums outline-none focus:bg-brand/15 focus:text-ink data-[placeholder]:text-ink/30";
 const triggerButtonClass =
-  "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-ink/40 outline-none transition hover:bg-ink/5 hover:text-ink/70 focus-visible:ring-2 focus-visible:ring-brand/40";
+  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink/40 outline-none transition hover:bg-ink/5 hover:text-ink/70 focus-visible:ring-2 focus-visible:ring-brand/40";
 const popoverClass =
-  "w-auto overflow-auto rounded-xl border border-ink/10 bg-surface p-3 shadow-lg outline-none";
+  "overflow-auto rounded-xl border border-ink/10 bg-surface p-3 shadow-lg outline-none";
 const navButtonClass =
-  "flex h-7 w-7 items-center justify-center rounded-lg text-ink/50 outline-none transition hover:bg-ink/5 hover:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-30";
-const cellClass =
-  "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-sm text-ink outline-none data-[outside-month]:text-ink/25 data-[hovered]:bg-brand/10 data-[selected]:bg-brand data-[selected]:text-white data-[unavailable]:pointer-events-none data-[unavailable]:text-ink/20 data-[today]:font-semibold";
+  "flex h-8 w-8 items-center justify-center rounded-lg text-ink/50 outline-none transition hover:bg-ink/5 hover:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-30";
+const cellClassFixed =
+  "flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-sm text-ink outline-none data-[outside-month]:text-ink/25 data-[hovered]:bg-brand/10 data-[selected]:bg-brand data-[selected]:text-white data-[unavailable]:pointer-events-none data-[unavailable]:text-ink/20 data-[today]:font-semibold";
+const cellClassFluid =
+  "flex aspect-square w-full cursor-pointer items-center justify-center rounded-lg text-sm text-ink outline-none data-[outside-month]:text-ink/25 data-[hovered]:bg-brand/10 data-[selected]:bg-brand data-[selected]:text-white data-[unavailable]:pointer-events-none data-[unavailable]:text-ink/20 data-[today]:font-semibold";
 
 function CalendarIcon() {
   return (
@@ -81,34 +87,85 @@ export function DatePicker({
   disabled,
   className,
   ariaLabel,
+  matchFieldWidth = false,
 }: {
   value: string | null | undefined;
   onChange: (value: string) => void;
   disabled?: boolean;
   className: string;
   ariaLabel?: string;
+  /** When true, calendar popover width matches the field (not used on very wide grids). */
+  matchFieldWidth?: boolean;
 }) {
+  const [open, setOpen] = useState(false);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const [fieldWidth, setFieldWidth] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (!matchFieldWidth) {
+      setFieldWidth(null);
+      return;
+    }
+    const el = fieldRef.current;
+    if (!el) return;
+    const measure = () => {
+      setFieldWidth(el.getBoundingClientRect().width);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [matchFieldWidth]);
+
+  const fluid = matchFieldWidth && fieldWidth != null && fieldWidth > 0;
+
   return (
     <AriaDatePicker
+      className="block w-full min-w-0"
       value={parseDateValue(value)}
       onChange={(date) => onChange(date ? date.toString() : "")}
       isDisabled={disabled}
+      isOpen={open}
+      onOpenChange={setOpen}
       aria-label={ariaLabel ?? "Date"}
     >
-      <Group
-        className={`flex items-center gap-1 border border-ink/10 bg-surface text-ink outline-none transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${className}`}
+      <div ref={fieldRef} className="w-full min-w-0">
+        <Group
+          className={`flex w-full min-w-0 cursor-pointer items-center gap-1 border border-ink/10 bg-surface pr-1.5 text-ink outline-none transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${className}`}
+          onPointerDownCapture={(e) => {
+            if (disabled) return;
+            const t = e.target as HTMLElement;
+            if (t.closest("button")) return;
+            setOpen(true);
+          }}
+        >
+          <div
+            className="flex min-w-0 flex-1 cursor-pointer items-center gap-0.5"
+            onPointerDown={() => {
+              if (!disabled) setOpen(true);
+            }}
+          >
+            <DateInput className="flex min-w-0 flex-1 cursor-pointer items-center gap-0.5">
+              {(segment) => (
+                <DateSegment segment={segment} className={segmentClass} />
+              )}
+            </DateInput>
+          </div>
+          <Button className={triggerButtonClass}>
+            <CalendarIcon />
+          </Button>
+        </Group>
+      </div>
+      <Popover
+        className={`${popoverClass} ${fluid ? "" : "w-auto"}`}
+        placement="bottom start"
+        style={
+          fluid && fieldWidth != null ? { width: fieldWidth } : undefined
+        }
       >
-        <DateInput className="flex flex-1 items-center gap-0.5">
-          {(segment) => <DateSegment segment={segment} className={segmentClass} />}
-        </DateInput>
-        <Button className={triggerButtonClass}>
-          <CalendarIcon />
-        </Button>
-      </Group>
-      <Popover className={popoverClass}>
-        <Dialog className="outline-none">
-          <Calendar>
-            <header className="mb-2 flex items-center justify-between">
+        <Dialog className={`outline-none ${fluid ? "w-full" : ""}`}>
+          <Calendar className={fluid ? "w-full" : undefined}>
+            <header className="mb-2 flex items-center justify-between gap-2">
               <Button slot="previous" className={navButtonClass}>
                 <ChevronLeft />
               </Button>
@@ -117,16 +174,27 @@ export function DatePicker({
                 <ChevronRight />
               </Button>
             </header>
-            <CalendarGrid className="border-collapse">
+            <CalendarGrid
+              className={
+                fluid
+                  ? "w-full table-fixed border-collapse [&_td]:p-0.5"
+                  : "border-collapse"
+              }
+            >
               <CalendarGridHeader>
                 {(day) => (
-                  <CalendarHeaderCell className="pb-1 text-xs font-medium text-ink/40">
+                  <CalendarHeaderCell className="pb-1 text-center text-xs font-medium text-ink/40">
                     {day}
                   </CalendarHeaderCell>
                 )}
               </CalendarGridHeader>
               <CalendarGridBody>
-                {(date) => <CalendarCell date={date} className={cellClass} />}
+                {(date) => (
+                  <CalendarCell
+                    date={date}
+                    className={fluid ? cellClassFluid : cellClassFixed}
+                  />
+                )}
               </CalendarGridBody>
             </CalendarGrid>
           </Calendar>

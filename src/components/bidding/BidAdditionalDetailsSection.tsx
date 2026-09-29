@@ -91,12 +91,18 @@ export function BidAdditionalDetailsSection({
   onAdditionalDetailsChange,
   onSalesActivitiesChange,
   disabled,
+  additionalSectionId,
+  salesSectionId,
+  sectionScrollClassName,
 }: {
   additionalDetails: ProcessAdditionalDetails;
   salesActivities: ProcessSalesActivities;
   onAdditionalDetailsChange: (next: ProcessAdditionalDetails) => void;
   onSalesActivitiesChange: (next: ProcessSalesActivities) => void;
   disabled?: boolean;
+  additionalSectionId?: string;
+  salesSectionId?: string;
+  sectionScrollClassName?: string;
 }) {
   const setAd = <K extends keyof ProcessAdditionalDetails>(key: K, value: ProcessAdditionalDetails[K]) =>
     onAdditionalDetailsChange({ ...additionalDetails, [key]: value });
@@ -120,14 +126,16 @@ export function BidAdditionalDetailsSection({
     </BidFormField>
   );
 
+  const cardClass = `ui-shadow-none border-ink/[0.08] p-4 ${sectionScrollClassName ?? ""}`.trim();
+
   return (
     <>
-      <Card>
+      <Card id={additionalSectionId} className={cardClass}>
         <CardHeader
           title="Additional details"
           subtitle="Fields that are not already on Intake, Assignment, Setup, Proposal, or Outcome."
         />
-        <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+        <div className="grid gap-2.5 lg:grid-cols-4">
           {selectField("subBuildingType", "Sub building type", SUB_BUILDING_TYPE_OPTIONS)}
           {selectField("source", "Source", LEAD_SOURCE_OPTIONS)}
 
@@ -183,12 +191,12 @@ export function BidAdditionalDetailsSection({
         </div>
       </Card>
 
-      <Card>
+      <Card id={salesSectionId} className={cardClass}>
         <CardHeader
           title="Sales activities"
-          subtitle="Follow Up, Technical, and Job Start/End live with their existing sections above — these are the remaining pipeline dates."
+          subtitle="Pipeline dates that are not already on Follow Up, Technical, or Job Start/End."
         />
-        <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+        <div className="grid gap-2.5 lg:grid-cols-4">
           {SALES_ACTIVITY_DATE_FIELDS.map(([key, label]) => (
             <BidFormField key={key} label={label} htmlFor={`sa-${key}`}>
               <DatePicker

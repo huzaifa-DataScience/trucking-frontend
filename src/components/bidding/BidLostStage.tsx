@@ -1,5 +1,6 @@
 "use client";
 
+import { DatePicker } from "@/components/ui/DatePicker";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
 import type { ProcessLost } from "@/lib/bidding/process-types";
 
@@ -51,12 +52,12 @@ export function BidLostStage() {
       <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Date</span>
-          <input
-            type="date"
+          <DatePicker
+            ariaLabel="Date"
             className={inputClass}
             disabled={!editable}
             value={lost.date?.slice(0, 10) ?? ""}
-            onChange={(e) => setLost({ date: e.target.value || null })}
+            onChange={(v) => setLost({ date: v || null })}
           />
         </label>
         <label className="flex flex-col gap-1">

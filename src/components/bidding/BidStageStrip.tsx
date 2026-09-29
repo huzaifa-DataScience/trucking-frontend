@@ -75,7 +75,7 @@ export function BidStageStrip({
       <div
         role="tablist"
         aria-label="Bid stage"
-        className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]"
+        className="flex flex-wrap items-center gap-5"
       >
         {preStages.map((t) => (
           <TabButton

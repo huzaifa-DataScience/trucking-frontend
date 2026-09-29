@@ -35,7 +35,9 @@ export function BidResultMetric({
       }`}
     >
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/40">{label}</p>
+        <p className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-ink/40">
+          {label}
+        </p>
         {excelRef ? (
           <p className="text-[9px] font-mono text-ink/30">{excelRef}</p>
         ) : null}

@@ -1,7 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Button, ComboBox, Input, ListBox, ListBoxItem, Popover } from "react-aria-components";
+import { useLayoutEffect, useRef, useState } from "react";
+import {
+  Button,
+  ComboBox,
+  Input,
+  ListBox,
+  ListBoxItem,
+  Popover,
+} from "react-aria-components";
 
 /**
  * Styled replacement for `<input type="time">`. Native time inputs render
@@ -58,14 +65,15 @@ function parseTimeText(text: string): string | null {
 }
 
 const groupClass =
-  "flex items-center gap-1 rounded-xl border border-ink/10 bg-surface pl-3.5 pr-1.5 py-1 text-sm text-ink transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20";
-const inputFieldClass = "min-w-0 flex-1 bg-transparent py-1.5 outline-none placeholder:text-ink/30";
+  "flex h-12 w-full min-w-0 cursor-pointer items-center gap-1 rounded-xl border border-[#D0D5DD] bg-surface pl-4 pr-1.5 text-[15px] text-ink transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15 dark:border-ink/15";
+const inputFieldClass =
+  "min-w-0 flex-1 cursor-pointer bg-transparent py-2.5 outline-none placeholder:text-ink/30";
 const buttonClass =
-  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink/40 outline-none transition hover:bg-ink/5 hover:text-ink/70 focus-visible:ring-2 focus-visible:ring-brand/40";
+  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink/40 outline-none transition hover:bg-ink/5 hover:text-ink/70 focus-visible:ring-2 focus-visible:ring-brand/40";
 const popoverClass =
-  "max-h-64 w-[--trigger-width] min-w-40 overflow-auto rounded-xl border border-ink/10 bg-surface p-1 shadow-lg outline-none";
+  "max-h-72 min-w-[12rem] overflow-auto rounded-xl border border-ink/10 bg-surface p-1.5 shadow-lg outline-none";
 const optionClass =
-  "cursor-pointer rounded-lg px-3 py-1.5 text-sm text-ink outline-none data-[focused]:bg-brand/10 data-[selected]:bg-brand/15 data-[selected]:font-medium";
+  "cursor-pointer rounded-lg px-3.5 py-2.5 text-[15px] text-ink outline-none data-[focused]:bg-brand/10 data-[selected]:bg-brand/15 data-[selected]:font-medium";
 
 function ClockIcon() {
   return (
@@ -93,7 +101,22 @@ export function TimePicker({
   // displayed text derives from `value` during render instead of mirroring
   // props into state via an effect.
   const [draft, setDraft] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const [fieldWidth, setFieldWidth] = useState<number | null>(null);
   const inputValue = draft ?? (value ? formatTimeLabel(value) : "");
+
+  useLayoutEffect(() => {
+    const el = fieldRef.current;
+    if (!el) return;
+    const measure = () => {
+      setFieldWidth(el.getBoundingClientRect().width);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const commit = (text: string) => {
     onChange(parseTimeText(text));
@@ -106,21 +129,40 @@ export function TimePicker({
       isDisabled={disabled}
       items={TIME_OPTIONS}
       inputValue={inputValue}
-      onInputChange={setDraft}
-      value={value ?? null}
-      onChange={(key) => {
+      onInputChange={(text) => {
+        setDraft(text);
+        if (!open) setOpen(true);
+      }}
+      selectedKey={value ?? null}
+      onSelectionChange={(key) => {
         if (key == null) return;
         onChange(String(key));
         setDraft(null);
+        setOpen(false);
       }}
+      isOpen={open}
+      onOpenChange={setOpen}
       menuTrigger="focus"
       allowsCustomValue
-      className={className}
+      className={`block w-full min-w-0 ${className ?? ""}`}
     >
-      <div className={`${groupClass} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
+      <div
+        ref={fieldRef}
+        className={`${groupClass} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+        onClick={(e) => {
+          if (disabled) return;
+          if ((e.target as HTMLElement).closest("button")) return;
+          setOpen(true);
+          const input = fieldRef.current?.querySelector("input");
+          input?.focus();
+        }}
+      >
         <Input
           className={inputFieldClass}
           placeholder="--:-- --"
+          onFocus={() => {
+            if (!disabled) setOpen(true);
+          }}
           onBlur={(e) => commit(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") commit(e.currentTarget.value);
@@ -130,10 +172,18 @@ export function TimePicker({
           <ClockIcon />
         </Button>
       </div>
-      <Popover className={popoverClass}>
-        <ListBox>
+      <Popover
+        className={popoverClass}
+        placement="bottom start"
+        style={fieldWidth != null ? { width: fieldWidth } : undefined}
+      >
+        <ListBox className="w-full outline-none">
           {(item: TimeOption) => (
-            <ListBoxItem id={item.id} textValue={item.label} className={optionClass}>
+            <ListBoxItem
+              id={item.id}
+              textValue={item.label}
+              className={optionClass}
+            >
               {item.label}
             </ListBoxItem>
           )}
