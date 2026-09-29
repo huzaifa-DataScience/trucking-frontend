@@ -333,9 +333,23 @@ export function Sidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
+  useEffect(() => {
+    if (user?.role !== "assistant_estimator") return;
+    const hidden =
+      pathname.startsWith("/job") ||
+      pathname.startsWith("/material") ||
+      pathname.startsWith("/hauler") ||
+      pathname.startsWith("/forensic") ||
+      pathname.startsWith("/billings") ||
+      pathname.startsWith("/clearstory");
+    if (hidden) router.replace("/bidding");
+  }, [user?.role, pathname, router]);
+
   const currentView: ViewMode = viewFromPathname(pathname);
   const seesAllChrome = isAdminPanelRole(user?.role);
   const showWfs = canSeeWfs(user?.role);
+
+  const hideOpsReportingBilling = user?.role === "assistant_estimator";
 
   const canSeeBillings =
     seesAllChrome ||
@@ -348,9 +362,10 @@ export function Sidebar({
     if (value === "wfs") return showWfs;
     if (seesAllChrome) return true;
     if (value === "operations") {
+      if (hideOpsReportingBilling) return false;
       return operationsNavItems.some((i) => navItemVisible(user, i));
     }
-    if (value === "billings") return canSeeBillings;
+    if (value === "billings") return !hideOpsReportingBilling && canSeeBillings;
     if (value === "dashboard" || value === "bidding" || value === "mike") {
       return canBidding(user, "bidding:read");
     }

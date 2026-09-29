@@ -7,10 +7,12 @@ import { useProcessDraft } from "@/hooks/useProcessDraft";
 import type {
   ProcessAssignment,
   ProcessTakeoffAssignment,
+  ProcessTechnicalReview,
   TakeoffRole,
 } from "@/lib/bidding/process-types";
 import type { BidCaptainLookup, BidContactLookup, BidTeam } from "@/lib/bidding/types";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { useBidSheet } from "@/contexts/BidSheetContext";
 
 const TAKEOFF_ROLES: TakeoffRole[] = [
   "duct1",
@@ -37,6 +39,7 @@ function contactDisplayName(c: BidContactLookup): string {
 
 /** Stage 2 — Assignment (FRONTEND_INTAKE.md). Nick + PJ + bid clerk. */
 export function BidAssignmentStage() {
+  const { setBidHeader } = useBidSheet();
   const router = useRouter();
   const {
     bid,
@@ -65,6 +68,7 @@ export function BidAssignmentStage() {
     // AEs are not on /captains — use contacts?role=assistant_estimator
     void biddingApi
       .getBiddingContacts({ role: "assistant_estimator" })
+      .then((list) => (list.length > 0 ? list : biddingApi.getBiddingContacts()))
       .then(setAes)
       .catch(() => setAes([]));
   }, []);
@@ -334,12 +338,19 @@ export function BidAssignmentStage() {
           </span>
         </label>
         <label className="flex flex-col gap-1">
-          <span className={labelClass}>Bid clerk</span>
+          <span className={labelClass}>Time estimate (hrs)</span>
           <input
+            type="number"
+            min={0}
+            step="0.5"
             className={inputClass}
             disabled={!editable}
-            value={a.bidClerk ?? ""}
-            onChange={(e) => setAssignment({ bidClerk: e.target.value || null })}
+            value={bid.timeEstimate ?? ""}
+            onChange={(e) =>
+              setBidHeader({
+                timeEstimate: e.target.value === "" ? null : Number(e.target.value),
+              })
+            }
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -364,10 +375,18 @@ export function BidAssignmentStage() {
         </label>
       </section>
 
+      <TechnicalReviewFields
+        review={draft.technicalReview ?? {}}
+        editable={editable}
+        noBid={a.pursue === false}
+        blockedReason={bid.workflow?.completeBlockedReason}
+        onChange={(next) => setField("technicalReview", next)}
+      />
+
       <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
         <h3 className="text-sm font-semibold text-ink">Takeoff assignments</h3>
         <p className="mt-0.5 mb-3 text-xs text-ink/45">
-          1 or 2 people per scope. Team/captain pick prefills blank roles.
+          Saved with the captain and team. The server fills names from that crew.
         </p>
         <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
           {TAKEOFF_ROLES.map((role) => (
@@ -384,5 +403,80 @@ export function BidAssignmentStage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function TechnicalReviewFields({
+  review,
+  editable,
+  noBid,
+  blockedReason,
+  onChange,
+}: {
+  review: ProcessTechnicalReview;
+  editable: boolean;
+  noBid: boolean;
+  blockedReason?: string | null;
+  onChange: (next: ProcessTechnicalReview) => void;
+}) {
+  const labelClass = "text-xs font-medium text-ink/55";
+  const inputClass =
+    "rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-brand disabled:opacity-50";
+  return (
+    <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+      <h3 className="col-span-full text-sm font-semibold text-ink">Technical review</h3>
+      <p className="col-span-full -mt-2 text-xs text-ink/45">
+        {noBid
+          ? "No-bid does not need takeoff approval to leave Assignment."
+          : "Approve for takeoff before handing off. Otherwise the server blocks complete."}
+        {blockedReason ? ` ${blockedReason}` : ""}
+      </p>
+      <label className="flex flex-col gap-1">
+        <span className={labelClass}>Prepared by</span>
+        <input
+          className={inputClass}
+          disabled={!editable}
+          value={review.preparedBy ?? ""}
+          onChange={(e) => onChange({ ...review, preparedBy: e.target.value || null })}
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className={labelClass}>Reviewed by</span>
+        <input
+          className={inputClass}
+          disabled={!editable}
+          value={review.reviewedBy ?? ""}
+          onChange={(e) => onChange({ ...review, reviewedBy: e.target.value || null })}
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className={labelClass}>Review date</span>
+        <DatePicker
+          ariaLabel="Review date"
+          className={inputClass}
+          disabled={!editable}
+          value={review.reviewDate?.slice(0, 10) ?? ""}
+          onChange={(v) => onChange({ ...review, reviewDate: v || null })}
+        />
+      </label>
+      <label className="flex items-center gap-2 col-span-full">
+        <input
+          type="checkbox"
+          disabled={!editable}
+          checked={review.approvedForTakeoff === true}
+          onChange={(e) => onChange({ ...review, approvedForTakeoff: e.target.checked })}
+        />
+        <span className="text-sm text-ink/80">Approved for takeoff</span>
+      </label>
+      <label className="flex flex-col gap-1 col-span-full">
+        <span className={labelClass}>Comments</span>
+        <textarea
+          className={`${inputClass} min-h-[72px]`}
+          disabled={!editable}
+          value={review.comments ?? ""}
+          onChange={(e) => onChange({ ...review, comments: e.target.value || null })}
+        />
+      </label>
+    </section>
   );
 }

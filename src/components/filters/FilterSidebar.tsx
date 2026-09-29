@@ -56,28 +56,34 @@ function FieldControl({
 
   if (field.kind === "select") {
     const options = field.dynamic ? dynamicOptions?.[field.key] ?? [] : field.options ?? [];
+    const selected = new Set(condition?.values ?? (condition?.value ? [condition.value] : []));
+    const toggle = (value: string) => {
+      const next = new Set(selected);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      const values = [...next];
+      if (values.length === 0) {
+        onChange(null);
+        return;
+      }
+      onChange({ id: condition?.id ?? newId(), field: field.key, op: "in", values });
+    };
     return (
-      <div className="relative">
-        <select
-          className={selectClass}
-          value={condition?.value ?? ""}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (!value) {
-              onChange(null);
-              return;
-            }
-            onChange({ id: condition?.id ?? newId(), field: field.key, op: "is", value });
-          }}
-        >
-          <option value="">{field.placeholder ?? `Select ${field.label.toLowerCase()}`}</option>
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <SelectChevron />
+      <div className="max-h-40 overflow-auto rounded-lg border border-ink/10 bg-surface p-2">
+        {options.length === 0 ? (
+          <p className="px-1 py-1 text-xs text-ink/40">No options</p>
+        ) : (
+          options.map((o) => (
+            <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm text-ink hover:bg-ink/[0.04]">
+              <input
+                type="checkbox"
+                checked={selected.has(o.value)}
+                onChange={() => toggle(o.value)}
+              />
+              <span>{o.label}</span>
+            </label>
+          ))
+        )}
       </div>
     );
   }

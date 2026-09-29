@@ -7,7 +7,6 @@ import * as biddingApi from "@/lib/api/endpoints/bidding";
 import * as biddingPartiesApi from "@/lib/api/endpoints/biddingParties";
 import type { BidPartyLookup } from "@/lib/api/endpoints/biddingParties";
 import { PartyNameCombobox } from "@/components/bidding/PartyNameCombobox";
-import { BidAdditionalDetailsSection } from "@/components/bidding/BidAdditionalDetailsSection";
 import { BidAttachmentsSection } from "@/components/bidding/BidAttachmentsSection";
 import { TimePicker } from "@/components/ui/TimePicker";
 import { DatePicker } from "@/components/ui/DatePicker";
@@ -184,7 +183,7 @@ function contactsForCompany(
 /** Stage 1 — Intake (FRONTEND_INTAKE.md). Bid clerk. Incomplete OK. */
 export function BidIntakeStage() {
   const router = useRouter();
-  const { setBidHeader, uploadAttachment, deleteAttachment } = useBidSheet();
+  const { setBidHeader, setJobId, setBaseBidField, lookups, uploadAttachment, deleteAttachment } = useBidSheet();
   const confirmDialog = useConfirmDialog();
   const {
     bid,
@@ -735,6 +734,16 @@ export function BidIntakeStage() {
           />
         </label>
         <label className="flex flex-col gap-1">
+          <span className={labelClass}>Drawing number</span>
+          <input
+            className={inputClass}
+            disabled={!editable}
+            value={draft.drawingNumber ?? ""}
+            onChange={(e) => setField("drawingNumber", e.target.value || null)}
+            placeholder="Sheet / set number"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
           <span className={labelClass}>Drawing category</span>
           <div className="relative">
             <select
@@ -749,9 +758,12 @@ export function BidIntakeStage() {
               }
             >
               <option value="">—</option>
-              {(meta?.drawingCategories ?? []).map((id) => (
+              {(meta?.drawingCategories?.includes("cd")
+                ? meta.drawingCategories
+                : [...(meta?.drawingCategories ?? ["sd", "dd", "ifb", "ifp", "ifc", "ifr"]), "cd"]
+              ).map((id) => (
                 <option key={id} value={id}>
-                  {meta?.drawingCategoryLabels?.[id] ?? id}
+                  {meta?.drawingCategoryLabels?.[id] ?? (id === "cd" ? "CD" : id)}
                 </option>
               ))}
             </select>
@@ -808,6 +820,42 @@ export function BidIntakeStage() {
             disabled={!editable}
             value={draft.dueTime}
             onChange={(v) => setField("dueTime", v)}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>Linked job</span>
+          <div className="relative">
+            <select
+              className={selectClass}
+              disabled={!editable}
+              value={bid.jobId ? String(bid.jobId) : ""}
+              onChange={(e) => {
+                const jobId = e.target.value ? Number(e.target.value) : null;
+                void setJobId(jobId, { prefillCompany: Boolean(jobId && jobId !== bid.jobId) });
+              }}
+            >
+              <option value="">No job linked</option>
+              {lookups.jobs.map((j) => (
+                <option key={j.id} value={String(j.id)}>
+                  {j.name || `Job #${j.id}`}
+                </option>
+              ))}
+            </select>
+            <SelectChevron />
+          </div>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>Bid date</span>
+          <DatePicker
+            ariaLabel="Bid date"
+            className={inputClass}
+            disabled={!editable}
+            value={
+              typeof bid.baseBid?.bidDate === "string"
+                ? String(bid.baseBid.bidDate).slice(0, 10)
+                : bid.bidDate?.slice(0, 10) ?? ""
+            }
+            onChange={(v) => setBaseBidField("bidDate", v)}
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -965,6 +1013,33 @@ export function BidIntakeStage() {
               />
             </label>
           ))}
+          <label className="flex flex-col gap-1">
+            <span className={labelClass}>Sales tax applicable</span>
+            <div className="relative">
+              <select
+                className={selectClass}
+                disabled={!editable}
+                value={
+                  bid.baseBid?.salesTaxApplicable === true
+                    ? "yes"
+                    : bid.baseBid?.salesTaxApplicable === false
+                      ? "no"
+                      : ""
+                }
+                onChange={(e) =>
+                  setBaseBidField(
+                    "salesTaxApplicable",
+                    e.target.value === "" ? undefined : e.target.value === "yes"
+                  )
+                }
+              >
+                <option value="">—</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+              <SelectChevron />
+            </div>
+          </label>
         </section>
         {renderPartySection("owner", "Owner", "owner")}
       </div>
@@ -1898,14 +1973,6 @@ export function BidIntakeStage() {
           </div>
         ))}
       </section>
-
-      <BidAdditionalDetailsSection
-        additionalDetails={draft.additionalDetails ?? {}}
-        salesActivities={draft.salesActivities ?? {}}
-        onAdditionalDetailsChange={(next) => setField("additionalDetails", next)}
-        onSalesActivitiesChange={(next) => setField("salesActivities", next)}
-        disabled={!editable}
-      />
 
       <BidAttachmentsSection
         attachments={(bid.attachments ?? []).filter((a) => a.label !== "drawings")}

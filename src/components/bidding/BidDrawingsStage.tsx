@@ -19,9 +19,13 @@ export function BidDrawingsStage() {
 
   if (!bid) return null;
 
-  const drawingCategoryOptions = (meta?.drawingCategories ?? []).map((id) => ({
+  const categoryIds = meta?.drawingCategories?.length
+    ? meta.drawingCategories
+    : ["sd", "dd", "cd", "ifb", "ifp", "ifc", "ifr"];
+  const withCd = categoryIds.includes("cd") ? categoryIds : [...categoryIds, "cd"];
+  const drawingCategoryOptions = withCd.map((id) => ({
     value: id,
-    label: meta?.drawingCategoryLabels?.[id] ?? id,
+    label: meta?.drawingCategoryLabels?.[id] ?? (id === "cd" ? "CD" : id),
   }));
   const drawings = (bid.attachments ?? []).filter((a) => a.label === "drawings");
 
