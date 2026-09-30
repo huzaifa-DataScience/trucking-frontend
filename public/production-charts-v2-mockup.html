@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Production charts — layout v2 mock</title>
+  <style>
+    :root {
+      --bg: #eef1f5;
+      --surface: #ffffff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: rgba(15, 23, 42, 0.08);
+      --brand: #ff7b11;
+      --brand-deep: #c2410c;
+      --canvas: #f5f7fa;
+      --slate: #64748b;
+      --amber: #f59e0b;
+      --green: #10b981;
+      --red: #dc2626;
+      --blue: #3b82f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 20px 64px;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .tabs button {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--muted);
+      box-shadow: 0 6px 18px -10px rgba(1,1,1,0.25);
+    }
+    .tabs button.is-on {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .panel { display: none; }
+    .panel.is-on { display: block; }
+
+    .idea-tag {
+      display: inline-block;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: rgba(255,123,17,0.12);
+      color: var(--brand-deep);
+    }
+
+    .page-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .eyebrow {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--brand);
+    }
+    h1 {
+      margin: 6px 0 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .lede {
+      margin: 4px 0 0;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    .stage-tabs {
+      display: inline-flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.85);
+    }
+    .stage-tabs span {
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .stage-tabs span.is-on {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .merged {
+      margin-bottom: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      padding: 10px 14px;
+      font-size: 12px;
+    }
+    .merged strong { display: block; }
+    .merged span { display: block; margin-top: 2px; color: var(--muted); }
+
+    .warn {
+      margin-bottom: 14px;
+      border-radius: 12px;
+      border: 1px solid #fcd34d;
+      background: #fffbeb;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #92400e;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      border-radius: 8px;
+      border: 1px solid rgba(1,1,1,0.12);
+      background: rgba(1,1,1,0.04);
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .status-pill.ok {
+      border-color: rgba(16,185,129,0.3);
+      background: rgba(16,185,129,0.1);
+      color: #047857;
+    }
+
+    /* KPI denser */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 800px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      padding: 14px;
+      box-shadow: 0 6px 18px -14px rgba(15,23,42,0.2);
+    }
+    .kpi .label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .kpi .value {
+      margin-top: 6px;
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.03em;
+    }
+    .kpi .hint {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .kpi.muted .value { color: rgba(17,24,39,0.35); }
+
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 860px) {
+      .charts { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      padding: 16px;
+      box-shadow: 0 6px 18px -14px rgba(15,23,42,0.2);
+      min-height: 0;
+    }
+    .card h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .card .sub {
+      margin: 3px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    /* Idea A — Hours mix as stacked compare rows (fills card) */
+    .mix-rows { display: grid; gap: 12px; }
+    .mix-row .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .mix-row .top .n {
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+    .mix-track {
+      height: 14px;
+      border-radius: 999px;
+      background: #eef2f7;
+      overflow: hidden;
+    }
+    .mix-fill {
+      height: 100%;
+      border-radius: inherit;
+    }
+    .mix-fill.slate { background: linear-gradient(90deg, #64748b, #94a3b8); }
+    .mix-fill.amber { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .mix-fill.green { background: linear-gradient(90deg, #10b981, #34d399); }
+    .mix-fill.empty {
+      width: 8px !important;
+      background: #cbd5e1;
+      opacity: 0.7;
+    }
+    .mix-foot {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .mix-foot strong {
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Idea B — compact donut + legend BELOW (not beside) */
+    .donut-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .donut {
+      width: 132px;
+      height: 132px;
+      border-radius: 50%;
+      background: conic-gradient(#64748b 0 100%);
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+    .donut.rich {
+      background: conic-gradient(
+        #64748b 0 47%,
+        #f59e0b 47% 75%,
+        #10b981 75% 100%
+      );
+    }
+    .donut::after {
+      content: "";
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      background: var(--surface);
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+    .donut-center {
+      position: absolute;
+      text-align: center;
+      z-index: 1;
+    }
+    .donut-center strong {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+    .donut-center span {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .legend-under {
+      width: 100%;
+      display: grid;
+      gap: 8px;
+    }
+    .legend-under .row {
+      display: grid;
+      grid-template-columns: 10px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: var(--canvas);
+    }
+    .legend-under i {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+    }
+
+    /* Labor hours — denser bars with value labels on top */
+    .vbars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      align-items: end;
+      height: 180px;
+      padding-top: 8px;
+    }
+    .vbar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      height: 100%;
+      gap: 6px;
+    }
+    .vbar .n {
+      font-size: 12px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .vbar .shaft {
+      width: 100%;
+      max-width: 56px;
+      border-radius: 10px 10px 4px 4px;
+      min-height: 6px;
+    }
+    .vbar .x {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-align: center;
+    }
+    .vbar.is-empty .n { color: rgba(17,24,39,0.35); }
+    .vbar.is-empty .shaft {
+      background: #e2e8f0 !important;
+      height: 6px !important;
+    }
+
+    /* Empty state inside card */
+    .card-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 160px;
+      padding: 20px;
+      text-align: center;
+      border-radius: 12px;
+      background: var(--canvas);
+      border: 1px dashed rgba(15,23,42,0.12);
+    }
+    .card-empty strong { font-size: 13px; }
+    .card-empty p {
+      margin: 0;
+      max-width: 16rem;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Commodity list denser */
+    .comm-list { display: grid; gap: 10px; }
+    .comm-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--canvas);
+    }
+    .comm-item .name { font-size: 13px; font-weight: 700; }
+    .comm-item .meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .comm-item .hrs {
+      font-size: 14px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .comm-item .bar {
+      grid-column: 1 / -1;
+      height: 8px;
+      border-radius: 999px;
+      background: #e8edf3;
+      overflow: hidden;
+    }
+    .comm-item .bar > i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--brand), #ffb06a);
+    }
+
+    /* Full est vs on site — horizontal paired bars */
+    .pair-list { display: grid; gap: 14px; }
+    .pair .lbl {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .pair .tracks { display: grid; gap: 4px; }
+    .pair .t {
+      display: grid;
+      grid-template-columns: 52px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .pair .t .track {
+      height: 8px;
+      border-radius: 999px;
+      background: #eef2f7;
+      overflow: hidden;
+    }
+    .pair .t .track > i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+    }
+    .pair .t .track > i.mike { background: #3b82f6; }
+    .pair .t .track > i.site { background: #f59e0b; }
+    .pair .t .val {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      min-width: 3rem;
+      text-align: right;
+    }
+
+    .section-label {
+      margin: 8px 0 4px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .section-help {
+      margin: 0 0 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      background: #fafbfc;
+      border-bottom: 1px solid var(--line);
+      padding: 11px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: rgba(17,24,39,0.4);
+      text-align: left;
+    }
+    tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(15,23,42,0.05);
+    }
+    tbody tr:last-child td { border-bottom: 0; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .type-pill {
+      display: inline-flex;
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      background: rgba(139,92,246,0.12);
+      color: #5b21b6;
+    }
+    .table-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      overflow: hidden;
+      box-shadow: 0 6px 18px -14px rgba(15,23,42,0.2);
+    }
+
+    .note {
+      margin-top: 20px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #fff8f0;
+      border: 1px solid #ffd7b0;
+      font-size: 13px;
+      color: #7a4a12;
+    }
+    .note code {
+      font-size: 0.85em;
+      background: rgba(0,0,0,0.05);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="tabs" role="tablist">
+      <button type="button" class="is-on" data-panel="sparse-a">1 · Sparse · stacked mix</button>
+      <button type="button" data-panel="sparse-b">2 · Sparse · donut under</button>
+      <button type="button" data-panel="rich">3 · Rich data</button>
+    </div>
+
+    <!-- 1 · Sparse (matches today's no-job state) — stacked hours mix fills card -->
+    <section class="panel is-on" id="panel-sparse-a">
+      <span class="idea-tag">Fix A — no empty donut gap</span>
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Production report</p>
+          <h1>IMD6491</h1>
+          <p class="lede">MCPS North Bethesda Middle School</p>
+        </div>
+        <span class="status-pill">No clock data</span>
+      </div>
+
+      <div class="stage-tabs"><span>Specs</span><span class="is-on">Production</span></div>
+      <div class="merged">
+        <strong>Mike takeoff: RECAP… Ductwork 2</strong>
+        <span>Extra CSV uploads append into the same takeoff.</span>
+      </div>
+      <div class="warn">Link a job on the bid for Trimble received + Connecteam hours</div>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="label">Full job estimate</div>
+          <div class="value">815.49</div>
+          <div class="hint">Mike labor hrs</div>
+        </div>
+        <div class="kpi muted">
+          <div class="label">Material on site</div>
+          <div class="value">—</div>
+          <div class="hint">Needs job link</div>
+        </div>
+        <div class="kpi muted">
+          <div class="label">Hours worked</div>
+          <div class="value">—</div>
+          <div class="hint">Needs Connecteam</div>
+        </div>
+        <div class="kpi muted">
+          <div class="label">Variance</div>
+          <div class="value">—</div>
+          <div class="hint">On site − worked</div>
+        </div>
+      </div>
+
+      <div class="charts">
+        <!-- Hours mix — stacked rows fill width -->
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Hours mix</h3>
+              <p class="sub">Full-width compare — no empty side gap</p>
+            </div>
+          </div>
+          <div class="mix-rows">
+            <div class="mix-row">
+              <div class="top"><span>Full job estimate</span><span class="n">815.49</span></div>
+              <div class="mix-track"><div class="mix-fill slate" style="width:100%"></div></div>
+            </div>
+            <div class="mix-row">
+              <div class="top"><span>Material on site</span><span class="n" style="color:rgba(17,24,39,0.35)">—</span></div>
+              <div class="mix-track"><div class="mix-fill empty"></div></div>
+            </div>
+            <div class="mix-row">
+              <div class="top"><span>Hours worked</span><span class="n" style="color:rgba(17,24,39,0.35)">—</span></div>
+              <div class="mix-track"><div class="mix-fill empty"></div></div>
+            </div>
+          </div>
+          <div class="mix-foot">
+            <span>Variance unavailable until job is linked</span>
+            <strong>—</strong>
+          </div>
+        </article>
+
+        <!-- Labor hours -->
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Labor hours</h3>
+              <p class="sub">Values labeled on each bar</p>
+            </div>
+            <span class="status-pill">No clock data</span>
+          </div>
+          <div class="vbars">
+            <div class="vbar">
+              <span class="n">815.49</span>
+              <div class="shaft" style="height:92%;background:linear-gradient(180deg,#94a3b8,#64748b)"></div>
+              <span class="x">Full estimate</span>
+            </div>
+            <div class="vbar is-empty">
+              <span class="n">—</span>
+              <div class="shaft"></div>
+              <span class="x">On site</span>
+            </div>
+            <div class="vbar is-empty">
+              <span class="n">—</span>
+              <div class="shaft"></div>
+              <span class="x">Worked</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Commodity on site — empty state instead of zero bars -->
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Commodity hours on site</h3>
+              <p class="sub">Hide empty bars when all recv = 0</p>
+            </div>
+          </div>
+          <div class="card-empty">
+            <strong>No material on site yet</strong>
+            <p>Link a Trimble job to pull received qty and on-site hours by commodity.</p>
+          </div>
+        </article>
+
+        <!-- Full est — always useful from Mike -->
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Full estimate by commodity</h3>
+              <p class="sub">Horizontal pairs — labels stay readable</p>
+            </div>
+          </div>
+          <div class="pair-list">
+            <div class="pair">
+              <div class="lbl"><span>Duct Wrap 1.5″</span><span>340.0 est</span></div>
+              <div class="tracks">
+                <div class="t"><span>Est</span><div class="track"><i class="mike" style="width:100%"></i></div><span class="val">340</span></div>
+                <div class="t"><span>Site</span><div class="track"><i class="site" style="width:0%"></i></div><span class="val">—</span></div>
+              </div>
+            </div>
+            <div class="pair">
+              <div class="lbl"><span>Duct Wrap 2.0″</span><span>255.0 est</span></div>
+              <div class="tracks">
+                <div class="t"><span>Est</span><div class="track"><i class="mike" style="width:75%"></i></div><span class="val">255</span></div>
+                <div class="t"><span>Site</span><div class="track"><i class="site" style="width:0%"></i></div><span class="val">—</span></div>
+              </div>
+            </div>
+            <div class="pair">
+              <div class="lbl"><span>Fiberglass 1.5″</span><span>220.5 est</span></div>
+              <div class="tracks">
+                <div class="t"><span>Est</span><div class="track"><i class="mike" style="width:65%"></i></div><span class="val">220</span></div>
+                <div class="t"><span>Site</span><div class="track"><i class="site" style="width:0%"></i></div><span class="val">—</span></div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <p class="section-label">Commodity lines</p>
+      <p class="section-help">Same stacked identity table</p>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Commodity</th>
+              <th class="num">Qty est</th>
+              <th class="num">Hrs on site</th>
+              <th class="num">Full est hrs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <span class="type-pill">Roll</span>
+                  <div>
+                    <div style="font-weight:700">Duct Wrap</div>
+                    <div style="font-size:11px;color:var(--muted)">1.50" thk</div>
+                  </div>
+                </div>
+              </td>
+              <td class="num">8,400.00</td>
+              <td class="num" style="color:rgba(17,24,39,0.35)">0.00</td>
+              <td class="num">340.00</td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <span class="type-pill">Roll</span>
+                  <div>
+                    <div style="font-weight:700">Duct Wrap</div>
+                    <div style="font-size:11px;color:var(--muted)">2.00" thk</div>
+                  </div>
+                </div>
+              </td>
+              <td class="num">5,100.00</td>
+              <td class="num" style="color:rgba(17,24,39,0.35)">0.00</td>
+              <td class="num">255.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 2 · Sparse — donut with legend underneath -->
+    <section class="panel" id="panel-sparse-b">
+      <span class="idea-tag">Fix B — donut stays, legend under</span>
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Production report</p>
+          <h1>IMD6491</h1>
+          <p class="lede">Same sparse data — donut centered, legend fills width below</p>
+        </div>
+        <span class="status-pill">No clock data</span>
+      </div>
+      <div class="stage-tabs"><span>Specs</span><span class="is-on">Production</span></div>
+      <div class="warn">Link a job on the bid for Trimble received + Connecteam hours</div>
+
+      <div class="charts">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Hours mix</h3>
+              <p class="sub">Donut + legend stacked (no side gap)</p>
+            </div>
+          </div>
+          <div class="donut-block">
+            <div class="donut" aria-hidden>
+              <div class="donut-center">
+                <strong>—</strong>
+                <span>Variance</span>
+              </div>
+            </div>
+            <div class="legend-under">
+              <div class="row">
+                <i style="background:#64748b"></i>
+                <span>Full job estimate</span>
+                <strong>815.49</strong>
+              </div>
+              <div class="row">
+                <i style="background:#f59e0b"></i>
+                <span>Material on site</span>
+                <strong style="color:rgba(17,24,39,0.35)">—</strong>
+              </div>
+              <div class="row">
+                <i style="background:#10b981"></i>
+                <span>Hours worked</span>
+                <strong style="color:rgba(17,24,39,0.35)">—</strong>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Labor hours</h3>
+              <p class="sub">Same denser bars</p>
+            </div>
+          </div>
+          <div class="vbars">
+            <div class="vbar">
+              <span class="n">815.49</span>
+              <div class="shaft" style="height:92%;background:linear-gradient(180deg,#94a3b8,#64748b)"></div>
+              <span class="x">Full estimate</span>
+            </div>
+            <div class="vbar is-empty">
+              <span class="n">—</span>
+              <div class="shaft"></div>
+              <span class="x">On site</span>
+            </div>
+            <div class="vbar is-empty">
+              <span class="n">—</span>
+              <div class="shaft"></div>
+              <span class="x">Worked</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 3 · Rich data — how it should look when linked -->
+    <section class="panel" id="panel-rich">
+      <span class="idea-tag">Rich — after job + Connecteam</span>
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Production report</p>
+          <h1>IMD6491</h1>
+          <p class="lede">MCPS North Bethesda · J-44108 · 11 workers</p>
+        </div>
+        <span class="status-pill ok">On track</span>
+      </div>
+      <div class="stage-tabs"><span>Specs</span><span class="is-on">Production</span></div>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="label">Full job estimate</div>
+          <div class="value">815.49</div>
+          <div class="hint">Mike labor hrs</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Material on site</div>
+          <div class="value" style="color:#b45309">488.20</div>
+          <div class="hint">Trimble ÷ rate</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Hours worked</div>
+          <div class="value" style="color:#047857">412.60</div>
+          <div class="hint">Connecteam</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Variance</div>
+          <div class="value" style="color:#047857">−75.60</div>
+          <div class="hint">On site − worked</div>
+        </div>
+      </div>
+
+      <div class="charts">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Hours mix</h3>
+              <p class="sub">Stacked compare (preferred when dense)</p>
+            </div>
+          </div>
+          <div class="mix-rows">
+            <div class="mix-row">
+              <div class="top"><span>Full job estimate</span><span class="n">815.49</span></div>
+              <div class="mix-track"><div class="mix-fill slate" style="width:100%"></div></div>
+            </div>
+            <div class="mix-row">
+              <div class="top"><span>Material on site</span><span class="n">488.20</span></div>
+              <div class="mix-track"><div class="mix-fill amber" style="width:60%"></div></div>
+            </div>
+            <div class="mix-row">
+              <div class="top"><span>Hours worked</span><span class="n">412.60</span></div>
+              <div class="mix-track"><div class="mix-fill green" style="width:51%"></div></div>
+            </div>
+          </div>
+          <div class="mix-foot">
+            <span>Variance · material on site − worked</span>
+            <strong style="color:var(--green)">−75.60 hrs</strong>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Labor hours</h3>
+              <p class="sub">Estimate · on site · worked</p>
+            </div>
+            <span class="status-pill ok">On track</span>
+          </div>
+          <div class="vbars">
+            <div class="vbar">
+              <span class="n">815</span>
+              <div class="shaft" style="height:100%;background:linear-gradient(180deg,#94a3b8,#64748b)"></div>
+              <span class="x">Full estimate</span>
+            </div>
+            <div class="vbar">
+              <span class="n">488</span>
+              <div class="shaft" style="height:60%;background:linear-gradient(180deg,#fbbf24,#f59e0b)"></div>
+              <span class="x">On site</span>
+            </div>
+            <div class="vbar">
+              <span class="n">413</span>
+              <div class="shaft" style="height:51%;background:linear-gradient(180deg,#34d399,#10b981)"></div>
+              <span class="x">Worked</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Commodity hours on site</h3>
+              <p class="sub">Card rows + bar — denser than thin tracks</p>
+            </div>
+          </div>
+          <div class="comm-list">
+            <div class="comm-item">
+              <div>
+                <div class="name">Duct Wrap 1.5″</div>
+                <div class="meta">Roll · FSK</div>
+              </div>
+              <div class="hrs">142.50</div>
+              <div class="bar"><i style="width:100%"></i></div>
+            </div>
+            <div class="comm-item">
+              <div>
+                <div class="name">Duct Wrap 2.0″</div>
+                <div class="meta">Roll · FSK</div>
+              </div>
+              <div class="hrs">98.20</div>
+              <div class="bar"><i style="width:69%"></i></div>
+            </div>
+            <div class="comm-item">
+              <div>
+                <div class="name">Fiberglass 1.5″</div>
+                <div class="meta">Pipe · ASJ</div>
+              </div>
+              <div class="hrs">64.10</div>
+              <div class="bar"><i style="width:45%"></i></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Full est vs on site</h3>
+              <p class="sub">Paired horizontal — no cut-off labels</p>
+            </div>
+          </div>
+          <div class="pair-list">
+            <div class="pair">
+              <div class="lbl"><span>Duct Wrap 1.5″</span></div>
+              <div class="tracks">
+                <div class="t"><span>Est</span><div class="track"><i class="mike" style="width:100%"></i></div><span class="val">340</span></div>
+                <div class="t"><span>Site</span><div class="track"><i class="site" style="width:42%"></i></div><span class="val">143</span></div>
+              </div>
+            </div>
+            <div class="pair">
+              <div class="lbl"><span>Duct Wrap 2.0″</span></div>
+              <div class="tracks">
+                <div class="t"><span>Est</span><div class="track"><i class="mike" style="width:75%"></i></div><span class="val">255</span></div>
+                <div class="t"><span>Site</span><div class="track"><i class="site" style="width:29%"></i></div><span class="val">98</span></div>
+              </div>
+            </div>
+            <div class="pair">
+              <div class="lbl"><span>Fiberglass 1.5″</span></div>
+              <div class="tracks">
+                <div class="t"><span>Est</span><div class="track"><i class="mike" style="width:65%"></i></div><span class="val">221</span></div>
+                <div class="t"><span>Site</span><div class="track"><i class="site" style="width:19%"></i></div><span class="val">64</span></div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <p class="note">
+      Open at <code>/production-charts-v2-mockup.html</code>.
+      <strong>1</strong> fixes the Hours mix empty gap with stacked bars + empty states for zero on-site.
+      <strong>2</strong> keeps a donut but puts the legend underneath.
+      <strong>3</strong> shows the same layout with full data.
+      Say which to ship.
+    </p>
+  </div>
+
+  <script>
+    function showPanel(id) {
+      document.querySelectorAll(".panel").forEach((p) => p.classList.remove("is-on"));
+      document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("is-on"));
+      document.getElementById("panel-" + id)?.classList.add("is-on");
+      document.querySelector('.tabs button[data-panel="' + id + '"]')?.classList.add("is-on");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    document.querySelectorAll(".tabs button").forEach((btn) => {
+      btn.addEventListener("click", () => showPanel(btn.getAttribute("data-panel")));
+    });
+  </script>
+</body>
+</html>

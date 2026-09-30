@@ -11,9 +11,13 @@ import { RestrictedState } from "@/components/ui/RestrictedState";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { ProductionDetailSkeleton } from "@/components/bidding/MikeModuleSkeletons";
 import { SpecsProductionTabNav } from "@/components/bidding/SpecsProductionTabNav";
+import { ProductionKpiStrip } from "@/components/bidding/production/ProductionKpiStrip";
+import { ProductionHoursMixDonut } from "@/components/bidding/production/ProductionHoursMixDonut";
 import { ProductionHoursCompareChart } from "@/components/bidding/production/ProductionHoursCompareChart";
 import { ProductionCommodityHoursChart } from "@/components/bidding/production/ProductionCommodityHoursChart";
+import { ProductionCommodityEstChart } from "@/components/bidding/production/ProductionCommodityEstChart";
 import { ProductionCommodityTable } from "@/components/bidding/production/ProductionCommodityTable";
+import { ProductionStatusBadge } from "@/components/bidding/production/ProductionStatusBadge";
 import {
   formatMikeFilesMergedHeader,
   type ProductionReport,
@@ -87,7 +91,6 @@ export function ProductionPage({
     );
   }
 
-  // Never flash empty-gate / upload CTA while data is still loading
   if (loading) {
     return <ProductionDetailSkeleton />;
   }
@@ -105,24 +108,39 @@ export function ProductionPage({
     mikeFiles.map((f) => f.fileName).filter(Boolean)
   );
 
+  const jobLine = [
+    bid?.bidName,
+    report?.jobNumber || report?.connecteam.jobNumber,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       {!embedded ? (
         <>
-          <div>
-            <Link
-              href="/production"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/50 transition hover:text-brand"
-            >
-              ← Production
-            </Link>
-            <h1 className="mt-2 text-xl font-semibold text-ink">
-              {bid?.estimateNumber ?? "Production"}
-            </h1>
-            <p className="text-sm text-ink/50">
-              {bid?.bidName ||
-                "One report per bid — one Mike takeoff (uploads append into it)"}
-            </p>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <Link
+                href="/production"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/50 transition hover:text-brand"
+              >
+                ← Production
+              </Link>
+              <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
+                Production report
+              </p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+                {bid?.estimateNumber ?? "Production"}
+              </h1>
+              <p className="mt-1 text-sm text-ink/50">
+                {jobLine ||
+                  "One report per bid — one Mike takeoff (uploads append into it)"}
+              </p>
+            </div>
+            {report ? (
+              <ProductionStatusBadge status={report.totals.status} />
+            ) : null}
           </div>
           <SpecsProductionTabNav
             bidId={bidId}
@@ -131,9 +149,14 @@ export function ProductionPage({
           />
         </>
       ) : (
-        <p className="text-sm text-ink/50">
-          Production — hours vs Connecteam for this bid’s Mike takeoff
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-ink/50">
+            Production — hours vs Connecteam for this bid’s Mike takeoff
+          </p>
+          {report ? (
+            <ProductionStatusBadge status={report.totals.status} />
+          ) : null}
+        </div>
       )}
 
       {mergedHeader ? (
@@ -188,11 +211,17 @@ export function ProductionPage({
             </p>
           ) : null}
 
-          <ProductionHoursCompareChart report={report} />
-          <ProductionCommodityHoursChart lines={report.lines} />
+          <ProductionKpiStrip report={report} />
+
+          <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+            <ProductionHoursMixDonut report={report} />
+            <ProductionHoursCompareChart report={report} />
+            <ProductionCommodityHoursChart lines={report.lines} />
+            <ProductionCommodityEstChart lines={report.lines} />
+          </div>
 
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-ink">
+            <h3 className="mb-1 text-sm font-semibold text-ink">
               Full commodity table
             </h3>
             <p className="mb-3 text-xs text-ink/45">

@@ -32,6 +32,10 @@ function fmtWhen(iso: string | null | undefined): string {
   }
 }
 
+function stripExt(name: string): string {
+  return name.replace(/\.(csv|xlsx|xls)$/i, "").trim() || name;
+}
+
 type TakeoffRow = {
   bidId: number;
   fileId: number;
@@ -44,6 +48,7 @@ type TakeoffRow = {
 
 /**
  * Estimation library — Mike main: list takeoffs + Upload Mike files.
+ * Split detail: select a takeoff on the left, preview + actions on the right.
  */
 export function EstimationFilesPage() {
   const { canRead, canWrite } = useBiddingAccess();
@@ -56,6 +61,8 @@ export function EstimationFilesPage() {
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
+  const [replaceBidId, setReplaceBidId] = useState<number | null>(null);
+  const [selectedBidId, setSelectedBidId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +134,34 @@ export function EstimationFilesPage() {
     );
   }, [takeoffs, search]);
 
+  useEffect(() => {
+    if (filtered.length === 0) {
+      setSelectedBidId(null);
+      return;
+    }
+    if (
+      selectedBidId == null ||
+      !filtered.some((t) => t.bidId === selectedBidId)
+    ) {
+      setSelectedBidId(filtered[0].bidId);
+    }
+  }, [filtered, selectedBidId]);
+
+  const selected = useMemo(
+    () => filtered.find((t) => t.bidId === selectedBidId) ?? null,
+    [filtered, selectedBidId]
+  );
+
+  const maxRows = useMemo(
+    () => Math.max(1, ...filtered.map((t) => t.totalRows)),
+    [filtered]
+  );
+
+  const openFilePicker = (bidId?: number | null) => {
+    setReplaceBidId(bidId ?? null);
+    fileRef.current?.click();
+  };
+
   const confirmUpload = async (values: MikeUploadOptions) => {
     const bidId = values.bidId;
     if (!bidId || !pendingFiles?.length) {
@@ -135,6 +170,7 @@ export function EstimationFilesPage() {
     }
     setUploading(true);
     setPendingFiles(null);
+    setReplaceBidId(null);
     try {
       const result = await uploadMikeFilesAndBuildSpecs(
         bidId,
@@ -178,7 +214,7 @@ export function EstimationFilesPage() {
             Estimation files
           </h1>
           <p className="mt-1 text-sm text-ink/50">
-            Upload Mike takeoffs here — one takeoff per estimate.
+            Pick a takeoff on the left — preview and open actions on the right.
           </p>
         </div>
         {canWrite ? (
@@ -202,7 +238,7 @@ export function EstimationFilesPage() {
                   ? "No estimates available yet"
                   : "Select one or more CSV / XLSX"
               }
-              onClick={() => fileRef.current?.click()}
+              onClick={() => openFilePicker(null)}
               className="inline-flex shrink-0 items-center justify-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_2px_10px_rgba(255,123,17,0.35)] disabled:opacity-50"
             >
               {uploading ? "Uploading…" : "Upload Mike files"}
@@ -251,7 +287,7 @@ export function EstimationFilesPage() {
           {canWrite && bids.length > 0 ? (
             <button
               type="button"
-              onClick={() => fileRef.current?.click()}
+              onClick={() => openFilePicker(null)}
               className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white"
             >
               Upload Mike files
@@ -259,45 +295,139 @@ export function EstimationFilesPage() {
           ) : null}
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
-          <table className="min-w-[720px] w-full border-collapse text-left text-sm">
-            <thead className="sticky top-0 z-10 bg-surface">
-              <tr className="border-b border-ink/[0.08] text-[10px] uppercase tracking-wide text-ink/40">
-                <th className="px-4 py-3 font-semibold">Takeoff</th>
-                <th className="px-3 py-3 font-semibold">Estimate #</th>
-                <th className="px-3 py-3 font-semibold">Bid name</th>
-                <th className="px-3 py-3 font-semibold">Rows</th>
-                <th className="px-3 py-3 font-semibold">Updated</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink/[0.05]">
-              {filtered.map((t) => (
-                <tr
-                  key={t.bidId}
-                  className="cursor-pointer hover:bg-canvas/60"
-                  onClick={() =>
-                    router.push(`/bidding/${t.bidId}?stage=takeoff`)
-                  }
-                >
-                  <td className="px-4 py-3 font-medium text-ink">
-                    {t.fileName}
-                  </td>
-                  <td className="px-3 py-3 text-ink/80">
-                    {t.estimateNumber ?? "—"}
-                  </td>
-                  <td className="max-w-[14rem] truncate px-3 py-3 text-ink/80">
-                    {t.bidName ?? "—"}
-                  </td>
-                  <td className="px-3 py-3 text-ink/80">
-                    {t.totalRows.toLocaleString()}
-                  </td>
-                  <td className="px-3 py-3 text-ink/80">
-                    {fmtWhen(t.updatedAt)}
-                  </td>
+        <div className="grid min-h-0 flex-1 grid-cols-1 items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.95fr)]">
+          <div className="min-h-0 overflow-auto rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+            <table className="w-full border-collapse text-left text-[13px]">
+              <thead className="sticky top-0 z-10 bg-surface">
+                <tr className="border-b border-ink/[0.08] text-[10px] uppercase tracking-wide text-ink/40">
+                  <th className="px-4 py-3 font-semibold">Takeoff</th>
+                  <th className="px-3 py-3 font-semibold">Estimate</th>
+                  <th className="px-3 py-3 font-semibold">Rows</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-ink/[0.05]">
+                {filtered.map((t) => {
+                  const isSelected = t.bidId === selectedBidId;
+                  return (
+                    <tr
+                      key={t.bidId}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected
+                          ? "bg-brand/[0.08]"
+                          : "hover:bg-canvas/60"
+                      }`}
+                      onClick={() => setSelectedBidId(t.bidId)}
+                      onDoubleClick={() =>
+                        router.push(`/bidding/${t.bidId}?stage=takeoff`)
+                      }
+                    >
+                      <td
+                        className={`px-4 py-3.5 font-semibold text-ink ${
+                          isSelected
+                            ? "shadow-[inset_3px_0_0_#ff7b11]"
+                            : ""
+                        }`}
+                      >
+                        {t.fileName}
+                      </td>
+                      <td className="px-3 py-3.5 tabular-nums text-ink/80">
+                        {t.estimateNumber ?? "—"}
+                      </td>
+                      <td className="px-3 py-3.5 tabular-nums text-ink/80">
+                        {t.totalRows.toLocaleString()}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {selected ? (
+            <aside className="sticky top-4 rounded-2xl border border-ink/[0.08] bg-surface p-[18px] shadow-[0_8px_24px_-14px_rgba(1,1,1,0.2)]">
+              <h3 className="text-[1.05rem] font-semibold tracking-tight text-ink">
+                {stripExt(selected.fileName)}
+              </h3>
+              <p className="mb-4 mt-1 text-[13px] text-ink/50">
+                Linked to estimate{" "}
+                {selected.estimateNumber ?? `#${selected.bidId}`} · opens
+                Takeoff stage
+              </p>
+              <div
+                className="mb-3.5 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]"
+                aria-hidden
+              >
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-brand to-[#ff9a4a]"
+                  style={{
+                    width: `${Math.max(
+                      8,
+                      Math.round((selected.totalRows / maxRows) * 100)
+                    )}%`,
+                  }}
+                />
+              </div>
+              <div className="mb-4 grid gap-2.5">
+                <div className="flex items-center justify-between gap-3 rounded-[10px] bg-canvas px-3 py-2.5 text-[13px]">
+                  <span className="font-semibold text-ink/50">Estimate #</span>
+                  <span className="text-right font-bold tabular-nums text-ink">
+                    {selected.estimateNumber ?? "—"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-[10px] bg-canvas px-3 py-2.5 text-[13px]">
+                  <span className="font-semibold text-ink/50">Bid name</span>
+                  <span className="max-w-[14rem] truncate text-right font-bold text-ink">
+                    {selected.bidName ?? "—"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-[10px] bg-canvas px-3 py-2.5 text-[13px]">
+                  <span className="font-semibold text-ink/50">Total rows</span>
+                  <span className="text-right font-bold tabular-nums text-ink">
+                    {selected.totalRows.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-[10px] bg-canvas px-3 py-2.5 text-[13px]">
+                  <span className="font-semibold text-ink/50">Updated</span>
+                  <span className="text-right font-bold text-ink">
+                    {fmtWhen(selected.updatedAt)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-[10px] bg-canvas px-3 py-2.5 text-[13px]">
+                  <span className="font-semibold text-ink/50">Production</span>
+                  <span className="text-right font-bold text-ink">
+                    Ready to link
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(`/bidding/${selected.bidId}?stage=takeoff`)
+                  }
+                  className="inline-flex items-center justify-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_2px_10px_rgba(255,123,17,0.35)]"
+                >
+                  Open takeoff
+                </button>
+                {canWrite ? (
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => openFilePicker(selected.bidId)}
+                    className="inline-flex items-center justify-center rounded-xl border border-ink/10 bg-surface px-4 py-2.5 text-sm font-semibold text-ink disabled:opacity-50"
+                  >
+                    Replace files
+                  </button>
+                ) : null}
+                <Link
+                  href={`/production/${selected.bidId}`}
+                  className="inline-flex items-center justify-center rounded-xl border border-ink/10 bg-surface px-4 py-2.5 text-sm font-semibold text-ink"
+                >
+                  View production
+                </Link>
+              </div>
+            </aside>
+          ) : null}
         </div>
       )}
 
@@ -319,9 +449,11 @@ export function EstimationFilesPage() {
               (t) => String(t.bidId) === String(b.id)
             )?.fileName,
           }))}
+          defaultBidId={replaceBidId}
           defaultJobId={null}
           onCancel={() => {
             setPendingFiles(null);
+            setReplaceBidId(null);
             if (fileRef.current) fileRef.current.value = "";
           }}
           onConfirm={(values) => void confirmUpload(values)}

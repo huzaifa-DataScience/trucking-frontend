@@ -1,30 +1,19 @@
 "use client";
 
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Cell,
-} from "recharts";
 import type { ProductionReport } from "@/lib/bidding/production-types";
 import { fmtProductionHours } from "@/lib/bidding/production-types";
 import { ProductionStatusBadge } from "./ProductionStatusBadge";
+import { PROD_WARM } from "./productionChartTheme";
 
-const MUTED = "#94a3b8";
-const TARGET = "#f59e0b";
-const MIKE = "#64748b";
+type Col = {
+  key: string;
+  label: string;
+  value: number | null;
+  fill: string;
+  soft: string;
+};
 
-function workedBarColor(status: ProductionReport["totals"]["status"]): string {
-  if (status === "green") return "#059669";
-  if (status === "red") return "#dc2626";
-  return "#94a3b8";
-}
-
-/** Chart A — labor: estimate vs material vs worked (§4.2) */
+/** Rounded pill columns — Warm brand labor hours */
 export function ProductionHoursCompareChart({
   report,
 }: {
@@ -32,185 +21,109 @@ export function ProductionHoursCompareChart({
 }) {
   const { totals, connecteam, jobNumber } = report;
   const actual = totals.actualHours;
-  const workerCount =
-    totals.workerCount ?? connecteam.workerCount ?? null;
-  const avgPerWorker =
-    totals.averageHoursPerWorker ??
-    connecteam.averageHoursPerWorker ??
-    null;
+  const onSite = totals.hoursEstimatedFromReceived ?? 0;
+  const estimate = totals.hoursEstimatedMike ?? 0;
 
-  const data = [
+  const cols: Col[] = [
     {
       key: "mike",
-      label: "Full job estimate",
-      hours: totals.hoursEstimatedMike ?? 0,
-      fill: MIKE,
-      help: "From Mike — total labor if all estimated material is installed",
+      label: "Full estimate",
+      value: estimate,
+      fill: PROD_WARM.estimate,
+      soft: PROD_WARM.estimateSoft,
     },
     {
-      key: "target",
-      label: "Material on site",
-      hours: totals.hoursEstimatedFromReceived ?? 0,
-      fill: TARGET,
-      help: "From Trimble received ÷ production rate — labor we should have used so far",
+      key: "site",
+      label: "On site",
+      value: onSite > 0 ? onSite : null,
+      fill: PROD_WARM.onSite,
+      soft: PROD_WARM.onSiteSoft,
     },
     {
-      key: "actual",
-      label: "Hours worked",
-      hours: actual ?? 0,
-      fill: workedBarColor(totals.status),
-      empty: actual == null,
-      help: "All workers’ clocked time summed (labor-hours) — green/red uses this",
+      key: "work",
+      label: "Worked",
+      value: actual,
+      fill: PROD_WARM.worked,
+      soft: PROD_WARM.workedSoft,
     },
   ];
 
-  const subtitleParts = [
+  const max = Math.max(
+    1,
+    ...cols.map((c) => (c.value != null && c.value > 0 ? c.value : 0))
+  );
+
+  const subtitle = [
     jobNumber || connecteam.jobNumber || connecteam.jobLabel,
     connecteam.shiftCount != null
       ? `${connecteam.shiftCount.toLocaleString()} shifts`
       : null,
-    workerCount != null
-      ? `${workerCount.toLocaleString()} workers`
+    (totals.workerCount ?? connecteam.workerCount) != null
+      ? `${(totals.workerCount ?? connecteam.workerCount)!.toLocaleString()} workers`
       : null,
-  ].filter(Boolean);
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+    <section className="rounded-[18px] border border-ink/[0.08] bg-surface p-4 shadow-[0_8px_22px_-16px_rgba(15,23,42,0.2)]">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-ink">
-            Labor: estimate vs material vs worked
-          </h3>
+          <h3 className="text-sm font-bold text-ink">Labor hours</h3>
           <p className="mt-0.5 text-xs text-ink/45">
-            Full job estimate · Hours for material on site · Hours worked
-            (Connecteam)
-            {subtitleParts.length ? ` · ${subtitleParts.join(" · ")}` : ""}
+            Rounded pill bars
+            {subtitle ? ` · ${subtitle}` : ""}
           </p>
-          {!connecteam.linked ? (
-            <p className="mt-1 text-xs text-warning">
-              No Connecteam time for this job
-            </p>
-          ) : null}
         </div>
         <ProductionStatusBadge status={totals.status} />
       </div>
 
-      <div className="h-64 w-full min-w-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
-            <XAxis
-              dataKey="label"
-              tick={{ fill: MUTED, fontSize: 11 }}
-              axisLine={{ stroke: "rgba(0,0,0,0.08)" }}
-              interval={0}
-            />
-            <YAxis
-              tick={{ fill: MUTED, fontSize: 11 }}
-              axisLine={{ stroke: "rgba(0,0,0,0.08)" }}
-              tickFormatter={(v) =>
-                typeof v === "number" ? v.toLocaleString() : String(v)
-              }
-            />
-            <Tooltip
-              cursor={{ fill: "rgba(0,0,0,0.03)" }}
-              content={({ active, payload }) => {
-                if (!active || !payload?.[0]) return null;
-                const row = payload[0].payload as (typeof data)[number];
-                return (
-                  <div className="max-w-xs rounded-lg border border-ink/10 bg-surface px-3 py-2 text-xs shadow-md">
-                    <p className="font-semibold text-ink">{row.label}</p>
-                    <p className="tabular-nums text-ink/70">
-                      {row.empty
-                        ? "No clock data"
-                        : `${fmtProductionHours(row.hours)} hrs`}
-                    </p>
-                    {row.help ? (
-                      <p className="mt-1 text-ink/45">{row.help}</p>
-                    ) : null}
-                    {row.key === "actual" && totals.varianceHours != null ? (
-                      <p className="mt-1 text-ink/50">
-                        Variance: {fmtProductionHours(totals.varianceHours)}{" "}
-                        (material on site − worked)
-                      </p>
-                    ) : null}
-                  </div>
-                );
-              }}
-            />
-            <Bar dataKey="hours" radius={[6, 6, 0, 0]} maxBarSize={72}>
-              {data.map((entry) => (
-                <Cell
-                  key={entry.key}
-                  fill={entry.fill}
-                  fillOpacity={entry.empty ? 0.25 : 1}
+      <div className="grid h-[190px] grid-cols-3 items-end gap-3">
+        {cols.map((col) => {
+          const empty = col.value == null || col.value <= 0;
+          const pct = empty
+            ? 0
+            : Math.max(6, Math.round((col.value! / max) * 100));
+          return (
+            <div
+              key={col.key}
+              className="flex h-full flex-col items-center justify-end gap-2"
+            >
+              <span
+                className={`text-[12px] font-extrabold tabular-nums ${
+                  empty ? "text-ink/30" : "text-ink"
+                }`}
+              >
+                {empty ? "—" : fmtProductionHours(col.value)}
+              </span>
+              <div className="flex w-full max-w-[52px] flex-1 items-end overflow-hidden rounded-full bg-[#eef2f7] p-[3px]">
+                <div
+                  className="w-full rounded-full"
+                  style={{
+                    height: empty ? 8 : `${pct}%`,
+                    minHeight: 8,
+                    background: empty
+                      ? "#cbd5e1"
+                      : `linear-gradient(180deg, ${col.soft}, ${col.fill})`,
+                    opacity: empty ? 0.55 : 1,
+                  }}
                 />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+              </div>
+              <span className="text-center text-[11px] font-semibold leading-tight text-ink/50">
+                {col.label.includes(" ") ? (
+                  <>
+                    {col.label.split(" ")[0]}
+                    <br />
+                    {col.label.split(" ").slice(1).join(" ")}
+                  </>
+                ) : (
+                  col.label
+                )}
+              </span>
+            </div>
+          );
+        })}
       </div>
-
-      <dl className="mt-3 grid gap-2 text-[11px] text-ink/55 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="rounded-lg border border-ink/[0.06] bg-canvas/40 px-2.5 py-2">
-          <dt className="inline-flex items-center gap-1.5 font-semibold text-ink/70">
-            <span className="h-2 w-2 rounded-sm" style={{ background: MIKE }} />
-            Full job estimate (hrs)
-          </dt>
-          <dd className="mt-1 tabular-nums text-sm font-semibold text-ink">
-            {fmtProductionHours(totals.hoursEstimatedMike)}
-          </dd>
-          <dd className="mt-1 text-ink/45">
-            From Mike — total labor if all estimated material is installed
-          </dd>
-        </div>
-        <div className="rounded-lg border border-ink/[0.06] bg-canvas/40 px-2.5 py-2">
-          <dt className="inline-flex items-center gap-1.5 font-semibold text-ink/70">
-            <span className="h-2 w-2 rounded-sm" style={{ background: TARGET }} />
-            Hours for material on site
-          </dt>
-          <dd className="mt-1 tabular-nums text-sm font-semibold text-ink">
-            {fmtProductionHours(totals.hoursEstimatedFromReceived)}
-          </dd>
-          <dd className="mt-1 text-ink/45">
-            From Trimble received ÷ production rate — labor we should have used
-            so far
-          </dd>
-        </div>
-        <div className="rounded-lg border border-ink/[0.06] bg-canvas/40 px-2.5 py-2">
-          <dt className="inline-flex items-center gap-1.5 font-semibold text-ink/70">
-            <span
-              className="h-2 w-2 rounded-sm"
-              style={{ background: workedBarColor(totals.status) }}
-            />
-            Hours worked (Connecteam)
-          </dt>
-          <dd className="mt-1 tabular-nums text-sm font-semibold text-ink">
-            {actual == null ? "—" : fmtProductionHours(actual)}
-          </dd>
-          <dd className="mt-1 text-ink/45">
-            All workers’ clocked time summed (labor-hours) — green/red uses this
-          </dd>
-        </div>
-        <div className="rounded-lg border border-ink/[0.06] bg-canvas/40 px-2.5 py-2">
-          <dt className="font-semibold text-ink/70">Workers on job</dt>
-          <dd className="mt-1 tabular-nums text-sm font-semibold text-ink">
-            {workerCount == null ? "—" : workerCount.toLocaleString()}
-          </dd>
-          <dd className="mt-1 text-ink/45">
-            How many people clocked on this job
-          </dd>
-        </div>
-        <div className="rounded-lg border border-ink/[0.06] bg-canvas/40 px-2.5 py-2">
-          <dt className="font-semibold text-ink/70">Avg hours / worker</dt>
-          <dd className="mt-1 tabular-nums text-sm font-semibold text-ink">
-            {avgPerWorker == null ? "—" : fmtProductionHours(avgPerWorker)}
-          </dd>
-          <dd className="mt-1 text-ink/45">
-            Labor-hours ÷ workers — typical hours one person put in
-          </dd>
-        </div>
-      </dl>
     </section>
   );
 }

@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Production — dashboard charts mock</title>
+  <style>
+    :root {
+      --bg: #eef1f5;
+      --surface: #ffffff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: rgba(15, 23, 42, 0.08);
+      --brand: #ff7b11;
+      --brand-deep: #c2410c;
+      --canvas: #f5f7fa;
+      --blue: #3b82f6;
+      --green: #10b981;
+      --red: #dc2626;
+      --purple: #8b5cf6;
+      --amber: #f59e0b;
+      --slate: #64748b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .shell {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 24px 20px 56px;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .tabs button {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--muted);
+      box-shadow: 0 6px 18px -10px rgba(1,1,1,0.25);
+    }
+    .tabs button.is-on {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .panel { display: none; }
+    .panel.is-on { display: block; }
+
+    .idea-tag {
+      display: inline-block;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: rgba(255,123,17,0.12);
+      color: var(--brand-deep);
+    }
+
+    .page-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .eyebrow {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--brand);
+    }
+    h1 {
+      margin: 6px 0 0;
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .lede {
+      margin: 6px 0 0;
+      font-size: 0.875rem;
+      color: var(--muted);
+      max-width: 40rem;
+    }
+    .back {
+      display: inline-flex;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-ghost {
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    .btn-brand {
+      background: var(--brand);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(255,123,17,0.35);
+    }
+    .btn-sm { padding: 8px 12px; font-size: 13px; }
+
+    .status-pill {
+      display: inline-flex;
+      border-radius: 8px;
+      border: 1px solid rgba(16,185,129,0.3);
+      background: rgba(16,185,129,0.1);
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #047857;
+    }
+
+    .stage-tabs {
+      display: inline-flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.85);
+    }
+    .stage-tabs span {
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .stage-tabs span.is-on {
+      background: var(--brand);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(255,123,17,0.35);
+    }
+
+    .search {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .search input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      box-shadow: 0 8px 24px -16px rgba(15,23,42,0.22);
+      overflow: hidden;
+    }
+
+    /* KPI */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 900px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      padding: 16px;
+      box-shadow: 0 8px 24px -16px rgba(15,23,42,0.22);
+    }
+    .kpi .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .kpi .label { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .kpi .icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .kpi .icon.slate { background: linear-gradient(135deg, #64748b, #94a3b8); }
+    .kpi .icon.amber { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+    .kpi .icon.green { background: linear-gradient(135deg, #10b981, #34d399); }
+    .kpi .icon.brand { background: linear-gradient(135deg, #ff7b11, #ff9a4a); }
+    .kpi .value {
+      margin-top: 10px;
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+    .pill {
+      display: inline-flex;
+      margin-top: 8px;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .pill.green { background: rgba(16,185,129,0.12); color: #047857; }
+    .pill.amber { background: rgba(245,158,11,0.14); color: #b45309; }
+    .pill.blue { background: rgba(59,130,246,0.12); color: #1d4ed8; }
+    .pill.orange { background: rgba(255,123,17,0.12); color: var(--brand-deep); }
+
+    /* Charts grid */
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 900px) {
+      .charts { grid-template-columns: 1fr; }
+    }
+    .chart-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      padding: 16px;
+      box-shadow: 0 8px 24px -16px rgba(15,23,42,0.22);
+    }
+    .chart-card .head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .chart-card h3 { margin: 0; font-size: 14px; font-weight: 700; }
+    .chart-card .sub { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+    .select-fake {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--canvas);
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* Donut — hours mix */
+    .donut-wrap {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 14px;
+      align-items: center;
+      min-height: 160px;
+    }
+    @media (max-width: 520px) {
+      .donut-wrap { grid-template-columns: 1fr; justify-items: center; }
+    }
+    .donut {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      /* estimate 312, on site 188, worked 164 — relative slices of sum ~664 */
+      background: conic-gradient(
+        #64748b 0 47%,
+        #f59e0b 47% 75%,
+        #10b981 75% 100%
+      );
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+    .donut::after {
+      content: "";
+      width: 82px;
+      height: 82px;
+      border-radius: 50%;
+      background: var(--surface);
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+    .donut-center {
+      position: absolute;
+      text-align: center;
+      z-index: 1;
+    }
+    .donut-center strong {
+      display: block;
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .donut-center span {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .legend { display: grid; gap: 10px; width: 100%; }
+    .legend-row {
+      display: grid;
+      grid-template-columns: 10px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+    }
+    .legend-row i {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+    }
+    .legend-row .n { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    /* Area — worked vs on-site trend */
+    .area { height: 170px; width: 100%; }
+    .area svg { width: 100%; height: 100%; display: block; }
+    .axis { fill: #94a3b8; font-size: 10px; font-family: inherit; }
+    .grid { stroke: rgba(15,23,42,0.06); stroke-dasharray: 3 3; }
+
+    /* Horizontal bars — commodity hrs */
+    .hbar-list { display: grid; gap: 12px; }
+    .hbar-row .lbl {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .hbar-row .lbl span:last-child {
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+    }
+    .hbar-track {
+      height: 12px;
+      border-radius: 999px;
+      background: #eef2f7;
+      overflow: hidden;
+    }
+    .hbar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff7b11, #ffb06a);
+    }
+    .hbar-fill.blue {
+      background: linear-gradient(90deg, #3b82f6, #93c5fd);
+    }
+
+    /* Vertical bars — pipeline / status across bids */
+    .vbar {
+      height: 170px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      align-items: end;
+      padding: 8px 4px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .vbar-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .vbar-col .n {
+      font-size: 11px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--slate);
+    }
+    .vbar-col .bar {
+      width: 100%;
+      max-width: 42px;
+      border-radius: 8px 8px 4px 4px;
+      background: linear-gradient(180deg, #60a5fa, #3b82f6);
+    }
+    .vbar-col .bar.green { background: linear-gradient(180deg, #34d399, #10b981); }
+    .vbar-col .bar.red { background: linear-gradient(180deg, #f87171, #dc2626); }
+    .vbar-col .bar.gray { background: linear-gradient(180deg, #cbd5e1, #94a3b8); }
+    .vbar-col .x {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    /* Commodity table */
+    .section-label {
+      margin: 8px 0 4px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .section-help {
+      margin: 0 0 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .type-pill {
+      display: inline-flex;
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .type-pill.pipe { background: rgba(14,165,233,0.12); color: #075985; }
+    .type-pill.roll { background: rgba(139,92,246,0.12); color: #5b21b6; }
+    .type-pill.board { background: rgba(245,158,11,0.14); color: #92400e; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    thead th {
+      background: #fafbfc;
+      border-bottom: 1px solid var(--line);
+      padding: 12px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(17,24,39,0.4);
+    }
+    tbody td {
+      padding: 14px;
+      border-bottom: 1px solid rgba(15,23,42,0.05);
+    }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: var(--canvas); }
+    tbody tr { cursor: pointer; }
+    .name { font-weight: 600; }
+    .mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+    .num { text-align: right; }
+    .subline {
+      margin-top: 2px;
+      font-size: 11px;
+      color: rgba(17,24,39,0.45);
+    }
+    .badge {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-green { background: rgba(16,185,129,0.12); color: #047857; }
+    .badge-red { background: rgba(220,38,38,0.12); color: var(--red); }
+    .badge-unk { background: rgba(1,1,1,0.06); color: var(--muted); }
+    .badge-ok { background: rgba(16,185,129,0.12); color: #047857; }
+    .badge-no { background: rgba(1,1,1,0.06); color: var(--muted); }
+
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 72px 24px;
+      text-align: center;
+      border: 1px dashed rgba(1,1,1,0.14);
+      border-radius: 16px;
+      background: rgba(244,245,247,0.55);
+    }
+    .empty h2 { margin: 0; font-size: 1.125rem; }
+    .empty p { margin: 0; max-width: 28rem; font-size: 0.875rem; color: var(--muted); }
+
+    .note {
+      margin-top: 20px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #fff8f0;
+      border: 1px solid #ffd7b0;
+      font-size: 13px;
+      color: #7a4a12;
+    }
+    .note code {
+      font-size: 0.85em;
+      background: rgba(0,0,0,0.05);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    .foot {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="tabs" role="tablist">
+      <button type="button" class="is-on" data-panel="report">1 · Report + charts</button>
+      <button type="button" data-panel="hub">2 · Hub list</button>
+      <button type="button" data-panel="empty">3 · Empty</button>
+    </div>
+
+    <!-- 1 · Production report with polished charts -->
+    <section class="panel is-on" id="panel-report">
+      <span class="idea-tag">Production charts</span>
+      <a class="back" href="#" onclick="showPanel('hub'); return false;">← Production</a>
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Production report</p>
+          <h1>IMD6491</h1>
+          <p class="lede">MCPS North Bethesda Middle School · Job J-44108</p>
+        </div>
+        <span class="status-pill">On track</span>
+      </div>
+
+      <div class="stage-tabs">
+        <span>Specs</span>
+        <span class="is-on">Production</span>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="top">
+            <span class="label">Full job estimate</span>
+            <span class="icon slate">E</span>
+          </div>
+          <div class="value">312.0</div>
+          <span class="pill blue">Mike labor hrs</span>
+        </div>
+        <div class="kpi">
+          <div class="top">
+            <span class="label">Material on site</span>
+            <span class="icon amber">M</span>
+          </div>
+          <div class="value">188.4</div>
+          <span class="pill amber">Trimble ÷ rate</span>
+        </div>
+        <div class="kpi">
+          <div class="top">
+            <span class="label">Hours worked</span>
+            <span class="icon green">W</span>
+          </div>
+          <div class="value">164.2</div>
+          <span class="pill green">Connecteam</span>
+        </div>
+        <div class="kpi">
+          <div class="top">
+            <span class="label">Variance</span>
+            <span class="icon brand">V</span>
+          </div>
+          <div class="value" style="color:var(--green)">−24.2</div>
+          <span class="pill orange">On site − worked</span>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts">
+        <article class="chart-card">
+          <div class="head">
+            <div>
+              <h3>Hours mix</h3>
+              <p class="sub">Estimate · material on site · worked</p>
+            </div>
+          </div>
+          <div class="donut-wrap">
+            <div class="donut" aria-hidden>
+              <div class="donut-center">
+                <strong>−24.2</strong>
+                <span>Variance</span>
+              </div>
+            </div>
+            <div class="legend">
+              <div class="legend-row">
+                <i style="background:#64748b"></i>
+                <span>Full job estimate</span>
+                <span class="n">312.0</span>
+              </div>
+              <div class="legend-row">
+                <i style="background:#f59e0b"></i>
+                <span>Material on site</span>
+                <span class="n">188.4</span>
+              </div>
+              <div class="legend-row">
+                <i style="background:#10b981"></i>
+                <span>Hours worked</span>
+                <span class="n">164.2</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="chart-card">
+          <div class="head">
+            <div>
+              <h3>Hours trend</h3>
+              <p class="sub">Worked vs material on site</p>
+            </div>
+            <span class="select-fake">Last 14 days ▾</span>
+          </div>
+          <div class="area" aria-label="Hours trend area chart">
+            <svg viewBox="0 0 420 170" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="fillWork" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#10b981" stop-opacity="0.28" />
+                  <stop offset="100%" stop-color="#10b981" stop-opacity="0.02" />
+                </linearGradient>
+                <linearGradient id="fillSite" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.22" />
+                  <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.02" />
+                </linearGradient>
+              </defs>
+              <line class="grid" x1="28" y1="20" x2="400" y2="20" />
+              <line class="grid" x1="28" y1="55" x2="400" y2="55" />
+              <line class="grid" x1="28" y1="90" x2="400" y2="90" />
+              <line class="grid" x1="28" y1="125" x2="400" y2="125" />
+              <!-- material on site -->
+              <path
+                d="M28,100 C70,96 110,88 150,78 C190,68 230,62 270,55 C310,48 350,42 400,38 L400,140 L28,140 Z"
+                fill="url(#fillSite)"
+              />
+              <path
+                d="M28,100 C70,96 110,88 150,78 C190,68 230,62 270,55 C310,48 350,42 400,38"
+                fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"
+              />
+              <!-- hours worked -->
+              <path
+                d="M28,118 C70,112 110,105 150,98 C190,90 230,82 270,74 C310,68 350,58 400,52 L400,140 L28,140 Z"
+                fill="url(#fillWork)"
+              />
+              <path
+                d="M28,118 C70,112 110,105 150,98 C190,90 230,82 270,74 C310,68 350,58 400,52"
+                fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"
+              />
+              <circle cx="28" cy="118" r="3.5" fill="#fff" stroke="#10b981" stroke-width="2" />
+              <circle cx="150" cy="98" r="3.5" fill="#fff" stroke="#10b981" stroke-width="2" />
+              <circle cx="270" cy="74" r="3.5" fill="#fff" stroke="#10b981" stroke-width="2" />
+              <circle cx="400" cy="52" r="3.5" fill="#fff" stroke="#10b981" stroke-width="2" />
+              <text class="axis" x="28" y="160">Sep 16</text>
+              <text class="axis" x="195" y="160" text-anchor="middle">Sep 23</text>
+              <text class="axis" x="400" y="160" text-anchor="end">Sep 30</text>
+            </svg>
+          </div>
+        </article>
+
+        <article class="chart-card">
+          <div class="head">
+            <div>
+              <h3>Commodity hours on site</h3>
+              <p class="sub">Top lines by material-on-site hours</p>
+            </div>
+            <span class="select-fake">All types ▾</span>
+          </div>
+          <div class="hbar-list">
+            <div class="hbar-row">
+              <div class="lbl"><span>Duct wrap FSK</span><span>42.50</span></div>
+              <div class="hbar-track"><div class="hbar-fill" style="width:100%"></div></div>
+            </div>
+            <div class="hbar-row">
+              <div class="lbl"><span>Fiberglass ASJ</span><span>15.56</span></div>
+              <div class="hbar-track"><div class="hbar-fill" style="width:37%"></div></div>
+            </div>
+            <div class="hbar-row">
+              <div class="lbl"><span>Rigid board</span><span>10.00</span></div>
+              <div class="hbar-track"><div class="hbar-fill" style="width:24%"></div></div>
+            </div>
+            <div class="hbar-row">
+              <div class="lbl"><span>Fitting covers</span><span>4.20</span></div>
+              <div class="hbar-track"><div class="hbar-fill" style="width:10%"></div></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="chart-card">
+          <div class="head">
+            <div>
+              <h3>Full est vs on site</h3>
+              <p class="sub">Per commodity — estimate hours</p>
+            </div>
+            <span class="select-fake">Last 30 days ▾</span>
+          </div>
+          <div class="vbar" aria-label="Commodity compare bars">
+            <div class="vbar-col">
+              <span class="n">70</span>
+              <div class="bar" style="height:88%"></div>
+              <span class="x">Duct<br/>wrap</span>
+            </div>
+            <div class="vbar-col">
+              <span class="n">23</span>
+              <div class="bar green" style="height:32%"></div>
+              <span class="x">FG<br/>ASJ</span>
+            </div>
+            <div class="vbar-col">
+              <span class="n">22</span>
+              <div class="bar" style="height:30%"></div>
+              <span class="x">Rigid<br/>board</span>
+            </div>
+            <div class="vbar-col">
+              <span class="n">12</span>
+              <div class="bar green" style="height:18%"></div>
+              <span class="x">Fitting<br/>covers</span>
+            </div>
+            <div class="vbar-col">
+              <span class="n">8</span>
+              <div class="bar gray" style="height:12%"></div>
+              <span class="x">Other</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Commodity table -->
+      <p class="section-label">Commodity lines</p>
+      <p class="section-help">Type + name stacked — metrics to the right</p>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Commodity</th>
+              <th class="num">Prod / hr</th>
+              <th class="num">Qty est</th>
+              <th class="num">Qty recv</th>
+              <th class="num">Remain</th>
+              <th class="num">Hrs on site</th>
+              <th class="num">Full est hrs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="display:flex;gap:10px;align-items:flex-start">
+                  <span class="type-pill pipe">Pipe</span>
+                  <div>
+                    <div class="name">Fiberglass ASJ</div>
+                    <div class="subline">FG · Ø 2.00 · 1.00" thk · 3# · ASJ</div>
+                  </div>
+                </div>
+              </td>
+              <td class="mono num">18.00</td>
+              <td class="mono num">420.00</td>
+              <td class="mono num">280.00</td>
+              <td class="mono num">140.00</td>
+              <td class="mono num" style="font-weight:800">15.56</td>
+              <td class="mono num">23.33</td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;gap:10px;align-items:flex-start">
+                  <span class="type-pill roll">Roll</span>
+                  <div>
+                    <div class="name">Duct wrap FSK</div>
+                    <div class="subline">Wrap · 1.50" thk · 0.75# · FSK</div>
+                  </div>
+                </div>
+              </td>
+              <td class="mono num">120.00</td>
+              <td class="mono num">8,400.00</td>
+              <td class="mono num">5,100.00</td>
+              <td class="mono num">3,300.00</td>
+              <td class="mono num" style="font-weight:800">42.50</td>
+              <td class="mono num">70.00</td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;gap:10px;align-items:flex-start">
+                  <span class="type-pill board">Board</span>
+                  <div>
+                    <div class="name">Rigid board</div>
+                    <div class="subline">Board · 2.00" thk · 3# · ASJ</div>
+                  </div>
+                </div>
+              </td>
+              <td class="mono num">40.00</td>
+              <td class="mono num">900.00</td>
+              <td class="mono num">400.00</td>
+              <td class="mono num">500.00</td>
+              <td class="mono num" style="font-weight:800">10.00</td>
+              <td class="mono num">22.50</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 2 · Hub -->
+    <section class="panel" id="panel-hub">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Mike</p>
+          <h1>Production</h1>
+          <p class="lede">One row per bid — open a ready row to see the chart report.</p>
+        </div>
+      </div>
+      <form class="search" onsubmit="return false;">
+        <input type="search" placeholder="Search job #, estimate #…" />
+        <button type="button" class="btn btn-ghost">Search</button>
+      </form>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Estimate #</th>
+              <th>Bid name</th>
+              <th>Job #</th>
+              <th>Specs ready?</th>
+              <th>Status</th>
+              <th>Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr onclick="showPanel('report')">
+              <td class="mono name">IMD6491</td>
+              <td>MCPS North Bethesda Middle School</td>
+              <td class="mono">J-44108</td>
+              <td><span class="badge badge-ok">Yes (48)</span></td>
+              <td><span class="badge badge-green">On track</span></td>
+              <td>Sep 28, 2026</td>
+            </tr>
+            <tr onclick="showPanel('report')">
+              <td class="mono name">MIKE-WS-3</td>
+              <td>Mike Workspace</td>
+              <td class="mono">J-39012</td>
+              <td><span class="badge badge-ok">Yes (22)</span></td>
+              <td><span class="badge badge-red">Over hours</span></td>
+              <td>Sep 26, 2026</td>
+            </tr>
+            <tr style="opacity:0.55;cursor:default">
+              <td class="mono name">GOEL-4412</td>
+              <td>Silver Spring Medical Pavilion</td>
+              <td class="mono">—</td>
+              <td><span class="badge badge-no">No</span></td>
+              <td><span class="badge badge-unk">Specs needed</span></td>
+              <td>Sep 22, 2026</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="foot">Click a Specs-ready row → report with charts.</p>
+    </section>
+
+    <!-- 3 · Empty -->
+    <section class="panel" id="panel-empty">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Mike</p>
+          <h1>Production</h1>
+          <p class="lede">One row per bid — combined Mike takeoff.</p>
+        </div>
+      </div>
+      <div class="empty">
+        <h2>Upload Mike + generate Specs on a bid first</h2>
+        <p>Production list comes from <code>GET /production-reports</code>.</p>
+        <a class="btn btn-brand" href="/estimation-files-mockup.html">Estimation files</a>
+      </div>
+    </section>
+
+    <p class="note">
+      This is the <strong>Production</strong> mock — open at
+      <code>/production-mockup.html</code>.
+      View <strong>1</strong> has the polished charts (donut, area, bars, KPIs)
+      applied to hours / commodities — not Estimation files.
+    </p>
+  </div>
+
+  <script>
+    function showPanel(id) {
+      document.querySelectorAll(".panel").forEach((p) => p.classList.remove("is-on"));
+      document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("is-on"));
+      document.getElementById("panel-" + id)?.classList.add("is-on");
+      document.querySelector('.tabs button[data-panel="' + id + '"]')?.classList.add("is-on");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    document.querySelectorAll(".tabs button").forEach((btn) => {
+      btn.addEventListener("click", () => showPanel(btn.getAttribute("data-panel")));
+    });
+  </script>
+</body>
+</html>
