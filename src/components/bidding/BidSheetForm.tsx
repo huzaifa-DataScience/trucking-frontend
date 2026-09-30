@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Card, CardHeader } from "@/components/ui/Card";
 import {
   BidFormField,
@@ -90,7 +91,12 @@ export function BidSheetForm() {
   const [prefillLoading, setPrefillLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<BidSheetTab>("sheet");
   const [processMeta, setProcessMeta] = useState<ProcessMeta | null>(null);
+  const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null);
   const { canSummary } = useBiddingAccess();
+
+  useEffect(() => {
+    setToolbarHost(document.getElementById("bid-proposal-toolbar-host"));
+  }, []);
   const canViewSummary = canSummary;
 
   useEffect(() => {
@@ -205,8 +211,32 @@ export function BidSheetForm() {
   const attachmentCount = bid.attachments?.length ?? 0;
   const showResultsRail = canViewSummary && activeTab === "sheet";
 
+  const toolbar = (
+    <BidSheetToolbar
+      isEditable={isEditable}
+      saving={saving}
+      dirty={dirty}
+      lastSavedAt={lastSavedAt}
+      status={bid.status}
+      serverVerifyWarnings={serverVerifyWarnings}
+      onPreview={previewCalculate}
+      onSave={() =>
+        void (async () => {
+          if (!isEditable) {
+            await saveCoverSheet();
+            return;
+          }
+          if (processDirty) await saveProcess();
+          await saveNow();
+        })()
+      }
+      onSubmit={() => void markSubmitted()}
+      onVerifyServer={() => void verifyServerCalc()}
+    />
+  );
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 ui-animate-in">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 ui-animate-in">
       <header className="shrink-0">
         <h2 className="text-base font-semibold text-ink">Proposal</h2>
         <p className="mt-1 text-[13px] text-ink/45">
@@ -215,43 +245,47 @@ export function BidSheetForm() {
         </p>
       </header>
 
-      <BidSheetAlerts
-        error={error}
-        warnings={warnings}
-        isEditable={isEditable}
-        status={bid.status}
-        saving={saving}
-        onReopen={() => void reopenAsDraft()}
-      />
-
-      {!isEditable && canRead && bid.status === "draft" ? (
-        <div className="rounded-xl border border-ink/[0.08] bg-ink/[0.03] px-4 py-2.5 text-xs text-ink/60">
-          View-only — you need{" "}
-          <span className="font-mono">{PERMISSIONS.biddingWrite}</span> to edit
-          this draft.
-        </div>
-      ) : null}
-
-      <BidSheetTabNav
-        active={activeTab}
-        onChange={setActiveTab}
-        attachmentCount={attachmentCount}
-      />
-
-      {!canViewSummary ? (
-        <RestrictedState
-          title="Totals restricted"
-          message="You can edit this bid, but MIKE/PJ totals and calculation detail require additional access."
-          permission="bidding:summary"
+      <div className="shrink-0 space-y-3">
+        <BidSheetAlerts
+          error={error}
+          warnings={warnings}
+          isEditable={isEditable}
+          status={bid.status}
+          saving={saving}
+          onReopen={() => void reopenAsDraft()}
         />
-      ) : null}
+
+        {!isEditable && canRead && bid.status === "draft" ? (
+          <div className="rounded-xl border border-ink/[0.08] bg-ink/[0.03] px-4 py-2.5 text-xs text-ink/60">
+            View-only — you need{" "}
+            <span className="font-mono">{PERMISSIONS.biddingWrite}</span> to edit
+            this draft.
+          </div>
+        ) : null}
+
+        <BidSheetTabNav
+          active={activeTab}
+          onChange={setActiveTab}
+          attachmentCount={attachmentCount}
+        />
+
+        {!canViewSummary ? (
+          <RestrictedState
+            title="Totals restricted"
+            message="You can edit this bid, but MIKE/PJ totals and calculation detail require additional access."
+            permission="bidding:summary"
+          />
+        ) : null}
+      </div>
 
       <div
         className={
-          showResultsRail ? "bid-workspace min-h-0 flex-1" : "min-h-0 flex-1"
+          showResultsRail
+            ? "bid-workspace min-h-0"
+            : "flex min-h-0 flex-col"
         }
       >
-        <div className="bid-workspace-form space-y-[18px] pb-8">
+        <div className="bid-workspace-form space-y-[18px] pb-4">
           {activeTab === "sheet" ? (
             <>
           <BidSheetHeaderSection
@@ -775,30 +809,13 @@ export function BidSheetForm() {
         ) : null}
       </div>
 
-      <div className="sticky bottom-0 z-10 shrink-0 border-t border-ink/[0.06] bg-canvas/95 pt-3 pb-1 backdrop-blur-md">
-        <BidSheetToolbar
-          isEditable={isEditable}
-          saving={saving}
-          dirty={dirty}
-          lastSavedAt={lastSavedAt}
-          status={bid.status}
-          serverVerifyWarnings={serverVerifyWarnings}
-          onPreview={previewCalculate}
-          onSave={() =>
-            void (async () => {
-              if (!isEditable) {
-                await saveCoverSheet();
-                return;
-              }
-              // Match header Save + sheet calc: flush process draft then calculator.
-              if (processDirty) await saveProcess();
-              await saveNow();
-            })()
-          }
-          onSubmit={() => void markSubmitted()}
-          onVerifyServer={() => void verifyServerCalc()}
-        />
-      </div>
+      {toolbarHost
+        ? createPortal(toolbar, toolbarHost)
+        : (
+            <div className="shrink-0 border-t border-ink/[0.06] bg-canvas pt-3 pb-1">
+              {toolbar}
+            </div>
+          )}
     </div>
   );
 }
