@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Production — rounded charts color options</title>
+  <style>
+    :root {
+      --bg: #eef1f5;
+      --surface: #ffffff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: rgba(15, 23, 42, 0.08);
+      --brand: #ff7b11;
+      --brand-deep: #c2410c;
+      --canvas: #f4f6f9;
+
+      /* Palette A — Brand warmth (default) */
+      --c1: #ff7b11;
+      --c1b: #ffb06a;
+      --c2: #e11d48;
+      --c2b: #fb7185;
+      --c3: #0d9488;
+      --c3b: #5eead4;
+      --ring-shadow: rgba(255,123,17,0.10);
+    }
+    body.palette-ocean {
+      --c1: #2563eb;
+      --c1b: #93c5fd;
+      --c2: #7c3aed;
+      --c2b: #c4b5fd;
+      --c3: #0891b2;
+      --c3b: #67e8f9;
+      --ring-shadow: rgba(37,99,235,0.10);
+    }
+    body.palette-ink {
+      --c1: #1e293b;
+      --c1b: #64748b;
+      --c2: #ff7b11;
+      --c2b: #ffb06a;
+      --c3: #475569;
+      --c3b: #94a3b8;
+      --ring-shadow: rgba(30,41,59,0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .shell {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 20px 64px;
+    }
+
+    .tabs, .palettes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .tabs button, .palettes button {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--muted);
+      box-shadow: 0 6px 18px -10px rgba(1,1,1,0.25);
+    }
+    .tabs button.is-on,
+    .palettes button.is-on {
+      background: var(--brand);
+      color: #fff;
+    }
+    .palettes {
+      margin-bottom: 18px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid var(--line);
+      align-items: center;
+    }
+    .palettes .label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-right: 4px;
+    }
+    .swatches {
+      display: inline-flex;
+      gap: 4px;
+      margin-left: 2px;
+      vertical-align: middle;
+    }
+    .swatches i {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      display: inline-block;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+    }
+
+    .panel { display: none; }
+    .panel.is-on { display: block; }
+
+    .idea-tag {
+      display: inline-block;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: rgba(255,123,17,0.12);
+      color: var(--brand-deep);
+    }
+
+    .page-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .eyebrow {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--brand);
+    }
+    h1 {
+      margin: 6px 0 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .lede {
+      margin: 4px 0 0;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    .stage-tabs {
+      display: inline-flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.85);
+    }
+    .stage-tabs span {
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .stage-tabs span.is-on {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .warn {
+      margin-bottom: 12px;
+      border-radius: 12px;
+      border: 1px solid #fcd34d;
+      background: #fffbeb;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #92400e;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid rgba(1,1,1,0.1);
+      background: rgba(1,1,1,0.04);
+      color: var(--muted);
+    }
+    .status-pill.ok {
+      border-color: color-mix(in srgb, var(--c3) 35%, transparent);
+      background: color-mix(in srgb, var(--c3) 12%, white);
+      color: color-mix(in srgb, var(--c3) 80%, black);
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 800px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      padding: 14px;
+      box-shadow: 0 8px 22px -16px rgba(15,23,42,0.22);
+    }
+    .kpi .label { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .kpi .value {
+      margin-top: 6px;
+      font-size: 1.45rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.03em;
+    }
+    .kpi .hint { margin-top: 4px; font-size: 11px; color: var(--muted); }
+    .kpi.dim .value { color: rgba(17,24,39,0.32); }
+    .kpi .value.c1 { color: var(--c1); }
+    .kpi .value.c2 { color: var(--c2); }
+    .kpi .value.c3 { color: var(--c3); }
+
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 860px) {
+      .charts { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+      padding: 16px;
+      box-shadow: 0 8px 22px -16px rgba(15,23,42,0.22);
+    }
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .card h3 { margin: 0; font-size: 14px; font-weight: 700; }
+    .card .sub { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+
+    .mix {
+      display: grid;
+      grid-template-columns: 148px 1fr;
+      gap: 14px;
+      align-items: center;
+    }
+    @media (max-width: 520px) {
+      .mix { grid-template-columns: 1fr; justify-items: center; }
+    }
+
+    .donut-wrap { width: 148px; height: 148px; }
+    .donut-ring {
+      width: 148px;
+      height: 148px;
+      border-radius: 50%;
+      background: conic-gradient(from -90deg, var(--c1) 0 100%);
+      display: grid;
+      place-items: center;
+      box-shadow:
+        0 0 0 6px var(--ring-shadow),
+        inset 0 0 0 1px rgba(15,23,42,0.04);
+    }
+    .donut-ring.rich {
+      background: conic-gradient(
+        from -90deg,
+        var(--c1) 0 47%,
+        var(--c2) 47% 75%,
+        var(--c3) 75% 100%
+      );
+    }
+    .donut-hole {
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      background: var(--surface);
+      box-shadow: inset 0 0 0 1px var(--line);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .donut-hole strong {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .donut-hole span {
+      margin-top: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .mix-legend { display: grid; gap: 8px; width: 100%; }
+    .mix-tile {
+      display: grid;
+      grid-template-columns: 12px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--canvas);
+    }
+    .mix-tile .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      box-shadow: 0 0 0 3px rgba(15,23,42,0.04);
+    }
+    .mix-tile .name {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(17,24,39,0.78);
+    }
+    .mix-tile .val {
+      font-size: 13px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .mix-tile.is-empty .val { color: rgba(17,24,39,0.32); }
+    .mix-tile.is-empty { background: #f8fafc; }
+
+    .vbars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      height: 190px;
+      align-items: end;
+    }
+    .vcol {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      height: 100%;
+      gap: 8px;
+    }
+    .vcol .val {
+      font-size: 12px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .vcol .track {
+      width: 100%;
+      max-width: 52px;
+      flex: 1;
+      border-radius: 999px;
+      background: #eef2f7;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+      padding: 3px;
+    }
+    .vcol .fill {
+      width: 100%;
+      border-radius: 999px;
+      min-height: 8px;
+    }
+    .vcol .x {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.2;
+    }
+    .vcol.is-empty .val { color: rgba(17,24,39,0.32); }
+    .vcol.is-empty .fill {
+      height: 8px !important;
+      background: #cbd5e1 !important;
+      opacity: 0.55;
+    }
+
+    .comm { display: grid; gap: 10px; }
+    .comm-row {
+      padding: 11px 12px;
+      border-radius: 14px;
+      background: var(--canvas);
+    }
+    .comm-row .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .comm-row .name { font-size: 13px; font-weight: 700; }
+    .comm-row .hrs {
+      font-size: 13px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .comm-row .track {
+      height: 10px;
+      border-radius: 999px;
+      background: #e8edf3;
+      overflow: hidden;
+    }
+    .comm-row .fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--c1), var(--c1b));
+    }
+
+    .card-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 168px;
+      padding: 18px;
+      text-align: center;
+      border-radius: 14px;
+      background: var(--canvas);
+      border: 1px dashed rgba(15,23,42,0.12);
+    }
+    .card-empty strong { font-size: 13px; }
+    .card-empty p {
+      margin: 0;
+      max-width: 15rem;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .pair-list { display: grid; gap: 12px; }
+    .pair {
+      padding: 11px 12px;
+      border-radius: 14px;
+      background: var(--canvas);
+    }
+    .pair .lbl {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .pair .line {
+      display: grid;
+      grid-template-columns: 36px 1fr 40px;
+      gap: 8px;
+      align-items: center;
+      margin-top: 5px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .pair .track {
+      height: 9px;
+      border-radius: 999px;
+      background: #e8edf3;
+      overflow: hidden;
+    }
+    .pair .track > i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+    }
+    .pair .track > i.mike {
+      background: linear-gradient(90deg, var(--c1), var(--c1b));
+    }
+    .pair .track > i.site {
+      background: linear-gradient(90deg, var(--c2), var(--c2b));
+    }
+    .pair .line .n {
+      text-align: right;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+    }
+
+    .note {
+      margin-top: 20px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #fff8f0;
+      border: 1px solid #ffd7b0;
+      font-size: 13px;
+      color: #7a4a12;
+    }
+    .note code {
+      font-size: 0.85em;
+      background: rgba(0,0,0,0.05);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="palette-warm">
+  <div class="shell">
+    <div class="palettes" role="group" aria-label="Color palette">
+      <span class="label">Colors</span>
+      <button type="button" class="is-on" data-palette="warm">
+        Warm brand
+        <span class="swatches">
+          <i style="background:#ff7b11"></i>
+          <i style="background:#e11d48"></i>
+          <i style="background:#0d9488"></i>
+        </span>
+      </button>
+      <button type="button" data-palette="ocean">
+        Ocean
+        <span class="swatches">
+          <i style="background:#2563eb"></i>
+          <i style="background:#7c3aed"></i>
+          <i style="background:#0891b2"></i>
+        </span>
+      </button>
+      <button type="button" data-palette="ink">
+        Ink + orange
+        <span class="swatches">
+          <i style="background:#1e293b"></i>
+          <i style="background:#ff7b11"></i>
+          <i style="background:#475569"></i>
+        </span>
+      </button>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" data-panel="sparse">1 · Sparse (estimate only)</button>
+      <button type="button" class="is-on" data-panel="rich">2 · Full data</button>
+    </div>
+
+    <section class="panel" id="panel-sparse">
+      <span class="idea-tag">Rounded · new colors</span>
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Production report</p>
+          <h1>IMD6491</h1>
+          <p class="lede">MCPS North Bethesda Middle School</p>
+        </div>
+        <span class="status-pill">No clock data</span>
+      </div>
+      <div class="stage-tabs"><span>Specs</span><span class="is-on">Production</span></div>
+      <div class="warn">Link a job on the bid for Trimble received + Connecteam hours</div>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="label">Full job estimate</div>
+          <div class="value c1">815.49</div>
+          <div class="hint">Mike labor hrs</div>
+        </div>
+        <div class="kpi dim">
+          <div class="label">Material on site</div>
+          <div class="value">—</div>
+          <div class="hint">Needs job link</div>
+        </div>
+        <div class="kpi dim">
+          <div class="label">Hours worked</div>
+          <div class="value">—</div>
+          <div class="hint">Needs Connecteam</div>
+        </div>
+        <div class="kpi dim">
+          <div class="label">Variance</div>
+          <div class="value">—</div>
+          <div class="hint">On site − worked</div>
+        </div>
+      </div>
+
+      <div class="charts">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Hours mix</h3>
+              <p class="sub">Rounded donut · palette-driven</p>
+            </div>
+          </div>
+          <div class="mix">
+            <div class="donut-wrap">
+              <div class="donut-ring">
+                <div class="donut-hole">
+                  <strong>—</strong>
+                  <span>Variance</span>
+                </div>
+              </div>
+            </div>
+            <div class="mix-legend">
+              <div class="mix-tile">
+                <span class="dot" style="background:var(--c1)"></span>
+                <span class="name">Full job estimate</span>
+                <span class="val">815.49</span>
+              </div>
+              <div class="mix-tile is-empty">
+                <span class="dot" style="background:var(--c2)"></span>
+                <span class="name">Material on site</span>
+                <span class="val">—</span>
+              </div>
+              <div class="mix-tile is-empty">
+                <span class="dot" style="background:var(--c3)"></span>
+                <span class="name">Hours worked</span>
+                <span class="val">—</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Labor hours</h3>
+              <p class="sub">Rounded pill bars</p>
+            </div>
+            <span class="status-pill">No clock data</span>
+          </div>
+          <div class="vbars">
+            <div class="vcol">
+              <span class="val">815.49</span>
+              <div class="track">
+                <div class="fill" style="height:92%;background:linear-gradient(180deg,var(--c1b),var(--c1))"></div>
+              </div>
+              <span class="x">Full<br/>estimate</span>
+            </div>
+            <div class="vcol is-empty">
+              <span class="val">—</span>
+              <div class="track"><div class="fill"></div></div>
+              <span class="x">On site</span>
+            </div>
+            <div class="vcol is-empty">
+              <span class="val">—</span>
+              <div class="track"><div class="fill"></div></div>
+              <span class="x">Worked</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Commodity hours on site</h3>
+              <p class="sub">Empty until Trimble is linked</p>
+            </div>
+          </div>
+          <div class="card-empty">
+            <strong>No material on site yet</strong>
+            <p>Link a Trimble job to show rounded on-site hour bars.</p>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Full est vs on site</h3>
+              <p class="sub">Paired rounded gradients</p>
+            </div>
+          </div>
+          <div class="pair-list">
+            <div class="pair">
+              <div class="lbl">Duct Wrap 1.5″</div>
+              <div class="line"><span>Est</span><div class="track"><i class="mike" style="width:100%"></i></div><span class="n">340</span></div>
+              <div class="line"><span>Site</span><div class="track"><i class="site" style="width:0%"></i></div><span class="n" style="color:rgba(17,24,39,0.32)">—</span></div>
+            </div>
+            <div class="pair">
+              <div class="lbl">Fiberglass 1.5″</div>
+              <div class="line"><span>Est</span><div class="track"><i class="mike" style="width:65%"></i></div><span class="n">221</span></div>
+              <div class="line"><span>Site</span><div class="track"><i class="site" style="width:0%"></i></div><span class="n" style="color:rgba(17,24,39,0.32)">—</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel is-on" id="panel-rich">
+      <span class="idea-tag">With material on site + hours worked</span>
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Production report</p>
+          <h1>IMD6491</h1>
+          <p class="lede">J-44108 · 11 workers</p>
+        </div>
+        <span class="status-pill ok">On track</span>
+      </div>
+      <div class="stage-tabs"><span>Specs</span><span class="is-on">Production</span></div>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="label">Full job estimate</div>
+          <div class="value c1">815.49</div>
+          <div class="hint">Mike labor hrs</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Material on site</div>
+          <div class="value c2">488.20</div>
+          <div class="hint">Trimble ÷ rate</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Hours worked</div>
+          <div class="value c3">412.60</div>
+          <div class="hint">Connecteam</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Variance</div>
+          <div class="value c3">−75.60</div>
+          <div class="hint">On site − worked</div>
+        </div>
+      </div>
+
+      <div class="charts">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Hours mix</h3>
+              <p class="sub">Three-tone rounded donut</p>
+            </div>
+          </div>
+          <div class="mix">
+            <div class="donut-wrap">
+              <div class="donut-ring rich">
+                <div class="donut-hole">
+                  <strong class="c3" style="color:var(--c3)">−75.6</strong>
+                  <span>Variance</span>
+                </div>
+              </div>
+            </div>
+            <div class="mix-legend">
+              <div class="mix-tile">
+                <span class="dot" style="background:var(--c1)"></span>
+                <span class="name">Full job estimate</span>
+                <span class="val">815.49</span>
+              </div>
+              <div class="mix-tile">
+                <span class="dot" style="background:var(--c2)"></span>
+                <span class="name">Material on site</span>
+                <span class="val">488.20</span>
+              </div>
+              <div class="mix-tile">
+                <span class="dot" style="background:var(--c3)"></span>
+                <span class="name">Hours worked</span>
+                <span class="val">412.60</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Labor hours</h3>
+              <p class="sub">Rounded pill columns</p>
+            </div>
+            <span class="status-pill ok">On track</span>
+          </div>
+          <div class="vbars">
+            <div class="vcol">
+              <span class="val">815</span>
+              <div class="track">
+                <div class="fill" style="height:100%;background:linear-gradient(180deg,var(--c1b),var(--c1))"></div>
+              </div>
+              <span class="x">Full<br/>estimate</span>
+            </div>
+            <div class="vcol">
+              <span class="val">488</span>
+              <div class="track">
+                <div class="fill" style="height:60%;background:linear-gradient(180deg,var(--c2b),var(--c2))"></div>
+              </div>
+              <span class="x">On site</span>
+            </div>
+            <div class="vcol">
+              <span class="val">413</span>
+              <div class="track">
+                <div class="fill" style="height:51%;background:linear-gradient(180deg,var(--c3b),var(--c3))"></div>
+              </div>
+              <span class="x">Worked</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Commodity hours on site</h3>
+              <p class="sub">Brand-gradient rounded tracks</p>
+            </div>
+          </div>
+          <div class="comm">
+            <div class="comm-row">
+              <div class="top"><span class="name">Duct Wrap 1.5″</span><span class="hrs">142.50</span></div>
+              <div class="track"><div class="fill" style="width:100%"></div></div>
+            </div>
+            <div class="comm-row">
+              <div class="top"><span class="name">Duct Wrap 2.0″</span><span class="hrs">98.20</span></div>
+              <div class="track"><div class="fill" style="width:69%"></div></div>
+            </div>
+            <div class="comm-row">
+              <div class="top"><span class="name">Fiberglass 1.5″</span><span class="hrs">64.10</span></div>
+              <div class="track"><div class="fill" style="width:45%"></div></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Full est vs on site</h3>
+              <p class="sub">Est = c1 · Site = c2</p>
+            </div>
+          </div>
+          <div class="pair-list">
+            <div class="pair">
+              <div class="lbl">Duct Wrap 1.5″</div>
+              <div class="line"><span>Est</span><div class="track"><i class="mike" style="width:100%"></i></div><span class="n">340</span></div>
+              <div class="line"><span>Site</span><div class="track"><i class="site" style="width:42%"></i></div><span class="n">143</span></div>
+            </div>
+            <div class="pair">
+              <div class="lbl">Fiberglass 1.5″</div>
+              <div class="line"><span>Est</span><div class="track"><i class="mike" style="width:65%"></i></div><span class="n">221</span></div>
+              <div class="line"><span>Site</span><div class="track"><i class="site" style="width:19%"></i></div><span class="n">64</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <p class="note">
+      Open at <code>/production-rounded-charts-mockup.html</code>.
+      <strong>2 · Full data</strong> is the default — shows estimate <em>and</em>
+      material on site <em>and</em> hours worked (donut 3 slices, all bars filled).
+      <strong>1 · Sparse</strong> is today’s state (estimate only).
+      Switch <strong>Colors</strong> to try Warm / Ocean / Ink+orange.
+    </p>
+  </div>
+
+  <script>
+    function showPanel(id) {
+      document.querySelectorAll(".panel").forEach((p) => p.classList.remove("is-on"));
+      document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("is-on"));
+      document.getElementById("panel-" + id)?.classList.add("is-on");
+      document.querySelector('.tabs button[data-panel="' + id + '"]')?.classList.add("is-on");
+    }
+    document.querySelectorAll(".tabs button").forEach((btn) => {
+      btn.addEventListener("click", () => showPanel(btn.getAttribute("data-panel")));
+    });
+
+    function setPalette(name) {
+      document.body.classList.remove("palette-warm", "palette-ocean", "palette-ink");
+      document.body.classList.add("palette-" + name);
+      document.querySelectorAll(".palettes button").forEach((b) => b.classList.remove("is-on"));
+      document.querySelector('.palettes button[data-palette="' + name + '"]')?.classList.add("is-on");
+    }
+    document.querySelectorAll(".palettes button").forEach((btn) => {
+      btn.addEventListener("click", () => setPalette(btn.getAttribute("data-palette")));
+    });
+    setPalette("warm");
+  </script>
+</body>
+</html>
