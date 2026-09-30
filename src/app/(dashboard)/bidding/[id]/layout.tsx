@@ -17,7 +17,9 @@ export default function BidSheetRootLayout({
   return (
     <BidSheetProvider bidId={id}>
       <Suspense fallback={<BidSheetSkeleton />}>
-        <BidSheetLayout>{children}</BidSheetLayout>
+        <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+          <BidSheetLayout>{children}</BidSheetLayout>
+        </div>
       </Suspense>
     </BidSheetProvider>
   );

@@ -110,7 +110,7 @@ export function BidEstimatingSetupStage() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <header>
         <h2 className="text-base font-semibold text-ink">Estimating Setup</h2>
         <p className="mt-1 text-xs text-ink/40">

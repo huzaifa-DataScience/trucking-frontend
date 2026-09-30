@@ -142,7 +142,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   }, [menuOpen]);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-ink/[0.06] bg-surface/75 shadow-[0_1px_0_rgba(255,255,255,0.6)_inset] backdrop-blur-xl">
+    <header className="shrink-0 z-30 border-b border-ink/[0.06] bg-surface/75 shadow-[0_1px_0_rgba(255,255,255,0.6)_inset] backdrop-blur-xl">
       <div className="flex h-auto w-full flex-wrap items-center gap-2 px-3 py-2 sm:h-[3.75rem] sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-0 lg:px-8">
         <div className="order-2 flex min-w-0 flex-1 items-center gap-2 sm:order-1 sm:gap-3">
           <button

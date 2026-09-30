@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  experimental: {
+    // Persistent Turbopack FS cache often corrupts under memory pressure on Windows.
+    turbopackFileSystemCacheForDev: false,
+  },
   // Allow dev requests from server IP and localhost on ports 3000–3005
   allowedDevOrigins: [
     "http://172.20.20.225:3000",

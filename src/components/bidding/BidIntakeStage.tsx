@@ -29,6 +29,43 @@ import {
 import type { BidListItem, LookupNameItem } from "@/lib/bidding/types";
 import { newId } from "@/lib/bidding/newId";
 
+const INTAKE_JUMP_LINKS = [
+  { id: "intake-bid", label: "Bid", observe: ["intake-bid"] },
+  {
+    id: "intake-address",
+    label: "Address / Owner",
+    observe: ["intake-address", "intake-owner"],
+  },
+  {
+    id: "intake-architect",
+    label: "Architect / Mech",
+    observe: ["intake-architect", "intake-mechanical"],
+  },
+  { id: "intake-invitations", label: "Invitations", observe: ["intake-invitations"] },
+  {
+    id: "intake-who",
+    label: "Who else / Documents",
+    observe: ["intake-who", "intake-documents"],
+  },
+  { id: "intake-chain", label: "Contract chain", observe: ["intake-chain"] },
+  { id: "intake-gcs", label: "GCs / mechanicals", observe: ["intake-gcs"] },
+  {
+    id: "intake-attachments",
+    label: "Attachments",
+    observe: ["intake-attachments"],
+  },
+] as const;
+
+/** Offset inside the form scroll pane (stage tabs sit outside it). */
+const INTAKE_SECTION_SCROLL_MT = "scroll-mt-3";
+
+function scrollToIntakeSection(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+}
+
 function TrashIcon() {
   return (
     <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -217,6 +254,44 @@ export function BidIntakeStage() {
     invite_contact: [],
   });
   const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [activeJump, setActiveJump] = useState<string>(INTAKE_JUMP_LINKS[0].id);
+  /** Ignore observer updates briefly after a manual jump click. */
+  const jumpLockUntilRef = useRef(0);
+
+  useEffect(() => {
+    const observeIds = INTAKE_JUMP_LINKS.flatMap((l) => [...l.observe]);
+    const els = observeIds
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el != null);
+    if (!els.length || typeof IntersectionObserver === "undefined") return;
+    const root =
+      (document.querySelector(
+        "[data-bid-sheet-scroll]"
+      ) as HTMLElement | null) ?? null;
+    const visible = new Set<string>();
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) visible.add(e.target.id);
+          else visible.delete(e.target.id);
+        }
+        if (Date.now() < jumpLockUntilRef.current) return;
+        // Deepest intersecting section wins (avoids Contract chain stealing
+        // highlight while Attachments is in view at the bottom).
+        const match = [...INTAKE_JUMP_LINKS]
+          .reverse()
+          .find((l) => l.observe.some((id) => visible.has(id)));
+        if (match) setActiveJump(match.id);
+      },
+      {
+        root,
+        rootMargin: "0px 0px -55% 0px",
+        threshold: [0, 0.05, 0.15, 0.35],
+      }
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [bid?.id]);
 
   useEffect(() => {
     void biddingApi.getProcessMeta().then(setMeta).catch(() => setMeta(null));
@@ -462,12 +537,16 @@ export function BidIntakeStage() {
   function renderPartySection(
     key: "owner" | "architect" | "mechanicalEngineer",
     title: string,
-    role: "owner" | "architect" | "mechanical"
+    role: "owner" | "architect" | "mechanical",
+    sectionId: string
   ) {
     const p = party(draft[key] as ProcessParty);
     const isMechanical = key === "mechanicalEngineer";
     return (
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+      <section
+        id={sectionId}
+        className={`${INTAKE_SECTION_SCROLL_MT} grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]`}
+      >
         <h3 className="col-span-full text-sm font-semibold text-ink">{title}</h3>
         <p className="col-span-full -mt-1 text-xs text-ink/45">
           {isMechanical
@@ -620,8 +699,32 @@ export function BidIntakeStage() {
     );
   }
 
+  const intakeJumpNav = (
+    <>
+      {INTAKE_JUMP_LINKS.map((l) => (
+        <button
+          key={l.id}
+          type="button"
+          aria-current={activeJump === l.id ? "true" : undefined}
+          className={`border-l-2 py-1.5 pl-3 text-left text-[13px] font-medium transition ${
+            activeJump === l.id
+              ? "border-brand font-semibold text-ink"
+              : "border-transparent text-ink/40 hover:text-ink/70"
+          }`}
+          onClick={() => {
+            jumpLockUntilRef.current = Date.now() + 1400;
+            setActiveJump(l.id);
+            scrollToIntakeSection(l.id);
+          }}
+        >
+          {l.label}
+        </button>
+      ))}
+    </>
+  );
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4">
       <header>
         <h2 className="text-base font-semibold text-ink">Intake</h2>
         <p className="mt-1 text-xs text-ink/40">
@@ -629,6 +732,15 @@ export function BidIntakeStage() {
         </p>
       </header>
 
+      <nav
+        className="mb-1 flex flex-row flex-wrap gap-x-3.5 gap-y-2 lg:hidden"
+        aria-label="Intake sections"
+      >
+        {intakeJumpNav}
+      </nav>
+
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_9.5rem] lg:gap-7">
+        <div className="flex min-w-0 flex-col gap-6">
       {error ? (
         <p className="rounded-xl border border-danger/25 bg-danger-tint/40 px-4 py-2 text-sm text-danger">
           {error}
@@ -687,8 +799,11 @@ export function BidIntakeStage() {
         </div>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-        <label className="flex flex-col gap-1">
+      <section
+        id="intake-bid"
+        className={`${INTAKE_SECTION_SCROLL_MT} grid grid-cols-1 gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2 xl:grid-cols-3`}
+      >
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Bid / estimate #</span>
           <input
             className={inputClass}
@@ -697,7 +812,7 @@ export function BidIntakeStage() {
             onChange={(e) => setBidHeader({ estimateNumber: e.target.value })}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Bid type (mandatory)</span>
           <div className="relative">
             <select
@@ -721,7 +836,7 @@ export function BidIntakeStage() {
             <SelectChevron />
           </div>
         </label>
-        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
+        <label className="flex min-w-0 flex-col gap-1.5 sm:col-span-2 xl:col-span-1">
           <span className={labelClass}>
             Bid name (architect name on drawings)
           </span>
@@ -733,7 +848,7 @@ export function BidIntakeStage() {
             placeholder="e.g. Weinberg USP 800 Pharmacy"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Drawing number</span>
           <input
             className={inputClass}
@@ -743,7 +858,7 @@ export function BidIntakeStage() {
             placeholder="Sheet / set number"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Drawing category</span>
           <div className="relative">
             <select
@@ -775,7 +890,7 @@ export function BidIntakeStage() {
             </p>
           ) : null}
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Owner / architect</span>
           <input
             className={inputClass}
@@ -788,7 +903,7 @@ export function BidIntakeStage() {
             }}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Engineer of Record — mechanical</span>
           <input
             className={inputClass}
@@ -803,7 +918,7 @@ export function BidIntakeStage() {
             }}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Due date</span>
           <DatePicker
             ariaLabel="Due date"
@@ -813,16 +928,17 @@ export function BidIntakeStage() {
             onChange={(v) => setField("dueDate", v || null)}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Due time</span>
           <TimePicker
             ariaLabel="Due time"
+            className="w-full"
             disabled={!editable}
             value={draft.dueTime}
             onChange={(v) => setField("dueTime", v)}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Linked job</span>
           <div className="relative">
             <select
@@ -844,7 +960,7 @@ export function BidIntakeStage() {
             <SelectChevron />
           </div>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Bid date</span>
           <DatePicker
             ariaLabel="Bid date"
@@ -858,7 +974,7 @@ export function BidIntakeStage() {
             onChange={(v) => setBaseBidField("bidDate", v)}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Work type</span>
           <div className="relative">
             <select
@@ -882,7 +998,7 @@ export function BidIntakeStage() {
             <SelectChevron />
           </div>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Building type</span>
           <div className="relative">
             <select
@@ -982,7 +1098,10 @@ export function BidIntakeStage() {
         </label>
       </section>
 
-      <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(420px,1fr))]">
+      <div
+        id="intake-address"
+        className={`${INTAKE_SECTION_SCROLL_MT} grid gap-6 grid-cols-[repeat(auto-fit,minmax(420px,1fr))]`}
+      >
         <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
           <h3 className="col-span-full text-sm font-semibold text-ink">
             Project address
@@ -1041,15 +1160,26 @@ export function BidIntakeStage() {
             </div>
           </label>
         </section>
-        {renderPartySection("owner", "Owner", "owner")}
+        {renderPartySection("owner", "Owner", "owner", "intake-owner")}
       </div>
 
-      <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(420px,1fr))]">
-        {renderPartySection("architect", "Architect", "architect")}
-        {renderPartySection("mechanicalEngineer", "Mechanical", "mechanical")}
+      <div
+        id="intake-architect"
+        className={`${INTAKE_SECTION_SCROLL_MT} grid gap-6 grid-cols-[repeat(auto-fit,minmax(420px,1fr))]`}
+      >
+        {renderPartySection("architect", "Architect", "architect", "intake-architect-card")}
+        {renderPartySection(
+          "mechanicalEngineer",
+          "Mechanical",
+          "mechanical",
+          "intake-mechanical"
+        )}
       </div>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
+      <section
+        id="intake-invitations"
+        className={`${INTAKE_SECTION_SCROLL_MT} flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5`}
+      >
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-ink">Invitations</h3>
@@ -1448,7 +1578,10 @@ export function BidIntakeStage() {
         )}
       </section>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
+      <section
+        id="intake-who"
+        className={`${INTAKE_SECTION_SCROLL_MT} flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5`}
+      >
         <div>
           <h3 className="text-sm font-semibold text-ink">
             Who else is bidding?
@@ -1497,7 +1630,10 @@ export function BidIntakeStage() {
         </label>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
+      <section
+        id="intake-documents"
+        className={`${INTAKE_SECTION_SCROLL_MT} flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5`}
+      >
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-ink">
@@ -1602,7 +1738,10 @@ export function BidIntakeStage() {
         )}
       </section>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
+      <section
+        id="intake-chain"
+        className={`${INTAKE_SECTION_SCROLL_MT} flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5`}
+      >
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-ink">Contract chain</h3>
@@ -1760,7 +1899,10 @@ export function BidIntakeStage() {
         )}
       </section>
 
-      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
+      <section
+        id="intake-gcs"
+        className={`${INTAKE_SECTION_SCROLL_MT} rounded-2xl border border-ink/[0.08] bg-surface p-5`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-ink">
@@ -1974,13 +2116,27 @@ export function BidIntakeStage() {
         ))}
       </section>
 
-      <BidAttachmentsSection
-        attachments={(bid.attachments ?? []).filter((a) => a.label !== "drawings")}
-        isEditable={editable}
-        uploading={saving}
-        onUpload={async (file, opts) => uploadAttachment(file, opts)}
-        onDelete={async (id) => deleteAttachment(id)}
-      />
+      <div
+        id="intake-attachments"
+        className={INTAKE_SECTION_SCROLL_MT}
+      >
+        <BidAttachmentsSection
+          attachments={(bid.attachments ?? []).filter((a) => a.label !== "drawings")}
+          isEditable={editable}
+          uploading={saving}
+          onUpload={async (file, opts) => uploadAttachment(file, opts)}
+          onDelete={async (id) => deleteAttachment(id)}
+        />
+      </div>
+        </div>
+
+        <nav
+          className="scrollbar-hide sticky top-2 z-[15] hidden max-h-[calc(100dvh-10rem)] flex-col items-start gap-0.5 self-start overflow-y-auto pt-0.5 lg:flex"
+          aria-label="Intake sections"
+        >
+          {intakeJumpNav}
+        </nav>
+      </div>
     </div>
   );
 }

@@ -243,24 +243,36 @@ type SpecColDef = {
   defaultWidth: number;
   /** Insulation slot index 0–3 → mock tint colors */
   insTone?: 0 | 1 | 2 | 3;
+  /** Top band label (mock nested two-level header). */
+  group: string;
+  /** Leaf sub-column (Code, Thick, Layers) — quieter header tint. */
+  leafSub?: boolean;
 };
 
 /** Match mock: Ins1 orange, Ins2 blue, Ins3 green, Ins4 purple */
 const INS_TONE = [
   {
-    th: "bg-[#fff6ed] text-[#9a3412]",
+    th: "bg-[#fff4e8] text-[#9a3412]",
+    thSub: "bg-[#fff4e8] text-[#9a3412]/75",
+    thGroup: "bg-[#ffe8d1] text-[#9a3412]",
     td: "bg-[#fff6ed]/70",
   },
   {
-    th: "bg-[#eff6ff] text-[#1e40af]",
+    th: "bg-[#edf5ff] text-[#1e40af]",
+    thSub: "bg-[#edf5ff] text-[#1e40af]/75",
+    thGroup: "bg-[#dbeafe] text-[#1e40af]",
     td: "bg-[#eff6ff]/70",
   },
   {
     th: "bg-[#f0fdf4] text-[#166534]",
+    thSub: "bg-[#f0fdf4] text-[#166534]/75",
+    thGroup: "bg-[#dcfce7] text-[#166534]",
     td: "bg-[#f0fdf4]/70",
   },
   {
     th: "bg-[#faf5ff] text-[#6b21a8]",
+    thSub: "bg-[#faf5ff] text-[#6b21a8]/75",
+    thGroup: "bg-[#ede9fe] text-[#6b21a8]",
     td: "bg-[#faf5ff]/70",
   },
 ] as const;
@@ -274,55 +286,121 @@ function buildSpecColDefs(opts: {
   editable: boolean;
 }): SpecColDef[] {
   const cols: SpecColDef[] = [
-    { key: "system", label: "System", defaultWidth: 200 },
-    { key: "systemCode", label: "Code", defaultWidth: 80 },
-    { key: "unit", label: "Unit", defaultWidth: 72 },
-    { key: "area", label: "Area", defaultWidth: 160 },
-    { key: "areaCode", label: "Code", defaultWidth: 80 },
-    { key: "family", label: "Family", defaultWidth: 220 },
-    { key: "layers", label: "Layers", defaultWidth: 96 },
+    { key: "system", label: "System", defaultWidth: 200, group: "Identity" },
+    {
+      key: "systemCode",
+      label: "Code",
+      defaultWidth: 80,
+      group: "Identity",
+      leafSub: true,
+    },
+    {
+      key: "unit",
+      label: "Unit",
+      defaultWidth: 72,
+      group: "Identity",
+      leafSub: true,
+    },
+    { key: "area", label: "Area", defaultWidth: 160, group: "Location" },
+    {
+      key: "areaCode",
+      label: "Code",
+      defaultWidth: 80,
+      group: "Location",
+      leafSub: true,
+    },
+    { key: "family", label: "Family", defaultWidth: 220, group: "Family" },
+    {
+      key: "layers",
+      label: "Layers",
+      defaultWidth: 96,
+      group: "Family",
+      leafSub: true,
+    },
   ];
   for (let i = 0; i < opts.maxInsulationCols; i++) {
     const tone = Math.min(i, 3) as 0 | 1 | 2 | 3;
+    const group = `Insulation ${i + 1}`;
     cols.push(
       {
         key: `ins-${i}`,
-        label: `Insulation ${i + 1}`,
+        label: "Material",
         defaultWidth: 200,
         insTone: tone,
+        group,
       },
       {
         key: `insCode-${i}`,
         label: "Code",
         defaultWidth: 80,
         insTone: tone,
+        group,
+        leafSub: true,
+      },
+      {
+        key: `insThick-${i}`,
+        label: 'Thick"',
+        defaultWidth: 88,
+        insTone: tone,
+        group,
+        leafSub: true,
       }
     );
   }
   cols.push(
-    { key: "mike", label: "Mike code", defaultWidth: 168 },
-    { key: "facing", label: "Facing", defaultWidth: 136 },
-    { key: "covering", label: "Covering", defaultWidth: 190 }
+    { key: "mike", label: "Mike code", defaultWidth: 168, group: "Mike" },
+    { key: "facing", label: "Facing", defaultWidth: 136, group: "Finish" },
+    { key: "covering", label: "Covering", defaultWidth: 190, group: "Finish" }
   );
   if (opts.showDuctShape) {
-    cols.push({ key: "shape", label: "Shape", defaultWidth: 120 });
+    cols.push({
+      key: "shape",
+      label: "Shape",
+      defaultWidth: 120,
+      group: "Finish",
+    });
   }
   cols.push(
-    { key: "from", label: "From", defaultWidth: 108 },
-    { key: "to", label: "To", defaultWidth: 108 },
-    { key: "width", label: 'Width"', defaultWidth: 100 },
-    { key: "thick", label: 'Thick"', defaultWidth: 100 },
-    { key: "mfr", label: "Mfr", defaultWidth: 168 },
-    { key: "preferred", label: "Preferred", defaultWidth: 140 },
-    { key: "accessories", label: "Accessories", defaultWidth: 180 },
-    { key: "section", label: "§", defaultWidth: 88 },
-    { key: "paragraph", label: "¶", defaultWidth: 88 },
-    { key: "notes", label: "Notes", defaultWidth: 220 }
+    { key: "from", label: "From", defaultWidth: 108, group: "Size / thick" },
+    { key: "to", label: "To", defaultWidth: 108, group: "Size / thick" },
+    { key: "width", label: 'Width"', defaultWidth: 100, group: "Size / thick" },
+    {
+      key: "thick",
+      label: 'Row thick"',
+      defaultWidth: 100,
+      group: "Size / thick",
+    },
+    { key: "mfr", label: "Allowed", defaultWidth: 168, group: "Mfr" },
+    { key: "preferred", label: "Pref?", defaultWidth: 140, group: "Mfr" },
+    {
+      key: "accessories",
+      label: "Accessories",
+      defaultWidth: 180,
+      group: "Mfr",
+    },
+    { key: "section", label: "§", defaultWidth: 88, group: "Spec refs" },
+    { key: "paragraph", label: "¶", defaultWidth: 88, group: "Spec refs" },
+    { key: "notes", label: "Notes", defaultWidth: 220, group: "Spec refs" }
   );
   if (opts.editable) {
-    cols.push({ key: "actions", label: "", defaultWidth: 96 });
+    cols.push({ key: "actions", label: "", defaultWidth: 96, group: "" });
   }
   return cols;
+}
+
+function groupSpecColDefs(
+  cols: SpecColDef[]
+): { label: string; span: number; insTone?: 0 | 1 | 2 | 3 }[] {
+  const groups: { label: string; span: number; insTone?: 0 | 1 | 2 | 3 }[] = [];
+  for (const c of cols) {
+    const last = groups[groups.length - 1];
+    if (last && last.label === c.group) {
+      last.span += 1;
+    } else {
+      groups.push({ label: c.group, span: 1, insTone: c.insTone });
+    }
+  }
+  return groups;
 }
 
 function ResizableTh({
@@ -330,18 +408,27 @@ function ResizableTh({
   width,
   onResize,
   toneClass,
+  stickyTop,
 }: {
   label: string;
   width: number;
   onResize: (next: number) => void;
   toneClass?: string;
+  stickyTop?: number;
 }) {
   return (
     <th
-      className={`relative whitespace-nowrap border-r border-ink/[0.04] px-3 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.05em] ${
+      className={`relative whitespace-nowrap border-r border-ink/[0.04] px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.05em] ${
         toneClass ?? "bg-[#f7f8fa] text-ink/40"
       }`}
-      style={{ width, minWidth: 40, maxWidth: width }}
+      style={{
+        width,
+        minWidth: 40,
+        maxWidth: width,
+        ...(stickyTop != null
+          ? { position: "sticky" as const, top: stickyTop, zIndex: 3 }
+          : null),
+      }}
     >
       {label}
       <span
@@ -1639,43 +1726,33 @@ export function BidSpecSheetsSection({
               Mike code).
             </p>
           </div>
-          {editable ? (
-            <div className="flex flex-wrap gap-2">
-              {ADD_KINDS.map((kind) => (
-                <button
-                  key={kind}
-                  type="button"
-                  disabled={sheets.length >= MAX_SPEC_SHEETS}
-                  onClick={() => addSheet(kind)}
-                  className="rounded-xl border border-ink/10 bg-canvas/50 px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-brand/40 hover:text-brand disabled:opacity-40"
-                >
-                  + {kindLabel(kind)}
-                </button>
-              ))}
-            </div>
-          ) : null}
         </div>
 
         {sheets.length === 0 ? (
-          <p className="mt-4 rounded-xl border border-dashed border-ink/15 bg-canvas/30 px-4 py-8 text-center text-sm text-ink/45">
-            No rules yet — add Duct, HVAC pipe, Plumbing, or Equipment.
-          </p>
+          <div className="mt-4">
+            {editable ? (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {ADD_KINDS.map((kind) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    disabled={sheets.length >= MAX_SPEC_SHEETS}
+                    onClick={() => addSheet(kind)}
+                    className="rounded-xl border border-ink/10 bg-canvas/50 px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-brand/40 hover:text-brand disabled:opacity-40"
+                  >
+                    + {kindLabel(kind)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <p className="rounded-xl border border-dashed border-ink/15 bg-canvas/30 px-4 py-8 text-center text-sm text-ink/45">
+              No rules yet — add Duct, HVAC pipe, Plumbing, or Equipment.
+            </p>
+          </div>
         ) : (
           <>
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {allowStackSheets ? (
-                <button
-                  type="button"
-                  onClick={() => setStackAll((v) => !v)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                    stackAll
-                      ? "bg-ink text-white"
-                      : "bg-ink/[0.05] text-ink/70 hover:bg-ink/[0.08]"
-                  }`}
-                >
-                  {stackAll ? "Stacked view" : "Stack all"}
-                </button>
-              ) : null}
+            {/* Mock nested-columns chrome: sheet pills + add kinds + Stack / Add row */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
               {!stackAll
                 ? sheets.map((s) => {
                     const on = s.id === activeId;
@@ -1687,17 +1764,60 @@ export function BidSpecSheetsSection({
                           setStackAll(false);
                           setActiveId(s.id);
                         }}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${
                           on
-                            ? "bg-brand text-white"
-                            : "bg-ink/[0.05] text-ink/70 hover:bg-ink/[0.08]"
+                            ? "border-brand bg-brand text-white"
+                            : "border-ink/[0.08] bg-[#fafafa] text-ink/55 hover:text-ink"
                         }`}
                       >
                         {s.title || kindLabel(s.kind)}
+                        <span
+                          className={`text-[11px] ${on ? "opacity-70" : "text-ink/40"}`}
+                        >
+                          {s.rows.length}
+                        </span>
                       </button>
                     );
                   })
                 : null}
+              {editable
+                ? ADD_KINDS.map((kind) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      disabled={sheets.length >= MAX_SPEC_SHEETS}
+                      onClick={() => addSheet(kind)}
+                      className="rounded-[10px] border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:border-brand/40 hover:text-[#c2410c] disabled:opacity-40"
+                    >
+                      + {kindLabel(kind)}
+                    </button>
+                  ))
+                : null}
+              {allowStackSheets ? (
+                <button
+                  type="button"
+                  onClick={() => setStackAll((v) => !v)}
+                  className={`ml-auto rounded-[10px] border px-3 py-1.5 text-xs font-semibold transition ${
+                    stackAll
+                      ? "border-ink bg-ink text-white"
+                      : "border-ink/10 bg-white text-ink/70 hover:border-brand/40"
+                  }`}
+                >
+                  {stackAll ? "Stacked view" : "Stack all"}
+                </button>
+              ) : (
+                <span className="ml-auto" />
+              )}
+              {editable && active && !stackAll ? (
+                <button
+                  type="button"
+                  disabled={active.rows.length >= MAX_SPEC_ROWS}
+                  onClick={addRow}
+                  className="rounded-[10px] bg-brand px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#f26620] disabled:opacity-40"
+                >
+                  + Add row
+                </button>
+              ) : null}
             </div>
 
             {stackAll ? (
@@ -1834,9 +1954,15 @@ export function BidSpecSheetsSection({
                   ) : null}
                 </div>
 
-                <div className="overflow-x-auto rounded-[14px] border border-ink/[0.07] bg-white">
+                <div className="mb-2 text-xs text-ink/50">
+                  Showing{" "}
+                  <b className="font-semibold text-ink">{active.rows.length}</b>{" "}
+                  of {MAX_SPEC_ROWS} max · horizontal scroll for full cascade
+                </div>
+
+                <div className="max-h-[min(70vh,720px)] overflow-auto rounded-[12px] border border-ink/[0.08] bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
                   <table
-                    className="w-max min-w-full border-separate border-spacing-0 text-left text-[13px] leading-normal"
+                    className="w-max min-w-full border-separate border-spacing-0 text-left text-[12.5px] leading-normal"
                     style={{ tableLayout: "fixed" }}
                   >
                     <colgroup>
@@ -1849,21 +1975,48 @@ export function BidSpecSheetsSection({
                         />
                       ))}
                     </colgroup>
-                    <thead className="sticky top-0 z-[2]">
+                    <thead>
                       <tr>
-                        {specColDefs.map((c) => (
-                          <ResizableTh
-                            key={c.key}
-                            label={c.label}
-                            width={widthFor(c.key, c.defaultWidth)}
-                            onResize={(next) => setColWidth(c.key, next)}
-                            toneClass={
-                              c.insTone != null
-                                ? INS_TONE[c.insTone].th
-                                : undefined
-                            }
-                          />
-                        ))}
+                        {groupSpecColDefs(specColDefs).map((g, gi) => {
+                          const tone =
+                            g.insTone != null ? INS_TONE[g.insTone] : null;
+                          return (
+                            <th
+                              key={`${g.label}-${gi}`}
+                              colSpan={g.span}
+                              className={`sticky top-0 z-[4] border-b border-ink/10 border-r border-ink/[0.08] px-2.5 py-2 text-center text-[10px] font-bold uppercase tracking-[0.08em] ${
+                                tone
+                                  ? tone.thGroup
+                                  : "bg-[#e9ebf0] text-ink/55"
+                              }`}
+                            >
+                              {g.label}
+                            </th>
+                          );
+                        })}
+                      </tr>
+                      <tr>
+                        {specColDefs.map((c) => {
+                          const tone =
+                            c.insTone != null ? INS_TONE[c.insTone] : null;
+                          const leafTone = tone
+                            ? c.leafSub
+                              ? tone.thSub
+                              : tone.th
+                            : c.leafSub
+                              ? "bg-[#eef0f4] text-ink/40"
+                              : undefined;
+                          return (
+                            <ResizableTh
+                              key={c.key}
+                              label={c.label}
+                              width={widthFor(c.key, c.defaultWidth)}
+                              onResize={(next) => setColWidth(c.key, next)}
+                              toneClass={leafTone}
+                              stickyTop={34}
+                            />
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody>
@@ -2150,6 +2303,110 @@ export function BidSpecSheetsSection({
                                     >
                                       {activeSlot ? (
                                         <CodeChip code={displayCode} />
+                                      ) : (
+                                        <span className="text-xs text-ink/25">
+                                          —
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td
+                                      className={`${CELL} ${INS_TONE[Math.min(i, 3) as 0 | 1 | 2 | 3].td}`}
+                                    >
+                                      {activeSlot ? (
+                                        <CellBusy
+                                          busy={dimsLoading && canSize && i === 0}
+                                        >
+                                          {i === 0 &&
+                                          rowThicks.length === 0 &&
+                                          !dimsLoading ? (
+                                            <span className="text-xs text-ink/35">
+                                              —
+                                            </span>
+                                          ) : i === 0 && rowThicks.length > 0 ? (
+                                            <select
+                                              disabled={
+                                                !editable ||
+                                                !canSize ||
+                                                dimsLoading
+                                              }
+                                              className={`${cellBusySelectClass(
+                                                !editable ||
+                                                  !canSize ||
+                                                  dimsLoading,
+                                                dimsLoading && canSize
+                                              )} w-full`}
+                                              value={
+                                                (pick?.thicknessIn ??
+                                                  row.thicknessIn) != null
+                                                  ? String(
+                                                      pick?.thicknessIn ??
+                                                        row.thicknessIn
+                                                    )
+                                                  : ""
+                                              }
+                                              onChange={(e) => {
+                                                const thicknessIn = e.target
+                                                  .value
+                                                  ? Number(e.target.value)
+                                                  : null;
+                                                const layers =
+                                                  resizeInsulationLayers(
+                                                    row.insulationLayers,
+                                                    row.insulationLayerCount
+                                                  ).map((L, idx) =>
+                                                    idx === i
+                                                      ? { ...L, thicknessIn }
+                                                      : L
+                                                  );
+                                                patchRow(active.id, row.id, {
+                                                  ...(i === 0
+                                                    ? { thicknessIn }
+                                                    : {}),
+                                                  insulationLayers: layers,
+                                                });
+                                              }}
+                                            >
+                                              <option value="">
+                                                {dimsLoading ? "Loading…" : "—"}
+                                              </option>
+                                              {rowThicks.map((t) => (
+                                                <option
+                                                  key={t.value}
+                                                  value={String(t.value)}
+                                                >
+                                                  {dimLabel(t)}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          ) : (
+                                            <input
+                                              type="number"
+                                              step="any"
+                                              disabled={!editable || !canSize}
+                                              placeholder="—"
+                                              className={`${selectClass(!editable || !canSize)} w-full`}
+                                              value={pick?.thicknessIn ?? ""}
+                                              onChange={(e) => {
+                                                const thicknessIn = e.target
+                                                  .value
+                                                  ? Number(e.target.value)
+                                                  : null;
+                                                const layers =
+                                                  resizeInsulationLayers(
+                                                    row.insulationLayers,
+                                                    row.insulationLayerCount
+                                                  ).map((L, idx) =>
+                                                    idx === i
+                                                      ? { ...L, thicknessIn }
+                                                      : L
+                                                  );
+                                                patchRow(active.id, row.id, {
+                                                  insulationLayers: layers,
+                                                });
+                                              }}
+                                            />
+                                          )}
+                                        </CellBusy>
                                       ) : (
                                         <span className="text-xs text-ink/25">
                                           —

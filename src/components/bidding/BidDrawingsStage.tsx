@@ -33,7 +33,7 @@ export function BidDrawingsStage() {
   const drawings = (bid.attachments ?? []).filter((a) => a.label === "drawings");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-5">
       <header>
         <h2 className="text-base font-semibold text-ink">Drawings</h2>
         <p className="mt-1 text-[13px] text-ink/45">
