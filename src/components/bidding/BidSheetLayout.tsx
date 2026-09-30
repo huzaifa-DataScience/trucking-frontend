@@ -100,86 +100,100 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-2 overflow-hidden bid-animate-in">
-      <div className="shrink-0 flex flex-col gap-0.5">
-        <button
-          type="button"
-          onClick={() => {
-            void (async () => {
-              if (!(await confirmLeaveUnsaved())) return;
-              router.push("/bidding");
-            })();
-          }}
-          className="inline-flex w-fit items-center gap-1 text-xs font-medium text-ink/50 transition hover:text-brand"
-        >
-          <svg
-            className="h-3.5 w-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            aria-hidden
-          >
-            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Bids
-          {unsavedChanges ? (
-            <span className="text-[10px] font-semibold text-amber-700">
-              · unsaved
-            </span>
-          ) : null}
-        </button>
-        <PageHeader
-          compact
-          title={bid.estimateNumber}
-          subtitle={bid.bidName || "Untitled estimate"}
-          action={
-            <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2.5">
-              <span className="text-xs text-ink/50">
-                {formatWorkType(work ?? undefined)}
-                {" · "}
-                {formatProcessStage(processStage ?? undefined)}
-                {" · "}
-                {formatOutcome(outcome ?? undefined)}
-              </span>
-              <BidStatusBadge status={bid.status} />
-              {bid.canEdit === false ? (
-                <span className="rounded-lg border border-ink/10 bg-ink/[0.04] px-2 py-1 text-[11px] font-semibold text-ink/55">
-                  View only
-                </span>
-              ) : null}
-              {saving ? (
-                <span className="text-xs font-medium text-brand">Saving…</span>
-              ) : null}
-              <span className="hidden text-sm text-ink/45 sm:inline">
-                {bid.companyName}
-              </span>
-              {/* Proposal owns save via sticky “Save & calculate” toolbar */}
-              {stage !== "proposal" ? <BidSaveButton /> : null}
-            </div>
-          }
-        />
-      </div>
-
-      {/* Pinned above the form scroll pane — stays visible while content scrolls. */}
-      <div className="shrink-0 z-[25] border-b border-ink/[0.04] bg-canvas pb-1.5 pt-0.5">
-        <BidStageStrip
-          bidId={bid.id}
-          active={stage}
-          processStage={processStage}
-          workflow={bid.workflow}
-        />
-      </div>
-
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bid-animate-in">
       <div
         data-bid-sheet-scroll
-        className="scrollbar-hide min-h-0 w-full flex-1 overflow-y-auto overscroll-contain pb-48"
+        className="scrollbar-hide min-h-0 w-full flex-1 overflow-y-auto overscroll-contain"
       >
-        {children}
+        <div className="flex flex-col gap-0.5 pb-2 pt-0.5">
+          <button
+            type="button"
+            onClick={() => {
+              void (async () => {
+                if (!(await confirmLeaveUnsaved())) return;
+                router.push("/bidding");
+              })();
+            }}
+            className="inline-flex w-fit items-center gap-1 text-xs font-medium text-ink/50 transition hover:text-brand"
+          >
+            <svg
+              className="h-3.5 w-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              aria-hidden
+            >
+              <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Bids
+            {unsavedChanges ? (
+              <span className="text-[10px] font-semibold text-amber-700">
+                · unsaved
+              </span>
+            ) : null}
+          </button>
+          <PageHeader
+            compact
+            title={bid.estimateNumber}
+            subtitle={bid.bidName || "Untitled estimate"}
+            action={
+              <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2.5">
+                <span className="text-xs text-ink/50">
+                  {formatWorkType(work ?? undefined)}
+                  {" · "}
+                  {formatProcessStage(processStage ?? undefined)}
+                  {" · "}
+                  {formatOutcome(outcome ?? undefined)}
+                </span>
+                <BidStatusBadge status={bid.status} />
+                {bid.canEdit === false ? (
+                  <span className="rounded-lg border border-ink/10 bg-ink/[0.04] px-2 py-1 text-[11px] font-semibold text-ink/55">
+                    View only
+                  </span>
+                ) : null}
+                {saving ? (
+                  <span className="text-xs font-medium text-brand">Saving…</span>
+                ) : null}
+                <span className="hidden text-sm text-ink/45 sm:inline">
+                  {bid.companyName}
+                </span>
+                {stage !== "proposal" ? <BidSaveButton /> : null}
+              </div>
+            }
+          />
+        </div>
+
+        {/* Scrolls away with the title, then pins under the app header. */}
+        <div className="sticky top-0 z-[25] -mx-1 border-b border-ink/[0.06] bg-canvas/95 px-1 pb-1.5 pt-1 backdrop-blur-md">
+          <BidStageStrip
+            bidId={bid.id}
+            active={stage}
+            processStage={processStage}
+            workflow={bid.workflow}
+          />
+        </div>
+
+        <div className={stage === "proposal" ? "pt-2 pb-3" : "pb-48 pt-2"}>
+          {children}
+        </div>
       </div>
+
+      {stage === "proposal" ? (
+        <div
+          id="bid-proposal-toolbar-host"
+          className="shrink-0 z-20 border-t border-ink/[0.06] bg-canvas px-0 pt-2 pb-2"
+        />
+      ) : null}
     </div>
 
-    <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-2.5">
+    <div
+      className={`fixed z-30 flex flex-col items-end gap-2.5 ${
+        stage === "proposal"
+          ? "bottom-24 right-6 xl:right-[calc(2rem+340px+0.75rem)]"
+          : "bottom-6 right-6"
+      }`}
+    >
       <BidFloatingButton
         label="Notes"
         icon={<NotesIcon />}
