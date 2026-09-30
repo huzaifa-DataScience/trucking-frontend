@@ -104,7 +104,7 @@ export function BidOutcomeStage() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <section className="w-full rounded-2xl border border-ink/[0.07] bg-white px-7 py-8 sm:px-10 sm:py-10">
         <header>
           <h2 className="text-xl font-semibold tracking-tight text-ink">

@@ -100,8 +100,8 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-    <div className="flex min-h-0 flex-1 flex-col gap-4 bid-animate-in">
-      <div className="flex flex-col gap-3">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-2 overflow-hidden bid-animate-in">
+      <div className="shrink-0 flex flex-col gap-0.5">
         <button
           type="button"
           onClick={() => {
@@ -110,10 +110,10 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
               router.push("/bidding");
             })();
           }}
-          className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-ink/50 transition hover:text-brand"
+          className="inline-flex w-fit items-center gap-1 text-xs font-medium text-ink/50 transition hover:text-brand"
         >
           <svg
-            className="h-4 w-4"
+            className="h-3.5 w-3.5"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -130,10 +130,11 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
           ) : null}
         </button>
         <PageHeader
+          compact
           title={bid.estimateNumber}
           subtitle={bid.bidName || "Untitled estimate"}
           action={
-            <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2.5">
               <span className="text-xs text-ink/50">
                 {formatWorkType(work ?? undefined)}
                 {" · "}
@@ -160,8 +161,8 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
         />
       </div>
 
-      {/* Sibling of the long form body — sticky only works while its ancestor still spans the scroll. */}
-      <div className="sticky top-[4.75rem] z-[25] -mx-4 border-b border-ink/[0.08] bg-canvas px-4 sm:-mx-6 sm:top-[3.75rem] sm:px-6 lg:-mx-8 lg:px-8">
+      {/* Pinned above the form scroll pane — stays visible while content scrolls. */}
+      <div className="shrink-0 z-[25] border-b border-ink/[0.04] bg-canvas pb-1.5 pt-0.5">
         <BidStageStrip
           bidId={bid.id}
           active={stage}
@@ -170,7 +171,10 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
         />
       </div>
 
-      <div className="flex min-h-0 w-full flex-1 flex-col pb-48">
+      <div
+        data-bid-sheet-scroll
+        className="scrollbar-hide min-h-0 w-full flex-1 overflow-y-auto overscroll-contain pb-48"
+      >
         {children}
       </div>
     </div>

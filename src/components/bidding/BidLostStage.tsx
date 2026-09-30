@@ -35,7 +35,7 @@ export function BidLostStage() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <header>
         <h2 className="text-base font-semibold text-ink">Lost / no-bid</h2>
         <p className="mt-0.5 text-sm text-ink/50">

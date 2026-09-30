@@ -196,7 +196,7 @@ export function BidAssignmentStage() {
     rows.find((r) => r.role === role)?.assigneeName ?? "";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <header>
         <h2 className="text-base font-semibold text-ink">Assignment</h2>
         <p className="mt-1 text-xs text-ink/40">
@@ -216,8 +216,8 @@ export function BidAssignmentStage() {
         </p>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-        <label className="flex items-center gap-2 col-span-full">
+      <section className="grid grid-cols-1 gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2 xl:grid-cols-3">
+        <label className="flex items-center gap-2 sm:col-span-2 xl:col-span-3">
           <input
             type="checkbox"
             disabled={!editable}
@@ -228,7 +228,7 @@ export function BidAssignmentStage() {
             Pursue this bid (uncheck = no bid)
           </span>
         </label>
-        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Captain (pick first)</span>
           <select
             className={inputClass}
@@ -257,7 +257,7 @@ export function BidAssignmentStage() {
             they have a crew.
           </span>
         </label>
-        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Team</span>
           <select
             className={inputClass}
@@ -277,7 +277,7 @@ export function BidAssignmentStage() {
             login captain.
           </span>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Priority</span>
           <input
             className={inputClass}
@@ -287,7 +287,7 @@ export function BidAssignmentStage() {
             placeholder="e.g. high / normal"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Captain name</span>
           <input
             className={inputClass}
@@ -297,7 +297,7 @@ export function BidAssignmentStage() {
             placeholder="Filled from captain pick"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Assistant estimator</span>
           <select
             className={inputClass}
@@ -337,7 +337,7 @@ export function BidAssignmentStage() {
             Assistant estimators from contacts — not the captain list.
           </span>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Time estimate (hrs)</span>
           <input
             type="number"
@@ -353,7 +353,7 @@ export function BidAssignmentStage() {
             }
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Internal estimate due</span>
           <DatePicker
             ariaLabel="Internal estimate due"
@@ -363,7 +363,7 @@ export function BidAssignmentStage() {
             onChange={(v) => setAssignment({ internalEstimateDue: v || null })}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Internal review due</span>
           <DatePicker
             ariaLabel="Internal review due"
@@ -388,9 +388,9 @@ export function BidAssignmentStage() {
         <p className="mt-0.5 mb-3 text-xs text-ink/45">
           Saved with the captain and team. The server fills names from that crew.
         </p>
-        <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {TAKEOFF_ROLES.map((role) => (
-            <label key={role} className="flex flex-col gap-1">
+            <label key={role} className="flex min-w-0 flex-col gap-1.5">
               <span className={labelClass}>{role}</span>
               <input
                 className={inputClass}
@@ -423,15 +423,15 @@ function TechnicalReviewFields({
   const inputClass =
     "rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-brand disabled:opacity-50";
   return (
-    <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-      <h3 className="col-span-full text-sm font-semibold text-ink">Technical review</h3>
-      <p className="col-span-full -mt-2 text-xs text-ink/45">
+    <section className="grid grid-cols-1 gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2 xl:grid-cols-3">
+      <h3 className="text-sm font-semibold text-ink sm:col-span-2 xl:col-span-3">Technical review</h3>
+      <p className="-mt-2 text-xs text-ink/45 sm:col-span-2 xl:col-span-3">
         {noBid
           ? "No-bid does not need takeoff approval to leave Assignment."
           : "Approve for takeoff before handing off. Otherwise the server blocks complete."}
         {blockedReason ? ` ${blockedReason}` : ""}
       </p>
-      <label className="flex flex-col gap-1">
+      <label className="flex min-w-0 flex-col gap-1.5">
         <span className={labelClass}>Prepared by</span>
         <input
           className={inputClass}
@@ -440,7 +440,7 @@ function TechnicalReviewFields({
           onChange={(e) => onChange({ ...review, preparedBy: e.target.value || null })}
         />
       </label>
-      <label className="flex flex-col gap-1">
+      <label className="flex min-w-0 flex-col gap-1.5">
         <span className={labelClass}>Reviewed by</span>
         <input
           className={inputClass}
@@ -449,7 +449,7 @@ function TechnicalReviewFields({
           onChange={(e) => onChange({ ...review, reviewedBy: e.target.value || null })}
         />
       </label>
-      <label className="flex flex-col gap-1">
+      <label className="flex min-w-0 flex-col gap-1.5">
         <span className={labelClass}>Review date</span>
         <DatePicker
           ariaLabel="Review date"

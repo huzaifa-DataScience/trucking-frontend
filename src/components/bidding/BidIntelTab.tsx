@@ -131,7 +131,7 @@ export function BidIntelTab() {
   if (!bid) return null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-ink">
@@ -166,17 +166,17 @@ export function BidIntelTab() {
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       <div className="flex w-full flex-col gap-6">
-        <section className="min-w-0 rounded-2xl border border-ink/[0.07] bg-white px-7 py-7 sm:px-8 sm:py-8">
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div className="flex min-w-0 items-start gap-3.5">
-              <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+        <section className="min-w-0 rounded-2xl border border-ink/[0.07] bg-white px-5 py-4 sm:px-6 sm:py-5">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
                 <PhoneIcon />
               </span>
               <div>
-                <h3 className="text-base font-semibold text-ink">
+                <h3 className="text-sm font-semibold text-ink">
                   Follow-up calls
                 </h3>
-                <p className="mt-1.5 text-sm text-ink/45">
+                <p className="mt-0.5 text-xs text-ink/45">
                   Up to {MAX_FOLLOWUP_COMPANIES} companies, each with up to{" "}
                   {MAX_FOLLOWUP_CALL_ATTEMPTS} dated call attempts.
                 </p>
@@ -185,7 +185,7 @@ export function BidIntelTab() {
             {editable && followUpCalls.length < MAX_FOLLOWUP_COMPANIES ? (
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-brand/35 bg-white px-4 py-2.5 text-sm font-semibold text-brand transition hover:bg-brand/5"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-brand/35 bg-white px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5"
                 onClick={addCompany}
               >
                 <PlusIcon />
@@ -195,14 +195,14 @@ export function BidIntelTab() {
           </div>
 
           {followUpCalls.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-ink/[0.1] bg-[#f0f1f4]/40 px-6 py-12 text-center">
+            <div className="rounded-xl border border-dashed border-ink/[0.1] bg-[#f0f1f4]/40 px-4 py-6 text-center">
               <p className="text-sm text-ink/45">
                 No follow-up calls logged yet.
               </p>
               {editable ? (
                 <button
                   type="button"
-                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"
+                  className="mt-2.5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"
                   onClick={addCompany}
                 >
                   <PlusIcon />
@@ -211,16 +211,16 @@ export function BidIntelTab() {
               ) : null}
             </div>
           ) : (
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-3.5">
               {followUpCalls.map((company, index) => {
                 const attempts = company.callAttempts ?? [];
                 return (
                   <div
                     key={company.id}
-                    className="rounded-2xl border border-ink/[0.06] bg-[#f3f4f6]/70 px-6 py-6"
+                    className="rounded-xl border border-ink/[0.06] bg-[#f3f4f6]/70 px-4 py-4"
                   >
-                    <div className="grid grid-cols-1 items-end gap-5 sm:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_minmax(0,12rem)_auto]">
-                      <label className="flex min-w-0 flex-col gap-2">
+                    <div className="grid grid-cols-1 items-end gap-3.5 sm:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_minmax(0,12rem)_auto]">
+                      <label className="flex min-w-0 flex-col gap-1.5">
                         <span className={labelClass}>Company</span>
                         <input
                           className={inputClass}
@@ -234,7 +234,7 @@ export function BidIntelTab() {
                           }
                         />
                       </label>
-                      <label className="flex min-w-0 flex-col gap-2">
+                      <label className="flex min-w-0 flex-col gap-1.5">
                         <span className={labelClass}>Contact name</span>
                         <input
                           className={inputClass}
@@ -248,7 +248,7 @@ export function BidIntelTab() {
                           }
                         />
                       </label>
-                      <label className="flex min-w-0 flex-col gap-2">
+                      <label className="flex min-w-0 flex-col gap-1.5">
                         <span className={labelClass}>Phone</span>
                         <input
                           className={inputClass}
@@ -267,7 +267,7 @@ export function BidIntelTab() {
                           type="button"
                           aria-label="Remove company"
                           title="Remove company"
-                          className="inline-flex items-center gap-1.5 justify-self-start pb-3 text-sm font-semibold text-[#b91c1c]/85 hover:text-danger xl:justify-self-auto"
+                          className="inline-flex items-center gap-1.5 justify-self-start pb-2 text-sm font-semibold text-[#b91c1c]/85 hover:text-danger xl:justify-self-auto"
                           onClick={() => {
                             void (async () => {
                               const ok = await confirmDialog({
@@ -289,8 +289,8 @@ export function BidIntelTab() {
                       ) : null}
                     </div>
 
-                    <div className="mt-5 rounded-2xl border border-ink/[0.05] bg-white/90 px-5 py-5">
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <div className="mt-3.5 rounded-xl border border-ink/[0.05] bg-white/90 px-4 py-3.5">
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                         <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink/55">
                           <CalendarIcon className="text-ink/40" />
                           Call attempts
@@ -299,7 +299,7 @@ export function BidIntelTab() {
                         attempts.length < MAX_FOLLOWUP_CALL_ATTEMPTS ? (
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-brand/10 px-3.5 py-2 text-sm font-semibold text-brand transition hover:bg-brand/15"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-brand/10 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand/15"
                             onClick={() =>
                               patchCompany(index, {
                                 callAttempts: [
@@ -319,19 +319,19 @@ export function BidIntelTab() {
                         ) : null}
                       </div>
                       {attempts.length === 0 ? (
-                        <p className="py-2 text-sm text-ink/40">
+                        <p className="py-1 text-sm text-ink/40">
                           No calls logged yet.
                         </p>
                       ) : (
                         attempts.map((attempt, attemptIndex) => (
                           <div
                             key={attemptIndex}
-                            className="mt-3.5 grid grid-cols-1 items-end gap-5 sm:grid-cols-[3.5rem_minmax(0,13rem)_1fr_auto]"
+                            className="mt-2.5 grid grid-cols-1 items-end gap-3.5 sm:grid-cols-[3.5rem_minmax(0,13rem)_1fr_auto]"
                           >
-                            <span className="pb-3.5 text-sm font-semibold text-ink/45">
+                            <span className="pb-2.5 text-sm font-semibold text-ink/45">
                               {ordinalLabel(attemptIndex + 1)}
                             </span>
-                            <label className="flex min-w-0 flex-col gap-2">
+                            <label className="flex min-w-0 flex-col gap-1.5">
                               <span className={labelClass}>Date of call</span>
                               <DatePicker
                                 ariaLabel="Date of call"
@@ -348,7 +348,7 @@ export function BidIntelTab() {
                                 }}
                               />
                             </label>
-                            <label className="flex min-w-0 flex-col gap-2">
+                            <label className="flex min-w-0 flex-col gap-1.5">
                               <span className={labelClass}>Remarks</span>
                               <input
                                 className={inputClass}
@@ -373,7 +373,7 @@ export function BidIntelTab() {
                                 type="button"
                                 aria-label="Remove call"
                                 title="Remove call"
-                                className="inline-flex items-center gap-1.5 justify-self-start pb-3 text-sm font-semibold text-[#b91c1c]/70 hover:text-danger sm:justify-self-auto"
+                                className="inline-flex items-center gap-1.5 justify-self-start pb-2 text-sm font-semibold text-[#b91c1c]/70 hover:text-danger sm:justify-self-auto"
                                 onClick={() => {
                                   const next = attempts
                                     .filter((_, i) => i !== attemptIndex)
