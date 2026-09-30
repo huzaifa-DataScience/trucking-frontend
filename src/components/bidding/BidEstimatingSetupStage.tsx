@@ -14,31 +14,40 @@ import {
 
 function CheckIcon() {
   return (
-    <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} aria-hidden>
+    <svg
+      className="h-3 w-3 text-white"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={3}
+      aria-hidden
+    >
       <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-/** Custom checkbox row — 20x20 rounded-square box, brand-orange when checked, whole row clickable. */
+/** Brand-orange checkbox row — matches Intake / Spec sheets. */
 function CheckboxRow({
   checked,
   disabled,
   onChange,
   label,
   badges,
+  className = "",
 }: {
   checked: boolean;
   disabled?: boolean;
   onChange: (checked: boolean) => void;
   label: string;
   badges?: string[];
+  className?: string;
 }) {
   return (
     <label
-      className={`group inline-flex w-fit items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors duration-150 ${
+      className={`group inline-flex w-fit items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors duration-150 ${
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-      } ${checked ? "bg-brand/[0.06]" : "hover:bg-ink/[0.03]"}`}
+      } ${checked ? "bg-brand/[0.07]" : "hover:bg-ink/[0.03]"} ${className}`}
     >
       <input
         type="checkbox"
@@ -50,12 +59,14 @@ function CheckboxRow({
       <span
         aria-hidden
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border-[1.5px] transition-all duration-150 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand ${
-          checked ? "border-brand bg-brand" : "border-ink/25 bg-white group-hover:border-brand/40"
+          checked
+            ? "border-brand bg-brand ring-2 ring-brand/20"
+            : "border-ink/25 bg-white group-hover:border-brand/40"
         }`}
       >
         {checked ? <CheckIcon /> : null}
       </span>
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink/85">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-ink/85">
         {label}
         {badges?.map((b) => (
           <span
@@ -69,6 +80,9 @@ function CheckboxRow({
     </label>
   );
 }
+
+const SECTION =
+  "grid grid-cols-1 gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 sm:grid-cols-2 xl:grid-cols-3";
 
 /** Stage 3 — Estimating Setup (wage decision ≠ wage rate). Spec sheets = next tab. */
 export function BidEstimatingSetupStage() {
@@ -99,7 +113,8 @@ export function BidEstimatingSetupStage() {
   if (!bid) return null;
 
   const b = bid.baseBid ?? {};
-  const wageRateId = lookups.wageRates.find((w) => w.rateLabel === b.wageRateLabel)?.id ?? "";
+  const wageRateId =
+    lookups.wageRates.find((w) => w.rateLabel === b.wageRateLabel)?.id ?? "";
   const num = (value: unknown) => (typeof value === "number" ? value : "");
 
   const clearances = clearanceOptionsFromMeta(meta);
@@ -114,7 +129,13 @@ export function BidEstimatingSetupStage() {
       <header>
         <h2 className="text-base font-semibold text-ink">Estimating Setup</h2>
         <p className="mt-1 text-xs text-ink/40">
-          {saving ? "Saving…" : dirty ? "Unsaved changes" : editable ? "Save to keep changes" : "Read only"}
+          {saving
+            ? "Saving…"
+            : dirty
+              ? "Unsaved changes"
+              : editable
+                ? "Save to keep changes"
+                : "Read only"}
           {" · "}
           Identity (building / GSF / company) is on Intake — wage rate, schedule,
           parking, and lifts are filled here.
@@ -127,8 +148,11 @@ export function BidEstimatingSetupStage() {
         </p>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-        <label className="flex flex-col gap-1">
+      <section className={SECTION}>
+        <h3 className="col-span-full text-sm font-semibold text-ink">
+          Project preferences
+        </h3>
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>MBE preference</span>
           <input
             className={inputClass}
@@ -137,7 +161,7 @@ export function BidEstimatingSetupStage() {
             onChange={(e) => setField("mbePreference", e.target.value || null)}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Clearance</span>
           <select
             className={inputClass}
@@ -158,16 +182,7 @@ export function BidEstimatingSetupStage() {
             ))}
           </select>
         </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            disabled={!editable}
-            checked={Boolean(draft.pla)}
-            onChange={(e) => setField("pla", e.target.checked)}
-          />
-          <span className="text-sm text-ink/80">PLA project</span>
-        </label>
-        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
+        <label className="flex min-w-0 flex-col gap-1.5 sm:col-span-2 xl:col-span-1">
           <span className={labelClass}>
             Wage decision # (not the Estimate wage rate)
           </span>
@@ -192,12 +207,19 @@ export function BidEstimatingSetupStage() {
             ))}
           </select>
         </label>
+        <CheckboxRow
+          className="col-span-full"
+          label="PLA project"
+          disabled={!editable}
+          checked={Boolean(draft.pla)}
+          onChange={(v) => setField("pla", v)}
+        />
       </section>
 
       <section className="flex flex-col gap-5 rounded-2xl border border-ink/[0.08] bg-surface p-5">
         <div>
-          <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink/45">Requirements</h3>
-          <div className="flex flex-col gap-2">
+          <h3 className="mb-2.5 text-sm font-semibold text-ink">Requirements</h3>
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
             <CheckboxRow
               label="Buy American"
               badges={["Project level", "Federal"]}
@@ -216,8 +238,8 @@ export function BidEstimatingSetupStage() {
         </div>
 
         <div className="border-t border-ink/[0.06] pt-5">
-          <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink/45">Insurance</h3>
-          <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+          <h3 className="mb-2.5 text-sm font-semibold text-ink">Insurance</h3>
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
             <CheckboxRow
               label="OCIP covers WC"
               disabled={!editable}
@@ -243,22 +265,21 @@ export function BidEstimatingSetupStage() {
           </div>
         </div>
 
-        <div>
-          <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink/45">Site logistics</h3>
+        <div className="border-t border-ink/[0.06] pt-5">
+          <h3 className="mb-1 text-sm font-semibold text-ink">Site logistics</h3>
           <p className="mb-3 text-xs text-ink/40">
-            Calculator inputs. Percents are decimals (0.5 = 50%). Parking people: 1 = 100%.
+            Calculator inputs. Percents are decimals (0.5 = 50%). Parking people:
+            1 = 100%.
           </p>
-          <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={Boolean(b.parking)}
-                onChange={(e) => setBaseBidField("parking", e.target.checked)}
-              />
-              <span className="text-sm text-ink/80">Parking?</span>
-            </label>
-            <label className="flex flex-col gap-1">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <CheckboxRow
+              className="sm:col-span-2 xl:col-span-3"
+              label="Parking?"
+              disabled={!editable}
+              checked={Boolean(b.parking)}
+              onChange={(v) => setBaseBidField("parking", v)}
+            />
+            <label className="flex min-w-0 flex-col gap-1.5">
               <span className={labelClass}>% who park (1 = 100%)</span>
               <input
                 type="number"
@@ -274,7 +295,7 @@ export function BidEstimatingSetupStage() {
                 }
               />
             </label>
-            <label className="flex flex-col gap-1">
+            <label className="flex min-w-0 flex-col gap-1.5">
               <span className={labelClass}>Parking cost / day</span>
               <input
                 type="number"
@@ -290,22 +311,20 @@ export function BidEstimatingSetupStage() {
                 }
               />
             </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={Boolean(b.liftsNeeded)}
-                onChange={(e) => {
-                  setBaseBidField("liftsNeeded", e.target.checked);
-                  setDraft({
-                    ...draft,
-                    lifts: { ...(draft.lifts ?? {}), needed: e.target.checked },
-                  });
-                }}
-              />
-              <span className="text-sm text-ink/80">Lifts needed</span>
-            </label>
-            <label className="flex flex-col gap-1">
+            <CheckboxRow
+              className="sm:col-span-2 xl:col-span-3"
+              label="Lifts needed"
+              disabled={!editable}
+              checked={Boolean(b.liftsNeeded)}
+              onChange={(v) => {
+                setBaseBidField("liftsNeeded", v);
+                setDraft({
+                  ...draft,
+                  lifts: { ...(draft.lifts ?? {}), needed: v },
+                });
+              }}
+            />
+            <label className="flex min-w-0 flex-col gap-1.5">
               <span className={labelClass}>Lift % (0.5 = 50%)</span>
               <input
                 type="number"
@@ -321,7 +340,7 @@ export function BidEstimatingSetupStage() {
                 }
               />
             </label>
-            <label className="flex flex-col gap-1">
+            <label className="flex min-w-0 flex-col gap-1.5">
               <span className={labelClass}>Lift cost / 4 weeks</span>
               <input
                 type="number"
@@ -341,12 +360,15 @@ export function BidEstimatingSetupStage() {
         </div>
       </section>
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-        <h3 className="col-span-full text-sm font-semibold text-ink">Wage and schedule</h3>
+      <section className={SECTION}>
+        <h3 className="col-span-full text-sm font-semibold text-ink">
+          Wage and schedule
+        </h3>
         <p className="col-span-full -mt-2 text-xs text-ink/40">
-          Estimate wage rate is not the wage decision above. Margin and escalation are decimals (0.25 = 25%).
+          Estimate wage rate is not the wage decision above. Margin and
+          escalation are decimals (0.25 = 25%).
         </p>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Wage rate</span>
           <select
             className={inputClass}
@@ -364,24 +386,18 @@ export function BidEstimatingSetupStage() {
             ))}
           </select>
         </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            disabled={!editable}
-            checked={Boolean(b.citizenProject)}
-            onChange={(e) => setBaseBidField("citizenProject", e.target.checked)}
-          />
-          <span className="text-sm text-ink/80">Citizen project</span>
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            disabled={!editable}
-            checked={Boolean(b.apprenticeable)}
-            onChange={(e) => setBaseBidField("apprenticeable", e.target.checked)}
-          />
-          <span className="text-sm text-ink/80">Apprenticeable</span>
-        </label>
+        <CheckboxRow
+          label="Citizen project"
+          disabled={!editable}
+          checked={Boolean(b.citizenProject)}
+          onChange={(v) => setBaseBidField("citizenProject", v)}
+        />
+        <CheckboxRow
+          label="Apprenticeable"
+          disabled={!editable}
+          checked={Boolean(b.apprenticeable)}
+          onChange={(v) => setBaseBidField("apprenticeable", v)}
+        />
         {(
           [
             ["marginPercent", "Margin (0.25 = 25%)"],
@@ -394,7 +410,7 @@ export function BidEstimatingSetupStage() {
             ["materialEscalationPerYear", "Material escalation / year"],
           ] as const
         ).map(([key, label]) => (
-          <label key={key} className="flex flex-col gap-1">
+          <label key={key} className="flex min-w-0 flex-col gap-1.5">
             <span className={labelClass}>{label}</span>
             <input
               type="number"
@@ -403,18 +419,21 @@ export function BidEstimatingSetupStage() {
               disabled={!editable}
               value={num(b[key])}
               onChange={(e) =>
-                setBaseBidField(key, e.target.value === "" ? undefined : Number(e.target.value))
+                setBaseBidField(
+                  key,
+                  e.target.value === "" ? undefined : Number(e.target.value)
+                )
               }
             />
           </label>
         ))}
       </section>
 
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+      <section className={SECTION}>
         <h3 className="col-span-full text-sm font-semibold text-ink">
           Technical review
         </h3>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Prepared by</span>
           <input
             className={inputClass}
@@ -423,7 +442,7 @@ export function BidEstimatingSetupStage() {
             onChange={(e) => setReview({ preparedBy: e.target.value || null })}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Reviewed by</span>
           <input
             className={inputClass}
@@ -432,7 +451,7 @@ export function BidEstimatingSetupStage() {
             onChange={(e) => setReview({ reviewedBy: e.target.value || null })}
           />
         </label>
-        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
+        <label className="flex min-w-0 flex-col gap-1.5">
           <span className={labelClass}>Review date</span>
           <DatePicker
             ariaLabel="Review date"
@@ -442,7 +461,7 @@ export function BidEstimatingSetupStage() {
             onChange={(v) => setReview({ reviewDate: v || null })}
           />
         </label>
-        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
+        <label className="flex min-w-0 flex-col gap-1.5 sm:col-span-2 xl:col-span-3">
           <span className={labelClass}>Comments</span>
           <textarea
             className={`${inputClass} min-h-[72px]`}
