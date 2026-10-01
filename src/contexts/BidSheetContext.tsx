@@ -86,6 +86,8 @@ type BidSheetContextValue = {
     opts?: { label?: string; category?: string; drawingCategory?: string }
   ) => Promise<void>;
   deleteAttachment: (attachmentId: number) => Promise<void>;
+  /** Hub link → Drawings without download / re-upload. */
+  importDrawingFromLink: (url: string, drawingCategory?: string) => Promise<void>;
 };
 
 const BidSheetContext = createContext<BidSheetContextValue | null>(null);
@@ -681,6 +683,27 @@ export function BidSheetProvider({
     [bidId, loadBid]
   );
 
+  const importDrawingFromLink = useCallback(
+    async (url: string, drawingCategory?: string) => {
+      if (bidRef.current?.status === "archived") {
+        setError("Attachments cannot be added on an archived bid.");
+        return;
+      }
+      setSaving(true);
+      setError(null);
+      try {
+        await biddingApi.importBidDrawingFromLink(bidId, { url, drawingCategory });
+        await loadBid({ silent: true });
+      } catch (e) {
+        setError(getApiErrorMessage(e, "Failed to import drawing from link"));
+        throw e;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [bidId, loadBid]
+  );
+
   const deleteAttachment = useCallback(
     async (attachmentId: number) => {
       if (bidRef.current?.status === "archived") {
@@ -803,6 +826,7 @@ export function BidSheetProvider({
     reopenAsDraft,
     uploadAttachment,
     deleteAttachment,
+    importDrawingFromLink,
   };
 
   return (

@@ -183,7 +183,7 @@ function contactsForCompany(
 /** Stage 1 — Intake (FRONTEND_INTAKE.md). Bid clerk. Incomplete OK. */
 export function BidIntakeStage() {
   const router = useRouter();
-  const { setBidHeader, setJobId, setBaseBidField, lookups, uploadAttachment, deleteAttachment } = useBidSheet();
+  const { setBidHeader, setJobId, setBaseBidField, lookups, uploadAttachment, deleteAttachment, importDrawingFromLink } = useBidSheet();
   const confirmDialog = useConfirmDialog();
   const {
     bid,
@@ -203,6 +203,10 @@ export function BidIntakeStage() {
   const [dupSearching, setDupSearching] = useState(false);
   const [linkingDupId, setLinkingDupId] = useState<string | null>(null);
   const [linkDupError, setLinkDupError] = useState<string | null>(null);
+  const [importingLinkIndex, setImportingLinkIndex] = useState<number | null>(null);
+  const [linkImportStatus, setLinkImportStatus] = useState<
+    Record<number, { ok: boolean; message: string }>
+  >({});
   const [buildingTypes, setBuildingTypes] = useState<LookupNameItem[]>([]);
   const [projectTypes, setProjectTypes] = useState<LookupNameItem[]>([]);
   const [partiesByRole, setPartiesByRole] = useState<{
@@ -1504,7 +1508,7 @@ export function BidIntakeStage() {
               Project document hub
             </h3>
             <p className="text-xs text-ink/45">
-              O-drive replacement: keep owner, federal, portal, and other project document links here. Upload files in Attachments or Drawings.
+              O-drive replacement: keep owner, federal, portal, and other project document links here. Use → Drawings to pull a file link straight into Drawings (no download / re-upload).
             </p>
           </div>
           {editable ? (
@@ -1528,7 +1532,7 @@ export function BidIntakeStage() {
           documentLinks.map((link, index) => (
             <div
               key={index}
-              className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]"
+              className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto_auto]"
             >
               <input
                 className={inputClass}
@@ -1575,6 +1579,49 @@ export function BidIntakeStage() {
               {editable ? (
                 <button
                   type="button"
+                  title="Fetch this file into Drawings (PDF / image / Word)"
+                  disabled={!link.url?.trim() || importingLinkIndex !== null}
+                  className="rounded-xl border border-ink/10 bg-canvas/40 px-3 py-1.5 text-xs font-semibold text-ink/70 hover:border-brand/40 hover:text-brand disabled:opacity-40"
+                  onClick={() => {
+                    const url = link.url?.trim();
+                    if (!url) return;
+                    const category =
+                      draft.drawingCategory && meta?.drawingCategories?.includes(draft.drawingCategory)
+                        ? draft.drawingCategory
+                        : undefined;
+                    setImportingLinkIndex(index);
+                    setLinkImportStatus((prev) => {
+                      const next = { ...prev };
+                      delete next[index];
+                      return next;
+                    });
+                    void importDrawingFromLink(url, category)
+                      .then(() =>
+                        setLinkImportStatus((prev) => ({
+                          ...prev,
+                          [index]: { ok: true, message: "Added to Drawings." },
+                        }))
+                      )
+                      .catch((e: unknown) =>
+                        setLinkImportStatus((prev) => ({
+                          ...prev,
+                          [index]: {
+                            ok: false,
+                            message: e instanceof Error ? e.message : "Import failed",
+                          },
+                        }))
+                      )
+                      .finally(() => setImportingLinkIndex(null));
+                  }}
+                >
+                  {importingLinkIndex === index ? "Importing…" : "→ Drawings"}
+                </button>
+              ) : (
+                <span />
+              )}
+              {editable ? (
+                <button
+                  type="button"
                   aria-label="Remove link"
                   title="Remove link"
                   className="ml-auto flex shrink-0 items-center justify-self-end rounded-md p-1.5 text-danger/70 hover:text-danger"
@@ -1596,6 +1643,15 @@ export function BidIntakeStage() {
                 >
                   <TrashIcon />
                 </button>
+              ) : null}
+              {linkImportStatus[index] ? (
+                <p
+                  className={`text-xs sm:col-span-5 ${
+                    linkImportStatus[index].ok ? "text-ink/55" : "text-danger"
+                  }`}
+                >
+                  {linkImportStatus[index].message}
+                </p>
               ) : null}
             </div>
           ))
