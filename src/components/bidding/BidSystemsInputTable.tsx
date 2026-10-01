@@ -72,7 +72,7 @@ export function BidSystemsInputTable({
                         checked={active}
                         disabled={!isEditable}
                         onChange={(e) => onUpdateRow(key, { used: e.target.checked })}
-                        className="h-4 w-4 cursor-pointer rounded border-[#cfd5dd] disabled:opacity-50"
+                        className="cursor-pointer disabled:opacity-50"
                       />
                     </td>
                     <td className="px-3 py-2 font-medium text-[#1f2937]">
