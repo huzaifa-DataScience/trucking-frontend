@@ -79,40 +79,40 @@ export function BidAwardTab() {
 
   if (!bid.workflow?.showAward) {
     return (
-      <div className="rounded-2xl border border-ink/[0.08] bg-surface p-6 text-sm text-ink/60">
-        Awarded / startup appears only after you pick{" "}
-        <span className="font-semibold text-ink">Awarded</span> on the{" "}
-        <Link
-          href={`/bidding/${bid.id}?stage=result`}
-          className="font-medium text-brand underline-offset-2 hover:underline"
-          onClick={(e) => {
-            e.preventDefault();
-            void (async () => {
-              if (!(await confirmLeaveUnsaved())) return;
-              router.push(`/bidding/${bid.id}?stage=result`);
-            })();
-          }}
-        >
-          Outcome
-        </Link>{" "}
-        tab. Lost is a separate Post screen.
+      <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+        <div className="intake-section">
+          <div className="intake-section-body text-[12.5px] text-[#4b5563]">
+            Awarded / startup appears only after you pick{" "}
+            <span className="font-semibold text-[#1f2937]">Awarded</span> on the{" "}
+            <Link
+              href={`/bidding/${bid.id}?stage=result`}
+              className="font-medium text-[#5a5340] hover:underline"
+              onClick={(e) => {
+                e.preventDefault();
+                void (async () => {
+                  if (!(await confirmLeaveUnsaved())) return;
+                  router.push(`/bidding/${bid.id}?stage=result`);
+                })();
+              }}
+            >
+              Outcome
+            </Link>{" "}
+            tab. Lost is a separate Post screen.
+          </div>
+        </div>
       </div>
     );
   }
 
-  const inputClass =
-    "w-full rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-brand";
-
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+      <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-base font-semibold text-ink">Awarded / startup</h2>
-          <p className="mt-0.5 text-sm text-ink/50">
-            Same bid. Confirm award + leftover startup. Contract tiers / bonds
-            can expand next.
+          <h2 className="intake-title">Awarded / startup</h2>
+          <p className="intake-sub mt-0.5">
+            Same bid. Confirm award + leftover startup. Contract tiers / bonds can expand next.
           </p>
-          <p className="mt-1 text-xs text-ink/40">
+          <p className="mt-1 text-[11px] text-[#9ca3af]">
             {saving
               ? "Saving…"
               : dirty
@@ -127,72 +127,88 @@ export function BidAwardTab() {
             type="button"
             disabled={saving || !dirty}
             onClick={() => void persist()}
-            className="rounded-xl border border-brand/30 bg-brand/10 px-3 py-2 text-sm font-semibold text-brand disabled:opacity-40"
+            className="intake-head-btn disabled:opacity-40"
           >
             {saving ? "Saving…" : "Save"}
           </button>
         ) : null}
-      </div>
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      </header>
 
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-        {(
-          [
-            ["jobNumber", "Job number"],
-            ["pm", "PM"],
-            ["me", "ME"],
-            ["ops", "Ops"],
-            ["awardDate", "Award date"],
-            ["primeContractor", "Prime contractor"],
-            ["mechanicalContractor", "Mechanical contractor"],
-          ] as const
-        ).map(([k, label]) => (
-          <label key={k} className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-ink/60">{label}</span>
-            <input
-              type={k === "awardDate" ? "date" : "text"}
-              className={inputClass}
-              disabled={!editable}
-              value={String(award[k] ?? "")}
-              onChange={(e) =>
-                patchAward({ ...award, [k]: e.target.value || null })
-              }
-            />
-          </label>
-        ))}
-      </section>
+      {error ? (
+        <p className="rounded border border-danger/25 bg-danger-tint/40 px-3 py-1.5 text-[12.5px] text-danger">
+          {error}
+        </p>
+      ) : null}
 
-      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-ink/60">
-            Linked job id (bid.jobId — Trimble / Connecteam)
-          </span>
-          <div className="flex gap-2">
-            <input
-              className={inputClass}
-              disabled={!editable}
-              value={jobIdDraft}
-              onChange={(e) => setJobIdDraft(e.target.value)}
-              placeholder="e.g. 451"
-            />
-            <button
-              type="button"
-              disabled={!editable}
-              onClick={() => {
-                const n = jobIdDraft.trim() ? Number(jobIdDraft) : null;
-                if (jobIdDraft.trim() && !Number.isFinite(n)) {
-                  setError("Job id must be a number");
-                  return;
-                }
-                void setJobId(n, { prefillCompany: false });
-              }}
-              className="shrink-0 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              Save job
-            </button>
+      <div className="grid grid-cols-2 items-start gap-3 max-[1000px]:grid-cols-1">
+        <section className="intake-section min-w-0">
+          <div className="intake-section-head">Award details</div>
+          <div className="intake-section-body">
+            <div className="intake-stack">
+              {(
+                [
+                  ["jobNumber", "Job number"],
+                  ["pm", "PM"],
+                  ["me", "ME"],
+                  ["ops", "Ops"],
+                  ["awardDate", "Award date"],
+                  ["primeContractor", "Prime contractor"],
+                  ["mechanicalContractor", "Mechanical contractor"],
+                ] as const
+              ).map(([k, label]) => (
+                <label key={k} className="intake-row">
+                  <span className="intake-label">{label}</span>
+                  <input
+                    type={k === "awardDate" ? "date" : "text"}
+                    className="intake-field"
+                    disabled={!editable}
+                    value={String(award[k] ?? "")}
+                    onChange={(e) =>
+                      patchAward({ ...award, [k]: e.target.value || null })
+                    }
+                  />
+                </label>
+              ))}
+            </div>
           </div>
-        </label>
-      </section>
+        </section>
+
+        <section className="intake-section min-w-0">
+          <div className="intake-section-head">Linked job</div>
+          <div className="intake-section-body">
+            <p className="intake-section-hint">
+              bid.jobId — Trimble / Connecteam
+            </p>
+            <label className="intake-row">
+              <span className="intake-label">Job id</span>
+              <div className="flex min-w-0 gap-1.5">
+                <input
+                  className="intake-field min-w-0 flex-1"
+                  disabled={!editable}
+                  value={jobIdDraft}
+                  onChange={(e) => setJobIdDraft(e.target.value)}
+                  placeholder="e.g. 451"
+                />
+                <button
+                  type="button"
+                  disabled={!editable}
+                  onClick={() => {
+                    const n = jobIdDraft.trim() ? Number(jobIdDraft) : null;
+                    if (jobIdDraft.trim() && !Number.isFinite(n)) {
+                      setError("Job id must be a number");
+                      return;
+                    }
+                    void setJobId(n, { prefillCompany: false });
+                  }}
+                  className="intake-head-btn shrink-0 disabled:opacity-50"
+                >
+                  Save job
+                </button>
+              </div>
+            </label>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

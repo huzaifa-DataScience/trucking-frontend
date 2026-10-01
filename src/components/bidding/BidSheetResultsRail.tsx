@@ -28,7 +28,7 @@ function HeroEstimate({
     <div
       className={`min-w-0 flex-1 rounded-xl px-3 py-3 ${
         variant === "pj"
-          ? "bg-brand/15 ring-1 ring-brand/25"
+          ? "bg-[#f3f1ea]/20 ring-1 ring-[#d9d4c8]/40"
           : "bg-white/10 ring-1 ring-white/10"
       }`}
     >
@@ -77,14 +77,14 @@ export function BidSheetResultsRail({
       ) : null}
 
       {canViewSummary ? (
-      <div className="overflow-hidden rounded-2xl border border-ink/[0.08] bg-gradient-to-br from-ink via-ink to-ink/95 shadow-[0_8px_32px_rgba(1,1,1,0.12)]">
+      <div className="overflow-hidden rounded-lg border border-[#d5dbe3] bg-gradient-to-br from-ink via-ink to-ink/95">
         <div className="border-b border-white/10 px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-white/45">
               Live totals
             </p>
             {insights.isRecalculating ? (
-              <span className="text-[10px] font-medium uppercase tracking-wide text-brand">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-[#d9d4c8]">
                 Updating…
               </span>
             ) : hasComputed ? (
@@ -144,7 +144,7 @@ export function BidSheetResultsRail({
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
               <div
-                className={`h-full rounded-full bg-gradient-to-r from-brand to-brand-secondary transition-all duration-700 ease-out ${
+                className={`h-full rounded-full bg-[#d9d4c8] transition-all duration-700 ease-out ${
                   insights.isRecalculating ? "bid-shimmer-bar" : ""
                 }`}
                 style={{ width: `${insights.completionPercent}%` }}
@@ -156,10 +156,10 @@ export function BidSheetResultsRail({
       ) : null}
 
       {canViewSummary ? (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.05)]">
-        <div className="border-b border-ink/[0.06] px-4 py-3">
-          <h2 className="text-sm font-semibold text-ink">Calculation detail</h2>
-          <p className="mt-0.5 text-xs text-ink/45">Excel rows 37–49 · D10–D13</p>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#d5dbe3] bg-white">
+        <div className="border-b border-[#e5e7eb] bg-[#f3f1ea] px-3 py-2">
+          <h2 className="text-[13px] font-semibold text-[#5a5340]">Calculation detail</h2>
+          <p className="mt-0.5 text-[11px] text-[#7a7360]">Excel rows 37–49 · D10–D13</p>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
@@ -170,7 +170,7 @@ export function BidSheetResultsRail({
           ) : (
             <div className="bid-stagger divide-y divide-ink/[0.06]">
               <section className="py-2">
-                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-brand/80">
+                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#7a7360]">
                   Labor build-up
                 </p>
                 {laborBuildUp ? (
@@ -206,7 +206,7 @@ export function BidSheetResultsRail({
               </section>
 
               <section className="py-2">
-                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-brand/80">
+                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#7a7360]">
                   Summary
                 </p>
                 <BidResultMetric
@@ -266,7 +266,7 @@ export function BidSheetResultsRail({
 
               {systemsComputed.length > 0 ? (
                 <section className="py-2">
-                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-brand/80">
+                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#7a7360]">
                     By system
                   </p>
                   {systemsComputed.map((row) => (
