@@ -456,6 +456,14 @@ export async function uploadBidAttachment(
   return response.json() as Promise<BidAttachment>;
 }
 
+/** Project document hub link → Drawings, fetched server-side (no download / re-upload). */
+export async function importBidDrawingFromLink(
+  bidId: string,
+  body: { url: string; drawingCategory?: string }
+): Promise<BidAttachment> {
+  return post<BidAttachment>(`/bids/${bidId}/attachments/import-link`, body);
+}
+
 export async function deleteBidAttachment(
   bidId: string,
   attachmentId: number
