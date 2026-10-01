@@ -234,30 +234,33 @@ function AddressBookModal({
         alignItems: "center",
         justifyContent: "center",
         padding: "1rem",
-        background: "rgba(1, 1, 1, 0.45)",
+        background: "rgba(15, 23, 42, 0.4)",
         boxSizing: "border-box",
+        fontFamily: '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
       }}
     >
       <div
-        className="flex w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-ink/10 bg-white shadow-2xl"
+        className="flex w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-[#d5dbe3] bg-white shadow-xl"
         style={{ maxHeight: "min(88dvh, 900px)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-brand px-5 py-3.5">
-          <h3 className="text-base font-semibold text-white">{title}</h3>
+        <div className="border-b border-[#e5e7eb] bg-[#f3f1ea] px-4 py-2.5">
+          <h3 className="text-[13px] font-semibold tracking-wide text-[#5a5340]">
+            {title}
+          </h3>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/[0.08] px-4 py-3">
-          <span className="inline-flex items-center rounded-md border border-brand/40 bg-brand/5 px-3 py-1.5 text-xs font-semibold text-brand">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e5e7eb] bg-[#f8fafc] px-4 py-2.5">
+          <span className="inline-flex items-center rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-2.5 py-1 text-[11px] font-semibold text-[#5a5340]">
             Email Address Book
           </span>
           <div className="relative min-w-[14rem] flex-1 sm:max-w-sm">
             <span
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/35"
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9ca3af]"
               aria-hidden
             >
               <svg
-                className="h-4 w-4"
+                className="h-3.5 w-3.5"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -272,20 +275,20 @@ function AddressBookModal({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name or email…"
-              className="h-10 w-full rounded-lg border border-ink/15 bg-white pl-9 pr-3 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+              className="h-8 w-full rounded-md border border-[#cfd5dd] bg-white pl-8 pr-2.5 text-[13.5px] text-[#374151] outline-none transition focus:border-[#94a3b8] focus:shadow-[0_0_0_2px_rgba(148,163,184,0.28)]"
             />
           </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto">
-          <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
-            <thead className="sticky top-0 z-10 bg-canvas/95 backdrop-blur-sm">
-              <tr className="border-b border-ink/[0.08] text-[11px] font-semibold uppercase tracking-wide text-ink/45">
-                <th className="px-4 py-2.5 font-semibold">Name</th>
-                <th className="px-4 py-2.5 font-semibold">Company name</th>
-                <th className="px-4 py-2.5 font-semibold">Email</th>
-                <th className="px-4 py-2.5 font-semibold">Phone number</th>
-                <th className="w-14 px-2 py-2.5" aria-label="Add" />
+          <table className="w-full min-w-[40rem] border-collapse text-left text-[12.5px] text-[#374151]">
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-[#e5e7eb] bg-[#f3f4f6] text-left text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                <th className="px-3 py-2">Name</th>
+                <th className="px-3 py-2">Company name</th>
+                <th className="px-3 py-2">Email</th>
+                <th className="px-3 py-2">Phone number</th>
+                <th className="w-12 px-2 py-2" aria-label="Add" />
               </tr>
             </thead>
             <tbody>
@@ -293,7 +296,7 @@ function AddressBookModal({
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-4 py-10 text-center text-sm text-ink/45"
+                    className="px-3 py-8 text-center text-[12.5px] text-[#9ca3af]"
                   >
                     Loading contacts…
                   </td>
@@ -302,7 +305,7 @@ function AddressBookModal({
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-4 py-10 text-center text-sm text-ink/45"
+                    className="px-3 py-8 text-center text-[12.5px] text-[#9ca3af]"
                   >
                     No contacts match.
                   </td>
@@ -313,35 +316,33 @@ function AddressBookModal({
                   return (
                     <tr
                       key={String(o.id)}
-                      className="border-b border-ink/[0.05] transition hover:bg-brand/[0.04]"
+                      className="border-b border-[#e5e7eb] transition hover:bg-[#faf7f0]"
                     >
-                      <td className="px-4 py-2.5 align-middle text-ink">
+                      <td className="px-3 py-2 align-middle">
                         {tags.length > 0 ? (
-                          <span className="text-ink/50">
-                            ({tags.join(", ")}){" "}
-                          </span>
+                          <span className="text-[#9ca3af]">({tags.join(", ")}) </span>
                         ) : null}
-                        <span className="font-medium">{label}</span>
+                        <span className="font-medium text-[#1f2937]">{label}</span>
                       </td>
-                      <td className="px-4 py-2.5 align-middle text-ink/75">
+                      <td className="px-3 py-2 align-middle text-[#4b5563]">
                         {o.company || "—"}
                       </td>
-                      <td className="px-4 py-2.5 align-middle text-ink/75">
+                      <td className="px-3 py-2 align-middle text-[#4b5563]">
                         {o.email || "—"}
                       </td>
-                      <td className="px-4 py-2.5 align-middle text-ink/75">
+                      <td className="px-3 py-2 align-middle text-[#4b5563]">
                         {o.phone || "—"}
                       </td>
-                      <td className="px-2 py-2 text-center align-middle">
+                      <td className="px-2 py-1.5 text-center align-middle">
                         <button
                           type="button"
                           title="Add this contact"
                           aria-label={`Add ${label}`}
                           onClick={() => onPick(o)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white shadow-sm transition hover:bg-brand-secondary"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340] transition hover:bg-[#ebe8df]"
                         >
                           <svg
-                            className="h-4 w-4"
+                            className="h-3.5 w-3.5"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -361,18 +362,18 @@ function AddressBookModal({
         </div>
 
         {query.trim() && !exactHit ? (
-          <div className="border-t border-ink/[0.08] px-4 py-2">
+          <div className="border-t border-[#e5e7eb] px-4 py-2">
             <button
               type="button"
               onClick={() => onAddNew(query.trim())}
-              className="text-sm font-semibold text-brand transition hover:underline"
+              className="text-[12.5px] font-semibold text-[#5a5340] transition hover:underline"
             >
               Use “{query.trim()}” as new
             </button>
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-center gap-1.5 border-t border-ink/[0.08] px-4 py-3">
+        <div className="flex flex-wrap items-center justify-center gap-1 border-t border-[#e5e7eb] bg-[#f8fafc] px-4 py-2.5">
           {(
             [
               ["First", 1],
@@ -384,7 +385,7 @@ function AddressBookModal({
               type="button"
               disabled={safePage <= 1}
               onClick={() => setPage(target)}
-              className="rounded-md px-2.5 py-1 text-xs font-medium text-ink/60 transition hover:bg-ink/[0.05] disabled:opacity-35"
+              className="rounded-md border border-transparent px-2 py-1 text-[11px] font-medium text-[#6b7280] transition hover:border-[#cfd5dd] hover:bg-white disabled:opacity-35"
             >
               {label}
             </button>
@@ -394,10 +395,10 @@ function AddressBookModal({
               key={n}
               type="button"
               onClick={() => setPage(n)}
-              className={`min-w-8 rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+              className={`min-w-7 rounded-md px-2 py-1 text-[11px] font-semibold transition ${
                 n === safePage
-                  ? "bg-brand text-white"
-                  : "text-ink/65 hover:bg-ink/[0.05]"
+                  ? "border border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340]"
+                  : "border border-transparent text-[#6b7280] hover:border-[#cfd5dd] hover:bg-white"
               }`}
             >
               {n}
@@ -414,18 +415,18 @@ function AddressBookModal({
               type="button"
               disabled={safePage >= totalPages}
               onClick={() => setPage(target)}
-              className="rounded-md px-2.5 py-1 text-xs font-medium text-ink/60 transition hover:bg-ink/[0.05] disabled:opacity-35"
+              className="rounded-md border border-transparent px-2 py-1 text-[11px] font-medium text-[#6b7280] transition hover:border-[#cfd5dd] hover:bg-white disabled:opacity-35"
             >
               {label}
             </button>
           ))}
         </div>
 
-        <div className="flex justify-end border-t border-ink/[0.08] px-4 py-3">
+        <div className="flex justify-end border-t border-[#e5e7eb] px-4 py-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand/10"
+            className="rounded-md border border-[#cfd5dd] bg-[#f8fafc] px-3 py-1 text-[11px] font-semibold text-[#4b5563] transition hover:border-[#94a3b8] hover:bg-[#f1f5f9]"
           >
             Close
           </button>
@@ -550,119 +551,121 @@ export function PartyNameCombobox({
   };
 
   return (
-    <div className="relative flex flex-col gap-1" ref={wrapRef}>
+    <div className="relative intake-row" ref={wrapRef}>
       <span className={labelClass}>{label}</span>
-      <div className="flex items-center gap-1.5">
-        <input
-          className={inputClass}
-          disabled={disabled}
-          value={query}
-          placeholder={placeholder}
-          autoComplete="off"
-          role="combobox"
-          aria-expanded={open}
-          aria-controls={listId}
-          onFocus={() => setOpen(true)}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            onChangeName(e.target.value);
-            setOpen(true);
-          }}
-          onBlur={() => {
-            window.setTimeout(() => commitTyped(query), 120);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setOpen(false);
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (filtered[0] && query.trim()) {
-                const hit =
-                  filtered.find(
-                    (o) =>
-                      o.name.trim().toLowerCase() === query.trim().toLowerCase()
-                  ) ?? filtered[0];
-                onPickExisting(partyFromLookup(hit));
-                setQuery(resolveInput(partyFromLookup(hit)));
-                setOpen(false);
-              } else {
-                commitTyped(query);
-                setOpen(false);
-              }
-            }
-          }}
-        />
-        {showPicker && !disabled ? (
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              setPickerOpen(true);
+      <div className="relative min-w-0">
+        <div className="flex min-w-0 items-center gap-1">
+          <input
+            className={inputClass}
+            disabled={disabled}
+            value={query}
+            placeholder={placeholder}
+            autoComplete="off"
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={listId}
+            onFocus={() => setOpen(true)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              onChangeName(e.target.value);
+              setOpen(true);
             }}
-            title="Open address book"
-            aria-label={`Open address book for ${label}`}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand text-white shadow-sm transition hover:bg-brand-secondary"
-          >
-            <svg
-              className="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              aria-hidden
+            onBlur={() => {
+              window.setTimeout(() => commitTyped(query), 120);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setOpen(false);
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (filtered[0] && query.trim()) {
+                  const hit =
+                    filtered.find(
+                      (o) =>
+                        o.name.trim().toLowerCase() === query.trim().toLowerCase()
+                    ) ?? filtered[0];
+                  onPickExisting(partyFromLookup(hit));
+                  setQuery(resolveInput(partyFromLookup(hit)));
+                  setOpen(false);
+                } else {
+                  commitTyped(query);
+                  setOpen(false);
+                }
+              }
+            }}
+          />
+          {showPicker && !disabled ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setPickerOpen(true);
+              }}
+              title="Open address book"
+              aria-label={`Open address book for ${label}`}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#cfd5dd] bg-[#f3f4f6] text-[#4b5563] transition hover:border-[#94a3b8] hover:bg-[#eef2f7]"
             >
-              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-            </svg>
-          </button>
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                aria-hidden
+              >
+                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+              </svg>
+            </button>
+          ) : null}
+        </div>
+        {open && !disabled && (filtered.length > 0 || query.trim()) ? (
+          <ul
+            id={listId}
+            role="listbox"
+            className="absolute left-0 right-0 top-full z-30 mt-0.5 max-h-48 overflow-auto rounded border border-[#cfd5dd] bg-white py-1 shadow-md"
+          >
+            {filtered.map((o) => (
+              <li key={String(o.id)}>
+                <button
+                  type="button"
+                  className="flex w-full flex-col items-start px-3 py-1.5 text-left text-[12.5px] hover:bg-[#eef2f7]"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    const party = partyFromLookup(o);
+                    onPickExisting(party);
+                    setQuery(resolveInput(party));
+                    setOpen(false);
+                  }}
+                >
+                  <span className="font-medium text-[#1f2937]">{o.name}</span>
+                  {(o.company || o.email) && (
+                    <span className="text-[11px] text-[#9ca3af]">
+                      {[o.company, o.email].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+            {query.trim() && !exactHit ? (
+              <li>
+                <button
+                  type="button"
+                  className="w-full px-3 py-1.5 text-left text-[12.5px] font-medium text-[#4b5563] hover:bg-[#eef2f7]"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    onChangeName(query.trim());
+                    setOpen(false);
+                  }}
+                >
+                  Use “{query.trim()}” as new
+                </button>
+              </li>
+            ) : null}
+            {filtered.length === 0 && !query.trim() ? (
+              <li className="px-3 py-1.5 text-[11px] text-[#9ca3af]">No saved parties yet</li>
+            ) : null}
+          </ul>
         ) : null}
       </div>
-      {open && !disabled && (filtered.length > 0 || query.trim()) ? (
-        <ul
-          id={listId}
-          role="listbox"
-          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-auto rounded-xl border border-ink/10 bg-surface py-1 shadow-lg"
-        >
-          {filtered.map((o) => (
-            <li key={String(o.id)}>
-              <button
-                type="button"
-                className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-brand/10"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  const party = partyFromLookup(o);
-                  onPickExisting(party);
-                  setQuery(resolveInput(party));
-                  setOpen(false);
-                }}
-              >
-                <span className="font-medium text-ink">{o.name}</span>
-                {(o.company || o.email) && (
-                  <span className="text-xs text-ink/45">
-                    {[o.company, o.email].filter(Boolean).join(" · ")}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
-          {query.trim() && !exactHit ? (
-            <li>
-              <button
-                type="button"
-                className="w-full px-3 py-2 text-left text-sm font-medium text-brand hover:bg-brand/10"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  onChangeName(query.trim());
-                  setOpen(false);
-                }}
-              >
-                Use “{query.trim()}” as new
-              </button>
-            </li>
-          ) : null}
-          {filtered.length === 0 && !query.trim() ? (
-            <li className="px-3 py-2 text-xs text-ink/45">No saved parties yet</li>
-          ) : null}
-        </ul>
-      ) : null}
 
       <AddressBookModal
         open={pickerOpen}

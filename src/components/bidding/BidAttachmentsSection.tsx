@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Card, CardHeader } from "@/components/ui/Card";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import type { BidAttachment } from "@/lib/bidding/types";
@@ -109,19 +108,19 @@ function AttachmentGrid({
   onDelete: (id: number) => Promise<void>;
 }) {
   if (attachments.length === 0) {
-    return <p className="text-sm text-ink/45">No attachments yet.</p>;
+    return <p className="text-[12.5px] text-[#6b7280]">No attachments yet.</p>;
   }
   return (
-    <ul className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+    <ul className="grid gap-2 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
       {attachments.map((att) => (
-        <li key={att.id} className="overflow-hidden rounded-xl border border-ink/[0.08] bg-surface">
+        <li key={att.id} className="overflow-hidden rounded border border-[#e5e7eb] bg-white">
           <AttachmentPreview attachment={att} />
-          <div className="space-y-1 p-3">
-            <p className="truncate text-sm font-medium text-ink" title={att.fileName}>
+          <div className="space-y-0.5 p-2">
+            <p className="truncate text-[12.5px] font-medium text-[#1f2937]" title={att.fileName}>
               {att.label ?? att.fileName}
             </p>
-            <p className="text-xs text-ink/40">{formatBytes(att.sizeBytes)}</p>
-            <div className="flex gap-2 pt-1">
+            <p className="text-[11px] text-[#9ca3af]">{formatBytes(att.sizeBytes)}</p>
+            <div className="flex gap-2 pt-0.5">
               <a
                 href="#"
                 onClick={(e) => {
@@ -135,7 +134,7 @@ function AttachmentGrid({
                     URL.revokeObjectURL(url);
                   });
                 }}
-                className="text-xs font-semibold text-brand hover:underline"
+                className="text-[11px] font-semibold text-[#4b5563] hover:underline"
               >
                 Download
               </a>
@@ -154,7 +153,7 @@ function AttachmentGrid({
                       void onDelete(att.id);
                     })();
                   }}
-                  className="text-xs font-semibold text-ink/45 hover:text-danger"
+                  className="text-[11px] font-semibold text-[#9ca3af] hover:text-danger"
                 >
                   Remove
                 </button>
@@ -246,18 +245,20 @@ export function BidAttachmentsSection({
       : groupBy(attachments, (a) => a.category ?? "project_documents");
 
   return (
-    <Card>
-      <CardHeader
-        title={mode === "drawings" ? "Drawings" : "Attachments"}
-        subtitle={
-          mode === "drawings"
-            ? "Every drawing on this bid, by revision phase."
-            : `Site photos, screenshots, PDFs, Word docs, and CSV exports, up to ${Math.round(maxBytes / (1024 * 1024))} MB each.`
-        }
-      />
+    <section className="intake-compact">
+      <div className="intake-section">
+        <div className="intake-section-head">
+          {mode === "drawings" ? "Drawings" : "Attachments"}
+        </div>
+        <div className="intake-section-body flex flex-col gap-2">
+          <p className="intake-section-hint">
+            {mode === "drawings"
+              ? "Every drawing on this bid, by revision phase."
+              : `Site photos, screenshots, PDFs, Word docs, and CSV exports, up to ${Math.round(maxBytes / (1024 * 1024))} MB each.`}
+          </p>
 
       {isEditable ? (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             ref={inputRef}
             type="file"
@@ -271,7 +272,7 @@ export function BidAttachmentsSection({
           />
           {mode === "drawings" ? (
             <select
-              className="rounded-lg border border-ink/10 bg-surface px-2.5 py-1.5 text-xs text-ink outline-none focus:border-brand"
+              className="intake-field appearance-none"
               value={pendingDrawingCategory}
               onChange={(e) => setPendingDrawingCategory(e.target.value)}
             >
@@ -283,7 +284,7 @@ export function BidAttachmentsSection({
             </select>
           ) : (
             <select
-              className="rounded-lg border border-ink/10 bg-surface px-2.5 py-1.5 text-xs text-ink outline-none focus:border-brand"
+              className="intake-field appearance-none"
               value={pendingCategory}
               onChange={(e) => setPendingCategory(e.target.value)}
             >
@@ -298,14 +299,14 @@ export function BidAttachmentsSection({
             type="button"
             disabled={uploading || localUploading || attachments.length >= MAX_FILES}
             onClick={() => inputRef.current?.click()}
-            className="rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04] disabled:opacity-50"
+            className="intake-head-btn disabled:opacity-50"
           >
             {uploading || localUploading ? "Uploading…" : "Add file"}
           </button>
         </div>
       ) : null}
 
-      {localError ? <p className="mb-3 text-xs text-danger">{localError}</p> : null}
+      {localError ? <p className="text-[12.5px] text-danger">{localError}</p> : null}
 
       {mode === "drawings" ? (
         (drawingCategoryOptions ?? []).length === 0 ? (
@@ -316,10 +317,10 @@ export function BidAttachmentsSection({
             onDelete={onDelete}
           />
         ) : (
-          <div className="space-y-5">
+          <div className="flex flex-col gap-3">
             {(drawingCategoryOptions ?? []).map((o) => (
               <div key={o.value}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">{o.label}</p>
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">{o.label}</p>
                 <AttachmentGrid
                   attachments={bucketed[o.value] ?? []}
                   isEditable={isEditable}
@@ -331,10 +332,10 @@ export function BidAttachmentsSection({
           </div>
         )
       ) : (
-        <div className="space-y-5">
+        <div className="flex flex-col gap-3">
           {ATTACHMENT_CATEGORY_OPTIONS.map((o) => (
             <div key={o.value}>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">{o.label}</p>
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">{o.label}</p>
               <AttachmentGrid
                 attachments={bucketed[o.value] ?? []}
                 isEditable={isEditable}
@@ -345,7 +346,9 @@ export function BidAttachmentsSection({
           ))}
         </div>
       )}
-    </Card>
+        </div>
+      </div>
+    </section>
   );
 }
 

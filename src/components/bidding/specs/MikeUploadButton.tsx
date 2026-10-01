@@ -74,7 +74,7 @@ export function MikeUploadButton({
         disabled={disabled || busy}
         title="Select one or more CSV / XLSX — name + job next"
         onClick={() => inputRef.current?.click()}
-        className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_2px_10px_rgba(255,123,17,0.35)] disabled:opacity-50"
+        className="intake-head-btn px-3 py-2 text-[12.5px] disabled:opacity-50"
       >
         {busy ? "Uploading…" : label}
       </button>

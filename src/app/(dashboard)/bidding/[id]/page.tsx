@@ -75,19 +75,37 @@ function BidWorkspaceInner() {
       return <BidDrawingsStage />;
     case "spec_sheets":
       return <BidSpecSheetsStage />;
-    case "takeoff":
+    case "takeoff": {
+      const hasComparison =
+        Array.isArray(bid.workflow?.takeoffComparisons) &&
+        (bid.workflow?.takeoffComparisons?.length ?? 0) > 0;
       return (
-        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
-          <BidTakeoffComparisonPanel />
-          <BidSystemsInputTable
-            systems={bid.systems ?? []}
-            systemsComputed={parseSystemsComputed(bid.computed)}
-            isEditable={isEditable}
-            onUpdateRow={updateSystemRow}
-          />
+        <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+          <header>
+            <h2 className="intake-title">Takeoff</h2>
+            <p className="intake-sub mt-0.5">
+              Systems inputs, Mike Specs qty grid, and takeoff comparison.
+            </p>
+          </header>
+          <div
+            className={`grid grid-cols-1 items-start gap-3 ${
+              hasComparison ? "xl:grid-cols-2" : ""
+            }`}
+          >
+            <BidTakeoffComparisonPanel />
+            <div className={hasComparison ? "min-w-0" : "min-w-0 xl:col-span-full"}>
+              <BidSystemsInputTable
+                systems={bid.systems ?? []}
+                systemsComputed={parseSystemsComputed(bid.computed)}
+                isEditable={isEditable}
+                onUpdateRow={updateSystemRow}
+              />
+            </div>
+          </div>
           <SpecsPage bidId={bidId} embedded />
         </div>
       );
+    }
     case "proposal":
       return <BidSheetForm />;
     case "post_bid":

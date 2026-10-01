@@ -279,7 +279,7 @@ export function SpecsPage({
           <button
             type="button"
             onClick={() => setRulesOpen(true)}
-            className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-xs font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand"
+            className="intake-head-btn"
           >
             Rules
           </button>
@@ -333,15 +333,15 @@ export function SpecsPage({
       />
 
       {lines.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-ink/15 bg-canvas/40 px-6 py-20 text-center">
-          <h3 className="text-base font-semibold text-ink">No Specs yet</h3>
-          <p className="max-w-md text-sm text-ink/50">
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded border border-dashed border-[#d5dbe3] bg-[#f8fafc] px-6 py-16 text-center">
+          <h3 className="text-[15px] font-semibold text-[#1f2937]">No Specs yet</h3>
+          <p className="max-w-md text-[12.5px] text-[#6b7280]">
             Upload Mike CSV(s), then Regenerate Specs. Extra uploads append into
             one takeoff file on this bid.
           </p>
           <Link
             href="/estimation-files"
-            className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white"
+            className="intake-head-btn"
           >
             Open Estimation files
           </Link>

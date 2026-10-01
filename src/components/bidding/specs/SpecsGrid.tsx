@@ -66,10 +66,10 @@ export function SpecsGrid({
 }) {
   if (lines.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-ink/15 bg-canvas/50 px-6 py-16 text-center">
+      <div className="flex flex-1 items-center justify-center rounded border border-dashed border-[#d5dbe3] bg-[#f8fafc] px-6 py-16 text-center">
         <div className="max-w-md">
-          <h3 className="text-base font-semibold text-ink">No Specs yet</h3>
-          <p className="mt-2 text-sm text-ink/50">
+          <h3 className="text-[15px] font-semibold text-[#1f2937]">No Specs yet</h3>
+          <p className="mt-2 text-[12.5px] text-[#6b7280]">
             Upload a Mike takeoff file to build the Specs sheet.
           </p>
         </div>
@@ -80,44 +80,73 @@ export function SpecsGrid({
   const showRollCols = lines.some(isRollLine);
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
-      <table className="min-w-[1600px] w-full border-collapse text-left text-xs">
-        <thead className="sticky top-0 z-10 bg-surface">
-          <tr className="border-b border-ink/[0.08] text-[10px] uppercase tracking-wide text-ink/40">
-            <th className="px-2 py-2.5 font-semibold">Type</th>
-            <th className="px-2 py-2.5 font-semibold">System</th>
-            <th className="px-2 py-2.5 font-semibold">Area</th>
-            <th className="sticky left-0 z-[1] bg-surface px-2 py-2.5 font-semibold shadow-[2px_0_0_rgba(0,0,0,0.04)]">
+    <div
+      className="intake-section min-h-0 flex-1 overflow-auto"
+      onMouseOver={(e) => {
+        const el = e.target;
+        if (
+          !(el instanceof HTMLSelectElement) &&
+          !(el instanceof HTMLInputElement) &&
+          !(el instanceof HTMLTextAreaElement)
+        ) {
+          return;
+        }
+        if (el instanceof HTMLSelectElement) {
+          const text = el.selectedOptions[0]?.text?.trim() ?? "";
+          const empty = !el.value || text === "—" || text === "";
+          if (empty) el.removeAttribute("title");
+          else el.title = text;
+          return;
+        }
+        const v = String(el.value ?? "").trim();
+        if (!v) el.removeAttribute("title");
+        else el.title = v;
+      }}
+      onFocus={(e) => {
+        const t = e.target;
+        if (t instanceof HTMLElement) t.dispatchEvent(new Event("mouseover", { bubbles: true }));
+      }}
+      onChange={(e) => {
+        const t = e.target;
+        if (t instanceof HTMLElement) t.dispatchEvent(new Event("mouseover", { bubbles: true }));
+      }}
+    >
+      <div className="intake-section-head">Specs qty grid</div>
+      <div className="intake-section-body !p-0">
+      <table className="min-w-[1600px] w-full border-collapse text-left text-[12.5px] text-[#374151]">
+        <thead className="sticky top-0 z-10">
+          <tr className="border-b border-[#e5e7eb] bg-[#f3f1ea] text-[11px] font-semibold uppercase tracking-wide text-[#5a5340]">
+            <th className="px-2 py-2">Type</th>
+            <th className="px-2 py-2">System</th>
+            <th className="px-2 py-2">Area</th>
+            <th className="sticky left-0 z-[1] bg-[#f3f1ea] px-2 py-2 shadow-[2px_0_0_rgba(0,0,0,0.04)]">
               Insulation
             </th>
-            <th className="px-2 py-2.5 font-semibold">Size</th>
-            <th className="px-2 py-2.5 font-semibold">Thick</th>
-            <th className="px-2 py-2.5 font-semibold">Wt / Facing</th>
-            <th className="px-2 py-2.5 font-semibold">Code</th>
-            <th className="px-2 py-2.5 font-semibold">Area</th>
-            <th className="px-2 py-2.5 font-semibold">Mat</th>
-            <th className="px-2 py-2.5 font-semibold">Prod/Hr</th>
-            <th className="px-2 py-2.5 font-semibold">Qty Est</th>
-            {/* Unit (Est) — temporarily hidden
-            <th className="px-2 py-2.5 font-semibold">Unit (Est)</th>
-            */}
-            <th className="px-2 py-2.5 font-semibold">Recv</th>
-            <th className="px-2 py-2.5 font-semibold">Unit (Trimble)</th>
-            <th className="px-2 py-2.5 font-semibold">Remain</th>
-            <th className="px-2 py-2.5 font-semibold">Hrs Mike</th>
-            <th className="px-2 py-2.5 font-semibold">Hrs @ recv</th>
+            <th className="px-2 py-2">Size</th>
+            <th className="px-2 py-2">Thick</th>
+            <th className="px-2 py-2">Wt / Facing</th>
+            <th className="px-2 py-2">Code</th>
+            <th className="px-2 py-2">Area</th>
+            <th className="px-2 py-2">Mat</th>
+            <th className="px-2 py-2">Prod/Hr</th>
+            <th className="px-2 py-2">Qty Est</th>
+            <th className="px-2 py-2">Recv</th>
+            <th className="px-2 py-2">Unit (Trimble)</th>
+            <th className="px-2 py-2">Remain</th>
+            <th className="px-2 py-2">Hrs Mike</th>
+            <th className="px-2 py-2">Hrs @ recv</th>
             {showRollCols ? (
               <>
-                <th className="px-2 py-2.5 font-semibold">SF / roll</th>
-                <th className="px-2 py-2.5 font-semibold">Recv SF</th>
-                <th className="min-w-[8rem] px-2 py-2.5 font-semibold">Recv summary</th>
+                <th className="px-2 py-2">SF / roll</th>
+                <th className="px-2 py-2">Recv SF</th>
+                <th className="min-w-[8rem] px-2 py-2">Recv summary</th>
               </>
             ) : null}
-            <th className="min-w-[14rem] px-2 py-2.5 font-semibold">
+            <th className="min-w-[14rem] px-2 py-2">
               Structshare options
             </th>
-            <th className="px-2 py-2.5 font-semibold">Notes</th>
-            {canWrite ? <th className="px-2 py-2.5" /> : null}
+            <th className="px-2 py-2">Notes</th>
+            {canWrite ? <th className="px-2 py-2" /> : null}
           </tr>
         </thead>
         <tbody className="divide-y divide-ink/[0.05]">
@@ -139,6 +168,7 @@ export function SpecsGrid({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -240,7 +270,7 @@ function SpecsLineRow({
       : facings;
 
   const cellInput =
-    "w-full min-w-[4.5rem] rounded-md border border-transparent bg-transparent px-1 py-1 text-xs text-ink outline-none hover:border-ink/10 focus:border-brand focus:bg-canvas disabled:opacity-60";
+    "w-full min-w-[4.5rem] cursor-pointer rounded border border-transparent bg-transparent px-1 py-1 text-[12.5px] text-[#374151] outline-none hover:border-[#cfd5dd] focus:border-[#94a3b8] focus:bg-white disabled:cursor-default disabled:opacity-60";
 
   return (
     <tr className={`align-top ${busy ? "opacity-60" : ""}`}>

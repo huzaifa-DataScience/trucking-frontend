@@ -44,7 +44,7 @@ function TrashIcon() {
 function SelectChevron() {
   return (
     <svg
-      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -194,10 +194,17 @@ export function BidIntakeStage() {
     dirty,
     error,
     editable,
-    inputClass,
-    labelClass,
   } = useProcessDraft();
-  const selectClass = `${inputClass} appearance-none pr-9`;
+  /** Compact CRM-style fields (shared visual system with Assignment). */
+  const inputClass =
+    "intake-field w-full appearance-none";
+  const labelClass = "intake-label";
+  const selectClass = `${inputClass} appearance-none pr-8`;
+  const sectionHead = "intake-section-head";
+  const sectionBody = "intake-section-body";
+  const sectionHint = "intake-section-hint";
+  const addBtnClass =
+    "intake-head-btn";
   const [meta, setMeta] = useState<ProcessMeta | null>(null);
   const [dupHits, setDupHits] = useState<BidListItem[]>([]);
   const [dupSearching, setDupSearching] = useState(false);
@@ -467,9 +474,10 @@ export function BidIntakeStage() {
     const p = party(draft[key] as ProcessParty);
     const isMechanical = key === "mechanicalEngineer";
     return (
-      <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-        <h3 className="col-span-full text-sm font-semibold text-ink">{title}</h3>
-        <p className="col-span-full -mt-1 text-xs text-ink/45">
+      <section className="intake-section min-w-0">
+        <h3 className={sectionHead}>{title}</h3>
+        <div className={`${sectionBody} intake-stack`}>
+        <p className={sectionHint}>
           {isMechanical
             ? "Pick from saved list — also fills the first invitation. Or type a new name."
             : "Pick from saved list, or type a new name."}
@@ -574,7 +582,7 @@ export function BidIntakeStage() {
             ["phone", "Phone"],
           ] as const
         ).map(([f, label]) => (
-          <label key={f} className="flex flex-col gap-1">
+          <label key={f} className="intake-row">
             <span className={labelClass}>{label}</span>
             <input
               className={inputClass}
@@ -584,7 +592,7 @@ export function BidIntakeStage() {
             />
           </label>
         ))}
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Preferred contact</span>
           <div className="relative">
             <select
@@ -606,7 +614,7 @@ export function BidIntakeStage() {
             <SelectChevron />
           </div>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Preferred value</span>
           <input
             className={inputClass}
@@ -616,32 +624,33 @@ export function BidIntakeStage() {
             placeholder="Matches email or phone above"
           />
         </label>
+        </div>
       </section>
     );
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       <header>
-        <h2 className="text-base font-semibold text-ink">Intake</h2>
-        <p className="mt-1 text-xs text-ink/40">
+        <h2 className="intake-title">Intake</h2>
+        <p className="intake-sub mt-0.5">
           {saving ? "Saving…" : editable ? (dirty ? "Unsaved changes" : "Save to keep changes") : "Read only"}
         </p>
       </header>
 
       {error ? (
-        <p className="rounded-xl border border-danger/25 bg-danger-tint/40 px-4 py-2 text-sm text-danger">
+        <p className="rounded border border-danger/25 bg-danger-tint/40 px-3 py-1.5 text-[12.5px] text-danger">
           {error}
         </p>
       ) : null}
 
       {dupHits.length > 0 ? (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-50/60 px-4 py-3">
-          <p className="text-sm font-semibold text-ink">
+        <div className="rounded border border-amber-500/25 bg-amber-50/70 px-3 py-2.5">
+          <p className="text-[12.5px] font-semibold text-[#1f2937]">
             Possible same opportunity
             {dupSearching ? "…" : ""}
           </p>
-          <p className="mt-0.5 text-xs text-ink/55">
+          <p className="mt-0.5 text-[11px] text-[#6b7280]">
             Same drawings? Open that bid and Add invitation — do not create a
             second bid. If this bid was created by mistake, merge it into the
             keeper.
@@ -657,7 +666,7 @@ export function BidIntakeStage() {
               >
                 <Link
                   href={`/bidding/${h.id}?stage=intake`}
-                  className="text-sm font-medium text-brand hover:underline"
+                  className="text-[12.5px] font-medium text-[#4b5563] hover:underline"
                 >
                   {h.estimateNumber}
                   {" · "}
@@ -673,7 +682,7 @@ export function BidIntakeStage() {
                   <button
                     type="button"
                     disabled={linkingDupId != null}
-                    className="text-xs font-semibold text-ink/70 underline-offset-2 hover:text-ink hover:underline disabled:opacity-50"
+                    className="text-[11px] font-semibold text-[#4b5563] underline-offset-2 hover:text-[#1f2937] hover:underline disabled:opacity-50"
                     onClick={() => void linkIntoKeeper(h)}
                   >
                     {linkingDupId === h.id
@@ -687,8 +696,11 @@ export function BidIntakeStage() {
         </div>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-        <label className="flex flex-col gap-1">
+      <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
+      <section className="intake-section min-w-0 row-span-2 max-[1000px]:row-span-1">
+        <h3 className={sectionHead}>Bid identity</h3>
+        <div className={`${sectionBody} intake-stack`}>
+        <label className="intake-row">
           <span className={labelClass}>Bid / estimate #</span>
           <input
             className={inputClass}
@@ -697,11 +709,11 @@ export function BidIntakeStage() {
             onChange={(e) => setBidHeader({ estimateNumber: e.target.value })}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Bid type (mandatory)</span>
           <div className="relative">
             <select
-              className={selectClass}
+              className={selectClass + " !bg-[#eef2f7]"}
               disabled={!editable}
               value={draft.bidKind ?? ""}
               onChange={(e) =>
@@ -721,10 +733,8 @@ export function BidIntakeStage() {
             <SelectChevron />
           </div>
         </label>
-        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
-          <span className={labelClass}>
-            Bid name (architect name on drawings)
-          </span>
+        <label className="intake-row">
+          <span className={labelClass}>Bid name</span>
           <input
             className={inputClass}
             disabled={!editable}
@@ -733,7 +743,7 @@ export function BidIntakeStage() {
             placeholder="e.g. Weinberg USP 800 Pharmacy"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Drawing number</span>
           <input
             className={inputClass}
@@ -743,39 +753,41 @@ export function BidIntakeStage() {
             placeholder="Sheet / set number"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Drawing category</span>
-          <div className="relative">
-            <select
-              className={selectClass}
-              disabled={!editable}
-              value={draft.drawingCategory ?? ""}
-              onChange={(e) =>
-                setField(
-                  "drawingCategory",
-                  (e.target.value || null) as typeof draft.drawingCategory
-                )
-              }
-            >
-              <option value="">—</option>
-              {(meta?.drawingCategories?.includes("cd")
-                ? meta.drawingCategories
-                : [...(meta?.drawingCategories ?? ["sd", "dd", "ifb", "ifp", "ifc", "ifr"]), "cd"]
-              ).map((id) => (
-                <option key={id} value={id}>
-                  {meta?.drawingCategoryLabels?.[id] ?? (id === "cd" ? "CD" : id)}
-                </option>
-              ))}
-            </select>
-            <SelectChevron />
+          <div className="min-w-0">
+            <div className="relative">
+              <select
+                className={selectClass}
+                disabled={!editable}
+                value={draft.drawingCategory ?? ""}
+                onChange={(e) =>
+                  setField(
+                    "drawingCategory",
+                    (e.target.value || null) as typeof draft.drawingCategory
+                  )
+                }
+              >
+                <option value="">—</option>
+                {(meta?.drawingCategories?.includes("cd")
+                  ? meta.drawingCategories
+                  : [...(meta?.drawingCategories ?? ["sd", "dd", "ifb", "ifp", "ifc", "ifr"]), "cd"]
+                ).map((id) => (
+                  <option key={id} value={id}>
+                    {meta?.drawingCategoryLabels?.[id] ?? (id === "cd" ? "CD" : id)}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
+            {draft.drawingCategory && meta?.drawingCategoryPercents?.[draft.drawingCategory] ? (
+              <p className="mt-0.5 text-[10px] text-[#9ca3af]">
+                {meta.drawingCategoryPercents[draft.drawingCategory]} design completeness
+              </p>
+            ) : null}
           </div>
-          {draft.drawingCategory && meta?.drawingCategoryPercents?.[draft.drawingCategory] ? (
-            <p className="text-[10px] text-ink/40">
-              {meta.drawingCategoryPercents[draft.drawingCategory]} design completeness
-            </p>
-          ) : null}
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Owner / architect</span>
           <input
             className={inputClass}
@@ -788,8 +800,8 @@ export function BidIntakeStage() {
             }}
           />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Engineer of Record — mechanical</span>
+        <label className="intake-row">
+          <span className={labelClass}>EOR mechanical #</span>
           <input
             className={inputClass}
             disabled={!editable}
@@ -803,7 +815,7 @@ export function BidIntakeStage() {
             }}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Due date</span>
           <DatePicker
             ariaLabel="Due date"
@@ -813,7 +825,7 @@ export function BidIntakeStage() {
             onChange={(v) => setField("dueDate", v || null)}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Due time</span>
           <TimePicker
             ariaLabel="Due time"
@@ -822,7 +834,7 @@ export function BidIntakeStage() {
             onChange={(v) => setField("dueTime", v)}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Linked job</span>
           <div className="relative">
             <select
@@ -844,7 +856,7 @@ export function BidIntakeStage() {
             <SelectChevron />
           </div>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Bid date</span>
           <DatePicker
             ariaLabel="Bid date"
@@ -858,7 +870,7 @@ export function BidIntakeStage() {
             onChange={(v) => setBaseBidField("bidDate", v)}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Work type</span>
           <div className="relative">
             <select
@@ -882,7 +894,7 @@ export function BidIntakeStage() {
             <SelectChevron />
           </div>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Building type</span>
           <div className="relative">
             <select
@@ -903,7 +915,7 @@ export function BidIntakeStage() {
             <SelectChevron />
           </div>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Project type</span>
           <div className="relative">
             <select
@@ -924,37 +936,39 @@ export function BidIntakeStage() {
             <SelectChevron />
           </div>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Impacted SF</span>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            className={inputClass}
-            disabled={!editable}
-            value={draft.impactedGsf ?? ""}
-            onChange={(e) =>
-              setField(
-                "impactedGsf",
-                e.target.value === "" ? null : Number(e.target.value)
-              )
-            }
-            placeholder="Renovated / impacted area"
-          />
-          <span className="text-[10px] text-ink/40">
-            Life-safety renovated area — not whole-building GSF
-          </span>
+          <div className="min-w-0">
+            <input
+              type="number"
+              min={0}
+              step={1}
+              className={inputClass}
+              disabled={!editable}
+              value={draft.impactedGsf ?? ""}
+              onChange={(e) =>
+                setField(
+                  "impactedGsf",
+                  e.target.value === "" ? null : Number(e.target.value)
+                )
+              }
+              placeholder="Renovated / impacted area"
+            />
+            <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
+              Life-safety renovated area — not whole-building GSF
+            </span>
+          </div>
         </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Entity rule (suggests company)</span>
-          <p className="rounded-xl border border-ink/[0.06] bg-canvas/40 px-3 py-2 text-sm text-ink/70">
+        <label className="intake-row">
+          <span className={labelClass}>Entity rule</span>
+          <p className="rounded border border-[#e5e7eb] bg-[#f3f4f6] px-2.5 py-1.5 text-[12.5px] text-[#4b5563]">
             {draft.entityRule?.suggestedOurEntity
               ? `Suggests ${draft.entityRule.suggestedOurEntity.replace(/_/g, " ")}`
               : "Pick company on the bid header — rule only suggests"}
           </p>
         </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Related / rebid bid ID</span>
+        <label className="intake-row">
+          <span className={labelClass}>Related bid ID</span>
           <div className="flex gap-2">
             <input
               className={inputClass}
@@ -973,21 +987,20 @@ export function BidIntakeStage() {
             {draft.relatedBidId != null ? (
               <Link
                 href={`/bidding/${draft.relatedBidId}?stage=intake`}
-                className="shrink-0 self-center text-sm font-medium text-brand hover:underline"
+                className="shrink-0 self-center text-[12.5px] font-medium text-[#4b5563] hover:underline"
               >
                 Open
               </Link>
             ) : null}
           </div>
         </label>
+        </div>
       </section>
 
-      <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(420px,1fr))]">
-        <section className="grid gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-          <h3 className="col-span-full text-sm font-semibold text-ink">
-            Project address
-          </h3>
-          <p className="col-span-full -mt-1 text-xs text-ink/45">
+        <section className="intake-section min-w-0">
+          <h3 className={sectionHead}>Project address</h3>
+          <div className={`${sectionBody} intake-stack`}>
+          <p className={sectionHint}>
             Paste the full US line in Address line 1 — backend fills city / state /
             ZIP when those are empty. Do not clear line 1.
           </p>
@@ -1002,7 +1015,7 @@ export function BidIntakeStage() {
           ).map(([k, label]) => (
             <label
               key={k}
-              className={`flex flex-col gap-1 ${k === "line1" ? "col-span-full max-w-2xl" : ""}`}
+              className="intake-row"
             >
               <span className={labelClass}>{label}</span>
               <input
@@ -1013,7 +1026,7 @@ export function BidIntakeStage() {
               />
             </label>
           ))}
-          <label className="flex flex-col gap-1">
+          <label className="intake-row">
             <span className={labelClass}>Sales tax applicable</span>
             <div className="relative">
               <select
@@ -1040,38 +1053,43 @@ export function BidIntakeStage() {
               <SelectChevron />
             </div>
           </label>
+          </div>
         </section>
         {renderPartySection("owner", "Owner", "owner")}
+        <div className="col-span-2 min-w-0 max-[1000px]:col-span-1">
+          {renderPartySection("architect", "Architect", "architect")}
+        </div>
       </div>
 
-      <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(420px,1fr))]">
-        {renderPartySection("architect", "Architect", "architect")}
+      <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
+      <div className="min-w-0">
         {renderPartySection("mechanicalEngineer", "Mechanical", "mechanical")}
       </div>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+      <section className="intake-section min-w-0">
+        <div className="intake-section-head-bar">
           <div>
-            <h3 className="text-sm font-semibold text-ink">Invitations</h3>
-            <p className="text-xs text-ink/45">
+            <h3>Invitations</h3>
+            <p>
               Company first, then contacts. Selecting a contact also fills
-              Mechanical. Many vendors → many rows, one bid.
+              Mechanical.
             </p>
           </div>
           {editable ? (
             <button
               type="button"
-              className="rounded-xl border border-ink/10 bg-canvas/40 px-3 py-1.5 text-xs font-semibold text-ink/70 hover:border-brand/40 hover:text-brand"
+              className={addBtnClass}
               onClick={() =>
                 setInvitations([...invitations, emptyInvitation()])
               }
             >
-              + Add invitation
+              + Add
             </button>
           ) : null}
         </div>
+        <div className={`${sectionBody} flex flex-col gap-2`}>
         {invitations.length === 0 ? (
-          <p className="text-sm text-ink/45">No invitations yet.</p>
+          <p className="text-[12.5px] text-[#6b7280]">No invitations yet.</p>
         ) : (
           invitations.map((inv, index) => {
             const company = inv.contact?.company ?? "";
@@ -1083,7 +1101,7 @@ export function BidIntakeStage() {
             return (
               <div
                 key={inv.id ?? index}
-                className="grid gap-3 rounded-xl border border-ink/[0.06] bg-canvas/30 p-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]"
+                className="intake-stack rounded border border-[#e5e7eb] bg-[#f8fafc] p-2.5"
               >
                 <PartyNameCombobox
                   label="Company"
@@ -1122,7 +1140,7 @@ export function BidIntakeStage() {
                     })
                   }
                 />
-                <label className="flex flex-col gap-1">
+                <label className="intake-row">
                   <span className={labelClass}>Received</span>
                   <DatePicker
                     ariaLabel="Received"
@@ -1179,7 +1197,7 @@ export function BidIntakeStage() {
                     })
                   }
                 />
-                <label className="flex flex-col gap-1">
+                <label className="intake-row">
                   <span className={labelClass}>Email</span>
                   <input
                     className={inputClass}
@@ -1195,7 +1213,7 @@ export function BidIntakeStage() {
                     }
                   />
                 </label>
-                <label className="flex flex-col gap-1">
+                <label className="intake-row">
                   <span className={labelClass}>Phone</span>
                   <input
                     className={inputClass}
@@ -1211,7 +1229,7 @@ export function BidIntakeStage() {
                     }
                   />
                 </label>
-                <label className="flex flex-col gap-1">
+                <label className="intake-row">
                   <span className={labelClass}>Preferred contact</span>
                   <div className="relative">
                     <select
@@ -1236,7 +1254,7 @@ export function BidIntakeStage() {
                     <SelectChevron />
                   </div>
                 </label>
-                <label className="flex flex-col gap-1">
+                <label className="intake-row">
                   <span className={labelClass}>Preferred value</span>
                   <input
                     className={inputClass}
@@ -1246,7 +1264,7 @@ export function BidIntakeStage() {
                     placeholder="Matches email or phone"
                   />
                 </label>
-                <label className="flex max-w-2xl flex-col gap-1 col-span-full">
+                <label className="intake-row col-span-full">
                   <span className={labelClass}>
                     Invitation email (paste full)
                   </span>
@@ -1263,7 +1281,7 @@ export function BidIntakeStage() {
                     }
                   />
                 </label>
-                <label className="flex max-w-2xl flex-col gap-1 col-span-full">
+                <label className="intake-row col-span-full">
                   <span className={labelClass}>Clerk notes</span>
                   <textarea
                     className={`${inputClass} min-h-[3.5rem] resize-y`}
@@ -1277,7 +1295,7 @@ export function BidIntakeStage() {
                     }
                   />
                 </label>
-                <label className="flex max-w-2xl flex-col gap-1 col-span-full">
+                <label className="intake-row col-span-full">
                   <span className={labelClass}>Inviter drawing link</span>
                   <input
                     className={inputClass}
@@ -1300,15 +1318,15 @@ export function BidIntakeStage() {
                   />
                 </label>
 
-                <div className="col-span-full flex flex-col gap-2 rounded-lg border border-ink/[0.05] bg-surface/60 p-2.5">
+                <div className="col-span-full flex flex-col gap-2 rounded border border-[#e5e7eb] bg-[#fff] p-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-ink/60">
+                    <span className="text-[11px] font-semibold text-[#6b7280]">
                       Addenda from this inviter
                     </span>
                     {editable ? (
                       <button
                         type="button"
-                        className="text-xs font-semibold text-brand hover:underline"
+                        className="text-[11px] font-semibold text-[#4b5563] hover:underline"
                         onClick={() =>
                           patchInvitation(index, {
                             addenda: [...addenda, emptyAddendum()],
@@ -1320,14 +1338,14 @@ export function BidIntakeStage() {
                     ) : null}
                   </div>
                   {addenda.length === 0 ? (
-                    <p className="text-xs text-ink/40">No addenda yet.</p>
+                    <p className="text-[11px] text-[#9ca3af]">No addenda yet.</p>
                   ) : (
                     addenda.map((ad, adIndex) => (
                       <div
                         key={adIndex}
                         className="grid gap-2 sm:grid-cols-[6rem_1fr_1fr_auto]"
                       >
-                        <label className="flex flex-col gap-1">
+                        <label className="intake-row">
                           <span className={labelClass}>#</span>
                           <input
                             className={inputClass}
@@ -1347,7 +1365,7 @@ export function BidIntakeStage() {
                             }}
                           />
                         </label>
-                        <label className="flex flex-col gap-1">
+                        <label className="intake-row">
                           <span className={labelClass}>Received</span>
                           <DatePicker
                             ariaLabel="Received"
@@ -1367,7 +1385,7 @@ export function BidIntakeStage() {
                             }}
                           />
                         </label>
-                        <label className="flex flex-col gap-1">
+                        <label className="intake-row">
                           <span className={labelClass}>Notes</span>
                           <input
                             className={inputClass}
@@ -1446,24 +1464,24 @@ export function BidIntakeStage() {
             );
           })
         )}
+        </div>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
-        <div>
-          <h3 className="text-sm font-semibold text-ink">
-            Who else is bidding?
-          </h3>
-          <p className="text-xs text-ink/45">
+      <section className="intake-section min-w-0">
+        <div className={sectionHead}>
+          Who else is bidding?
+        </div>
+        <div className={`${sectionBody} flex flex-col gap-2`}>
+          <p className={sectionHint}>
             Call GC / architect / ME. Do not ask the inviter.
           </p>
-        </div>
         {needsWhoElseResearch ? (
-          <p className="rounded-xl border border-amber-500/25 bg-amber-50/50 px-3 py-2 text-xs text-ink/65">
+          <p className="rounded border border-amber-500/30 bg-amber-50/60 px-2.5 py-1.5 text-[11px] text-[#4b5563]">
             {bid.workflow?.completeBlockedReason ||
               "Researched is required to hand off when there are fewer than two invitations."}
           </p>
         ) : null}
-        <label className="flex items-center gap-2 text-sm text-ink">
+        <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
           <input
             type="checkbox"
             disabled={!editable}
@@ -1480,7 +1498,7 @@ export function BidIntakeStage() {
             {needsWhoElseResearch ? " (required for handoff)" : ""}
           </span>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="intake-row">
           <span className={labelClass}>Notes</span>
           <textarea
             className={`${inputClass} min-h-[4.5rem] resize-y`}
@@ -1495,22 +1513,23 @@ export function BidIntakeStage() {
             }
           />
         </label>
+        </div>
       </section>
+      </div>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
+      <section className="intake-section min-w-0">
+        <div className="intake-section-head-bar">
           <div>
-            <h3 className="text-sm font-semibold text-ink">
-              Project document hub
-            </h3>
-            <p className="text-xs text-ink/45">
-              O-drive replacement: keep owner, federal, portal, and other project document links here. Upload files in Attachments or Drawings.
+            <h3>Project document hub</h3>
+            <p>
+              O-drive / portal / project document links. Upload files in Attachments or Drawings.
             </p>
           </div>
           {editable ? (
             <button
               type="button"
-              className="rounded-xl border border-ink/10 bg-canvas/40 px-3 py-1.5 text-xs font-semibold text-ink/70 hover:border-brand/40 hover:text-brand"
+              className={addBtnClass}
               onClick={() =>
                 setField("documentLinks", [
                   ...documentLinks,
@@ -1522,8 +1541,9 @@ export function BidIntakeStage() {
             </button>
           ) : null}
         </div>
+        <div className={`${sectionBody} flex flex-col gap-2`}>
         {documentLinks.length === 0 ? (
-          <p className="text-sm text-ink/45">No owner links yet.</p>
+          <p className="text-[12.5px] text-[#6b7280]">No owner links yet.</p>
         ) : (
           documentLinks.map((link, index) => (
             <div
@@ -1556,7 +1576,7 @@ export function BidIntakeStage() {
                   setField("documentLinks", next);
                 }}
               />
-              <label className="inline-flex items-center gap-1.5 text-xs text-ink/70">
+              <label className="inline-flex items-center gap-1.5 text-[11px] text-[#4b5563]">
                 <input
                   type="checkbox"
                   disabled={!editable}
@@ -1600,36 +1620,37 @@ export function BidIntakeStage() {
             </div>
           ))
         )}
+        </div>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+      <section className="intake-section min-w-0">
+        <div className="intake-section-head-bar">
           <div>
-            <h3 className="text-sm font-semibold text-ink">Contract chain</h3>
-            <p className="text-xs text-ink/45">
-              Optional. Add only the layers you know (owner → … → us). Direct to
-              owner is fine — mechanical not required.
+            <h3>Contract chain</h3>
+            <p>
+              Optional. Add only the layers you know (owner → … → us).
             </p>
           </div>
           {editable ? (
             <button
               type="button"
-              className="rounded-xl border border-ink/10 bg-canvas/40 px-3 py-1.5 text-xs font-semibold text-ink/70 hover:border-brand/40 hover:text-brand"
+              className={addBtnClass}
               onClick={() => setTiers([...tiers, emptyTier()])}
             >
               + Add layer
             </button>
           ) : null}
         </div>
+        <div className={`${sectionBody} flex flex-col gap-2`}>
         {tiers.length === 0 ? (
-          <p className="text-sm text-ink/45">
+          <p className="text-[12.5px] text-[#6b7280]">
             No layers yet — not required to hand off.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
-                <tr className="text-xs text-ink/50">
+                <tr className="text-[11px] text-[#6b7280]">
                   <th className="px-2 py-1.5 font-semibold">Role</th>
                   <th className="px-2 py-1.5 font-semibold">Company</th>
                   <th className="px-2 py-1.5 font-semibold">Has job?</th>
@@ -1758,20 +1779,16 @@ export function BidIntakeStage() {
             </table>
           </div>
         )}
+        </div>
       </section>
 
-      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-semibold text-ink">
-              GCs / mechanicals
-            </h3>
-            <p className="mt-0.5 text-xs text-ink/45">
-              Same opportunity — company + flags. Deeper follow-up stays on
-              Post-Bid.
-            </p>
-          </div>
-        </div>
+      <section className="intake-section min-w-0">
+        <div className={sectionHead}>GCs / mechanicals</div>
+        <div className={`${sectionBody} flex flex-col gap-3`}>
+        <p className={sectionHint}>
+          Same opportunity — company + flags. Deeper follow-up stays on
+          Post-Bid.
+        </p>
         {(
           [
             {
@@ -1788,15 +1805,15 @@ export function BidIntakeStage() {
             },
           ] as const
         ).map(({ key, title, list, setList }) => (
-          <div key={key} className="mt-4">
+          <div key={key}>
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
                 {title}
               </p>
               {editable ? (
                 <button
                   type="button"
-                  className="text-xs font-semibold text-brand hover:underline"
+                  className="text-[11px] font-semibold text-[#4b5563] hover:underline"
                   onClick={() => setList([...list, emptyGcOrMech()])}
                 >
                   + Add
@@ -1804,13 +1821,13 @@ export function BidIntakeStage() {
               ) : null}
             </div>
             {list.length === 0 ? (
-              <p className="mt-1 text-sm text-ink/40">None yet.</p>
+              <p className="mt-1 text-[12.5px] text-[#9ca3af]">None yet.</p>
             ) : (
               <ul className="mt-2 space-y-2">
                 {list.map((row, index) => (
                   <li
                     key={`${key}-${index}`}
-                    className="flex flex-wrap items-center gap-2 rounded-xl border border-ink/[0.06] px-3 py-2"
+                    className="flex flex-wrap items-center gap-2 rounded border border-[#e5e7eb] bg-[#f8fafc] px-2.5 py-1.5"
                   >
                     <input
                       className={`${inputClass} min-w-[10rem] flex-1`}
@@ -1858,7 +1875,7 @@ export function BidIntakeStage() {
                         setList(list.map((r, i) => (i === index ? { ...r, phone } : r)));
                       }}
                     />
-                    <label className="flex items-center gap-1.5 text-xs text-ink/70">
+                    <label className="flex items-center gap-1.5 text-[11px] text-[#4b5563]">
                       <input
                         type="checkbox"
                         disabled={!editable}
@@ -1878,7 +1895,7 @@ export function BidIntakeStage() {
                       />
                       Has the job
                     </label>
-                    <label className="flex items-center gap-1.5 text-xs text-ink/70">
+                    <label className="flex items-center gap-1.5 text-[11px] text-[#4b5563]">
                       <input
                         type="checkbox"
                         disabled={!editable}
@@ -1972,7 +1989,9 @@ export function BidIntakeStage() {
             )}
           </div>
         ))}
+        </div>
       </section>
+      </div>
 
       <BidAttachmentsSection
         attachments={(bid.attachments ?? []).filter((a) => a.label !== "drawings")}

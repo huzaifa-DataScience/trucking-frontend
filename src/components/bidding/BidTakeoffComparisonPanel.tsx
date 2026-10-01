@@ -39,46 +39,42 @@ export function BidTakeoffComparisonPanel() {
   if (!bid || rows.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-base font-semibold text-ink">Takeoff comparison</h2>
-          <p className="mt-0.5 text-sm text-ink/50">
-            Compare the submitted HVAC, duct, hydronic, and plumbing takeoffs before moving to proposal.
-          </p>
-        </div>
-        <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold text-ink/55">
+    <section className="intake-section min-w-0">
+      <div className="intake-section-head flex flex-wrap items-center justify-between gap-2">
+        <span>Takeoff comparison</span>
+        <span className="rounded border border-[#d9d4c8] bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-[#5a5340]">
           {rows.filter((row) => row.reconciliationRequired).length} to reconcile
         </span>
       </div>
-
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[40rem] text-left text-sm">
-          <thead className="border-b border-ink/[0.08] text-xs uppercase tracking-wide text-ink/45">
+      <div className="intake-section-body overflow-x-auto">
+        <p className="intake-section-hint">
+          Compare HVAC, duct, hydronic, and plumbing takeoffs before proposal.
+        </p>
+        <table className="w-full min-w-[32rem] text-left text-[12.5px] text-[#374151]">
+          <thead className="border-b border-[#e5e7eb] bg-[#f3f4f6] text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
             <tr>
-              <th className="px-3 py-2 font-semibold">Scope</th>
-              <th className="px-3 py-2 font-semibold">Takeoff A</th>
-              <th className="px-3 py-2 font-semibold">Takeoff B</th>
-              <th className="px-3 py-2 font-semibold">Difference</th>
-              <th className="px-3 py-2 font-semibold">Variance</th>
-              <th className="px-3 py-2 font-semibold">Final</th>
-              <th className="px-3 py-2 font-semibold">Status</th>
+              <th className="px-2 py-1.5">Scope</th>
+              <th className="px-2 py-1.5">Takeoff A</th>
+              <th className="px-2 py-1.5">Takeoff B</th>
+              <th className="px-2 py-1.5">Diff</th>
+              <th className="px-2 py-1.5">Var</th>
+              <th className="px-2 py-1.5">Final</th>
+              <th className="px-2 py-1.5">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink/[0.06]">
+          <tbody className="divide-y divide-[#e5e7eb]">
             {rows.map((row) => (
               <tr key={`${row.scope}-${row.roleA}-${row.roleB}`}>
-                <td className="px-3 py-3 font-semibold text-ink">{label(row.scope)}</td>
-                <td className="px-3 py-3 text-ink/70">{label(row.roleA)}: {quantity(row.quantityA)}</td>
-                <td className="px-3 py-3 text-ink/70">{label(row.roleB)}: {quantity(row.quantityB)}</td>
-                <td className="px-3 py-3 text-ink/70">{quantity(row.difference)}</td>
-                <td className="px-3 py-3 text-ink/70">{percent(row.differencePct)}</td>
-                <td className="px-3 py-3 font-semibold text-ink">{quantity(row.finalQuantity)}</td>
-                <td className="px-3 py-3">
+                <td className="px-2 py-2 font-semibold text-[#1f2937]">{label(row.scope)}</td>
+                <td className="px-2 py-2 text-[#4b5563]">{label(row.roleA)}: {quantity(row.quantityA)}</td>
+                <td className="px-2 py-2 text-[#4b5563]">{label(row.roleB)}: {quantity(row.quantityB)}</td>
+                <td className="px-2 py-2 text-[#4b5563]">{quantity(row.difference)}</td>
+                <td className="px-2 py-2 text-[#4b5563]">{percent(row.differencePct)}</td>
+                <td className="px-2 py-2 font-semibold text-[#1f2937]">{quantity(row.finalQuantity)}</td>
+                <td className="px-2 py-2">
                   <span className={row.reconciliationRequired ? "font-semibold text-danger" : "text-success"}>
                     {row.reconciliationRequired ? "Review required" : "Matched"}
                   </span>
-                  {row.reviewedBy ? <span className="ml-1 text-xs text-ink/45">by {row.reviewedBy}</span> : null}
                 </td>
               </tr>
             ))}
