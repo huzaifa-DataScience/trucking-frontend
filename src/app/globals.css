@@ -556,6 +556,11 @@ body {
   font-size: 11px;
   font-weight: 600;
   color: #4b5563;
+  cursor: pointer;
+}
+
+.intake-compact .intake-head-btn:disabled {
+  cursor: default;
 }
 
 .intake-compact .intake-head-btn:hover {
@@ -656,5 +661,49 @@ body {
 .intake-compact textarea[class*="focus:border-brand"]:focus {
   border-color: #94a3b8;
   box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.28);
+}
+
+/* Muted CRM checkboxes — replace browser-default blue/black */
+.intake-compact input[type="checkbox"],
+.intake-check {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1px solid #cfd5dd;
+  border-radius: 3px;
+  background-color: #fff;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 10px 10px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.intake-compact input[type="checkbox"]:hover:not(:disabled):not(:checked),
+.intake-check:hover:not(:disabled):not(:checked) {
+  border-color: #94a3b8;
+  background-color: #faf7f0;
+}
+
+.intake-compact input[type="checkbox"]:checked,
+.intake-check:checked {
+  border-color: #5a5340;
+  background-color: #5a5340;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M2.5 6.2 5 8.7 9.5 3.5'/%3E%3C/svg%3E");
+}
+
+.intake-compact input[type="checkbox"]:focus-visible,
+.intake-check:focus-visible {
+  outline: 2px solid rgba(90, 83, 64, 0.35);
+  outline-offset: 1px;
+}
+
+.intake-compact input[type="checkbox"]:disabled,
+.intake-check:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
