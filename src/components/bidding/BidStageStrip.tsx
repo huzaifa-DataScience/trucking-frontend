@@ -25,20 +25,15 @@ function TabButton({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`relative pb-2.5 text-sm transition focus-visible:outline-none ${
+      className={`inline-flex items-center rounded-md px-3 py-2 text-[12.5px] transition focus-visible:outline-none ${
         active
-          ? `font-semibold ${colorClass ?? "text-ink"}`
-          : "font-medium text-ink/55 hover:text-ink"
+          ? colorClass
+            ? `bg-peach-fill font-semibold ring-1 ring-peach-border ${colorClass}`
+            : "bg-peach-fill font-semibold text-ink ring-1 ring-peach-border"
+          : "font-medium text-[#4b5563] hover:bg-[#f3f4f6]"
       }`}
     >
       {children}
-      {active ? (
-        <span
-          className={`absolute inset-x-0 -bottom-px h-0.5 rounded-full ${
-            colorClass ? "bg-current" : "bg-brand"
-          }`}
-        />
-      ) : null}
     </button>
   );
 }
@@ -71,11 +66,11 @@ export function BidStageStrip({
   };
 
   return (
-    <nav aria-label="Bid workflow stages" className="flex flex-col gap-3">
+    <nav aria-label="Bid workflow stages">
       <div
         role="tablist"
         aria-label="Bid stage"
-        className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]"
+        className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[#e0e0e0] bg-white p-1.5"
       >
         {preStages.map((t) => (
           <TabButton

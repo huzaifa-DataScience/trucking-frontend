@@ -42,7 +42,7 @@ export function BidSheetAlerts({
       ) : null}
 
       {!hasComputed ? (
-        <div className="rounded-lg border border-dashed border-[#d9d4c8] bg-[#f3f1ea]/50 px-4 py-3 text-[13px] text-[#4b5563]">
+        <div className="rounded-lg border border-dashed border-[#d9c7b6] bg-[#f5efe8]/50 px-4 py-3 text-[13px] text-[#4b5563]">
           Fill the form, then <strong className="text-[#1f2937]">Preview calculate</strong> — live totals
           appear in the results panel.
         </div>
@@ -57,7 +57,7 @@ export function BidSheetAlerts({
             type="button"
             onClick={onReopen}
             disabled={saving}
-            className="rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-3 py-1.5 text-[12px] font-medium text-[#5a5340] hover:bg-[#ebe8df] disabled:opacity-50"
+            className="rounded-md border border-[#d9c7b6] bg-[#f5efe8] px-3 py-1.5 text-[12px] font-medium text-[#1a1a1a] hover:bg-[#e6d5c4] disabled:opacity-50"
           >
             Reopen as draft
           </button>

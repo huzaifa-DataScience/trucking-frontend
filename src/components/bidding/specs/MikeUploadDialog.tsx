@@ -239,7 +239,7 @@ export function MikeUploadDialog({
           <button
             type="button"
             onClick={submit}
-            className="rounded-lg border border-[#cfd5dd] bg-[#f3f1ea] px-4 py-2 text-sm font-semibold text-[#5a5340] hover:bg-[#ebe8df]"
+            className="rounded-lg border border-[#cfd5dd] bg-[#f5efe8] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#e6d5c4]"
           >
             Upload
           </button>

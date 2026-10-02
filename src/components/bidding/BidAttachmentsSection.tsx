@@ -21,13 +21,13 @@ const ATTACHMENT_CATEGORY_OPTIONS: { value: string; label: string }[] = [
 ];
 
 const DRAWING_PHASE_TITLES: Record<string, string> = {
-  sd: "SD — Schematic Design",
-  dd: "DD — Design Development",
-  cd: "CD — Construction Documents",
-  ifb: "IFB — Issued for Bid",
-  ifp: "IFP — Issued for Permit",
-  ifc: "IFC — Issued for Construction",
-  ifr: "IFR — Issued for Record",
+  sd: "Schematic Design",
+  dd: "Design Development",
+  cd: "Construction Documents",
+  ifb: "Issued for Bid",
+  ifp: "Issued for Permit",
+  ifc: "Issued for Construction",
+  ifr: "Issued for Record",
 };
 
 function isWordDoc(mimeType: string): boolean {
@@ -213,9 +213,9 @@ function DrawingFileRows({
       {attachments.map((att) => (
         <li
           key={att.id}
-          className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-[#e5e7eb] bg-white px-3 py-2.5 first:border-t-0 hover:bg-[#faf7f0]"
+          className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-[#e5e7eb] bg-white px-3 py-2.5 first:border-t-0 hover:bg-[#faf7f3]"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f3f1ea] text-[10px] font-bold tracking-wide text-[#5a5340]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f5efe8] text-[10px] font-bold tracking-wide text-[#1a1a1a]">
             {fileKindLabel(att)}
           </div>
           <div className="min-w-0">
@@ -316,16 +316,16 @@ function DrawingsPanel({
               key={o.value}
               type="button"
               onClick={() => onPhaseChange(o.value)}
-              className={`inline-flex h-[30px] cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-semibold transition-colors ${
+              className={`inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-md border px-3 text-[12px] font-semibold transition-colors ${
                 active
-                  ? "border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340]"
-                  : "border-[#d5dbe3] bg-white text-[#4b5563] hover:border-[#94a3b8] hover:bg-[#fafafa]"
+                  ? "border-peach-border bg-peach-fill text-ink"
+                  : "border-[#e0e0e0] bg-white text-[#4b5563] hover:border-peach-border hover:bg-peach-fill/50"
               }`}
             >
               <span>{o.label}</span>
               <span
                 className={`inline-flex min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-[18px] ${
-                  active ? "bg-[#ebe6da] text-[#5a5340]" : "bg-[#eef1f4] text-[#6b7280]"
+                  active ? "bg-ink/80 text-white" : "bg-[#eef1f4] text-[#6b7280]"
                 }`}
               >
                 {count}
@@ -337,17 +337,17 @@ function DrawingsPanel({
 
       <section className="intake-section">
         <div className="intake-section-head flex items-center justify-between gap-3">
-          <h3 className="m-0 text-[13px] font-semibold tracking-[0.02em] text-[#5a5340]">
+          <h3 className="m-0 text-[13px] font-semibold tracking-[0.02em] text-[#1f2937]">
             {phaseTitle}
           </h3>
-          <span className="shrink-0 text-[12px] font-normal text-[#7a7360]">{fileMeta}</span>
+          <span className="shrink-0 text-[12px] font-normal text-[#6b7280]">{fileMeta}</span>
         </div>
 
         <div className="intake-section-body">
           {isEditable ? (
             <div
-              className={`flex cursor-pointer flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-3.5 py-3.5 ${
-                dragging ? "border-[#94a3b8] bg-[#f3f1ea]" : "border-[#c5ccd6] bg-[#fafbfc]"
+              className={`flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 py-8 text-center ${
+                dragging ? "border-brand bg-peach-fill/40" : "border-[#e0e0e0] bg-[#fafafa]"
               } ${busy || atLimit ? "cursor-default opacity-70" : ""}`}
               onClick={() => {
                 if (!busy && !atLimit) onBrowse();
@@ -370,32 +370,30 @@ function DrawingsPanel({
                 if (!busy && !atLimit) onDropFiles(e.dataTransfer.files);
               }}
             >
-              <div className="flex min-w-0 items-center gap-2.5">
-                <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md border border-[#e5e7eb] bg-white text-[#7a7360]">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                    <path d="M12 16V4M12 4l-4 4M12 4l4 4" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-[#374151]">
-                    {busy ? "Uploading…" : "Drop PDF or image here"}
-                  </p>
-                  <p className="mt-0.5 text-[12px] text-[#6b7280]">
-                    or browse — up to {Math.round(maxBytes / (1024 * 1024))} MB each · max {MAX_FILES} files
-                  </p>
-                </div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-peach-fill text-brand">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+                  <path d="M12 16V4M12 4l-4 4M12 4l4 4" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-[13px] font-bold uppercase tracking-[0.06em] text-ink">
+                  {busy ? "Uploading…" : "Drag files here"}
+                </p>
+                <p className="mt-1 text-[12px] text-[#6b7280]">
+                  PDF or image · up to {Math.round(maxBytes / (1024 * 1024))} MB · max {MAX_FILES} files
+                </p>
               </div>
               <button
                 type="button"
                 disabled={busy || atLimit}
-                className="intake-head-btn shrink-0 cursor-pointer border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340] hover:bg-[#ebe6da] disabled:cursor-default disabled:opacity-50"
+                className="h-9 cursor-pointer rounded-md border border-brand bg-brand px-4 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(194,100,42,0.25)] hover:bg-brand-secondary disabled:cursor-default disabled:opacity-50"
                 onClick={(e) => {
                   e.stopPropagation();
                   onBrowse();
                 }}
               >
-                Browse files
+                Upload files
               </button>
               <input
                 ref={inputRef}

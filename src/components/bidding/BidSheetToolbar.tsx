@@ -72,7 +72,7 @@ export function BidSheetToolbar({
             type="button"
             onClick={onSubmit}
             disabled={saving || !isEditable}
-            className="rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-2.5 py-1 text-[11px] font-semibold text-[#5a5340] hover:bg-[#ebe8df] disabled:opacity-45"
+            className="rounded-md border border-[#d9c7b6] bg-[#f5efe8] px-2.5 py-1 text-[11px] font-semibold text-[#1a1a1a] hover:bg-[#e6d5c4] disabled:opacity-45"
           >
             Mark submitted
           </button>

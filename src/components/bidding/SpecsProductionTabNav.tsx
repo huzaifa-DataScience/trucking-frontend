@@ -24,7 +24,7 @@ export function SpecsProductionTabNav({
       disabled
         ? "cursor-not-allowed font-medium text-ink/30"
         : on
-          ? "bg-brand font-semibold text-white shadow-[0_2px_8px_rgba(255,123,17,0.35)]"
+          ? "bg-brand font-semibold text-white shadow-[0_2px_8px_rgba(194,100,42,0.35)]"
           : "font-medium text-ink hover:bg-ink/[0.04]"
     }`;
 

@@ -39,7 +39,7 @@ export function BidSheetTabNav({
             onClick={() => onChange(t.id)}
             className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-[12.5px] transition disabled:opacity-45 ${
               isActive
-                ? "bg-[#f3f1ea] font-semibold text-[#5a5340] ring-1 ring-[#d9d4c8]"
+                ? "bg-peach-fill font-semibold text-ink ring-1 ring-peach-border"
                 : "font-medium text-[#4b5563] hover:bg-[#f3f4f6]"
             }`}
           >
@@ -47,7 +47,7 @@ export function BidSheetTabNav({
             {badge ? (
               <span
                 className={`min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none ${
-                  isActive ? "bg-white/80 text-[#5a5340]" : "bg-[#e5e7eb] text-[#6b7280]"
+                  isActive ? "bg-ink/80 text-white" : "bg-[#e5e7eb] text-[#6b7280]"
                 }`}
               >
                 {badge}
