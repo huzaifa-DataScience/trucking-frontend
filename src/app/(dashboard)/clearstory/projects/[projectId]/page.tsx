@@ -14,6 +14,7 @@ import {
   normalizeMoney,
   type ClearstoryCorBucket,
 } from "@/lib/api/endpoints/clearstory";
+import { tableFont } from "@/lib/fonts";
 
 const BUCKETS: { key: ClearstoryCorBucket | "ALL"; label: string }[] = [
   { key: "ALL", label: "All" },
@@ -210,36 +211,38 @@ export default function ClearstoryProjectDetailPage() {
             No CORs for this filter. Clearstory may have no rows in this bucket, or data has not synced yet.
           </p>
         ) : (
-          <div className={TABLE_SCROLL}>
-            <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
+          <div className={`${TABLE_SCROLL} rounded border border-ink/[0.12]`}>
+            <table
+              className={`${tableFont.className} w-full min-w-[1040px] border-collapse text-left text-sm leading-5 text-ink/[0.87]`}
+            >
               <caption className="sr-only">Change orders for {title}</caption>
               <thead>
-                <tr className="border-b border-ink/[0.08] text-xs font-semibold uppercase tracking-wide text-ink/45">
-                  <th scope="col" className="sticky left-0 z-[1] bg-surface px-2 py-2.5">
+                <tr className="border-b border-ink/[0.12] bg-[#f8f9fa]">
+                  <th scope="col" className="sticky left-0 z-[1] h-11 whitespace-nowrap border-r border-ink/[0.12] bg-[#f8f9fa] px-4 font-medium">
                     COR #
                   </th>
-                  <th scope="col" className="px-2 py-2.5">
+                  <th scope="col" className="relative h-11 whitespace-nowrap px-4 font-medium before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20">
                     Bucket
                   </th>
-                  <th scope="col" className="px-2 py-2.5">
+                  <th scope="col" className="relative h-11 whitespace-nowrap px-4 font-medium before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20">
                     Status
                   </th>
-                  <th scope="col" className="px-2 py-2.5">
+                  <th scope="col" className="relative h-11 whitespace-nowrap px-4 font-medium before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20">
                     Stage
                   </th>
-                  <th scope="col" className="px-2 py-2.5 text-right">
+                  <th scope="col" className="relative h-11 whitespace-nowrap px-4 font-medium text-right before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20">
                     Requested
                   </th>
-                  <th scope="col" className="px-2 py-2.5 text-right">
+                  <th scope="col" className="relative h-11 whitespace-nowrap px-4 font-medium text-right before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20">
                     Total
                   </th>
-                  <th scope="col" className="px-2 py-2.5 text-right">
+                  <th scope="col" className="relative h-11 whitespace-nowrap px-4 font-medium text-right before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20">
                     Void
                   </th>
-                  <th scope="col" className="px-2 py-2.5">
+                  <th scope="col" className="relative h-11 whitespace-nowrap px-4 font-medium before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20">
                     Updated
                   </th>
-                  <th scope="col" className="px-2 py-2.5">
+                  <th scope="col" className="relative h-11 whitespace-nowrap px-4 font-medium before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20">
                     <span className="sr-only">Full JSON</span>
                   </th>
                 </tr>
@@ -249,35 +252,35 @@ export default function ClearstoryProjectDetailPage() {
                   const statusText = row.status?.trim() || "—";
                   const stageText = row.stage?.trim() || "—";
                   return (
-                    <tr key={row.id} className="border-b border-ink/[0.06] hover:bg-ink/[0.02]">
+                    <tr key={row.id} className="group/row h-10 border-b border-ink/[0.12] transition-colors last:border-b-0 hover:bg-[#f7f7f7]">
                       <th
                         scope="row"
-                        className="sticky left-0 z-[1] bg-surface px-2 py-2.5 text-left font-mono text-xs font-normal text-ink"
+                        className="sticky left-0 z-[1] border-r border-ink/[0.12] bg-surface px-4 py-1.5 text-left font-normal group-hover/row:bg-[#f7f7f7]"
                       >
                         {row.corNumber ?? row.issueNumber ?? row.numericId ?? row.id.slice(0, 8)}
                       </th>
-                      <td className="px-2 py-2.5 text-ink/80">{bucketLabel(row.statusBucket)}</td>
-                      <td className="max-w-[10rem] truncate px-2 py-2.5 text-ink/80" title={row.status}>
+                      <td className="px-4 py-1.5">{bucketLabel(row.statusBucket)}</td>
+                      <td className="max-w-[10rem] truncate px-4 py-1.5" title={row.status}>
                         {statusText}
                       </td>
-                      <td className="max-w-[10rem] truncate px-2 py-2.5 text-ink/80" title={row.stage}>
+                      <td className="max-w-[10rem] truncate px-4 py-1.5" title={row.stage}>
                         {stageText}
                       </td>
-                      <td className="px-2 py-2.5 text-right tabular-nums text-ink">
+                      <td className="px-4 py-1.5 text-right tabular-nums">
                         {formatUsdDetailed(normalizeMoney(row.requestedAmount))}
                       </td>
-                      <td className="px-2 py-2.5 text-right tabular-nums text-ink">
+                      <td className="px-4 py-1.5 text-right tabular-nums">
                         {formatUsdDetailed(normalizeMoney(row.totalAmount))}
                       </td>
-                      <td className="px-2 py-2.5 text-right tabular-nums text-ink/70">
+                      <td className="px-4 py-1.5 text-right tabular-nums">
                         {formatUsdDetailed(normalizeMoney(row.voidAmount))}
                       </td>
-                      <td className="px-2 py-2.5 text-xs text-ink/55">{formatDate(row.updatedAt)}</td>
-                      <td className="px-2 py-2.5 text-right">
+                      <td className="px-4 py-1.5">{formatDate(row.updatedAt)}</td>
+                      <td className="px-4 py-1.5 text-right">
                         <button
                           type="button"
                           onClick={() => setCorModalId(row.id)}
-                          className="text-xs font-semibold text-brand hover:text-brand-secondary"
+                          className="text-brand hover:underline"
                         >
                           JSON
                         </button>
