@@ -110,7 +110,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
               router.push("/bidding");
             })();
           }}
-          className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-ink/50 transition hover:text-[#5a5340]"
+          className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-ink/50 transition hover:text-[#1a1a1a]"
         >
           <svg
             className="h-4 w-4"
@@ -124,7 +124,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
           </svg>
           Bids
           {unsavedChanges ? (
-            <span className="text-[10px] font-semibold text-[#7a7360]">
+            <span className="text-[10px] font-semibold text-[#6b7280]">
               · unsaved
             </span>
           ) : null}
@@ -133,27 +133,58 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
           title={bid.estimateNumber}
           subtitle={bid.bidName || "Untitled estimate"}
           action={
-            <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-xs text-ink/50">
-                {formatWorkType(work ?? undefined)}
-                {" · "}
-                {formatProcessStage(processStage ?? undefined)}
-                {" · "}
-                {formatOutcome(outcome ?? undefined)}
-              </span>
-              <BidStatusBadge status={bid.status} />
-              {bid.canEdit === false ? (
-                <span className="rounded-lg border border-ink/10 bg-ink/[0.04] px-2 py-1 text-[11px] font-semibold text-ink/55">
-                  View only
+            <div className="flex flex-col items-end gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                {work ? (
+                  <span className="inline-flex items-center rounded-full border border-[#e0e0e0] bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#4b5563]">
+                    {formatWorkType(work)}
+                  </span>
+                ) : null}
+                {processStage ? (
+                  <span className="inline-flex items-center rounded-full border border-[#e0e0e0] bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#4b5563]">
+                    {formatProcessStage(processStage)}
+                  </span>
+                ) : null}
+                <span className="inline-flex items-center rounded-full border border-[#e0e0e0] bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#4b5563]">
+                  {formatOutcome(outcome ?? undefined)}
                 </span>
-              ) : null}
-              {saving ? (
-                <span className="text-xs font-medium text-[#5a5340]">Saving…</span>
-              ) : null}
-              <span className="hidden text-sm text-ink/45 sm:inline">
-                {bid.companyName}
-              </span>
-              <BidSaveButton />
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                <BidFloatingButton
+                  label="Notes"
+                  icon={<NotesIcon />}
+                  active={notesOpen}
+                  onClick={() => {
+                    if (notesOpen) closeNotes();
+                    else setNotesManualOpen(true);
+                  }}
+                />
+                <BidFloatingButton
+                  label="Handoff"
+                  icon={<HandoffIcon />}
+                  active={handoffOpen}
+                  onClick={() => setHandoffOpen((v) => !v)}
+                />
+                <BidFloatingButton
+                  label="Activity"
+                  icon={<ActivityIcon />}
+                  active={activityOpen}
+                  onClick={() => setActivityOpen((v) => !v)}
+                />
+                <BidStatusBadge status={bid.status} />
+                {bid.canEdit === false ? (
+                  <span className="rounded-md border border-ink/10 bg-ink/[0.04] px-2 py-1 text-[11px] font-semibold text-ink/55">
+                    View only
+                  </span>
+                ) : null}
+                {saving ? (
+                  <span className="text-xs font-medium text-[#1a1a1a]">Saving…</span>
+                ) : null}
+                <span className="hidden text-sm text-ink/45 lg:inline">
+                  {bid.companyName}
+                </span>
+                <BidSaveButton />
+              </div>
             </div>
           }
         />
@@ -165,33 +196,9 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
         />
       </div>
 
-      <div className="flex min-h-0 w-full flex-1 flex-col pb-28">
+      <div className="flex min-h-0 w-full flex-1 flex-col">
         {children}
       </div>
-    </div>
-
-    <div className="fixed bottom-5 right-4 z-50 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
-      <BidFloatingButton
-        label="Notes"
-        icon={<NotesIcon />}
-        active={notesOpen}
-        onClick={() => {
-          if (notesOpen) closeNotes();
-          else setNotesManualOpen(true);
-        }}
-      />
-      <BidFloatingButton
-        label="Handoff"
-        icon={<HandoffIcon />}
-        active={handoffOpen}
-        onClick={() => setHandoffOpen((v) => !v)}
-      />
-      <BidFloatingButton
-        label="Activity"
-        icon={<ActivityIcon />}
-        active={activityOpen}
-        onClick={() => setActivityOpen((v) => !v)}
-      />
     </div>
 
     <BidSidebarDrawer title="Notes" open={notesOpen} onClose={closeNotes}>

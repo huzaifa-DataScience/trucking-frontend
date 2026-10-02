@@ -429,35 +429,35 @@ export function Sidebar({
       iconOnly ? "justify-center" : "justify-start px-2.5"
     } ${
       active
-        ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
-        : "text-white/70 hover:bg-white/[0.05] hover:text-white"
+        ? "bg-peach-active text-ink"
+        : "text-ink/65 hover:bg-peach-active/40 hover:text-ink"
     }`;
 
   const subLinkClass = (active: boolean) =>
-    `flex items-center gap-2.5 rounded-md py-1.5 text-[12.5px] font-medium transition-colors ${
+    `relative flex items-center gap-2.5 rounded-md py-1.5 text-[12.5px] font-medium transition-colors ${
       iconOnly ? "justify-center px-2" : "pl-3 pr-2.5"
     } ${
       active
-        ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
-        : "text-white/55 hover:bg-white/[0.05] hover:text-white/85"
+        ? "bg-peach-active text-ink"
+        : "text-ink/50 hover:bg-peach-active/40 hover:text-ink"
     }`;
 
   return (
     <>
       {mobileOpen ? (
         <div
-          className="fixed inset-0 z-30 bg-black/50 sm:hidden"
+          className="fixed inset-0 z-30 bg-ink/40 sm:hidden"
           onClick={onMobileClose}
           aria-hidden
         />
       ) : null}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-white/[0.06] bg-[#0a0a0c] transition-[width,transform] duration-200 sm:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-peach-border/60 bg-peach transition-[width,transform] duration-200 sm:translate-x-0 ${
           collapsed ? "sm:w-16" : "sm:w-64"
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
       <div
-        className={`flex items-center justify-between border-b border-white/[0.07] px-3 lg:px-4 ${
+        className={`flex items-center justify-between border-b border-peach-border/50 px-3 lg:px-4 ${
           collapsed ? "h-16 sm:h-auto sm:flex-col sm:justify-center sm:gap-1.5 sm:py-3" : "h-16"
         }`}
       >
@@ -470,10 +470,10 @@ export function Sidebar({
             <AppLogo height={20} />
           </span>
           <span className={`min-w-0 flex-col ${lgLabelFlex}`}>
-            <span className="truncate text-[13px] font-semibold leading-tight text-white/95">
+            <span className="truncate text-[13px] font-semibold leading-tight text-ink">
               Construction Logistics
             </span>
-            <span className="text-[10.5px] leading-tight text-white/50">GOEL Services</span>
+            <span className="text-[10.5px] leading-tight text-ink/45">GOEL Services</span>
           </span>
         </Link>
         <button
@@ -481,7 +481,7 @@ export function Sidebar({
           onClick={onToggleCollapsed}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="hidden shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] p-1.5 text-white/55 transition hover:border-white/[0.14] hover:bg-white/[0.09] hover:text-white sm:flex"
+          className="hidden shrink-0 items-center justify-center rounded-lg border border-peach-border/60 bg-white/60 p-1.5 text-ink/50 transition hover:border-peach-border hover:bg-peach-active hover:text-ink sm:flex"
         >
           <svg
             className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
@@ -497,7 +497,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={onMobileClose}
-          className="flex shrink-0 items-center justify-center rounded-lg p-1.5 text-white/60 transition hover:bg-white/[0.08] hover:text-white sm:hidden"
+          className="flex shrink-0 items-center justify-center rounded-lg p-1.5 text-ink/55 transition hover:bg-peach-active/70 hover:text-ink sm:hidden"
           aria-label="Close navigation menu"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -508,7 +508,7 @@ export function Sidebar({
 
       <nav className="ui-scroll-dark flex-1 space-y-6 overflow-y-auto px-2 py-4 lg:px-3">
         <div>
-          <p className={`mb-2.5 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 ${lgLabel}`}>
+          <p className={`mb-2.5 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/40 ${lgLabel}`}>
             Workspace
           </p>
           <div className="space-y-1.5">
@@ -528,20 +528,20 @@ export function Sidebar({
                       iconOnly ? "justify-center" : "justify-start px-2.5"
                     } ${
                       isActiveWorkspace
-                        ? "bg-white/[0.08] text-white"
-                        : "text-white/75 hover:bg-white/[0.05] hover:text-white"
+                        ? "bg-peach-active/70 text-ink"
+                        : "text-ink/70 hover:bg-peach-active/40 hover:text-ink"
                     }`}
                   >
                     <Icon
                       className={`h-5 w-5 shrink-0 ${
-                        isActiveWorkspace ? "text-brand" : "text-white/55"
+                        isActiveWorkspace ? "text-brand" : "text-ink/50"
                       }`}
                     />
                     <span className={`flex-1 truncate text-left ${lgLabelInline}`}>
                       {WORKSPACE_FULL_LABELS[value]}
                     </span>
                     <svg
-                      className={`h-3.5 w-3.5 shrink-0 text-white/40 transition-transform ${lgLabel} ${isExpanded ? "rotate-90" : ""}`}
+                      className={`h-3.5 w-3.5 shrink-0 text-ink/40 transition-transform ${lgLabel} ${isExpanded ? "rotate-90" : ""}`}
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -569,9 +569,15 @@ export function Sidebar({
                               : pathname === href || pathname.startsWith(`${href}/`);
                         return (
                           <Link key={href} href={href} className={subLinkClass(active)} title={label}>
+                            {active && !iconOnly ? (
+                              <span
+                                className="absolute left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-brand"
+                                aria-hidden
+                              />
+                            ) : null}
                             <ItemIcon
                               className={`h-3.5 w-3.5 shrink-0 ${
-                                active ? "text-brand" : "text-white/45"
+                                active ? "text-brand" : "text-ink/40"
                               }`}
                             />
                             <span className={`flex-1 ${lgLabelInline}`}>{label}</span>
@@ -591,11 +597,11 @@ export function Sidebar({
                             title="Clearstory"
                           >
                             <NavIconLayers
-                              className={`h-3.5 w-3.5 shrink-0 ${inClearstory ? "text-brand" : "text-white/45"}`}
+                              className={`h-3.5 w-3.5 shrink-0 ${inClearstory ? "text-brand" : "text-ink/40"}`}
                             />
                             <span className={`flex-1 ${lgLabelInline}`}>Clearstory</span>
                             <svg
-                              className={`h-3 w-3 shrink-0 text-white/40 transition-transform ${lgLabel} ${inClearstory ? "rotate-90" : ""}`}
+                              className={`h-3 w-3 shrink-0 text-ink/40 transition-transform ${lgLabel} ${inClearstory ? "rotate-90" : ""}`}
                               viewBox="0 0 24 24"
                               fill="none"
                               stroke="currentColor"
@@ -607,7 +613,7 @@ export function Sidebar({
                           </Link>
                           {inClearstory && (
                             <div className={`mt-0.5 ${lgLabel}`}>
-                              <div className="ml-2 space-y-0.5 border-l border-white/[0.08] pl-2.5">
+                              <div className="ml-2 space-y-0.5 border-l border-peach-border/60 pl-2.5">
                                 {clearstorySubItems.map(({ href, label, Icon }) => {
                                   const active = pathname === href || pathname.startsWith(`${href}/`);
                                   return (
@@ -616,13 +622,13 @@ export function Sidebar({
                                       href={href}
                                       className={`flex items-center gap-2 rounded-md py-1.5 pl-2 pr-2.5 text-[12px] font-medium transition-colors ${
                                         active
-                                          ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
-                                          : "text-white/50 hover:bg-white/[0.05] hover:text-white/80"
+                                          ? "bg-peach-active text-ink"
+                                          : "text-ink/45 hover:bg-peach-active/40 hover:text-ink"
                                       }`}
                                     >
                                       <Icon
                                         className={`h-3.5 w-3.5 shrink-0 ${
-                                          active ? "text-brand" : "text-white/40"
+                                          active ? "text-brand" : "text-ink/40"
                                         }`}
                                       />
                                       <span className="flex-1">{label}</span>
@@ -644,7 +650,7 @@ export function Sidebar({
 
         {visibleAdminNav.length > 0 && (
           <div>
-            <p className={`mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 ${lgLabel}`}>
+            <p className={`mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/40 ${lgLabel}`}>
               System
             </p>
             <div className="space-y-0.5">
@@ -653,7 +659,7 @@ export function Sidebar({
                 return (
                   <Link key={href} href={href} className={navLinkClass(active)} title={label}>
                     <Icon
-                      className={`h-[1.15rem] w-[1.15rem] shrink-0 ${active ? "text-brand" : "text-white/50"}`}
+                      className={`h-[1.15rem] w-[1.15rem] shrink-0 ${active ? "text-brand" : "text-ink/45"}`}
                     />
                     <span className={lgLabelInline}>{label}</span>
                   </Link>
@@ -664,14 +670,14 @@ export function Sidebar({
         )}
       </nav>
 
-      <div className={`border-t border-white/[0.07] p-2 ${collapsed ? "" : "sm:p-3"}`}>
+      <div className={`border-t border-peach-border/50 p-2 ${collapsed ? "" : "sm:p-3"}`}>
         <div
-          className={`flex flex-col items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] p-2 ${
+          className={`flex flex-col items-center gap-2 rounded-xl border border-peach-border/50 bg-white/60 p-2 ${
             collapsed ? "" : "sm:flex-row sm:gap-3 sm:p-3"
           }`}
         >
           <div
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-[0_4px_12px_rgba(255,123,17,0.35)] ${
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-[0_4px_12px_rgba(194,100,42,0.35)] ${
               collapsed ? "" : "sm:h-10 sm:w-10"
             }`}
             style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%)" }}
@@ -681,15 +687,15 @@ export function Sidebar({
             {userInitials(user)}
           </div>
           <div className={`min-w-0 flex-1 ${lgLabel}`}>
-            <p className="truncate text-sm font-semibold text-white/90">{displayName(user)}</p>
-            <p className="truncate text-xs text-white/55">
+            <p className="truncate text-sm font-semibold text-ink/90">{displayName(user)}</p>
+            <p className="truncate text-xs text-ink/50">
               {roleLabel(user?.role ?? "user")}
             </p>
           </div>
           <button
             type="button"
             onClick={() => logout()}
-            className="shrink-0 rounded-lg p-2 text-white/40 transition hover:bg-white/10 hover:text-white"
+            className="shrink-0 rounded-lg p-2 text-ink/40 transition hover:bg-peach-active hover:text-ink"
             title="Log out"
             aria-label="Log out"
           >
@@ -708,8 +714,8 @@ export function Sidebar({
       {/* Collapsed + inside Clearstory: a persistent second rail for its modules — more reliable
           than a hover flyout, and mirrors a dedicated-workspace pattern (icon rail + module list). */}
       {iconOnly && inClearstory ? (
-        <aside className="fixed left-16 top-0 z-30 hidden h-dvh w-48 flex-col overflow-y-auto border-r border-white/[0.06] bg-[#111114] px-2 py-4 sm:flex">
-          <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">Clearstory</p>
+        <aside className="fixed left-16 top-0 z-30 hidden h-dvh w-48 flex-col overflow-y-auto border-r border-peach-border/60 bg-peach-active/50 px-2 py-4 sm:flex">
+          <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-ink/40">Clearstory</p>
           <div className="space-y-0.5">
             {clearstorySubItems.map(({ href, label, Icon }) => {
               const active = pathname === href || pathname.startsWith(`${href}/`);
@@ -719,11 +725,11 @@ export function Sidebar({
                   href={href}
                   className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
                     active
-                      ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
-                      : "text-white/65 hover:bg-white/[0.06] hover:text-white"
+                      ? "bg-peach-active text-ink"
+                      : "text-ink/60 hover:bg-peach-active/50 hover:text-ink"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/50"}`} />
+                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-ink/45"}`} />
                   <span>{label}</span>
                 </Link>
               );

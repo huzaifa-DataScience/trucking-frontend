@@ -9,14 +9,14 @@ import type { ProcessMeta } from "@/lib/bidding/process-types";
 
 const DEFAULT_PHASES = ["sd", "dd", "cd", "ifb", "ifp", "ifc", "ifr"] as const;
 
-const PHASE_SHORT: Record<string, string> = {
-  sd: "SD",
-  dd: "DD",
-  cd: "CD",
-  ifb: "IFB",
-  ifp: "IFP",
-  ifc: "IFC",
-  ifr: "IFR",
+const PHASE_LABELS: Record<string, string> = {
+  sd: "Schematic Design",
+  dd: "Design Development",
+  cd: "Construction Documents",
+  ifb: "Issued for Bid",
+  ifp: "Issued for Permit",
+  ifc: "Issued for Construction",
+  ifr: "Issued for Record",
 };
 
 /** Chrome tab after Setup, before Spec sheets — every drawing (attachments), by revision phase. */
@@ -37,7 +37,7 @@ export function BidDrawingsStage() {
   const withCd = categoryIds.includes("cd") ? categoryIds : [...categoryIds, "cd"];
   const drawingCategoryOptions = withCd.map((id) => ({
     value: id,
-    label: meta?.drawingCategoryLabels?.[id] ?? PHASE_SHORT[id] ?? id.toUpperCase(),
+    label: PHASE_LABELS[id] ?? id,
   }));
   const drawings = (bid.attachments ?? []).filter((a) => a.label === "drawings");
 
@@ -46,7 +46,7 @@ export function BidDrawingsStage() {
       <header>
         <h2 className="intake-title">Drawings</h2>
         <p className="intake-sub mt-0.5">
-          Revision sets for this bid — SD through IFR. Separate from general Attachments.
+          Revision sets for this bid. Separate from general Attachments.
         </p>
       </header>
 

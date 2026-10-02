@@ -1596,8 +1596,8 @@ export function BidSpecSheetsSection({
                   onClick={() => setStackAll((v) => !v)}
                   className={`rounded px-3 py-1.5 text-[12.5px] font-medium transition ${
                     stackAll
-                      ? "bg-[#f3f1ea] text-[#5a5340] ring-1 ring-[#d9d4c8]"
-                      : "bg-[#f3f4f6] text-[#4b5563] hover:bg-[#f3f1ea]"
+                      ? "bg-[#f5efe8] text-[#1a1a1a] ring-1 ring-[#d9c7b6]"
+                      : "bg-[#f3f4f6] text-[#4b5563] hover:bg-[#f5efe8]"
                   }`}
                 >
                   {stackAll ? "Stacked view" : "Stack all"}
@@ -1616,8 +1616,8 @@ export function BidSpecSheetsSection({
                         }}
                         className={`rounded px-3 py-1.5 text-[12.5px] font-medium transition ${
                           on
-                            ? "bg-[#f3f1ea] text-[#5a5340] ring-1 ring-[#d9d4c8]"
-                            : "bg-[#f3f4f6] text-[#4b5563] hover:bg-[#f3f1ea]"
+                            ? "bg-[#f5efe8] text-[#1a1a1a] ring-1 ring-[#d9c7b6]"
+                            : "bg-[#f3f4f6] text-[#4b5563] hover:bg-[#f5efe8]"
                         }`}
                       >
                         {s.title || kindLabel(s.kind)}
@@ -1645,7 +1645,7 @@ export function BidSpecSheetsSection({
                       </h4>
                       <button
                         type="button"
-                        className="text-[12px] font-semibold text-[#5a5340] hover:underline"
+                        className="text-[12px] font-semibold text-[#1a1a1a] hover:underline"
                         onClick={() => {
                           setStackAll(false);
                           setActiveId(s.id);
@@ -1784,7 +1784,7 @@ export function BidSpecSheetsSection({
                         />
                       ))}
                     </colgroup>
-                    <thead className="bg-[#f3f1ea] text-[11px] font-semibold text-[#5a5340]">
+                    <thead className="bg-[#f5efe8] text-[11px] font-semibold text-[#1a1a1a]">
                       <tr>
                         {specColDefs.map((c) => (
                           <ResizableTh
@@ -2107,7 +2107,7 @@ export function BidSpecSheetsSection({
                                   onClick={() =>
                                     void runMikeCode(active.id, row)
                                   }
-                                  className="inline-flex min-w-[2rem] items-center justify-center rounded border border-[#cfd5dd] bg-[#f3f1ea] px-1.5 text-[11px] font-semibold text-[#5a5340] hover:bg-[#ebe8df] disabled:opacity-40"
+                                  className="inline-flex min-w-[2rem] items-center justify-center rounded border border-[#cfd5dd] bg-[#f5efe8] px-1.5 text-[11px] font-semibold text-[#1a1a1a] hover:bg-[#e6d5c4] disabled:opacity-40"
                                   aria-label={mikeBusy ? "Loading" : "Apply Mike code"}
                                 >
                                   {mikeBusy ? (
@@ -2215,7 +2215,7 @@ export function BidSpecSheetsSection({
                                       {editable && canSize ? (
                                         <button
                                           type="button"
-                                          className="cursor-pointer text-[11px] text-[#5a5340] hover:underline"
+                                          className="cursor-pointer text-[11px] text-[#1a1a1a] hover:underline"
                                           onClick={() =>
                                             patchRow(active.id, row.id, {
                                               sizeMin: null,
