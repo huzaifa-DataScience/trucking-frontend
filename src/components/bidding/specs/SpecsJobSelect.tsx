@@ -84,15 +84,15 @@ export function SpecsJobSelect({
 
   return (
     <div
-      className={`flex flex-col gap-2 rounded-xl px-3 py-3 sm:flex-row sm:items-center sm:gap-3 ${
+      className={`flex flex-col gap-2 rounded border px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 ${
         needsPick
-          ? "border border-warning-border bg-warning-tint/60"
-          : "border border-ink/[0.08] bg-canvas/50"
+          ? "border-warning-border bg-warning-tint/60"
+          : "border-[#e5e7eb] bg-[#f8fafc]"
       }`}
     >
       <label
-        className={`shrink-0 text-xs font-semibold ${
-          needsPick ? "text-warning" : "text-ink/70"
+        className={`shrink-0 text-[12.5px] font-medium ${
+          needsPick ? "text-warning" : "text-[#6b7280]"
         }`}
         htmlFor={`specs-job-${bidId}`}
       >
@@ -100,7 +100,7 @@ export function SpecsJobSelect({
       </label>
       <select
         id={`specs-job-${bidId}`}
-        className="min-w-0 flex-1 rounded-lg border border-ink/10 bg-surface px-2 py-2 text-sm text-ink disabled:opacity-50"
+        className="intake-field min-w-0 flex-1 cursor-pointer appearance-none disabled:opacity-50"
         disabled={busy}
         value={value}
         onChange={(e) => void apply(e.target.value)}

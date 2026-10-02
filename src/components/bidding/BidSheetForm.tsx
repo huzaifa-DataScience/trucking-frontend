@@ -82,7 +82,6 @@ export function BidSheetForm() {
     previewCalculate,
     verifyServerCalc,
     saveNow,
-    saveCoverSheet,
     markSubmitted,
     reopenAsDraft,
     uploadAttachment,
@@ -207,15 +206,22 @@ export function BidSheetForm() {
   const showResultsRail = canViewSummary && activeTab === "sheet";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 ui-animate-in">
-      <nav aria-label="Breadcrumb" className="text-xs text-ink/45">
-        <Link href="/bidding" className="font-medium transition-colors hover:text-ink">
+    <>
+      <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3">
+      <header>
+        <h2 className="intake-title">Proposal</h2>
+        <p className="intake-sub mt-0.5">
+          Bidding sheet calculator — cover sheet, wage, schedule, and live totals.
+        </p>
+      </header>
+      <nav aria-label="Breadcrumb" className="text-[12px] text-[#6b7280]">
+        <Link href="/bidding" className="font-medium transition-colors hover:text-[#1f2937]">
           Bidding
         </Link>
-        <span aria-hidden className="mx-1.5 text-ink/25">
+        <span aria-hidden className="mx-1.5 text-[#9ca3af]">
           /
         </span>
-        <span className="font-mono font-medium text-ink/60">
+        <span className="font-mono font-medium text-[#4b5563]">
           {bid.estimateNumber || "Estimate"}
         </span>
       </nav>
@@ -256,450 +262,453 @@ export function BidSheetForm() {
           showResultsRail ? "bid-workspace min-h-0 flex-1" : "min-h-0 flex-1"
         }
       >
-        <div className="bid-workspace-form space-y-5 pb-8">
+        <div className="bid-workspace-form space-y-5 pb-4">
           {activeTab === "sheet" ? (
             <>
-          <BidSheetHeaderSection
-            bid={bid}
-            isEditable={isEditable}
-            identityLocked={identityLocked}
-            entityOptions={entityOptions}
-            jobs={lookups.jobs}
-            onEstimateNumber={(v) => setBidHeader({ estimateNumber: v })}
-            onBidName={(v) => setBidHeader({ bidName: v })}
-            onBidDate={(v) => setBaseBidField("bidDate", v)}
-            onSubmitDate={(v) => setBidHeader({ submitDate: v || null })}
-            onTimeEstimate={(v) => setBidHeader({ timeEstimate: v ?? null })}
-            onEntity={(v) => setBidHeader({ ourEntityId: v ? Number(v) : bid.ourEntityId })}
-            onJobChange={(jobId, prefill) => void setJobId(jobId, { prefillCompany: prefill })}
-          />
-
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => void (isEditable ? saveNow() : saveCoverSheet())}
-              disabled={saving}
-              className="rounded-xl border border-ink/10 px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:bg-ink/[0.04] disabled:opacity-50"
-            >
-              {saving ? "Saving…" : isEditable ? "Save" : "Save cover sheet"}
-            </button>
-          </div>
-
-          <Card>
-            <CardHeader
-              title="Team"
-              subtitle="From Assignment — crew auto-fills from GET /lookups/bidding/teams by teamId. Not picked here."
-            />
-            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-              <BidFormField label="Team" htmlFor="team-ro">
-                <p
-                  id="team-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
-                >
-                  {teamLabel}
-                </p>
-              </BidFormField>
-              <BidFormField label="Captain" htmlFor="captain-ro">
-                <p
-                  id="captain-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
-                >
-                  {captainLabel}
-                </p>
-              </BidFormField>
-              <BidFormField label="Assistant estimator" htmlFor="asst-ro">
-                <p
-                  id="asst-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
-                >
-                  {aeLabel}
-                </p>
-              </BidFormField>
-            </div>
-            {teamFromAssignment ? (
-              <div className="mt-4 grid gap-3 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] p-4 grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
-                {(
-                  [
-                    ["Duct 1", teamFromAssignment.duct1],
-                    ["Duct 2", teamFromAssignment.duct2],
-                    ["Hydronic 1", teamFromAssignment.hydronic1],
-                    ["Hydronic 2", teamFromAssignment.hydronic2],
-                    ["Plumbing 1", teamFromAssignment.plumbing1],
-                    ["Plumbing 2", teamFromAssignment.plumbing2],
-                  ] as const
-                ).map(([label, val]) => (
-                  <div key={label}>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/35">
-                      {label}
-                    </p>
-                    <p className="mt-0.5 text-sm font-medium text-ink">{val ?? "—"}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-3 text-xs text-ink/45">
-                No assigned team yet — set captain / team on Assignment (or Settings →
-                My team for the captain’s crew).
-              </p>
-            )}
-          </Card>
-
-          <Card>
-            <CardHeader
-              title="Project identity"
-              subtitle="From Intake — building / project type, impacted SF, state. Calculator fields stay below."
-            />
-            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-              <BidFormField label="Building type" htmlFor="btype-ro">
-                <p
-                  id="btype-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
-                >
-                  {bid.process?.constructionType || "—"}
-                </p>
-              </BidFormField>
-              <BidFormField label="Project type" htmlFor="ptype-ro">
-                <p
-                  id="ptype-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
-                >
-                  {bid.process?.constructionSubtype || "—"}
-                </p>
-              </BidFormField>
-              <BidFormField label="Impacted SF (GSF)" htmlFor="gsf-ro">
-                <p
-                  id="gsf-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
-                >
-                  {impactedGsf != null ? impactedGsf.toLocaleString() : "—"}
-                </p>
-                <span className="mt-1 block text-[10px] text-ink/40">
-                  Copied to baseBid.gsfOfBuilding for calc — edit on Intake
-                </span>
-              </BidFormField>
-              <BidFormField label="Project state" htmlFor="state-ro">
-                <p
-                  id="state-ro"
-                  className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
-                >
-                  {projectStateRo || "—"}
-                </p>
-              </BidFormField>
-              {typeof stateTax === "number" ? (
-                <BidFormField label="State sales tax" htmlFor="stax-ro">
-                  <p
-                    id="stax-ro"
-                    className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 font-mono text-sm text-ink"
-                  >
-                    {formatPercentDecimal(stateTax)}
-                  </p>
-                </BidFormField>
-              ) : null}
-              <BidFormField
-                label="MBE / preference"
-                htmlFor="pref"
-                hint="Also on Setup (process.mbePreference) — kept in sync"
-              >
-                <BidSelect
-                  id="pref"
-                  value={
-                    (b.preference as string) ||
-                    bid.process?.mbePreference ||
-                    ""
-                  }
-                  onChange={(v) => setBaseBidField("preference", v)}
-                  disabled={!isEditable}
-                  options={[
-                    { value: "", label: "—" },
-                    ...lookups.preferences.map((p) => ({
-                      value: p.name,
-                      label: p.name,
-                    })),
-                  ]}
-                />
-              </BidFormField>
-              <BoolSelect
-                id="salestax"
-                label="Sales tax applicable"
-                value={b.salesTaxApplicable as boolean | undefined}
-                onChange={(v) => setBaseBidField("salesTaxApplicable", v)}
-                disabled={!isEditable || capturedEarlier}
+          <div className="grid grid-cols-2 items-start gap-3 max-[1000px]:grid-cols-1">
+            <div className="min-w-0">
+              <BidSheetHeaderSection
+                bid={bid}
+                isEditable={isEditable}
+                identityLocked={identityLocked}
+                entityOptions={entityOptions}
+                jobs={lookups.jobs}
+                onEstimateNumber={(v) => setBidHeader({ estimateNumber: v })}
+                onBidName={(v) => setBidHeader({ bidName: v })}
+                onBidDate={(v) => setBaseBidField("bidDate", v)}
+                onSubmitDate={(v) => setBidHeader({ submitDate: v || null })}
+                onTimeEstimate={(v) => setBidHeader({ timeEstimate: v ?? null })}
+                onEntity={(v) => setBidHeader({ ourEntityId: v ? Number(v) : bid.ourEntityId })}
+                onJobChange={(jobId, prefill) => void setJobId(jobId, { prefillCompany: prefill })}
               />
             </div>
-          </Card>
 
-          <Card>
+            <div className="flex min-w-0 flex-col gap-3">
+              <Card className="min-w-0">
+                <CardHeader
+                  title="Team"
+                  subtitle="From Assignment — crew auto-fills from GET /lookups/bidding/teams by teamId. Not picked here."
+                />
+                <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(160px,1fr))]">
+                  <BidFormField label="Team" htmlFor="team-ro">
+                    <p
+                      id="team-ro"
+                      className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                    >
+                      {teamLabel}
+                    </p>
+                  </BidFormField>
+                  <BidFormField label="Captain" htmlFor="captain-ro">
+                    <p
+                      id="captain-ro"
+                      className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                    >
+                      {captainLabel}
+                    </p>
+                  </BidFormField>
+                  <BidFormField label="Assistant estimator" htmlFor="asst-ro">
+                    <p
+                      id="asst-ro"
+                      className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                    >
+                      {aeLabel}
+                    </p>
+                  </BidFormField>
+                </div>
+                {teamFromAssignment ? (
+                  <div className="mt-4 grid gap-3 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] p-4 grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
+                    {(
+                      [
+                        ["Duct 1", teamFromAssignment.duct1],
+                        ["Duct 2", teamFromAssignment.duct2],
+                        ["Hydronic 1", teamFromAssignment.hydronic1],
+                        ["Hydronic 2", teamFromAssignment.hydronic2],
+                        ["Plumbing 1", teamFromAssignment.plumbing1],
+                        ["Plumbing 2", teamFromAssignment.plumbing2],
+                      ] as const
+                    ).map(([label, val]) => (
+                      <div key={label}>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/35">
+                          {label}
+                        </p>
+                        <p className="mt-0.5 text-sm font-medium text-ink">{val ?? "—"}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-ink/45">
+                    No assigned team yet — set captain / team on Assignment (or Settings →
+                    My team for the captain’s crew).
+                  </p>
+                )}
+              </Card>
+
+              <Card className="min-w-0">
+                <CardHeader
+                  title="Project identity"
+                  subtitle="From Intake — building / project type, impacted SF, state. Calculator fields stay below."
+                />
+                <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(160px,1fr))]">
+                  <BidFormField label="Building type" htmlFor="btype-ro">
+                    <p
+                      id="btype-ro"
+                      className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                    >
+                      {bid.process?.constructionType || "—"}
+                    </p>
+                  </BidFormField>
+                  <BidFormField label="Project type" htmlFor="ptype-ro">
+                    <p
+                      id="ptype-ro"
+                      className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                    >
+                      {bid.process?.constructionSubtype || "—"}
+                    </p>
+                  </BidFormField>
+                  <BidFormField label="Impacted SF (GSF)" htmlFor="gsf-ro">
+                    <p
+                      id="gsf-ro"
+                      className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                    >
+                      {impactedGsf != null ? impactedGsf.toLocaleString() : "—"}
+                    </p>
+                    <span className="mt-1 block text-[10px] text-ink/40">
+                      Copied to baseBid.gsfOfBuilding for calc — edit on Intake
+                    </span>
+                  </BidFormField>
+                  <BidFormField label="Project state" htmlFor="state-ro">
+                    <p
+                      id="state-ro"
+                      className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"
+                    >
+                      {projectStateRo || "—"}
+                    </p>
+                  </BidFormField>
+                  {typeof stateTax === "number" ? (
+                    <BidFormField label="State sales tax" htmlFor="stax-ro">
+                      <p
+                        id="stax-ro"
+                        className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 font-mono text-sm text-ink"
+                      >
+                        {formatPercentDecimal(stateTax)}
+                      </p>
+                    </BidFormField>
+                  ) : null}
+                  <BidFormField
+                    label="MBE / preference"
+                    htmlFor="pref"
+                    hint="Also on Setup (process.mbePreference) — kept in sync"
+                  >
+                    <BidSelect
+                      id="pref"
+                      value={
+                        (b.preference as string) ||
+                        bid.process?.mbePreference ||
+                        ""
+                      }
+                      onChange={(v) => setBaseBidField("preference", v)}
+                      disabled={!isEditable}
+                      options={[
+                        { value: "", label: "—" },
+                        ...lookups.preferences.map((p) => ({
+                          value: p.name,
+                          label: p.name,
+                        })),
+                      ]}
+                    />
+                  </BidFormField>
+                  <BoolSelect
+                    id="salestax"
+                    label="Sales tax applicable"
+                    value={b.salesTaxApplicable as boolean | undefined}
+                    onChange={(v) => setBaseBidField("salesTaxApplicable", v)}
+                    disabled={!isEditable || capturedEarlier}
+                  />
+                </div>
+              </Card>
+            </div>
+          </div>
+
+          <Card className="min-w-0">
             <CardHeader
               title="Wage rate"
               subtitle="Set on Setup. Composite labor rate stays editable here (Excel D10)."
             />
-            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
-              <BidFormField label="Wage rate" htmlFor="wage">
-                <BidSelect
-                  id="wage"
-                  value={wageRateId === "" ? "" : String(wageRateId)}
-                  onChange={(v) => {
-                    if (v) void selectWageRate(Number(v));
-                  }}
-                  disabled={!isEditable || capturedEarlier}
-                  options={[
-                    { value: "", label: "Select wage rate…" },
-                    ...lookups.wageRates.map((w) => ({
-                      value: String(w.id),
-                      label: w.displayLabel || w.rateLabel,
-                    })),
-                  ]}
-                />
-              </BidFormField>
-              {burdenedRate ? (
-                <div className="rounded-xl border border-brand/20 bg-brand/[0.04] p-4 col-span-full">
-                  <p className="text-sm font-semibold text-ink">
-                    Burdened: {formatMoneyPrecise(burdenedRate.burdenedRate)}/hr
-                  </p>
-                  <div className="mt-3 grid gap-2 grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
-                    <ComputedField label="Wage" value={formatMoneyPrecise(burdenedRate.wage)} />
-                    <ComputedField
-                      label="Burden"
-                      value={formatMoneyPrecise(burdenedRate.totalBurden)}
-                    />
-                    <ComputedField
-                      label="Total"
-                      value={formatMoneyPrecise(burdenedRate.burdenedRate)}
-                      emphasis
-                    />
-                  </div>
-                  {burdenedRate.lines.length > 0 ? (
-                    <div className="mt-4 overflow-x-auto">
-                      <table className="w-full min-w-[280px] text-left text-xs">
-                        <thead>
-                          <tr className="border-b border-ink/10 text-ink/45">
-                            <th className="py-1.5 pr-2 font-medium">Code</th>
-                            <th className="py-1.5 pr-2 font-medium">Line</th>
-                            <th className="py-1.5 text-right font-medium">$/hr</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {burdenedRate.lines.map((line) => (
-                            <tr key={line.code} className="border-b border-ink/[0.05]">
-                              <td className="py-1.5 pr-2 font-mono text-ink/60">{line.code}</td>
-                              <td className="py-1.5 pr-2 text-ink/70">{line.label}</td>
-                              <td className="py-1.5 text-right font-mono text-ink">
-                                {formatMoneyPrecise(line.amountPerHour)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+              <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+                <BidFormField label="Wage rate" htmlFor="wage">
+                  <BidSelect
+                    id="wage"
+                    value={wageRateId === "" ? "" : String(wageRateId)}
+                    onChange={(v) => {
+                      if (v) void selectWageRate(Number(v));
+                    }}
+                    disabled={!isEditable || capturedEarlier}
+                    options={[
+                      { value: "", label: "Select wage rate…" },
+                      ...lookups.wageRates.map((w) => ({
+                        value: String(w.id),
+                        label: w.displayLabel || w.rateLabel,
+                      })),
+                    ]}
+                  />
+                </BidFormField>
+                {burdenedRate ? (
+                  <div className="col-span-full rounded-lg border border-[#d9d4c8] bg-[#f3f1ea] p-4">
+                    <p className="text-[13px] font-semibold text-[#5a5340]">
+                      Burdened: {formatMoneyPrecise(burdenedRate.burdenedRate)}/hr
+                    </p>
+                    <div className="mt-3 grid gap-2 grid-cols-[repeat(auto-fit,minmax(120px,1fr))]">
+                      <ComputedField label="Wage" value={formatMoneyPrecise(burdenedRate.wage)} />
+                      <ComputedField
+                        label="Burden"
+                        value={formatMoneyPrecise(burdenedRate.totalBurden)}
+                      />
+                      <ComputedField
+                        label="Total"
+                        value={formatMoneyPrecise(burdenedRate.burdenedRate)}
+                        emphasis
+                      />
                     </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-            <div className="mt-4 grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-              <BidFormField
-                label="Labor rate composite / hr"
-                htmlFor="composite"
-                hint="D10 — crew-weighted composite for PJ totals; not auto-filled from burdened rate (enter manually, e.g. 51.7 on IDC6098)."
-              >
-                <BidNumberInput
-                  id="composite"
-                  value={b.laborRateCompositePerHour as number | undefined}
-                  onChange={(v) => setBaseBidField("laborRateCompositePerHour", v)}
+                    {burdenedRate.lines.length > 0 ? (
+                      <div className="mt-4 overflow-x-auto">
+                        <table className="w-full min-w-[280px] text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-ink/10 text-ink/45">
+                              <th className="py-1.5 pr-2 font-medium">Code</th>
+                              <th className="py-1.5 pr-2 font-medium">Line</th>
+                              <th className="py-1.5 text-right font-medium">$/hr</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {burdenedRate.lines.map((line) => (
+                              <tr key={line.code} className="border-b border-ink/[0.05]">
+                                <td className="py-1.5 pr-2 font-mono text-ink/60">{line.code}</td>
+                                <td className="py-1.5 pr-2 text-ink/70">{line.label}</td>
+                                <td className="py-1.5 text-right font-mono text-ink">
+                                  {formatMoneyPrecise(line.amountPerHour)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+              <div className="mt-4 grid gap-4 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
+                <BidFormField
+                  label="Labor rate composite / hr"
+                  htmlFor="composite"
+                  hint="D10 — crew-weighted composite for PJ totals; not auto-filled from burdened rate (enter manually, e.g. 51.7 on IDC6098)."
+                >
+                  <BidNumberInput
+                    id="composite"
+                    value={b.laborRateCompositePerHour as number | undefined}
+                    onChange={(v) => setBaseBidField("laborRateCompositePerHour", v)}
+                    disabled={!isEditable}
+                  />
+                </BidFormField>
+                {burdenedRate ? (
+                  <div className="flex items-end">
+                    <p className="rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-4 py-3 text-xs leading-relaxed text-ink/55">
+                      Single-tier burdened rate is{" "}
+                      <span className="font-mono font-semibold text-ink">
+                        {formatMoneyPrecise(burdenedRate.burdenedRate)}/hr
+                      </span>
+                      . Excel D10 may use a higher crew-weighted composite — adjust above if PJ totals
+                      look low.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+              <div className="mt-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
+                <BoolSelect
+                  id="citizen"
+                  label="Citizen project"
+                  value={b.citizenProject as boolean | undefined}
+                  onChange={(v) => setBaseBidField("citizenProject", v)}
+                  disabled={!isEditable || capturedEarlier}
+                />
+                <BoolSelect
+                  id="apprentice"
+                  label="Apprenticeable"
+                  value={b.apprenticeable as boolean | undefined}
+                  onChange={(v) => setBaseBidField("apprenticeable", v)}
+                  disabled={!isEditable || capturedEarlier}
+                />
+                <BoolSelect
+                  id="pla"
+                  label="PLA"
+                  value={
+                    (b.pla as boolean | undefined) ??
+                    (bid.process?.pla as boolean | undefined)
+                  }
+                  onChange={(v) => setBaseBidField("pla", v)}
                   disabled={!isEditable}
                 />
-              </BidFormField>
-              {burdenedRate ? (
-                <div className="flex items-end">
-                  <p className="rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-4 py-3 text-xs leading-relaxed text-ink/55">
-                    Single-tier burdened rate is{" "}
-                    <span className="font-mono font-semibold text-ink">
-                      {formatMoneyPrecise(burdenedRate.burdenedRate)}/hr
-                    </span>
-                    . Excel D10 may use a higher crew-weighted composite — adjust above if PJ totals
-                    look low.
-                  </p>
+                <BoolSelect
+                  id="ccip"
+                  label="CCIP covers WC"
+                  value={
+                    (b.ccipCoversWc as boolean | undefined) ??
+                    (bid.process?.ocipCcip?.coversWc as boolean | undefined)
+                  }
+                  onChange={(v) => setBaseBidField("ccipCoversWc", v)}
+                  disabled={!isEditable}
+                />
+              </div>
+              <p className="mt-2 text-[10px] text-ink/40">
+                PLA / CCIP / preference also editable on Setup — wage rate here ≠
+                Setup wage decision.
+              </p>
+            </Card>
+
+          <div className="grid grid-cols-2 items-stretch gap-3 max-[900px]:grid-cols-1">
+            <section className="intake-section min-w-0">
+              <div className="intake-section-head">Schedule & margin</div>
+              <div className="intake-section-body">
+                <p className="intake-section-hint">Filled on Setup. Shown here for the calculator output.</p>
+                <div className="grid gap-3 grid-cols-2">
+                  <BidFormField
+                    label="Margin"
+                    htmlFor="margin"
+                    hint="Decimal: 0.25 = 25%"
+                  >
+                    <BidNumberInput
+                      id="margin"
+                      value={b.marginPercent as number | undefined}
+                      onChange={(v) => setBaseBidField("marginPercent", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
+                  <BidFormField label="Hours / day" htmlFor="hpd">
+                    <BidNumberInput
+                      id="hpd"
+                      value={b.hoursPerDay as number | undefined}
+                      onChange={(v) => setBaseBidField("hoursPerDay", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
+                  <BidFormField label="Days / week" htmlFor="dpw">
+                    <BidNumberInput
+                      id="dpw"
+                      value={b.daysPerWeek as number | undefined}
+                      onChange={(v) => setBaseBidField("daysPerWeek", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
+                  <BidFormField label="Duration (months)" htmlFor="dur">
+                    <BidNumberInput
+                      id="dur"
+                      value={b.durationMonths as number | undefined}
+                      onChange={(v) => setBaseBidField("durationMonths", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
+                  <BidFormField label="Start in # months from bid" htmlFor="startmo">
+                    <BidNumberInput
+                      id="startmo"
+                      value={b.startInMonths as number | undefined}
+                      onChange={(v) => setBaseBidField("startInMonths", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
+                  <BidFormField label="Backcheck hours" htmlFor="backcheck">
+                    <BidNumberInput
+                      id="backcheck"
+                      value={b.backcheckHours as number | undefined}
+                      onChange={(v) => setBaseBidField("backcheckHours", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
+                  <BidFormField label="Average # people" htmlFor="avgpeople">
+                    <BidNumberInput
+                      id="avgpeople"
+                      value={b.averageNoPeople as number | undefined}
+                      onChange={(v) => setBaseBidField("averageNoPeople", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
+                  <BidFormField
+                    label="Material escalation / year"
+                    htmlFor="esc"
+                    hint="Decimal: 0.04 = 4%"
+                  >
+                    <BidNumberInput
+                      id="esc"
+                      value={b.materialEscalationPerYear as number | undefined}
+                      onChange={(v) => setBaseBidField("materialEscalationPerYear", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
                 </div>
-              ) : null}
-            </div>
-            <div className="mt-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
-              <BoolSelect
-                id="citizen"
-                label="Citizen project"
-                value={b.citizenProject as boolean | undefined}
-                onChange={(v) => setBaseBidField("citizenProject", v)}
-                disabled={!isEditable || capturedEarlier}
-              />
-              <BoolSelect
-                id="apprentice"
-                label="Apprenticeable"
-                value={b.apprenticeable as boolean | undefined}
-                onChange={(v) => setBaseBidField("apprenticeable", v)}
-                disabled={!isEditable || capturedEarlier}
-              />
-              <BoolSelect
-                id="pla"
-                label="PLA"
-                value={
-                  (b.pla as boolean | undefined) ??
-                  (bid.process?.pla as boolean | undefined)
-                }
-                onChange={(v) => setBaseBidField("pla", v)}
-                disabled={!isEditable}
-              />
-              <BoolSelect
-                id="ccip"
-                label="CCIP covers WC"
-                value={
-                  (b.ccipCoversWc as boolean | undefined) ??
-                  (bid.process?.ocipCcip?.coversWc as boolean | undefined)
-                }
-                onChange={(v) => setBaseBidField("ccipCoversWc", v)}
-                disabled={!isEditable}
-              />
-            </div>
-            <p className="mt-2 text-[10px] text-ink/40">
-              PLA / CCIP / preference also editable on Setup — wage rate here ≠
-              Setup wage decision.
-            </p>
-          </Card>
+              </div>
+            </section>
 
-          <Card>
-            <CardHeader title="Schedule & margin" subtitle="Filled on Setup. Shown here for the calculator output." />
-            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-              <BidFormField
-                label="Margin"
-                htmlFor="margin"
-                hint="Decimal: 0.25 = 25%"
-              >
-                <BidNumberInput
-                  id="margin"
-                  value={b.marginPercent as number | undefined}
-                  onChange={(v) => setBaseBidField("marginPercent", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-              <BidFormField label="Hours / day" htmlFor="hpd">
-                <BidNumberInput
-                  id="hpd"
-                  value={b.hoursPerDay as number | undefined}
-                  onChange={(v) => setBaseBidField("hoursPerDay", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-              <BidFormField label="Days / week" htmlFor="dpw">
-                <BidNumberInput
-                  id="dpw"
-                  value={b.daysPerWeek as number | undefined}
-                  onChange={(v) => setBaseBidField("daysPerWeek", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-              <BidFormField label="Duration (months)" htmlFor="dur">
-                <BidNumberInput
-                  id="dur"
-                  value={b.durationMonths as number | undefined}
-                  onChange={(v) => setBaseBidField("durationMonths", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-              <BidFormField label="Start in # months from bid" htmlFor="startmo">
-                <BidNumberInput
-                  id="startmo"
-                  value={b.startInMonths as number | undefined}
-                  onChange={(v) => setBaseBidField("startInMonths", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-              <BidFormField label="Backcheck hours" htmlFor="backcheck">
-                <BidNumberInput
-                  id="backcheck"
-                  value={b.backcheckHours as number | undefined}
-                  onChange={(v) => setBaseBidField("backcheckHours", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-              <BidFormField label="Average # people" htmlFor="avgpeople">
-                <BidNumberInput
-                  id="avgpeople"
-                  value={b.averageNoPeople as number | undefined}
-                  onChange={(v) => setBaseBidField("averageNoPeople", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-              <BidFormField
-                label="Material escalation / year"
-                htmlFor="esc"
-                hint="Decimal: 0.04 = 4%"
-              >
-                <BidNumberInput
-                  id="esc"
-                  value={b.materialEscalationPerYear as number | undefined}
-                  onChange={(v) => setBaseBidField("materialEscalationPerYear", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader title="Parking & lifts" subtitle="Filled on Setup. Results still use these calculator inputs." />
-            <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-              <BoolSelect
-                id="parking"
-                label="Parking"
-                value={b.parking as boolean | undefined}
-                onChange={(v) => setBaseBidField("parking", v)}
-                disabled={!isEditable || capturedEarlier}
-              />
-              <BidFormField
-                label="% people that park"
-                htmlFor="parkpct"
-                hint="1 = 100% (not 0–100)"
-              >
-                <BidNumberInput
-                  id="parkpct"
-                  value={b.parkingPeoplePercent as number | undefined}
-                  onChange={(v) => setBaseBidField("parkingPeoplePercent", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-              <BidFormField label="Parking cost / day" htmlFor="parkcost">
-                <BidNumberInput
-                  id="parkcost"
-                  value={b.parkingCostPerDay as number | undefined}
-                  onChange={(v) => setBaseBidField("parkingCostPerDay", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-              <BoolSelect
-                id="lifts"
-                label="Lifts needed"
-                value={b.liftsNeeded as boolean | undefined}
-                onChange={(v) => setBaseBidField("liftsNeeded", v)}
-                disabled={!isEditable || capturedEarlier}
-              />
-              <BidFormField
-                label="Lift %"
-                htmlFor="liftpct"
-                hint="Decimal: 0.5 = 50%"
-              >
-                <BidNumberInput
-                  id="liftpct"
-                  value={b.liftPercentage as number | undefined}
-                  onChange={(v) => setBaseBidField("liftPercentage", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-              <BidFormField label="Lift cost / 4 weeks" htmlFor="liftcost">
-                <BidNumberInput
-                  id="liftcost"
-                  value={b.liftCostPer4Weeks as number | undefined}
-                  onChange={(v) => setBaseBidField("liftCostPer4Weeks", v)}
-                  disabled={!isEditable || capturedEarlier}
-                />
-              </BidFormField>
-            </div>
-          </Card>
+            <section className="intake-section min-w-0">
+              <div className="intake-section-head">Parking & lifts</div>
+              <div className="intake-section-body">
+                <p className="intake-section-hint">Filled on Setup. Results still use these calculator inputs.</p>
+                <div className="grid gap-3 grid-cols-2">
+                  <BoolSelect
+                    id="parking"
+                    label="Parking"
+                    value={b.parking as boolean | undefined}
+                    onChange={(v) => setBaseBidField("parking", v)}
+                    disabled={!isEditable || capturedEarlier}
+                  />
+                  <BidFormField
+                    label="% people that park"
+                    htmlFor="parkpct"
+                    hint="1 = 100% (not 0–100)"
+                  >
+                    <BidNumberInput
+                      id="parkpct"
+                      value={b.parkingPeoplePercent as number | undefined}
+                      onChange={(v) => setBaseBidField("parkingPeoplePercent", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
+                  <BidFormField label="Parking cost / day" htmlFor="parkcost">
+                    <BidNumberInput
+                      id="parkcost"
+                      value={b.parkingCostPerDay as number | undefined}
+                      onChange={(v) => setBaseBidField("parkingCostPerDay", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
+                  <BoolSelect
+                    id="lifts"
+                    label="Lifts needed"
+                    value={b.liftsNeeded as boolean | undefined}
+                    onChange={(v) => setBaseBidField("liftsNeeded", v)}
+                    disabled={!isEditable || capturedEarlier}
+                  />
+                  <BidFormField
+                    label="Lift %"
+                    htmlFor="liftpct"
+                    hint="Decimal: 0.5 = 50%"
+                  >
+                    <BidNumberInput
+                      id="liftpct"
+                      value={b.liftPercentage as number | undefined}
+                      onChange={(v) => setBaseBidField("liftPercentage", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
+                  <BidFormField label="Lift cost / 4 weeks" htmlFor="liftcost">
+                    <BidNumberInput
+                      id="liftcost"
+                      value={b.liftCostPer4Weeks as number | undefined}
+                      onChange={(v) => setBaseBidField("liftCostPer4Weeks", v)}
+                      disabled={!isEditable || capturedEarlier}
+                    />
+                  </BidFormField>
+                </div>
+              </div>
+            </section>
+          </div>
 
           <BidSystemsInputTable
             systems={bid.systems}
@@ -718,7 +727,7 @@ export function BidSheetForm() {
                   <button
                     type="button"
                     onClick={() => setActiveTab("sheet")}
-                    className="font-semibold text-brand hover:underline"
+                    className="font-semibold text-[#5a5340] hover:underline"
                   >
                     Bidding sheet
                   </button>{" "}
@@ -761,21 +770,24 @@ export function BidSheetForm() {
           />
         ) : null}
       </div>
-
-      <div className="sticky bottom-0 z-10 shrink-0 border-t border-ink/[0.06] bg-canvas/95 pt-3 pb-1 backdrop-blur-md">
-        <BidSheetToolbar
-          isEditable={isEditable}
-          saving={saving}
-          dirty={dirty}
-          lastSavedAt={lastSavedAt}
-          status={bid.status}
-          serverVerifyWarnings={serverVerifyWarnings}
-          onPreview={previewCalculate}
-          onSave={() => void saveNow()}
-          onSubmit={() => void markSubmitted()}
-          onVerifyServer={() => void verifyServerCalc()}
-        />
       </div>
-    </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d5dbe3] bg-[#f3f4f6] px-4 py-2.5 shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.12)] sm:px-6 lg:px-8">
+        <div className="ml-auto w-fit max-w-full pr-24 sm:pr-28">
+          <BidSheetToolbar
+            isEditable={isEditable}
+            saving={saving}
+            dirty={dirty}
+            lastSavedAt={lastSavedAt}
+            status={bid.status}
+            serverVerifyWarnings={serverVerifyWarnings}
+            onPreview={previewCalculate}
+            onSave={() => void saveNow()}
+            onSubmit={() => void markSubmitted()}
+            onVerifyServer={() => void verifyServerCalc()}
+          />
+        </div>
+      </div>
+    </>
   );
 }

@@ -198,11 +198,9 @@ body {
 @keyframes bid-fade-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -360,3 +358,352 @@ body {
     animation: none !important;
   }
 }
+
+/* —— Intake compact (CRM-like density, muted chrome) —— */
+.intake-compact {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: #374151;
+  letter-spacing: 0.01em;
+  background: #f3f4f6;
+  padding: 10px 10px 16px;
+}
+
+.intake-compact .intake-section {
+  overflow: hidden;
+  border: 1px solid #d5dbe3;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.intake-compact .intake-section-head {
+  margin: 0;
+  padding: 8px 12px;
+  background: #f3f1ea;
+  color: #5a5340;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+}
+
+.intake-compact .intake-section-body {
+  padding: 10px 12px 12px;
+}
+
+.intake-compact .intake-section-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.35;
+}
+
+.intake-compact .intake-field {
+  height: 2rem;
+  border-radius: 6px;
+  border: 1px solid #cfd5dd;
+  background: #fff;
+  padding: 0 0.55rem;
+  font-size: 13.5px;
+  font-weight: 400;
+  color: #374151;
+  line-height: 1.25;
+  outline: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.intake-compact .intake-field:focus {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.28);
+}
+
+.intake-compact .intake-field:disabled {
+  opacity: 0.55;
+  background: #f3f4f6;
+}
+
+.intake-compact .intake-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.intake-compact .intake-row {
+  display: grid;
+  grid-template-columns: 7.25rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.45rem;
+  row-gap: 0.15rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.intake-compact .intake-row > .intake-label {
+  text-align: left;
+  padding-top: 1px;
+  overflow-wrap: anywhere;
+}
+
+.intake-compact .intake-row > .relative,
+.intake-compact .intake-row > .intake-field,
+.intake-compact .intake-row > input,
+.intake-compact .intake-row > select,
+.intake-compact .intake-row > textarea,
+.intake-compact .intake-row > div {
+  min-width: 0;
+}
+
+.intake-compact .intake-row > textarea.intake-field,
+.intake-compact .intake-row:has(textarea) {
+  align-items: start;
+}
+
+.intake-compact .intake-row > textarea.intake-field {
+  margin-top: 0;
+}
+
+.intake-compact .intake-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  column-gap: 0.75rem;
+  row-gap: 0.35rem;
+}
+
+.intake-compact .intake-grid-tight {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  column-gap: 0.55rem;
+  row-gap: 0.35rem;
+}
+
+.intake-compact .intake-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.35rem;
+}
+
+.intake-compact .intake-stack > .intake-row {
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+.intake-compact .intake-cols-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .intake-compact .intake-cols-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.intake-compact .intake-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  letter-spacing: -0.01em;
+}
+
+.intake-compact .intake-sub {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.intake-compact textarea.intake-field {
+  height: auto;
+  min-height: 4.25rem;
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+}
+
+.intake-compact .intake-section-head-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 8px 12px;
+  background: #f3f1ea;
+}
+
+.intake-compact .intake-section-head-bar h3 {
+  margin: 0;
+  color: #5a5340;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+}
+
+.intake-compact .intake-section-head-bar p {
+  margin: 0.15rem 0 0;
+  color: #7a7360;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.intake-compact .intake-head-btn {
+  border-radius: 6px;
+  border: 1px solid #cfd5dd;
+  background: #f8fafc;
+  padding: 0.25rem 0.65rem;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.intake-compact .intake-head-btn:disabled {
+  cursor: default;
+}
+
+.intake-compact .intake-head-btn:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+  color: #1f2937;
+}
+
+.intake-compact .ui-shadow-card {
+  border: 1px solid #d5dbe3;
+  border-radius: 8px;
+  box-shadow: none;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.intake-compact .ui-shadow-card > :first-child {
+  margin: 0;
+  padding: 8px 12px;
+  background: #f3f1ea;
+  border-bottom: none;
+  border-radius: 0;
+}
+
+.intake-compact .ui-shadow-card > :first-child h3 {
+  color: #5a5340;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.intake-compact .ui-shadow-card > :first-child p {
+  color: #7a7360;
+  font-size: 12px;
+}
+
+.intake-compact .ui-shadow-card > :not(:first-child) {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.intake-compact .ui-shadow-card > :nth-child(2) {
+  padding-top: 10px;
+}
+
+.intake-compact .ui-shadow-card > :last-child:not(:first-child) {
+  padding-bottom: 12px;
+}
+
+.intake-compact table {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: #374151;
+}
+
+.intake-compact table th {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.intake-compact table td {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 12.5px;
+}
+
+.intake-compact table input,
+.intake-compact table select,
+.intake-compact table textarea {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+  font-size: 12.5px !important;
+  color: #374151;
+}
+
+.intake-compact table input:not(:disabled),
+.intake-compact table select:not(:disabled),
+.intake-compact table textarea:not(:disabled) {
+  cursor: pointer;
+}
+
+.intake-compact table input:disabled,
+.intake-compact table select:disabled {
+  cursor: default;
+}
+
+.intake-compact input[class*="rounded-xl"],
+.intake-compact select[class*="rounded-xl"],
+.intake-compact textarea[class*="rounded-xl"] {
+  border-radius: 6px;
+  border-color: #cfd5dd;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 13.5px;
+  color: #374151;
+}
+
+.intake-compact input[class*="focus:border-brand"]:focus,
+.intake-compact select[class*="focus:border-brand"]:focus,
+.intake-compact textarea[class*="focus:border-brand"]:focus {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.28);
+}
+
+/* Muted CRM checkboxes — replace browser-default blue/black */
+.intake-compact input[type="checkbox"],
+.intake-check {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1px solid #cfd5dd;
+  border-radius: 3px;
+  background-color: #fff;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 10px 10px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.intake-compact input[type="checkbox"]:hover:not(:disabled):not(:checked),
+.intake-check:hover:not(:disabled):not(:checked) {
+  border-color: #94a3b8;
+  background-color: #faf7f0;
+}
+
+.intake-compact input[type="checkbox"]:checked,
+.intake-check:checked {
+  border-color: #5a5340;
+  background-color: #5a5340;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M2.5 6.2 5 8.7 9.5 3.5'/%3E%3C/svg%3E");
+}
+
+.intake-compact input[type="checkbox"]:focus-visible,
+.intake-check:focus-visible {
+  outline: 2px solid rgba(90, 83, 64, 0.35);
+  outline-offset: 1px;
+}
+
+.intake-compact input[type="checkbox"]:disabled,
+.intake-check:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
