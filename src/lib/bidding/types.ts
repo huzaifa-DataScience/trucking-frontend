@@ -28,6 +28,16 @@ export type BidSystemKey =
   | "vrf"
   | "equipment";
 
+export type BoardStatus =
+  | "not_started"
+  | "bidding"
+  | "bid_submitted"
+  | "won"
+  | "lost"
+  | "no_bid"
+  | "on_hold"
+  | "cancelled";
+
 export interface BidListItem {
   id: string;
   estimateNumber: string;
@@ -55,6 +65,14 @@ export interface BidListItem {
   bidKind?: string | null;
   dueDate?: string | null;
   dueTime?: string | null;
+  /** Single list status (Not Started … Cancelled), derived server-side from stage + outcome. */
+  boardStatus?: BoardStatus | null;
+  /** Project city, state. */
+  location?: string | null;
+  /** Captain, AE, clerk, takeoff people — Assigned To avatars. */
+  assignees?: { name: string; role: string }[];
+  /** Newest Notes-thread entry (GET /bids only). */
+  latestNote?: { body: string; authorName: string; at: string } | null;
   teamId?: number | null;
   /** Captain assigned to lead the estimate — FollowupCRM-style "Estimator" sort/filter. */
   estimator?: string | null;

@@ -25,6 +25,7 @@ import {
   loadHiddenColumns,
   pinnedBodyClass,
   pinnedHeaderClass,
+  TH_SEPARATOR,
   useColumnPinning,
   useStickyOffsets,
 } from "@/components/clearstory/ClearstorySwaggerTable";
@@ -41,6 +42,7 @@ import {
 import { PROJECTS_SAVED_VIEWS_KEY, PROJECT_FILTER_FIELDS } from "@/lib/clearstory/projectFilters";
 import { newId } from "@/lib/bidding/newId";
 import { useAuth } from "@/contexts/AuthContext";
+import { tableFont } from "@/lib/fonts";
 
 // Match COR tables: the table scrolls (X+Y) inside a bounded region.
 const TABLE_SCROLL =
@@ -73,20 +75,21 @@ function compareValues(a: unknown, b: unknown): number {
   return aStr.localeCompare(bStr);
 }
 
+/** Arrow only on the sorted column; others show a faint one on header hover (needs `group` on the button). */
 function SortIcon({ dir }: { dir: SortDir | null }) {
-  if (!dir) {
-    return (
-      <svg className="h-3 w-3 shrink-0 text-ink/25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-        <path d="M8 9l4-4 4 4M8 15l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
   return (
-    <svg className="h-3 w-3 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-      {dir === "desc" ? (
-        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      className={`h-4 w-4 shrink-0 ${dir ? "text-ink/70" : "text-ink/30 opacity-0 group-hover:opacity-100"}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      {dir === "asc" ? (
+        <path d="M12 19V5M6 11l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
       ) : (
-        <path d="M6 15l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M12 5v14M6 13l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
       )}
     </svg>
   );
@@ -511,11 +514,13 @@ export default function ClearstoryProjectsPage() {
                   onTogglePin={togglePin}
                 />
               </div>
-              <div className={`${TABLE_SCROLL} rounded-xl border border-ink/[0.1] bg-[#fafbfc] shadow-inner`}>
-                <table className="w-full min-w-[980px] border-separate border-spacing-0 text-left">
+              <div className={`${TABLE_SCROLL} rounded border border-ink/[0.12] bg-white`}>
+                <table
+                  className={`${tableFont.className} w-full min-w-[980px] border-separate border-spacing-0 text-left text-sm leading-5 text-ink/[0.87]`}
+                >
                   <caption className="sr-only">Clearstory projects</caption>
                   <thead>
-                    <tr className="sticky top-0 z-20 bg-[#f0f2f5]">
+                    <tr className="sticky top-0 z-20 bg-[#f8f9fa]">
                       {orderedColumnKeys.map((k) => {
                         const dir = sort?.key === k ? sort.dir : null;
                         const isPinned = pinnedSet.has(k);
@@ -529,15 +534,15 @@ export default function ClearstoryProjectsPage() {
                             }}
                             scope="col"
                             style={isPinned ? { left: pinnedOffsets[k] ?? 0 } : undefined}
-                            className={`whitespace-nowrap border-b border-ink/[0.1] px-0 py-0 text-xs font-semibold tracking-wide text-ink/60 ${
-                              isPinned ? pinnedHeaderClass(isLastPinned) : ""
+                            className={`whitespace-nowrap border-b border-ink/[0.12] p-0 text-sm font-medium text-ink/[0.87] ${TH_SEPARATOR} ${
+                              isPinned ? pinnedHeaderClass(isLastPinned) : "relative"
                             }`}
                           >
                             <button
                               type="button"
                               onClick={() => toggleSort(k)}
                               aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none"}
-                              className="flex w-full items-center gap-1 px-3 py-3 text-left transition hover:text-ink"
+                              className="group flex h-11 w-full items-center gap-1.5 px-4 text-left"
                             >
                               {humanizeColumnKey(k)}
                               <SortIcon dir={dir} />
@@ -548,14 +553,11 @@ export default function ClearstoryProjectsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedProjects.map((p, rowIdx) => {
+                    {sortedProjects.map((p) => {
                       const base = normalizeMoney(p.baseContractValue);
-                      const zebra = rowIdx % 2 === 1;
+                      const zebra = false;
                       return (
-                        <tr
-                          key={p.id}
-                          className={`align-top transition hover:bg-brand/[0.03] ${zebra ? "bg-ink/[0.015]" : "bg-white"}`}
-                        >
+                        <tr key={p.id} className="group/row h-10 bg-white transition-colors hover:bg-[#f7f7f7]">
                           {orderedColumnKeys.map((k) => {
                             const raw = (p as Record<string, unknown>)[k];
                             const isPinned = pinnedSet.has(k);
@@ -564,7 +566,7 @@ export default function ClearstoryProjectsPage() {
                             // Special-case baseContractValue to use USD formatting when possible.
                             if (k === "baseContractValue") {
                               return (
-                                <td key={k} style={cellStyle} className={`max-w-[16rem] border-b border-ink/[0.06] px-3 py-2.5 text-sm text-ink/90 tabular-nums ${isPinned ? pinnedBodyClass(zebra, isLastPinned) : ""}`}>
+                                <td key={k} style={cellStyle} className={`max-w-[16rem] border-b border-ink/[0.12] px-4 py-1.5 tabular-nums ${isPinned ? pinnedBodyClass(zebra, isLastPinned) : ""}`}>
                                   {formatUsdWhole(base)}
                                 </td>
                               );
@@ -572,7 +574,7 @@ export default function ClearstoryProjectsPage() {
 
                             const exp = expandCellForModal(raw);
                             return (
-                              <td key={k} style={cellStyle} className={`max-w-[18rem] border-b border-ink/[0.06] px-3 py-2.5 text-sm text-ink/90 ${isPinned ? pinnedBodyClass(zebra, isLastPinned) : ""}`}>
+                              <td key={k} style={cellStyle} className={`max-w-[18rem] border-b border-ink/[0.12] px-4 py-1.5 ${isPinned ? pinnedBodyClass(zebra, isLastPinned) : ""}`}>
                                 {"empty" in exp ? (
                                   <span className="text-ink/30">—</span>
                                 ) : "modal" in exp ? (
@@ -585,7 +587,7 @@ export default function ClearstoryProjectsPage() {
                                         value: exp.modal,
                                       })
                                     }
-                                    className="block w-full truncate text-left font-semibold text-brand underline-offset-2 hover:underline"
+                                    className="block w-full truncate text-left text-brand underline-offset-2 hover:underline"
                                     title="Open details"
                                   >
                                     {formatSwaggerCell(raw) || "View"}
@@ -594,7 +596,7 @@ export default function ClearstoryProjectsPage() {
                                   k === "id" ? (
                                     <Link
                                       href={`/clearstory/projects/${encodeURIComponent(String(p.id))}`}
-                                      className="block truncate font-semibold text-brand hover:text-brand-secondary"
+                                      className="block truncate hover:text-brand hover:underline"
                                       title="Open project summary"
                                     >
                                       {exp.text || "—"}

@@ -1,5 +1,7 @@
 "use client";
 
+import { tableFont } from "@/lib/fonts";
+
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import {
@@ -168,6 +170,10 @@ function PastDueMetricCard({
   );
 }
 
+/** Short hairline between header cells (th needs `relative` or `sticky`). */
+const TH_SEPARATOR =
+  "before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden";
+
 function SortableTh({
   label,
   sortKey,
@@ -186,20 +192,18 @@ function SortableTh({
   const active = sort.by === sortKey;
   return (
     <th
-      className={`whitespace-nowrap px-3 py-2 text-xs font-medium text-stone-600 dark:text-stone-400 ${
+      className={`h-11 whitespace-nowrap px-4 font-medium text-ink/[0.87] ${TH_SEPARATOR} ${
         align === "right" ? "text-right" : "text-left"
-      } ${className}`}
+      } ${className || "relative"}`}
     >
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className={`inline-flex items-center gap-1 transition hover:text-stone-900 dark:hover:text-stone-100 ${
-          align === "right" ? "flex-row-reverse" : ""
-        } ${active ? "text-stone-900 dark:text-stone-100" : ""}`}
+        className={`group inline-flex items-center gap-1.5 ${align === "right" ? "flex-row-reverse" : ""}`}
       >
         {label}
         <svg
-          className={`h-3 w-3 shrink-0 transition ${active ? "text-brand" : "text-stone-400/60 dark:text-stone-500/60"}`}
+          className={`h-3.5 w-3.5 shrink-0 ${active ? "text-ink/70" : "text-ink/30 opacity-0 group-hover:opacity-100"}`}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -228,11 +232,11 @@ const SITELINE_AGING_DISPLAY_MAP: Record<string, string> = {
 
 /** Fills remaining card size; scroll inside viewport (Billings aging / overdue). */
 const BILLING_TABLE_FILL_SCROLL =
-  "min-h-0 min-w-0 w-full flex-1 overflow-x-auto overflow-y-auto";
+  "min-h-0 min-w-0 w-full flex-1 overflow-x-auto overflow-y-auto rounded border border-ink/[0.12] bg-white";
 
 /** Contracts / pay apps tab (fixed max height when that tab is enabled). */
 const BILLING_TABLE_SCROLL_WRAPPER =
-  "min-w-0 w-full overflow-x-auto overflow-y-auto min-h-[12rem] max-h-[min(70dvh,calc(100dvh-13.5rem))] sm:max-h-[min(72dvh,calc(100dvh-14rem))]";
+  "min-w-0 w-full overflow-x-auto overflow-y-auto rounded border border-ink/[0.12] bg-white min-h-[12rem] max-h-[min(70dvh,calc(100dvh-13.5rem))] sm:max-h-[min(72dvh,calc(100dvh-14rem))]";
 
 function isSitelineError(value: unknown): value is SitelineError {
   return (
@@ -778,28 +782,28 @@ export default function BillingsPage() {
               </p>
             ) : (
               <div className={BILLING_TABLE_SCROLL_WRAPPER}>
-                <table className="min-w-full text-sm">
+                <table className={`${tableFont.className} min-w-full text-sm leading-5 text-ink/[0.87]`}>
                   <thead>
-                    <tr className="border-b border-stone-200 dark:border-stone-700">
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                    <tr className="border-b border-ink/[0.12] bg-[#f8f9fa]">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Contract / Internal #
                       </th>
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Project #
                       </th>
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Billing type
                       </th>
-                      <th className="text-right px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-right font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Percent complete
                       </th>
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Latest pay app (month)
                       </th>
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Status
                       </th>
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Actions
                       </th>
                     </tr>
@@ -816,21 +820,21 @@ export default function BillingsPage() {
                       return (
                         <tr
                           key={row.id}
-                          className="border-b border-stone-100 last:border-0 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                          className="group/row h-10 border-b border-ink/[0.12] last:border-0 transition-colors hover:bg-[#f7f7f7]"
                         >
-                          <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                          <td className="px-4 py-1.5">
                             {row.internalProjectNumber ?? "—"}
                           </td>
-                          <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                          <td className="px-4 py-1.5">
                             {row.project?.projectNumber ?? "—"}
                           </td>
-                          <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                          <td className="px-4 py-1.5">
                             {row.billingType ?? "—"}
                           </td>
-                          <td className="px-2 py-2 text-right text-stone-800 dark:text-stone-200">
+                          <td className="px-4 py-1.5 text-right">
                             {formatPercent(row.percentComplete)}
                           </td>
-                          <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                          <td className="px-4 py-1.5">
                             {latestPayApp && start && end ? (
                               <div className="flex flex-col">
                                 <span>
@@ -844,10 +848,10 @@ export default function BillingsPage() {
                               "—"
                             )}
                           </td>
-                          <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                          <td className="px-4 py-1.5">
                             {latestPayApp?.status ?? "—"}
                           </td>
-                          <td className="px-2 py-2 text-sm">
+                          <td className="px-4 py-1.5 text-sm">
                             <button
                               type="button"
                               onClick={() => openContract(row)}
@@ -906,25 +910,25 @@ export default function BillingsPage() {
               </p>
             ) : (
               <div className={BILLING_TABLE_SCROLL_WRAPPER}>
-                <table className="min-w-full text-sm">
+                <table className={`${tableFont.className} min-w-full text-sm leading-5 text-ink/[0.87]`}>
                   <thead>
-                    <tr className="border-b border-stone-200 dark:border-stone-700">
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                    <tr className="border-b border-ink/[0.12] bg-[#f8f9fa]">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Pay app #
                       </th>
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Project / Contract
                       </th>
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Billing type
                       </th>
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Status
                       </th>
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Updated at
                       </th>
-                      <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <th className="relative h-11 whitespace-nowrap px-4 text-left font-medium text-ink/[0.87] before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden">
                         Actions
                       </th>
                     </tr>
@@ -933,27 +937,27 @@ export default function BillingsPage() {
                     {payApps.map((row: SitelinePaginatedPayAppRow) => (
                       <tr
                         key={row.id}
-                        className="border-b border-stone-100 last:border-0 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                        className="group/row h-10 border-b border-ink/[0.12] last:border-0 transition-colors hover:bg-[#f7f7f7]"
                       >
-                        <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                        <td className="px-4 py-1.5">
                           {row.payAppNumber ?? "—"}
                         </td>
-                        <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                        <td className="px-4 py-1.5">
                           {row.contract?.project?.projectNumber ?? "—"}{" "}
                           {row.contract?.internalProjectNumber
                             ? `· ${row.contract.internalProjectNumber}`
                             : ""}
                         </td>
-                        <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                        <td className="px-4 py-1.5">
                           {row.billingType ?? "—"}
                         </td>
-                        <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                        <td className="px-4 py-1.5">
                           {row.status ?? "—"}
                         </td>
-                        <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                        <td className="px-4 py-1.5">
                           {row.updatedAt ?? "—"}
                         </td>
-                        <td className="px-2 py-2 text-sm">
+                        <td className="px-4 py-1.5 text-sm">
                           <button
                             type="button"
                             onClick={() => setSelectedPayAppId(row.id)}
@@ -1136,15 +1140,15 @@ export default function BillingsPage() {
               )}
               {!agingError && (showAgingSkeleton || (agingReport && agingReport.rows.length > 0)) && (
                 <div className={BILLING_TABLE_FILL_SCROLL}>
-                  <table className="min-w-full text-sm">
+                  <table className={`${tableFont.className} min-w-full text-sm leading-5 text-ink/[0.87]`}>
                     <thead>
-                      <tr className="border-b border-stone-200 dark:border-stone-700">
+                      <tr className="border-b border-ink/[0.12] bg-[#f8f9fa]">
                         <SortableTh
                           label="Project"
                           sortKey="projectName"
                           sort={agingSort}
                           onSort={onAgingSort}
-                          className="sticky left-0 z-20 bg-stone-50 dark:bg-stone-800/50"
+                          className="sticky left-0 z-20 border-r border-ink/[0.12] bg-[#f8f9fa]"
                         />
                         <SortableTh label="PM" sortKey="leadPmName" sort={agingSort} onSort={onAgingSort} />
                         <SortableTh
@@ -1177,9 +1181,9 @@ export default function BillingsPage() {
                     <tbody>
                       {showAgingSkeleton &&
                         Array.from({ length: 8 }, (_, i) => (
-                          <tr key={`skeleton-${i}`} className="border-b border-stone-100 last:border-0 dark:border-stone-800">
+                          <tr key={`skeleton-${i}`} className="group/row h-10 border-b border-ink/[0.12] last:border-0 transition-colors hover:bg-[#f7f7f7]">
                             {Array.from({ length: agingDisplayBuckets.length + 5 }, (_, j) => (
-                              <td key={j} className="px-3 py-2.5">
+                              <td key={j} className="px-4 py-2.5">
                                 <div className="h-3.5 w-full max-w-24 animate-pulse rounded bg-stone-200/80 dark:bg-stone-700/60" />
                               </td>
                             ))}
@@ -1189,12 +1193,12 @@ export default function BillingsPage() {
                         sortedAgingRows.map((row, i) => (
                         <tr
                           key={i}
-                          className="border-b border-stone-100 last:border-0 dark:border-stone-800"
+                          className="group/row h-10 border-b border-ink/[0.12] last:border-0 transition-colors hover:bg-[#f7f7f7]"
                         >
-                          <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium text-stone-900 dark:bg-stone-900 dark:text-stone-100">
+                          <td className="sticky left-0 z-10 border-r border-ink/[0.12] bg-white px-4 py-1.5 group-hover/row:bg-[#f7f7f7]">
                             {row.projectName}
                           </td>
-                          <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                          <td className="px-4 py-1.5">
                             <div className="flex flex-col">
                               <span>{row.leadPmName ?? "—"}</span>
                               {row.leadPmEmail && (
@@ -1207,10 +1211,10 @@ export default function BillingsPage() {
                               )}
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
+                          <td className="px-4 py-1.5 text-right tabular-nums">
                             {formatInvoiceNumber(row.invoiceNumber)}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-left text-stone-800 dark:text-stone-200">
+                          <td className="whitespace-nowrap px-4 py-1.5 text-left">
                             {formatInvoiceDate(row.invoiceDate)}
                           </td>
                           {agingDisplayBuckets.map((b) => {
@@ -1218,29 +1222,29 @@ export default function BillingsPage() {
                             return (
                               <td
                                 key={b}
-                                className={`px-3 py-2 text-right tabular-nums ${agingBucketCellClass(b, bucketValue, "text-stone-800 dark:text-stone-200")}`}
+                                className={`px-4 py-1.5 text-right tabular-nums ${agingBucketCellClass(b, bucketValue, "text-ink/[0.87]")}`}
                               >
                                 {formatAgingCurrency(bucketValue)}
                               </td>
                             );
                           })}
-                          <td className="px-3 py-2 text-right font-medium text-stone-800 dark:text-stone-200 tabular-nums">
+                          <td className="px-4 py-1.5 text-right font-medium tabular-nums">
                             {formatAgingCurrency(row.projectTotal)}
                           </td>
                         </tr>
                       ))}
                       {!showAgingSkeleton && agingReport && (
-                        <tr className="border-t-2 border-stone-300 bg-stone-50 font-semibold dark:border-stone-600 dark:bg-stone-800/50">
-                          <td className="sticky left-0 z-10 bg-stone-50 px-3 py-2 dark:bg-stone-800/50">
+                        <tr className="h-10 border-t border-ink/[0.2] bg-[#f8f9fa] font-medium">
+                          <td className="sticky left-0 z-10 border-r border-ink/[0.12] bg-[#f8f9fa] px-4 py-1.5">
                             TOTALS
                           </td>
-                          <td className="px-3 py-2 text-stone-900 dark:text-stone-100 tabular-nums">
+                          <td className="px-4 py-1.5 tabular-nums">
                             {/* PM column has no totals */}
                           </td>
-                          <td className="px-3 py-2 text-stone-900 dark:text-stone-100 tabular-nums">
+                          <td className="px-4 py-1.5 tabular-nums">
                             {/* Invoice # column has no totals */}
                           </td>
-                          <td className="px-3 py-2 text-stone-900 dark:text-stone-100">
+                          <td className="px-4 py-1.5">
                             {/* Invoice date column has no totals */}
                           </td>
                           {agingDisplayBuckets.map((b) => {
@@ -1248,13 +1252,13 @@ export default function BillingsPage() {
                             return (
                               <td
                                 key={b}
-                                className={`px-3 py-2 text-right tabular-nums ${agingBucketCellClass(b, bucketTotal, "text-stone-900 dark:text-stone-100")}`}
+                                className={`px-4 py-1.5 text-right tabular-nums ${agingBucketCellClass(b, bucketTotal, "text-ink/[0.87]")}`}
                               >
                                 {formatAgingCurrency(bucketTotal)}
                               </td>
                             );
                           })}
-                          <td className="px-3 py-2 text-right text-stone-900 dark:text-stone-100 tabular-nums">
+                          <td className="px-4 py-1.5 text-right tabular-nums">
                             {formatAgingCurrency(agingReport.totals.projectTotal)}
                           </td>
                         </tr>
@@ -1442,9 +1446,9 @@ export default function BillingsPage() {
               {!agingOverdueError &&
                 (showOverdueSkeleton || (agingOverdue && agingOverdue.items.length > 0)) && (
                   <div className={BILLING_TABLE_FILL_SCROLL}>
-                    <table className="min-w-full text-sm">
+                    <table className={`${tableFont.className} min-w-full text-sm leading-5 text-ink/[0.87]`}>
                       <thead>
-                        <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
+                        <tr className="border-b border-ink/[0.12] bg-[#f8f9fa]">
                           <SortableTh label="Project" sortKey="projectName" sort={overdueSort} onSort={onOverdueSort} />
                           <SortableTh
                             label="GC / Project #"
@@ -1487,9 +1491,9 @@ export default function BillingsPage() {
                       <tbody>
                         {showOverdueSkeleton &&
                           Array.from({ length: 8 }, (_, i) => (
-                            <tr key={`skeleton-${i}`} className="border-b border-stone-100 last:border-0 dark:border-stone-800">
+                            <tr key={`skeleton-${i}`} className="group/row h-10 border-b border-ink/[0.12] last:border-0 transition-colors hover:bg-[#f7f7f7]">
                               {Array.from({ length: 9 }, (_, j) => (
-                                <td key={j} className="px-3 py-2.5">
+                                <td key={j} className="px-4 py-2.5">
                                   <div className="h-3.5 w-full max-w-24 animate-pulse rounded bg-stone-200/80 dark:bg-stone-700/60" />
                                 </td>
                               ))}
@@ -1508,9 +1512,9 @@ export default function BillingsPage() {
                           return (
                             <tr
                               key={`${item.contractId}-${idx}`}
-                              className="border-b border-stone-100 last:border-0 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                              className="group/row h-10 border-b border-ink/[0.12] last:border-0 transition-colors hover:bg-[#f7f7f7]"
                             >
-                              <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                              <td className="px-4 py-1.5">
                                 <div className="flex flex-col">
                                   <span>{item.projectName ?? "—"}</span>
                                   {item.internalProjectNumber && (
@@ -1520,10 +1524,10 @@ export default function BillingsPage() {
                                   )}
                                 </div>
                               </td>
-                              <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                              <td className="px-4 py-1.5">
                                 {item.projectNumber ?? "—"}
                               </td>
-                              <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                              <td className="px-4 py-1.5">
                                 <div className="flex flex-col">
                                   <span>{item.leadPmName ?? "—"}</span>
                                   {item.leadPmEmail && (
@@ -1536,22 +1540,22 @@ export default function BillingsPage() {
                                   )}
                                 </div>
                               </td>
-                              <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                              <td className="px-4 py-1.5">
                                 {due}
                               </td>
-                              <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
+                              <td className="px-4 py-1.5 text-right tabular-nums">
                                 {item.daysPastDue}
                               </td>
-                              <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
+                              <td className="px-4 py-1.5 text-right tabular-nums">
                                 {formatInvoiceNumber(item.invoiceNumber)}
                               </td>
-                              <td className="whitespace-nowrap px-3 py-2 text-left text-stone-800 dark:text-stone-200">
+                              <td className="whitespace-nowrap px-4 py-1.5 text-left">
                                 {invDate}
                               </td>
-                              <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-200 tabular-nums">
+                              <td className="px-4 py-1.5 text-right tabular-nums">
                                 {formatAgingCurrency(item.netDollars)}
                               </td>
-                              <td className="px-3 py-2 text-stone-800 dark:text-stone-200">
+                              <td className="px-4 py-1.5">
                                 {item.status ?? "—"}
                               </td>
                             </tr>
