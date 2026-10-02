@@ -17,9 +17,9 @@ import { formatMoney } from "@/lib/bidding/format";
 import type { WfsCharts } from "@/lib/wfs/types";
 
 const EQUITY = "#0f172a";
-const CASH = "#ff7b11";
+const CASH = "#c2642a";
 const GOEL = "#0f172a";
-const DCB = "#ff7b11";
+const DCB = "#c2642a";
 const GOEL_DC = "#059669";
 const OTHER = "#94a3b8";
 const AR = "#059669";

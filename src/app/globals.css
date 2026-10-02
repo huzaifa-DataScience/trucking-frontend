@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
-  Brand: #FF7B11, #F26620, #010101 on #FFFFFF.
+  Brand: muted copper + ink on white (construction / logistics).
   Dark variant is class-based only — we do not set `dark` on <html>, so the UI stays light
   (matches product spec; avoids OS dark mode flipping the whole app black).
 */
@@ -9,20 +9,26 @@
 
 /*
   Brand palette (usage ~40% ink / 30% primary / 20% secondary on white):
-  --brand #FF7B11, --brand-secondary #F26620, --ink #010101, surface #FFFFFF
+  --brand copper #C2642A, --brand-secondary #9A4A22, --ink #010101, surface #FFFFFF
 */
 :root {
   --background: #ffffff;
   --foreground: #010101;
-  --brand: #ff7b11;
-  --brand-secondary: #f26620;
+  --brand: #c2642a;
+  --brand-secondary: #9a4a22;
   --ink: #010101;
   /** App canvas behind white cards (executive dashboard pattern). */
-  --canvas: #f0f1f4;
+  --canvas: #f7f5f2;
+  /** Soft warm stone chrome (sidebar, section headers, active fills). */
+  --peach: #f0e8df;
+  --peach-fill: #f5efe8;
+  --peach-active: #e6d5c4;
+  --peach-border: #d9c7b6;
+  --peach-muted: #8b5a3c;
 
   /*
     Semantic status colors (UX_UI_DESIGN_REWORK.md §4.1).
-    Brand orange is never a status color: orange = "act here".
+    Brand copper is never a status color: copper = "act here".
     Each gets text (-700), tint bg (-50), border (-200).
   */
   --success: #15803d;
@@ -47,6 +53,11 @@
   --color-ink: var(--ink);
   --color-surface: #ffffff;
   --color-canvas: var(--canvas);
+  --color-peach: var(--peach);
+  --color-peach-fill: var(--peach-fill);
+  --color-peach-active: var(--peach-active);
+  --color-peach-border: var(--peach-border);
+  --color-peach-muted: var(--peach-muted);
   --color-success: var(--success);
   --color-success-tint: var(--success-tint);
   --color-success-border: var(--success-border);
@@ -81,7 +92,7 @@ body {
 
 /* Brand-tinted text selection */
 ::selection {
-  background: rgba(255, 123, 17, 0.18);
+  background: rgba(194, 100, 42, 0.18);
   color: var(--ink);
 }
 
@@ -134,7 +145,7 @@ body {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 123, 17, 0.35) 50%,
+    rgba(194, 100, 42, 0.35) 50%,
     transparent 100%
   );
   pointer-events: none;
@@ -207,10 +218,10 @@ body {
 @keyframes bid-pulse-ring {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(255, 123, 17, 0.25);
+    box-shadow: 0 0 0 0 rgba(194, 100, 42, 0.25);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(255, 123, 17, 0);
+    box-shadow: 0 0 0 6px rgba(194, 100, 42, 0);
   }
 }
 
@@ -262,7 +273,7 @@ body {
   background: linear-gradient(
     90deg,
     rgba(1, 1, 1, 0.04) 0%,
-    rgba(255, 123, 17, 0.12) 50%,
+    rgba(194, 100, 42, 0.12) 50%,
     rgba(1, 1, 1, 0.04) 100%
   );
   background-size: 200% 100%;
@@ -359,18 +370,18 @@ body {
   }
 }
 
-/* —— Intake compact (CRM-like density, muted chrome) —— */
+/* —— Estimates compact chrome (soft warm stone / muted copper) —— */
 .intake-compact {
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   color: #374151;
   letter-spacing: 0.01em;
-  background: #f3f4f6;
+  background: #f7f5f2;
   padding: 10px 10px 16px;
 }
 
 .intake-compact .intake-section {
   overflow: hidden;
-  border: 1px solid #d5dbe3;
+  border: 1px solid #e5e0da;
   border-radius: 8px;
   background: #fff;
   box-shadow: none;
@@ -379,8 +390,8 @@ body {
 .intake-compact .intake-section-head {
   margin: 0;
   padding: 8px 12px;
-  background: #f3f1ea;
-  color: #5a5340;
+  background: var(--peach-fill);
+  color: #1a1a1a;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -402,7 +413,7 @@ body {
 .intake-compact .intake-field {
   height: 2rem;
   border-radius: 6px;
-  border: 1px solid #cfd5dd;
+  border: 1px solid #d6d0c8;
   background: #fff;
   padding: 0 0.55rem;
   font-size: 13.5px;
@@ -414,8 +425,8 @@ body {
 }
 
 .intake-compact .intake-field:focus {
-  border-color: #94a3b8;
-  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.28);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px rgba(194, 100, 42, 0.22);
 }
 
 .intake-compact .intake-field:disabled {
@@ -529,12 +540,12 @@ body {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 8px 12px;
-  background: #f3f1ea;
+  background: var(--peach-fill);
 }
 
 .intake-compact .intake-section-head-bar h3 {
   margin: 0;
-  color: #5a5340;
+  color: #1a1a1a;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -543,19 +554,19 @@ body {
 
 .intake-compact .intake-section-head-bar p {
   margin: 0.15rem 0 0;
-  color: #7a7360;
+  color: #6b7280;
   font-size: 12px;
   line-height: 1.35;
 }
 
 .intake-compact .intake-head-btn {
   border-radius: 6px;
-  border: 1px solid #cfd5dd;
-  background: #f8fafc;
+  border: 1px solid var(--peach-border);
+  background: var(--peach-fill);
   padding: 0.25rem 0.65rem;
   font-size: 11px;
   font-weight: 600;
-  color: #4b5563;
+  color: #1a1a1a;
   cursor: pointer;
 }
 
@@ -564,9 +575,9 @@ body {
 }
 
 .intake-compact .intake-head-btn:hover {
-  border-color: #94a3b8;
-  background: #f1f5f9;
-  color: #1f2937;
+  border-color: var(--peach-muted);
+  background: var(--peach-active);
+  color: #1a1a1a;
 }
 
 .intake-compact .ui-shadow-card {
@@ -581,20 +592,20 @@ body {
 .intake-compact .ui-shadow-card > :first-child {
   margin: 0;
   padding: 8px 12px;
-  background: #f3f1ea;
+  background: var(--peach-fill);
   border-bottom: none;
   border-radius: 0;
 }
 
 .intake-compact .ui-shadow-card > :first-child h3 {
-  color: #5a5340;
+  color: #1a1a1a;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
 .intake-compact .ui-shadow-card > :first-child p {
-  color: #7a7360;
+  color: #6b7280;
   font-size: 12px;
 }
 
@@ -685,13 +696,13 @@ body {
 .intake-compact input[type="checkbox"]:hover:not(:disabled):not(:checked),
 .intake-check:hover:not(:disabled):not(:checked) {
   border-color: #94a3b8;
-  background-color: #faf7f0;
+  background-color: #faf7f3;
 }
 
 .intake-compact input[type="checkbox"]:checked,
 .intake-check:checked {
-  border-color: #5a5340;
-  background-color: #5a5340;
+  border-color: #1a1a1a;
+  background-color: #1a1a1a;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M2.5 6.2 5 8.7 9.5 3.5'/%3E%3C/svg%3E");
 }
 

@@ -64,7 +64,7 @@ export function BidSystemsInputTable({
                 return (
                   <tr
                     key={key}
-                    className={active ? "hover:bg-[#faf7f0]" : "text-[#9ca3af]"}
+                    className={active ? "hover:bg-[#faf7f3]" : "text-[#9ca3af]"}
                   >
                     <td className="px-3 py-2">
                       <input

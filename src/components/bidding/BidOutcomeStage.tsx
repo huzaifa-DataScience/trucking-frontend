@@ -135,7 +135,7 @@ export function BidOutcomeStage() {
                         ? "border-emerald-600/70 bg-emerald-50"
                         : c.tone === "lose"
                           ? "border-[#94a3b8] bg-[#f3f4f6]"
-                          : "border-[#d9d4c8] bg-[#f3f1ea]"
+                          : "border-[#d9c7b6] bg-[#f5efe8]"
                       : "border-[#d5dbe3] bg-white hover:border-[#94a3b8]"
                   }`}
                 >
@@ -167,7 +167,7 @@ export function BidOutcomeStage() {
           {bid.workflow?.showAward ? (
             <Link
               href={`/bidding/${bid.id}?stage=award`}
-              className="intake-head-btn bg-[#f3f1ea] text-[#5a5340]"
+              className="intake-head-btn bg-[#f5efe8] text-[#1a1a1a]"
             >
               Open Awarded / startup →
             </Link>

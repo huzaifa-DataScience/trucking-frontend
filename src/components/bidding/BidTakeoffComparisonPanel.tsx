@@ -42,7 +42,7 @@ export function BidTakeoffComparisonPanel() {
     <section className="intake-section min-w-0">
       <div className="intake-section-head flex flex-wrap items-center justify-between gap-2">
         <span>Takeoff comparison</span>
-        <span className="rounded border border-[#d9d4c8] bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-[#5a5340]">
+        <span className="rounded border border-[#d9c7b6] bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-[#1a1a1a]">
           {rows.filter((row) => row.reconciliationRequired).length} to reconcile
         </span>
       </div>

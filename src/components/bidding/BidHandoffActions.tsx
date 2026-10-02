@@ -62,12 +62,12 @@ export function BidSaveButton() {
         type="button"
         disabled={!editable || busy || saving}
         onClick={() => void runSave()}
-        className="rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-3 py-1.5 text-[12px] font-semibold text-[#5a5340] transition hover:bg-[#ebe8df] disabled:opacity-40"
+        className="cursor-pointer rounded-md border border-brand bg-brand px-3.5 py-1.5 text-[12px] font-semibold text-white transition hover:bg-brand-secondary disabled:opacity-40"
       >
         {busy || saving ? "Saving…" : "Save"}
       </button>
       {unsavedChanges ? (
-        <span className="text-[10px] font-semibold text-[#7a7360]">
+        <span className="text-[10px] font-semibold text-[#6b7280]">
           Unsaved changes
         </span>
       ) : null}
@@ -181,7 +181,7 @@ export function BidHandoffActions() {
           type="button"
           disabled={!editable || busy !== null}
           onClick={() => void runSave()}
-          className="rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-3 py-1.5 text-[12px] font-semibold text-[#5a5340] transition hover:bg-[#ebe8df] disabled:opacity-40"
+          className="cursor-pointer rounded-md border border-brand bg-brand px-3.5 py-1.5 text-[12px] font-semibold text-white transition hover:bg-brand-secondary disabled:opacity-40"
         >
           {busy === "save" || saving ? "Saving…" : "Save"}
         </button>

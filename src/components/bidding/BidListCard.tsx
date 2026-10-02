@@ -7,7 +7,7 @@ import {
 import type { BidListItem, BidStatus } from "@/lib/bidding/types";
 
 const STATUS_CHIP_CLASSES: Record<BidStatus, string> = {
-  draft: "border-[#f0c396] bg-[#fdf3e9] text-[#a15c1a]",
+  draft: "border-peach-border bg-peach-fill text-ink",
   submitted: "border-info-border bg-info-tint text-info",
   archived: "border-ink/10 bg-ink/[0.04] text-ink/55",
 };

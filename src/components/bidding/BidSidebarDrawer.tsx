@@ -66,7 +66,7 @@ export function BidSidebarDrawer({
   );
 }
 
-/** Floating action — labeled pills in the bottom-right corner (no page-wide gutter). */
+/** Header chrome action — outline buttons (Notes / Handoff / Activity). */
 export function BidFloatingButton({
   label,
   active,
@@ -84,14 +84,14 @@ export function BidFloatingButton({
       onClick={onClick}
       aria-pressed={active}
       title={label}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-[12px] font-semibold shadow-md transition ${
+      className={`inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-semibold transition ${
         active
-          ? "border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340]"
-          : "border-[#d5dbe3] bg-white text-[#4b5563] hover:border-[#94a3b8] hover:bg-[#f8fafc]"
+          ? "border-peach-border bg-peach-fill text-ink"
+          : "border-[#e0e0e0] bg-white text-[#4b5563] hover:border-peach-border hover:bg-peach-fill/60"
       }`}
     >
       {icon}
-      {label}
+      <span className="hidden sm:inline">{label}</span>
     </button>
   );
 }

@@ -774,7 +774,18 @@ export function BidIntakeStage() {
                   : [...(meta?.drawingCategories ?? ["sd", "dd", "ifb", "ifp", "ifc", "ifr"]), "cd"]
                 ).map((id) => (
                   <option key={id} value={id}>
-                    {meta?.drawingCategoryLabels?.[id] ?? (id === "cd" ? "CD" : id)}
+                    {meta?.drawingCategoryLabels?.[id]
+                      ?.replace(/\s*\([A-Z]{2,4}\)\s*/g, " ")
+                      .replace(/\s*\/\s*Conceptual/i, "")
+                      .replace(/\s+/g, " ")
+                      .trim() ||
+                      (id === "cd"
+                        ? "Construction Documents"
+                        : id === "sd"
+                          ? "Schematic Design"
+                          : id === "dd"
+                            ? "Design Development"
+                            : id)}
                   </option>
                 ))}
               </select>

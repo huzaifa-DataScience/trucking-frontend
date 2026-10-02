@@ -8,8 +8,8 @@ const LABELS: Record<BidStatus, string> = {
 
 const STYLES: Record<BidStatus, { wrap: string; dot: string }> = {
   draft: {
-    wrap: "border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340]",
-    dot: "bg-[#5a5340]",
+    wrap: "border-peach-border bg-peach-fill text-ink",
+    dot: "bg-brand",
   },
   submitted: {
     wrap: "border-info-border bg-info-tint text-info",
