@@ -31,22 +31,20 @@ export function BidSpecSheetsStage() {
   const sheets = (draft.specSheets as SpecSheet[] | undefined) ?? EMPTY_SPEC_SHEETS;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold text-ink">Spec sheets</h2>
-          <p className="mt-0.5 text-sm text-ink/50">
-            Which spec PDFs apply + allowed insulation rules before takeoff.
-            Not the Mike Specs qty grid.
-          </p>
-          <p className="mt-1 text-xs text-ink/40">
-            {saving ? "Saving…" : dirty ? "Unsaved changes" : editable ? "Save to keep changes" : "Read only"}
-          </p>
-        </div>
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+      <header>
+        <h2 className="intake-title">Spec sheets</h2>
+        <p className="intake-sub mt-0.5">
+          Which spec PDFs apply + allowed insulation rules before takeoff.
+          Not the Mike Specs qty grid.
+        </p>
+        <p className="intake-sub mt-0.5">
+          {saving ? "Saving…" : dirty ? "Unsaved changes" : editable ? "Save to keep changes" : "Read only"}
+        </p>
       </header>
 
       {error ? (
-        <p className="rounded-xl border border-danger/25 bg-danger-tint/40 px-4 py-2 text-sm text-danger">
+        <p className="rounded border border-danger/25 bg-danger-tint/40 px-3 py-1.5 text-[12.5px] text-danger">
           {error}
         </p>
       ) : null}

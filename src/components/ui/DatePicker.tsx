@@ -39,16 +39,12 @@ function parseDateValue(value: string | null | undefined): CalendarDate | null {
   }
 }
 
-const segmentClass =
-  "rounded px-0.5 tabular-nums outline-none focus:bg-brand/15 focus:text-ink data-[placeholder]:text-ink/30";
-const triggerButtonClass =
-  "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-ink/40 outline-none transition hover:bg-ink/5 hover:text-ink/70 focus-visible:ring-2 focus-visible:ring-brand/40";
 const popoverClass =
   "w-auto overflow-auto rounded-xl border border-ink/10 bg-surface p-3 shadow-lg outline-none";
 const navButtonClass =
   "flex h-7 w-7 items-center justify-center rounded-lg text-ink/50 outline-none transition hover:bg-ink/5 hover:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-30";
 const cellClass =
-  "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-sm text-ink outline-none data-[outside-month]:text-ink/25 data-[hovered]:bg-brand/10 data-[selected]:bg-brand data-[selected]:text-white data-[unavailable]:pointer-events-none data-[unavailable]:text-ink/20 data-[today]:font-semibold";
+  "flex h-8 w-8 cursor-pointer items-center justify-center rounded text-[12.5px] text-[#374151] outline-none data-[outside-month]:text-[#d1d5db] data-[hovered]:bg-[#f3f1ea] data-[selected]:bg-[#5a5340] data-[selected]:text-white data-[unavailable]:pointer-events-none data-[unavailable]:text-[#d1d5db] data-[today]:font-semibold";
 
 function CalendarIcon() {
   return (
@@ -96,12 +92,17 @@ export function DatePicker({
       aria-label={ariaLabel ?? "Date"}
     >
       <Group
-        className={`flex items-center gap-1 border border-ink/10 bg-surface text-ink outline-none transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${className}`}
+        className={`flex items-center gap-1 text-[#374151] outline-none transition focus-within:border-[#94a3b8] focus-within:shadow-[0_0_0_2px_rgba(148,163,184,0.28)] data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${className}`}
       >
-        <DateInput className="flex flex-1 items-center gap-0.5">
-          {(segment) => <DateSegment segment={segment} className={segmentClass} />}
+        <DateInput className="flex flex-1 items-center gap-0.5 font-[inherit] text-[13.5px]">
+          {(segment) => (
+            <DateSegment
+              segment={segment}
+              className="rounded px-0.5 tabular-nums outline-none focus:bg-[#e5e7eb] focus:text-[#1f2937] data-[placeholder]:text-[#9ca3af]"
+            />
+          )}
         </DateInput>
-        <Button className={triggerButtonClass}>
+        <Button className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[#6b7280] outline-none transition hover:bg-[#f3f4f6] hover:text-[#1f2937] focus-visible:ring-2 focus-visible:ring-[#94a3b8]/40">
           <CalendarIcon />
         </Button>
       </Group>

@@ -97,82 +97,90 @@ export function BidOutcomeStage() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       <header>
-        <h2 className="text-base font-semibold text-ink">Outcome</h2>
-        <p className="mt-0.5 text-sm text-ink/50">
-          Last Pre step. Pick win / lose — change anytime. Post Awarded or Lost
-          follows the <span className="font-medium text-ink">current</span>{" "}
-          pick; saved fields are not deleted.
+        <h2 className="intake-title">Outcome</h2>
+        <p className="intake-sub mt-0.5">
+          Last Pre step. Pick win / lose — change anytime. Post Awarded or Lost follows the{" "}
+          <span className="font-medium text-[#1f2937]">current</span> pick; saved fields are not
+          deleted.
         </p>
-        <p className="mt-2 text-sm text-ink/70">
+        <p className="mt-1.5 text-[12.5px] text-[#4b5563]">
           Current:{" "}
-          <span className="font-semibold text-ink">
-            {formatOutcome(current)}
-          </span>
+          <span className="font-semibold text-[#1f2937]">{formatOutcome(current)}</span>
         </p>
       </header>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {error ? (
+        <p className="rounded border border-danger/25 bg-danger-tint/40 px-3 py-1.5 text-[12.5px] text-danger">
+          {error}
+        </p>
+      ) : null}
 
-      <div className="grid gap-2 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-        {CHOICES.map((c) => {
-          const on = current === c.value;
-          return (
+      <section className="intake-section min-w-0">
+        <div className="intake-section-head">Select outcome</div>
+        <div className="intake-section-body">
+          <div className="grid gap-2 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
+            {CHOICES.map((c) => {
+              const on = current === c.value;
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  disabled={!editable || busy}
+                  onClick={() => void pick(c.value)}
+                  className={`rounded-lg border px-3 py-2.5 text-left transition disabled:opacity-50 ${
+                    on
+                      ? c.tone === "win"
+                        ? "border-emerald-600/70 bg-emerald-50"
+                        : c.tone === "lose"
+                          ? "border-[#94a3b8] bg-[#f3f4f6]"
+                          : "border-[#d9d4c8] bg-[#f3f1ea]"
+                      : "border-[#d5dbe3] bg-white hover:border-[#94a3b8]"
+                  }`}
+                >
+                  <span className="block text-[12.5px] font-semibold text-[#1f2937]">
+                    {c.label}
+                    {on ? " ✓" : ""}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] text-[#6b7280]">{c.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {current !== "open" ? (
             <button
-              key={c.value}
               type="button"
               disabled={!editable || busy}
-              onClick={() => void pick(c.value)}
-              className={`rounded-2xl border px-4 py-3 text-left transition disabled:opacity-50 ${
-                on
-                  ? c.tone === "win"
-                    ? "border-emerald-600 bg-emerald-50"
-                    : c.tone === "lose"
-                      ? "border-ink/40 bg-ink/[0.04]"
-                      : "border-brand bg-brand/5"
-                  : "border-ink/[0.08] bg-surface hover:border-ink/20"
-              }`}
+              onClick={() => void clearOpen()}
+              className="mt-3 text-[11px] font-medium text-[#6b7280] underline-offset-2 hover:text-[#1f2937] hover:underline disabled:opacity-40"
             >
-              <span className="block text-sm font-semibold text-ink">
-                {c.label}
-                {on ? " ✓" : ""}
-              </span>
-              <span className="mt-0.5 block text-xs text-ink/50">{c.hint}</span>
+              Clear back to Open
             </button>
-          );
-        })}
-      </div>
+          ) : null}
+        </div>
+      </section>
 
-      {current !== "open" ? (
-        <button
-          type="button"
-          disabled={!editable || busy}
-          onClick={() => void clearOpen()}
-          className="w-fit text-xs font-medium text-ink/50 underline-offset-2 hover:text-ink hover:underline disabled:opacity-40"
-        >
-          Clear back to Open
-        </button>
-      ) : null}
+      {(bid.workflow?.showAward || bid.workflow?.showLost) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {bid.workflow?.showAward ? (
+            <Link
+              href={`/bidding/${bid.id}?stage=award`}
+              className="intake-head-btn bg-[#f3f1ea] text-[#5a5340]"
+            >
+              Open Awarded / startup →
+            </Link>
+          ) : null}
+          {bid.workflow?.showLost ? (
+            <Link href={`/bidding/${bid.id}?stage=lost`} className="intake-head-btn">
+              Open Lost form →
+            </Link>
+          ) : null}
+        </div>
+      )}
 
-      {bid.workflow?.showAward ? (
-        <Link
-          href={`/bidding/${bid.id}?stage=award`}
-          className="inline-flex w-fit rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
-        >
-          Open Awarded / startup →
-        </Link>
-      ) : null}
-      {bid.workflow?.showLost ? (
-        <Link
-          href={`/bidding/${bid.id}?stage=lost`}
-          className="inline-flex w-fit rounded-xl border border-ink/15 px-4 py-2 text-sm font-semibold text-ink"
-        >
-          Open Lost form →
-        </Link>
-      ) : null}
-
-      <p className="text-xs text-ink/40">
+      <p className="text-[11px] text-[#9ca3af]">
         Complete &amp; Hand Off is off on this tab — change outcome here instead.
       </p>
     </div>

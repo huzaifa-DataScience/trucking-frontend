@@ -7,6 +7,18 @@ import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
 import type { ProcessMeta } from "@/lib/bidding/process-types";
 
+const DEFAULT_PHASES = ["sd", "dd", "cd", "ifb", "ifp", "ifc", "ifr"] as const;
+
+const PHASE_SHORT: Record<string, string> = {
+  sd: "SD",
+  dd: "DD",
+  cd: "CD",
+  ifb: "IFB",
+  ifp: "IFP",
+  ifc: "IFC",
+  ifr: "IFR",
+};
+
 /** Chrome tab after Setup, before Spec sheets — every drawing (attachments), by revision phase. */
 export function BidDrawingsStage() {
   const { bid, editable, saving } = useProcessDraft();
@@ -21,20 +33,20 @@ export function BidDrawingsStage() {
 
   const categoryIds = meta?.drawingCategories?.length
     ? meta.drawingCategories
-    : ["sd", "dd", "cd", "ifb", "ifp", "ifc", "ifr"];
+    : [...DEFAULT_PHASES];
   const withCd = categoryIds.includes("cd") ? categoryIds : [...categoryIds, "cd"];
   const drawingCategoryOptions = withCd.map((id) => ({
     value: id,
-    label: meta?.drawingCategoryLabels?.[id] ?? (id === "cd" ? "CD" : id),
+    label: meta?.drawingCategoryLabels?.[id] ?? PHASE_SHORT[id] ?? id.toUpperCase(),
   }));
   const drawings = (bid.attachments ?? []).filter((a) => a.label === "drawings");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       <header>
-        <h2 className="text-base font-semibold text-ink">Drawings</h2>
-        <p className="mt-0.5 text-sm text-ink/50">
-          Every drawing on this bid — SD, DD, IFB, IFP, IFC, IFR. Separate from the general Attachments tab.
+        <h2 className="intake-title">Drawings</h2>
+        <p className="intake-sub mt-0.5">
+          Revision sets for this bid — SD through IFR. Separate from general Attachments.
         </p>
       </header>
 

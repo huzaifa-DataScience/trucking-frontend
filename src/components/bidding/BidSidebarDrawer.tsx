@@ -66,7 +66,7 @@ export function BidSidebarDrawer({
   );
 }
 
-/** Floating round trigger button — stacked bottom-right so it never collides with the app's real left nav. */
+/** Floating action — labeled pills in the bottom-right corner (no page-wide gutter). */
 export function BidFloatingButton({
   label,
   active,
@@ -84,10 +84,10 @@ export function BidFloatingButton({
       onClick={onClick}
       aria-pressed={active}
       title={label}
-      className={`flex items-center gap-2 rounded-full border px-4 py-3 text-sm font-semibold shadow-[0_8px_24px_-6px_rgba(1,1,1,0.25)] transition ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-[12px] font-semibold shadow-md transition ${
         active
-          ? "border-brand bg-brand text-white"
-          : "border-ink/10 bg-surface text-ink/75 hover:border-ink/20 hover:text-ink"
+          ? "border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340]"
+          : "border-[#d5dbe3] bg-white text-[#4b5563] hover:border-[#94a3b8] hover:bg-[#f8fafc]"
       }`}
     >
       {icon}

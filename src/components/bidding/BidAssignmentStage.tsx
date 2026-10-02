@@ -49,9 +49,12 @@ export function BidAssignmentStage() {
     dirty,
     error,
     editable,
-    inputClass,
-    labelClass,
   } = useProcessDraft();
+  const inputClass = "intake-field w-full appearance-none";
+  const labelClass = "intake-label";
+  const sectionHead = "intake-section-head";
+  const sectionBody = "intake-section-body";
+  const sectionHint = "intake-section-hint";
   const [teams, setTeams] = useState<BidTeam[]>([]);
   const [captains, setCaptains] = useState<BidCaptainLookup[]>([]);
   const [aes, setAes] = useState<BidContactLookup[]>([]);
@@ -196,10 +199,10 @@ export function BidAssignmentStage() {
     rows.find((r) => r.role === role)?.assigneeName ?? "";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       <header>
-        <h2 className="text-base font-semibold text-ink">Assignment</h2>
-        <p className="mt-1 text-xs text-ink/40">
+        <h2 className="intake-title">Assignment</h2>
+        <p className="intake-sub mt-0.5">
           {saving
             ? "Saving…"
             : dirty
@@ -211,197 +214,207 @@ export function BidAssignmentStage() {
       </header>
 
       {error ? (
-        <p className="rounded-xl border border-danger/25 bg-danger-tint/40 px-4 py-2 text-sm text-danger">
+        <p className="rounded border border-danger/25 bg-danger-tint/40 px-3 py-1.5 text-[12.5px] text-danger">
           {error}
         </p>
       ) : null}
 
-      <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-        <label className="flex items-center gap-2 col-span-full">
-          <input
-            type="checkbox"
-            disabled={!editable}
-            checked={a.pursue !== false}
-            onChange={(e) => setAssignment({ pursue: e.target.checked })}
-          />
-          <span className="text-sm text-ink/80">
-            Pursue this bid (uncheck = no bid)
-          </span>
-        </label>
-        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
-          <span className={labelClass}>Captain (pick first)</span>
-          <select
-            className={inputClass}
-            disabled={!editable}
-            value={a.captainUserId != null ? String(a.captainUserId) : ""}
-            onChange={(e) => pickCaptain(e.target.value)}
-          >
-            <option value="">—</option>
-            {captains.length === 0 ? (
-              <option value="" disabled>
-                No captains (API empty)
-              </option>
-            ) : (
-              captains.map((c) => (
-                <option key={c.userId} value={c.userId}>
-                  {c.name}
-                  {c.teamName ? ` · ${c.teamName}` : ""}
-                  {c.teamId == null ? " (crew later in Settings)" : ""}
-                </option>
-              ))
-            )}
-          </select>
-          <span className="text-[10px] text-ink/40">
-            App users with role captain. teamId null is OK — crew set later in
-            Settings → My team. Save captainUserId; backend fills team + name when
-            they have a crew.
-          </span>
-        </label>
-        <label className="flex max-w-2xl flex-col gap-1 col-span-full">
-          <span className={labelClass}>Team</span>
-          <select
-            className={inputClass}
-            disabled={!editable}
-            value={a.teamId != null ? String(a.teamId) : ""}
-            onChange={(e) => pickTeam(e.target.value)}
-          >
-            <option value="">—</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.teamName}
-              </option>
-            ))}
-          </select>
-          <span className="text-[10px] text-ink/40">
-            Captain first. Changing team sets captain only if that crew has a
-            login captain.
-          </span>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Priority</span>
-          <input
-            className={inputClass}
-            disabled={!editable}
-            value={a.priority ?? ""}
-            onChange={(e) => setAssignment({ priority: e.target.value || null })}
-            placeholder="e.g. high / normal"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Captain name</span>
-          <input
-            className={inputClass}
-            disabled
-            readOnly
-            value={a.captain ?? ""}
-            placeholder="Filled from captain pick"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Assistant estimator</span>
-          <select
-            className={inputClass}
-            disabled={!editable}
-            value={a.assistantEstimator ?? ""}
-            onChange={(e) =>
-              setAssignment({ assistantEstimator: e.target.value || null })
-            }
-          >
-            <option value="">—</option>
-            {/* Keep current value if not in list */}
-            {a.assistantEstimator &&
-            !aes.some((c) => contactDisplayName(c) === a.assistantEstimator) ? (
-              <option value={a.assistantEstimator}>{a.assistantEstimator}</option>
-            ) : null}
-            {aes.map((c, i) => {
-              const name = contactDisplayName(c);
-              if (!name) return null;
-              return (
-                <option
-                  key={
-                    c.appUserId != null
-                      ? `ae-app-${c.appUserId}`
-                      : c.connecteamUserId != null
-                        ? `ae-ct-${c.connecteamUserId}`
-                        : `ae-${name}-${i}`
-                  }
-                  value={name}
+      <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
+        <section className="intake-section min-w-0">
+          <h3 className={sectionHead}>Assignment</h3>
+          <div className={`${sectionBody} intake-stack`}>
+            <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
+              <input
+                type="checkbox"
+                disabled={!editable}
+                checked={a.pursue !== false}
+                onChange={(e) => setAssignment({ pursue: e.target.checked })}
+              />
+              <span className="font-medium">Pursue this bid (uncheck = no bid)</span>
+            </label>
+            <label className="intake-row">
+              <span className={labelClass}>Captain</span>
+              <div className="min-w-0">
+                <select
+                  className={inputClass}
+                  disabled={!editable}
+                  value={a.captainUserId != null ? String(a.captainUserId) : ""}
+                  onChange={(e) => pickCaptain(e.target.value)}
                 >
-                  {name}
-                  {c.email ? ` · ${c.email}` : ""}
-                </option>
-              );
-            })}
-          </select>
-          <span className="text-[10px] text-ink/40">
-            Assistant estimators from contacts — not the captain list.
-          </span>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Time estimate (hrs)</span>
-          <input
-            type="number"
-            min={0}
-            step="0.5"
-            className={inputClass}
-            disabled={!editable}
-            value={bid.timeEstimate ?? ""}
-            onChange={(e) =>
-              setBidHeader({
-                timeEstimate: e.target.value === "" ? null : Number(e.target.value),
-              })
-            }
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Internal estimate due</span>
-          <DatePicker
-            ariaLabel="Internal estimate due"
-            className={inputClass}
-            disabled={!editable}
-            value={a.internalEstimateDue?.slice(0, 10) ?? ""}
-            onChange={(v) => setAssignment({ internalEstimateDue: v || null })}
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>Internal review due</span>
-          <DatePicker
-            ariaLabel="Internal review due"
-            className={inputClass}
-            disabled={!editable}
-            value={a.internalReviewDue?.slice(0, 10) ?? ""}
-            onChange={(v) => setAssignment({ internalReviewDue: v || null })}
-          />
-        </label>
-      </section>
-
-      <TechnicalReviewFields
-        review={draft.technicalReview ?? {}}
-        editable={editable}
-        noBid={a.pursue === false}
-        blockedReason={bid.workflow?.completeBlockedReason}
-        onChange={(next) => setField("technicalReview", next)}
-      />
-
-      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
-        <h3 className="text-sm font-semibold text-ink">Takeoff assignments</h3>
-        <p className="mt-0.5 mb-3 text-xs text-ink/45">
-          Saved with the captain and team. The server fills names from that crew.
-        </p>
-        <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-          {TAKEOFF_ROLES.map((role) => (
-            <label key={role} className="flex flex-col gap-1">
-              <span className={labelClass}>{role}</span>
+                  <option value="">—</option>
+                  {captains.length === 0 ? (
+                    <option value="" disabled>
+                      No captains (API empty)
+                    </option>
+                  ) : (
+                    captains.map((c) => (
+                      <option key={c.userId} value={c.userId}>
+                        {c.name}
+                        {c.teamName ? ` · ${c.teamName}` : ""}
+                        {c.teamId == null ? " (crew later in Settings)" : ""}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
+                  Pick captain first. Save captainUserId; backend fills team + name.
+                </span>
+              </div>
+            </label>
+            <label className="intake-row">
+              <span className={labelClass}>Team</span>
+              <div className="min-w-0">
+                <select
+                  className={inputClass}
+                  disabled={!editable}
+                  value={a.teamId != null ? String(a.teamId) : ""}
+                  onChange={(e) => pickTeam(e.target.value)}
+                >
+                  <option value="">—</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.teamName}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
+                  Changing team sets captain only if that crew has a login captain.
+                </span>
+              </div>
+            </label>
+            <label className="intake-row">
+              <span className={labelClass}>Priority</span>
               <input
                 className={inputClass}
                 disabled={!editable}
-                value={assigneeFor(role)}
-                onChange={(e) => upsertRole(role, e.target.value)}
+                value={a.priority ?? ""}
+                onChange={(e) => setAssignment({ priority: e.target.value || null })}
+                placeholder="e.g. high / normal"
               />
             </label>
-          ))}
-        </div>
-      </section>
+            <label className="intake-row">
+              <span className={labelClass}>Captain name</span>
+              <input
+                className={inputClass}
+                disabled
+                readOnly
+                value={a.captain ?? ""}
+                placeholder="Filled from captain pick"
+              />
+            </label>
+            <label className="intake-row">
+              <span className={labelClass}>Asst. estimator</span>
+              <div className="min-w-0">
+                <select
+                  className={inputClass}
+                  disabled={!editable}
+                  value={a.assistantEstimator ?? ""}
+                  onChange={(e) =>
+                    setAssignment({ assistantEstimator: e.target.value || null })
+                  }
+                >
+                  <option value="">—</option>
+                  {a.assistantEstimator &&
+                  !aes.some((c) => contactDisplayName(c) === a.assistantEstimator) ? (
+                    <option value={a.assistantEstimator}>{a.assistantEstimator}</option>
+                  ) : null}
+                  {aes.map((c, i) => {
+                    const name = contactDisplayName(c);
+                    if (!name) return null;
+                    return (
+                      <option
+                        key={
+                          c.appUserId != null
+                            ? `ae-app-${c.appUserId}`
+                            : c.connecteamUserId != null
+                              ? `ae-ct-${c.connecteamUserId}`
+                              : `ae-${name}-${i}`
+                        }
+                        value={name}
+                      >
+                        {name}
+                        {c.email ? ` · ${c.email}` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+                <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
+                  From contacts — not the captain list.
+                </span>
+              </div>
+            </label>
+            <label className="intake-row">
+              <span className={labelClass}>Time est. (hrs)</span>
+              <input
+                type="number"
+                min={0}
+                step="0.5"
+                className={inputClass}
+                disabled={!editable}
+                value={bid.timeEstimate ?? ""}
+                onChange={(e) =>
+                  setBidHeader({
+                    timeEstimate: e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
+              />
+            </label>
+            <label className="intake-row">
+              <span className={labelClass}>Est. due</span>
+              <DatePicker
+                ariaLabel="Internal estimate due"
+                className={inputClass}
+                disabled={!editable}
+                value={a.internalEstimateDue?.slice(0, 10) ?? ""}
+                onChange={(v) => setAssignment({ internalEstimateDue: v || null })}
+              />
+            </label>
+            <label className="intake-row">
+              <span className={labelClass}>Review due</span>
+              <DatePicker
+                ariaLabel="Internal review due"
+                className={inputClass}
+                disabled={!editable}
+                value={a.internalReviewDue?.slice(0, 10) ?? ""}
+                onChange={(v) => setAssignment({ internalReviewDue: v || null })}
+              />
+            </label>
+          </div>
+        </section>
+
+        <TechnicalReviewFields
+          review={draft.technicalReview ?? {}}
+          editable={editable}
+          noBid={a.pursue === false}
+          blockedReason={bid.workflow?.completeBlockedReason}
+          onChange={(next) => setField("technicalReview", next)}
+          inputClass={inputClass}
+          labelClass={labelClass}
+          sectionHead={sectionHead}
+          sectionBody={sectionBody}
+          sectionHint={sectionHint}
+        />
+
+        <section className="intake-section min-w-0">
+          <h3 className={sectionHead}>Takeoff assignments</h3>
+          <div className={`${sectionBody} intake-stack`}>
+            <p className={sectionHint}>
+              Saved with the captain and team. The server fills names from that crew.
+            </p>
+            {TAKEOFF_ROLES.map((role) => (
+              <label key={role} className="intake-row">
+                <span className={labelClass}>{role}</span>
+                <input
+                  className={inputClass}
+                  disabled={!editable}
+                  value={assigneeFor(role)}
+                  onChange={(e) => upsertRole(role, e.target.value)}
+                />
+              </label>
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
@@ -412,71 +425,80 @@ function TechnicalReviewFields({
   noBid,
   blockedReason,
   onChange,
+  inputClass,
+  labelClass,
+  sectionHead,
+  sectionBody,
+  sectionHint,
 }: {
   review: ProcessTechnicalReview;
   editable: boolean;
   noBid: boolean;
   blockedReason?: string | null;
   onChange: (next: ProcessTechnicalReview) => void;
+  inputClass: string;
+  labelClass: string;
+  sectionHead: string;
+  sectionBody: string;
+  sectionHint: string;
 }) {
-  const labelClass = "text-xs font-medium text-ink/55";
-  const inputClass =
-    "rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-brand disabled:opacity-50";
   return (
-    <section className="grid gap-4 rounded-2xl border border-ink/[0.08] bg-surface p-5 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-      <h3 className="col-span-full text-sm font-semibold text-ink">Technical review</h3>
-      <p className="col-span-full -mt-2 text-xs text-ink/45">
-        {noBid
-          ? "No-bid does not need takeoff approval to leave Assignment."
-          : "Approve for takeoff before handing off. Otherwise the server blocks complete."}
-        {blockedReason ? ` ${blockedReason}` : ""}
-      </p>
-      <label className="flex flex-col gap-1">
-        <span className={labelClass}>Prepared by</span>
-        <input
-          className={inputClass}
-          disabled={!editable}
-          value={review.preparedBy ?? ""}
-          onChange={(e) => onChange({ ...review, preparedBy: e.target.value || null })}
-        />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span className={labelClass}>Reviewed by</span>
-        <input
-          className={inputClass}
-          disabled={!editable}
-          value={review.reviewedBy ?? ""}
-          onChange={(e) => onChange({ ...review, reviewedBy: e.target.value || null })}
-        />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span className={labelClass}>Review date</span>
-        <DatePicker
-          ariaLabel="Review date"
-          className={inputClass}
-          disabled={!editable}
-          value={review.reviewDate?.slice(0, 10) ?? ""}
-          onChange={(v) => onChange({ ...review, reviewDate: v || null })}
-        />
-      </label>
-      <label className="flex items-center gap-2 col-span-full">
-        <input
-          type="checkbox"
-          disabled={!editable}
-          checked={review.approvedForTakeoff === true}
-          onChange={(e) => onChange({ ...review, approvedForTakeoff: e.target.checked })}
-        />
-        <span className="text-sm text-ink/80">Approved for takeoff</span>
-      </label>
-      <label className="flex flex-col gap-1 col-span-full">
-        <span className={labelClass}>Comments</span>
-        <textarea
-          className={`${inputClass} min-h-[72px]`}
-          disabled={!editable}
-          value={review.comments ?? ""}
-          onChange={(e) => onChange({ ...review, comments: e.target.value || null })}
-        />
-      </label>
+    <section className="intake-section min-w-0">
+      <h3 className={sectionHead}>Technical review</h3>
+      <div className={`${sectionBody} intake-stack`}>
+        <p className={sectionHint}>
+          {noBid
+            ? "No-bid does not need takeoff approval to leave Assignment."
+            : "Approve for takeoff before handing off. Otherwise the server blocks complete."}
+          {blockedReason ? ` ${blockedReason}` : ""}
+        </p>
+        <label className="intake-row">
+          <span className={labelClass}>Prepared by</span>
+          <input
+            className={inputClass}
+            disabled={!editable}
+            value={review.preparedBy ?? ""}
+            onChange={(e) => onChange({ ...review, preparedBy: e.target.value || null })}
+          />
+        </label>
+        <label className="intake-row">
+          <span className={labelClass}>Reviewed by</span>
+          <input
+            className={inputClass}
+            disabled={!editable}
+            value={review.reviewedBy ?? ""}
+            onChange={(e) => onChange({ ...review, reviewedBy: e.target.value || null })}
+          />
+        </label>
+        <label className="intake-row">
+          <span className={labelClass}>Review date</span>
+          <DatePicker
+            ariaLabel="Review date"
+            className={inputClass}
+            disabled={!editable}
+            value={review.reviewDate?.slice(0, 10) ?? ""}
+            onChange={(v) => onChange({ ...review, reviewDate: v || null })}
+          />
+        </label>
+        <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
+          <input
+            type="checkbox"
+            disabled={!editable}
+            checked={review.approvedForTakeoff === true}
+            onChange={(e) => onChange({ ...review, approvedForTakeoff: e.target.checked })}
+          />
+          <span className="font-medium">Approved for takeoff</span>
+        </label>
+        <label className="intake-row">
+          <span className={labelClass}>Comments</span>
+          <textarea
+            className={`${inputClass} min-h-[4.5rem] resize-y`}
+            disabled={!editable}
+            value={review.comments ?? ""}
+            onChange={(e) => onChange({ ...review, comments: e.target.value || null })}
+          />
+        </label>
+      </div>
     </section>
   );
 }

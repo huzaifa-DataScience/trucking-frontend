@@ -447,13 +447,30 @@ function SpecImageLightbox({
 }
 
 function selectClass(disabled: boolean) {
-  return `w-full min-w-[6rem] rounded border border-ink/10 bg-surface px-1.5 py-1 text-xs text-ink outline-none focus:border-brand ${
-    disabled ? "opacity-60" : ""
+  return `w-full min-w-[6rem] rounded border border-[#cfd5dd] bg-white px-1.5 py-1 text-[12.5px] text-[#374151] outline-none focus:border-[#94a3b8] ${
+    disabled ? "cursor-default opacity-60" : "cursor-pointer"
   }`;
 }
 
 function cellBusySelectClass(disabled: boolean, busy: boolean) {
   return `${selectClass(disabled)}${busy ? " pr-6" : ""}`;
+}
+
+/** Native tooltip from current select/input value (empty → no title). */
+function fillValueTooltip(el: EventTarget | null) {
+  if (!(el instanceof HTMLSelectElement) && !(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) {
+    return;
+  }
+  if (el instanceof HTMLSelectElement) {
+    const text = el.selectedOptions[0]?.text?.trim() ?? "";
+    const empty = !el.value || text === "—" || text === "";
+    if (empty) el.removeAttribute("title");
+    else el.title = text;
+    return;
+  }
+  const v = String(el.value ?? "").trim();
+  if (!v) el.removeAttribute("title");
+  else el.title = v;
 }
 
 /** Allowed manufacturers — one dropdown, pick again to unselect. */
@@ -503,7 +520,11 @@ function ManufacturerAllowedSelect({
             preferred && nextAllowed.includes(preferred) ? preferred : null,
         });
       }}
-      title="Pick again to unselect"
+      title={
+        allowedLabels.length > 0
+          ? `Allowed: ${allowedLabels.join(", ")}`
+          : "Pick again to unselect"
+      }
     >
       <option value="">{summary}</option>
       {options.map((opt) => (
@@ -551,7 +572,11 @@ function ManufacturerPreferredSelect({
           manufacturerPreferred: e.target.value || null,
         })
       }
-      title="Preferred (not cheapest)"
+      title={
+        preferredValue
+          ? `Preferred: ${labelFor(preferredValue)}`
+          : "Preferred (not cheapest)"
+      }
     >
       <option value="">—</option>
       {allowedIds.map((id) => (
@@ -1453,18 +1478,19 @@ export function BidSpecSheetsSection({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {showInsulationSpecs ? (
-        <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
-          <h3 className="text-sm font-semibold text-ink">Spec PDFs that apply</h3>
-          <p className="mt-0.5 mb-3 text-xs text-ink/45">
+        <section className="intake-section">
+          <h3 className="intake-section-head">Spec PDFs that apply</h3>
+          <div className="intake-section-body">
+          <p className="intake-section-hint">
             Which client spec books apply — separate from the rules table below.
           </p>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
             {INSULATION_SPEC_KEYS.map(({ key, label }) => (
               <label
                 key={key}
-                className="inline-flex items-center gap-2 text-sm text-ink/80"
+                className="inline-flex items-center gap-2 text-[12.5px] text-[#374151]"
               >
                 <input
                   type="checkbox"
@@ -1481,13 +1507,16 @@ export function BidSpecSheetsSection({
               </label>
             ))}
           </div>
+          </div>
         </section>
       ) : null}
 
       {onBuyAmericanChange || onAPlusChange ? (
-        <section className="flex flex-wrap gap-x-6 gap-y-3 rounded-2xl border border-ink/[0.08] bg-surface p-5">
+        <section className="intake-section">
+          <h3 className="intake-section-head">Requirements</h3>
+          <div className="intake-section-body flex flex-wrap gap-x-6 gap-y-2">
           {onBuyAmericanChange ? (
-            <label className="inline-flex items-center gap-2 text-sm text-ink/80">
+            <label className="inline-flex items-center gap-2 text-[12.5px] text-[#374151]">
               <input
                 type="checkbox"
                 disabled={!editable}
@@ -1497,15 +1526,15 @@ export function BidSpecSheetsSection({
                 }
               />
               <span>
-                <span className="font-semibold text-ink">Buy American?</span>
-                <span className="ml-1.5 text-ink/45">
+                <span className="font-semibold">Buy American?</span>
+                <span className="ml-1.5 text-[#6b7280]">
                   Project-level · federal work
                 </span>
               </span>
             </label>
           ) : null}
           {onAPlusChange ? (
-            <label className="inline-flex items-center gap-2 text-sm text-ink/80">
+            <label className="inline-flex items-center gap-2 text-[12.5px] text-[#374151]">
               <input
                 type="checkbox"
                 disabled={!editable}
@@ -1515,21 +1544,22 @@ export function BidSpecSheetsSection({
                 }
               />
               <span>
-                <span className="font-semibold text-ink">A+</span>
-                <span className="ml-1.5 text-ink/45">
+                <span className="font-semibold">A+</span>
+                <span className="ml-1.5 text-[#6b7280]">
                   Bid-level · Setup only
                 </span>
               </span>
             </label>
           ) : null}
+          </div>
         </section>
       ) : null}
 
-      <section className="rounded-2xl border border-ink/[0.08] bg-surface p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <section className="intake-section">
+        <div className="intake-section-head-bar">
           <div>
-            <h3 className="text-sm font-semibold text-ink">Spec sheets</h3>
-            <p className="mt-0.5 text-xs text-ink/45">
+            <h3>Spec sheets</h3>
+            <p>
               Cascade: System → Area → Family → Insulation (always 1). Layers
               2/3/4 add more Insulation columns. Facing after insulation (or
               Mike code).
@@ -1543,7 +1573,7 @@ export function BidSpecSheetsSection({
                   type="button"
                   disabled={sheets.length >= MAX_SPEC_SHEETS}
                   onClick={() => addSheet(kind)}
-                  className="rounded-xl border border-ink/10 bg-canvas/50 px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-brand/40 hover:text-brand disabled:opacity-40"
+                  className="intake-head-btn disabled:opacity-40"
                 >
                   + {kindLabel(kind)}
                 </button>
@@ -1551,22 +1581,23 @@ export function BidSpecSheetsSection({
             </div>
           ) : null}
         </div>
+        <div className="intake-section-body">
 
         {sheets.length === 0 ? (
-          <p className="mt-4 rounded-xl border border-dashed border-ink/15 bg-canvas/30 px-4 py-8 text-center text-sm text-ink/45">
+          <p className="rounded border border-dashed border-[#d5dbe3] bg-[#f8fafc] px-3 py-6 text-center text-[12.5px] text-[#6b7280]">
             No rules yet — add Duct, HVAC pipe, Plumbing, or Equipment.
           </p>
         ) : (
           <>
-            <div className="mt-4 flex flex-wrap gap-1.5">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {allowStackSheets ? (
                 <button
                   type="button"
                   onClick={() => setStackAll((v) => !v)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  className={`rounded px-3 py-1.5 text-[12.5px] font-medium transition ${
                     stackAll
-                      ? "bg-ink text-white"
-                      : "bg-ink/[0.05] text-ink/70 hover:bg-ink/[0.08]"
+                      ? "bg-[#f3f1ea] text-[#5a5340] ring-1 ring-[#d9d4c8]"
+                      : "bg-[#f3f4f6] text-[#4b5563] hover:bg-[#f3f1ea]"
                   }`}
                 >
                   {stackAll ? "Stacked view" : "Stack all"}
@@ -1583,10 +1614,10 @@ export function BidSpecSheetsSection({
                           setStackAll(false);
                           setActiveId(s.id);
                         }}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                        className={`rounded px-3 py-1.5 text-[12.5px] font-medium transition ${
                           on
-                            ? "bg-brand text-white"
-                            : "bg-ink/[0.05] text-ink/70 hover:bg-ink/[0.08]"
+                            ? "bg-[#f3f1ea] text-[#5a5340] ring-1 ring-[#d9d4c8]"
+                            : "bg-[#f3f4f6] text-[#4b5563] hover:bg-[#f3f1ea]"
                         }`}
                       >
                         {s.title || kindLabel(s.kind)}
@@ -1601,20 +1632,20 @@ export function BidSpecSheetsSection({
                 {sheets.map((s) => (
                   <div
                     key={s.id}
-                    className="rounded-xl border border-ink/[0.08] bg-canvas/20 p-3"
+                    className="rounded border border-[#e5e7eb] bg-[#fafafa] p-3"
                   >
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                      <h4 className="text-sm font-semibold text-ink">
+                      <h4 className="text-[13px] font-semibold text-[#1f2937]">
                         {s.title || kindLabel(s.kind)}
                         {s.specNumber ? (
-                          <span className="ml-2 text-xs font-normal text-ink/45">
+                          <span className="ml-2 text-[12px] font-normal text-[#6b7280]">
                             § {s.specNumber}
                           </span>
                         ) : null}
                       </h4>
                       <button
                         type="button"
-                        className="text-xs font-semibold text-brand hover:underline"
+                        className="text-[12px] font-semibold text-[#5a5340] hover:underline"
                         onClick={() => {
                           setStackAll(false);
                           setActiveId(s.id);
@@ -1627,8 +1658,8 @@ export function BidSpecSheetsSection({
                       <p className="text-xs text-ink/40">No rows</p>
                     ) : (
                       <div className="overflow-x-auto">
-                        <table className="min-w-full text-left text-[11px]">
-                          <thead className="text-ink/45">
+                        <table className="min-w-full text-left text-[12.5px] text-[#374151]">
+                          <thead className="text-[11px] font-semibold text-[#6b7280]">
                             <tr>
                               <th className="px-1 py-1">System</th>
                               <th className="px-1 py-1">Area</th>
@@ -1686,16 +1717,20 @@ export function BidSpecSheetsSection({
             ) : null}
 
             {!stackAll && active ? (
-              <div className="mt-4 flex flex-col gap-3">
+              <div
+                className="mt-4 flex flex-col gap-3"
+                onMouseOver={(e) => fillValueTooltip(e.target)}
+                onFocus={(e) => fillValueTooltip(e.target)}
+                onChange={(e) => fillValueTooltip(e.target)}
+              >
                 <div className="flex flex-wrap items-end gap-3">
-                  <label className="flex min-w-[12rem] flex-1 flex-col gap-1">
-                    <span className="text-xs font-semibold text-ink/60">
-                      Title
-                    </span>
+                  <label className="intake-row min-w-[12rem] flex-1">
+                    <span className="intake-label">Title</span>
                     <input
                       disabled={!editable}
                       className={selectClass(!editable)}
                       value={active.title}
+                      title={active.title?.trim() || undefined}
                       onChange={(e) =>
                         replaceSheet(active.id, {
                           title: e.target.value.slice(0, 200),
@@ -1703,15 +1738,14 @@ export function BidSpecSheetsSection({
                       }
                     />
                   </label>
-                  <label className="flex w-36 flex-col gap-1">
-                    <span className="text-xs font-semibold text-ink/60">
-                      Spec #
-                    </span>
+                  <label className="intake-row w-44">
+                    <span className="intake-label">Spec #</span>
                     <input
                       disabled={!editable}
                       className={selectClass(!editable)}
                       placeholder="230700"
                       value={active.specNumber ?? ""}
+                      title={active.specNumber?.trim() || undefined}
                       onChange={(e) =>
                         replaceSheet(active.id, {
                           specNumber: e.target.value.slice(0, 32) || null,
@@ -1723,16 +1757,21 @@ export function BidSpecSheetsSection({
                     <button
                       type="button"
                       onClick={() => removeSheet(active.id)}
-                      className="rounded-xl border border-danger/25 px-3 py-2 text-sm font-medium text-danger hover:bg-danger-tint/30"
+                      className="rounded border border-danger/25 px-2.5 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger-tint/30"
                     >
                       Remove sheet
                     </button>
                   ) : null}
                 </div>
 
-                <div className="overflow-x-auto rounded-xl border border-ink/[0.08]">
+                <div
+                  className="overflow-x-auto rounded border border-[#e5e7eb]"
+                  onMouseOver={(e) => fillValueTooltip(e.target)}
+                  onFocus={(e) => fillValueTooltip(e.target)}
+                  onChange={(e) => fillValueTooltip(e.target)}
+                >
                   <table
-                    className="w-max min-w-full border-collapse text-left text-xs leading-tight"
+                    className="w-max min-w-full border-collapse text-left text-[12.5px] leading-tight text-[#374151]"
                     style={{ tableLayout: "fixed" }}
                   >
                     <colgroup>
@@ -1745,7 +1784,7 @@ export function BidSpecSheetsSection({
                         />
                       ))}
                     </colgroup>
-                    <thead className="bg-ink/[0.03] text-[11px] font-semibold text-ink/55">
+                    <thead className="bg-[#f3f1ea] text-[11px] font-semibold text-[#5a5340]">
                       <tr>
                         {specColDefs.map((c) => (
                           <ResizableTh
@@ -2068,7 +2107,7 @@ export function BidSpecSheetsSection({
                                   onClick={() =>
                                     void runMikeCode(active.id, row)
                                   }
-                                  className="inline-flex min-w-[2rem] items-center justify-center rounded-lg border border-ink/10 px-1.5 text-[10px] font-semibold text-ink/60 hover:border-brand/40 hover:text-brand disabled:opacity-40"
+                                  className="inline-flex min-w-[2rem] items-center justify-center rounded border border-[#cfd5dd] bg-[#f3f1ea] px-1.5 text-[11px] font-semibold text-[#5a5340] hover:bg-[#ebe8df] disabled:opacity-40"
                                   aria-label={mikeBusy ? "Loading" : "Apply Mike code"}
                                 >
                                   {mikeBusy ? (
@@ -2176,7 +2215,7 @@ export function BidSpecSheetsSection({
                                       {editable && canSize ? (
                                         <button
                                           type="button"
-                                          className="text-[10px] text-brand hover:underline"
+                                          className="cursor-pointer text-[11px] text-[#5a5340] hover:underline"
                                           onClick={() =>
                                             patchRow(active.id, row.id, {
                                               sizeMin: null,
@@ -2537,16 +2576,14 @@ export function BidSpecSheetsSection({
                     type="button"
                     disabled={active.rows.length >= MAX_SPEC_ROWS}
                     onClick={addRow}
-                    className="self-start rounded-xl border border-ink/10 bg-canvas/40 px-3 py-1.5 text-xs font-semibold text-ink/70 hover:border-brand/40 hover:text-brand disabled:opacity-40"
+                    className="intake-head-btn self-start disabled:opacity-40"
                   >
                     + Add row
                   </button>
                 ) : null}
 
                 <label className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-ink/60">
-                    Footer note
-                  </span>
+                  <span className="intake-label">Footer note</span>
                   <textarea
                     disabled={!editable}
                     value={active.footerNote ?? ""}
@@ -2698,6 +2735,7 @@ export function BidSpecSheetsSection({
             ) : null}
           </>
         )}
+        </div>
       </section>
     </div>
   );

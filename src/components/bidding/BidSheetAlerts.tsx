@@ -42,22 +42,22 @@ export function BidSheetAlerts({
       ) : null}
 
       {!hasComputed ? (
-        <div className="rounded-xl border border-dashed border-brand/25 bg-brand/[0.03] px-4 py-3 text-sm text-ink/70">
-          Fill the form, then <strong className="text-ink">Preview calculate</strong> — live totals
+        <div className="rounded-lg border border-dashed border-[#d9d4c8] bg-[#f3f1ea]/50 px-4 py-3 text-[13px] text-[#4b5563]">
+          Fill the form, then <strong className="text-[#1f2937]">Preview calculate</strong> — live totals
           appear in the results panel.
         </div>
       ) : null}
 
       {!isEditable ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink/10 bg-ink/[0.03] px-4 py-3 text-sm text-ink/70">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d5dbe3] bg-[#f3f4f6]/60 px-4 py-3 text-[13px] text-[#4b5563]">
           <span>
-            Bid is <strong className="text-ink">{status}</strong> — inputs locked.
+            Bid is <strong className="text-[#1f2937]">{status}</strong> — inputs locked.
           </span>
           <button
             type="button"
             onClick={onReopen}
             disabled={saving}
-            className="rounded-lg border border-brand/30 px-3 py-1.5 text-sm font-medium text-brand hover:bg-brand/[0.06] disabled:opacity-50"
+            className="rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-3 py-1.5 text-[12px] font-medium text-[#5a5340] hover:bg-[#ebe8df] disabled:opacity-50"
           >
             Reopen as draft
           </button>

@@ -58,14 +58,15 @@ function parseTimeText(text: string): string | null {
 }
 
 const groupClass =
-  "flex items-center gap-1 rounded-xl border border-ink/10 bg-surface pl-3.5 pr-1.5 py-1 text-sm text-ink transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20";
-const inputFieldClass = "min-w-0 flex-1 bg-transparent py-1.5 outline-none placeholder:text-ink/30";
+  "flex h-8 items-center gap-1 rounded-md border border-[#cfd5dd] bg-white px-2 text-[13.5px] text-[#374151] transition focus-within:border-[#94a3b8] focus-within:shadow-[0_0_0_2px_rgba(148,163,184,0.28)]";
+const inputFieldClass =
+  "min-w-0 flex-1 bg-transparent py-1 outline-none placeholder:text-[#9ca3af]";
 const buttonClass =
-  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink/40 outline-none transition hover:bg-ink/5 hover:text-ink/70 focus-visible:ring-2 focus-visible:ring-brand/40";
+  "flex h-6 w-6 shrink-0 items-center justify-center rounded text-[#6b7280] outline-none transition hover:bg-[#f3f4f6] hover:text-[#1f2937] focus-visible:ring-2 focus-visible:ring-[#94a3b8]/40";
 const popoverClass =
-  "max-h-64 w-[--trigger-width] min-w-40 overflow-auto rounded-xl border border-ink/10 bg-surface p-1 shadow-lg outline-none";
+  "max-h-64 w-[--trigger-width] min-w-40 overflow-auto rounded-md border border-[#d5dbe3] bg-white p-1 shadow-lg outline-none";
 const optionClass =
-  "cursor-pointer rounded-lg px-3 py-1.5 text-sm text-ink outline-none data-[focused]:bg-brand/10 data-[selected]:bg-brand/15 data-[selected]:font-medium";
+  "cursor-pointer rounded px-2.5 py-1.5 text-[12.5px] text-[#374151] outline-none data-[focused]:bg-[#f3f1ea] data-[selected]:bg-[#f3f1ea] data-[selected]:font-medium data-[selected]:text-[#5a5340]";
 
 function ClockIcon() {
   return (

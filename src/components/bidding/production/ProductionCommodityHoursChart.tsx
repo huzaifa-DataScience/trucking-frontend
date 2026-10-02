@@ -62,7 +62,7 @@ export function ProductionCommodityHoursChart({
             type="checkbox"
             checked={hideZeroRecv}
             onChange={(e) => setHideZeroRecv(e.target.checked)}
-            className="rounded border-ink/20"
+            className="intake-check"
           />
           Hide zero recv
         </label>

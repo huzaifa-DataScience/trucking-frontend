@@ -100,7 +100,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-    <div className="flex min-h-0 flex-1 flex-col gap-4 bid-animate-in">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex flex-col gap-3">
         <button
           type="button"
@@ -110,7 +110,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
               router.push("/bidding");
             })();
           }}
-          className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-ink/50 transition hover:text-brand"
+          className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-ink/50 transition hover:text-[#5a5340]"
         >
           <svg
             className="h-4 w-4"
@@ -124,7 +124,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
           </svg>
           Bids
           {unsavedChanges ? (
-            <span className="text-[10px] font-semibold text-amber-700">
+            <span className="text-[10px] font-semibold text-[#7a7360]">
               · unsaved
             </span>
           ) : null}
@@ -148,7 +148,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
                 </span>
               ) : null}
               {saving ? (
-                <span className="text-xs font-medium text-brand">Saving…</span>
+                <span className="text-xs font-medium text-[#5a5340]">Saving…</span>
               ) : null}
               <span className="hidden text-sm text-ink/45 sm:inline">
                 {bid.companyName}
@@ -165,12 +165,12 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
         />
       </div>
 
-      <div className="flex min-h-0 w-full flex-1 flex-col pb-48">
+      <div className="flex min-h-0 w-full flex-1 flex-col pb-28">
         {children}
       </div>
     </div>
 
-    <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-2.5">
+    <div className="fixed bottom-5 right-4 z-50 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
       <BidFloatingButton
         label="Notes"
         icon={<NotesIcon />}
