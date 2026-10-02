@@ -71,7 +71,11 @@ export function BidSaveButton() {
           Unsaved changes
         </span>
       ) : null}
-      {error ? <p className="max-w-xs text-right text-xs text-danger">{error}</p> : null}
+      {error ? (
+        <p className="max-w-sm text-right text-sm text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

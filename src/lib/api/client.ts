@@ -54,18 +54,23 @@ async function handleResponse<T>(response: Response): Promise<T> {
     if (response.status === 401) {
       handleUnauthorized();
     }
-    if (response.status === 403) {
-      // 403 Forbidden = not admin, redirect to dashboard
-      if (typeof window !== "undefined") window.location.href = "/job";
-      throw new ApiError("Access denied. Admin role required.", 403, "FORBIDDEN", body);
-    }
-    const msg = typeof body === "object" && body !== null && "message" in body
-      ? String((body as { message: unknown }).message)
-      : response.statusText;
+    const rawMessage =
+      typeof body === "object" && body !== null && "message" in body
+        ? (body as { message: unknown }).message
+        : undefined;
+    const msg = Array.isArray(rawMessage)
+      ? rawMessage.map(String).join(" ")
+      : typeof rawMessage === "string" && rawMessage.trim()
+        ? rawMessage
+        : response.statusText;
     throw new ApiError(
       msg,
       response.status,
-      typeof body === "object" && body !== null && "code" in body ? String((body as { code: unknown }).code) : undefined,
+      response.status === 403
+        ? "FORBIDDEN"
+        : typeof body === "object" && body !== null && "code" in body
+          ? String((body as { code: unknown }).code)
+          : undefined,
       body
     );
   }
