@@ -4,6 +4,7 @@
 import { del, get, getBlob, patch, post } from "../client";
 import type {
   BidAttachment,
+  BoardStatus,
   BidCaptainLookup,
   BidContactLookup,
   BidComment,
@@ -412,6 +413,14 @@ export async function getCompanyInfoPrefillFromJob(
   jobId: number
 ): Promise<BidCompanyInfo> {
   return get<BidCompanyInfo>(`/bids/prefill/company-from-job/${jobId}`);
+}
+
+/** Estimates list status dropdown — server maps it onto process stage + outcome. */
+export async function setBidBoardStatus(
+  bidId: string,
+  status: BoardStatus
+): Promise<{ id: string; boardStatus: BoardStatus; processStage: string; outcomeStatus: string }> {
+  return post(`/bids/${bidId}/board-status`, { status });
 }
 
 /** Fetch attachment bytes for preview (JWT required — cannot use raw img src). */

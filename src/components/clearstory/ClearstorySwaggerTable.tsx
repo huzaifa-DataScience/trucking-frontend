@@ -16,6 +16,7 @@ import {
   subObjectCellPreview,
   tableColumnLabel,
 } from "@/lib/clearstory/swaggerTableColumns";
+import { tableFont } from "@/lib/fonts";
 
 const MAX_COLUMNS_NOTE = 60;
 
@@ -54,34 +55,39 @@ function compareValues(a: unknown, b: unknown): number {
   return aStr.localeCompare(bStr);
 }
 
+/** Arrow only on the sorted column; others show a faint one on header hover (needs `group` on the button). */
 function SortIcon({ dir }: { dir: SortDir | null }) {
-  if (!dir) {
-    return (
-      <svg className="h-3 w-3 shrink-0 text-ink/25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-        <path d="M8 9l4-4 4 4M8 15l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
   return (
-    <svg className="h-3 w-3 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-      {dir === "desc" ? (
-        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      className={`h-4 w-4 shrink-0 ${dir ? "text-ink/70" : "text-ink/30 opacity-0 group-hover:opacity-100"}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      {dir === "asc" ? (
+        <path d="M12 19V5M6 11l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
       ) : (
-        <path d="M6 15l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M12 5v14M6 13l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
       )}
     </svg>
   );
 }
 
+/** Short hairline between header cells (th needs `relative` or `sticky`). */
+export const TH_SEPARATOR =
+  "before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden";
+
 const TABLE_SCROLL =
   "min-h-0 min-w-0 w-full flex-1 overflow-x-auto overflow-y-auto max-h-[min(70dvh,calc(100dvh-14rem))]";
 
-/** Sticky-left classes for pinned columns. `isLast` puts the divider shadow only on the rightmost pinned column. */
+/** Sticky-left classes for pinned columns. `isLast` draws the full-height divider on the rightmost pinned column only (the edge rows scroll under). */
 export function pinnedHeaderClass(isLast: boolean): string {
-  return `sticky z-30 bg-[#f0f2f5] ${isLast ? "shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]" : ""}`;
+  return `sticky z-30 bg-[#f8f9fa] ${isLast ? "border-r border-ink/[0.12]" : ""}`;
 }
 export function pinnedBodyClass(zebra: boolean, isLast: boolean): string {
-  return `sticky z-10 ${zebra ? "bg-[#fbfbfc]" : "bg-white"} ${isLast ? "shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]" : ""}`;
+  return `sticky z-10 ${zebra ? "bg-[#fbfbfc]" : "bg-white group-hover/row:bg-[#f7f7f7]"} ${isLast ? "border-r border-ink/[0.12]" : ""}`;
 }
 
 export function loadHiddenColumns(storageKey: string): Set<string> {
@@ -527,16 +533,18 @@ export function ClearstorySwaggerTable({
             ) : null}
           </div>
 
-          <div className={`${TABLE_SCROLL} rounded-xl border border-ink/[0.1] bg-[#fafbfc] shadow-inner`}>
+          <div className={`${TABLE_SCROLL} rounded border border-ink/[0.12] bg-white`}>
             {rows.length === 0 ? (
               <div className="p-4">
                 <p className="text-sm text-ink/55">No rows for this page. Adjust filters or run a sync from Ops.</p>
               </div>
             ) : (
-              <table className="w-full min-w-[760px] border-separate border-spacing-0 text-left">
+              <table
+                className={`${tableFont.className} w-full min-w-[760px] border-separate border-spacing-0 text-left text-sm leading-5 text-ink/[0.87]`}
+              >
                 <caption className="sr-only">{title}</caption>
                 <thead className="sticky top-0 z-20">
-                  <tr className="bg-[#f0f2f5]">
+                  <tr className="bg-[#f8f9fa]">
                     {orderedHeaders.map((h) => {
                       const key = dataHeaderKey(h.spec);
                       const dir = sort?.key === key ? sort.dir : null;
@@ -551,15 +559,15 @@ export function ClearstorySwaggerTable({
                           }}
                           scope="col"
                           style={isPinned ? { left: pinnedOffsets[key] ?? 0 } : undefined}
-                          className={`whitespace-nowrap border-b border-ink/[0.1] px-0 py-0 text-xs font-semibold tracking-wide text-ink/60 ${
-                            isPinned ? pinnedHeaderClass(isLastPinned) : ""
+                          className={`whitespace-nowrap border-b border-ink/[0.12] p-0 text-sm font-medium text-ink/[0.87] ${TH_SEPARATOR} ${
+                            isPinned ? pinnedHeaderClass(isLastPinned) : "relative"
                           }`}
                         >
                           <button
                             type="button"
                             onClick={() => toggleSort(key)}
                             aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none"}
-                            className="flex w-full items-center gap-1 px-3 py-3 text-left transition hover:text-ink"
+                            className="group flex h-11 w-full items-center gap-1.5 px-4 text-left"
                           >
                             {tableColumnLabel(h.spec)}
                             <SortIcon dir={dir} />
@@ -570,20 +578,17 @@ export function ClearstorySwaggerTable({
                   </tr>
                 </thead>
                 <tbody className="bg-white">
-                  {sortedRows.map((row, rowIdx) => {
-                    const zebra = rowIdx % 2 === 1;
+                  {sortedRows.map((row) => {
+                    const zebra = false;
                     return (
-                      <tr
-                        key={row.resourceKey}
-                        className={`align-top transition-colors hover:bg-brand/[0.03] ${zebra ? "bg-ink/[0.015]" : ""}`}
-                      >
+                      <tr key={row.resourceKey} className="group/row h-10 transition-colors hover:bg-[#f7f7f7]">
                         {orderedHeaders.map((h) => {
                           const label = tableColumnLabel(h.spec);
                           const cellKey = dataHeaderKey(h.spec);
                           const isPinned = pinnedSet.has(cellKey);
                           const isLastPinned = isPinned && activePinnedOrder[activePinnedOrder.length - 1] === cellKey;
                           const cellStyle = isPinned ? { left: pinnedOffsets[cellKey] ?? 0 } : undefined;
-                          const cellClass = `max-w-[16rem] border-b border-ink/[0.06] px-3 py-2.5 align-middle ${isPinned ? pinnedBodyClass(zebra, isLastPinned) : ""}`;
+                          const cellClass = `max-w-[16rem] border-b border-ink/[0.12] px-4 py-1.5 align-middle ${isPinned ? pinnedBodyClass(zebra, isLastPinned) : ""}`;
 
                           if (h.spec.kind === "group") {
                             const raw = getGroupedSwaggerOrMirrorValue(row, h.spec.prefix);
@@ -629,7 +634,7 @@ export function ClearstorySwaggerTable({
                                 />
                               ) : (
                                 <span
-                                  className="block max-w-full truncate text-sm leading-relaxed text-ink/90"
+                                  className="block max-w-full truncate"
                                   title={exp.text.length > 80 ? exp.text : undefined}
                                 >
                                   {exp.text || "—"}

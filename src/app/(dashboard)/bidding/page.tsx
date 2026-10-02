@@ -1,11 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { tableFont } from "@/lib/fonts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { BidListCard } from "@/components/bidding/BidListCard";
-import { BidStatusBadge } from "@/components/bidding/BidStatusBadge";
+import {
+  AssigneesCell,
+  BoardStatusCell,
+  NotesCell,
+  bidDateTimeKey,
+  boardStatusRank,
+  formatBidDateTime,
+} from "@/components/bidding/BidListCells";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useToast } from "@/components/ui/ToastProvider";
 import { Skeleton, SkeletonCardGrid, TableSkeleton } from "@/components/ui/Skeleton";
 import { buttonClasses } from "@/components/ui/Button";
 import { RestrictedState } from "@/components/ui/RestrictedState";
@@ -42,6 +51,8 @@ type SortKey =
   | "estimator"
   | "status"
   | "stage"
+  | "boardStatus"
+  | "location"
   | "outcome"
   | "workType"
   | "baseBid"
@@ -107,7 +118,9 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "dueDate", label: "Deadline" },
   { value: "office", label: "Company" },
   { value: "estimator", label: "Estimator" },
-  { value: "stage", label: "Status" },
+  { value: "boardStatus", label: "Status" },
+  { value: "stage", label: "Stage" },
+  { value: "location", label: "Location" },
   { value: "outcome", label: "Outcome" },
   { value: "baseBid", label: "Base bid" },
   { value: "status", label: "Record" },
@@ -152,14 +165,15 @@ function SortableTh({
       <button
         type="button"
         onClick={() => onSort(column)}
-        className={`inline-flex items-center gap-1 text-left font-semibold ${
-          active ? "text-ink" : "text-ink/50 hover:text-ink"
-        }`}
+        className="group inline-flex max-w-full items-center gap-1.5 text-left font-medium text-ink/[0.87]"
         aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
       >
-        {label}
-        <span aria-hidden className="text-[10px]">
-          {active ? (dir === "asc" ? "↑" : "↓") : "↕"}
+        <span className="truncate">{label}</span>
+        <span
+          aria-hidden
+          className={`text-base leading-none ${active ? "text-ink/70" : "text-ink/30 opacity-0 group-hover:opacity-100"}`}
+        >
+          {active && dir === "asc" ? "↑" : "↓"}
         </span>
       </button>
     </th>
@@ -261,6 +275,7 @@ export default function BiddingListPage() {
   const { companyId } = useCompany();
   const { user } = useAuth();
   const { canRead, canWrite } = useBiddingAccess();
+  const { showToast } = useToast();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [workType, setWorkType] = useState("");
@@ -480,7 +495,11 @@ export default function BiddingListPage() {
           case "drawingNumber":
             return (a.drawingNumber ?? "").localeCompare(b.drawingNumber ?? "", undefined, { numeric: true });
           case "dueDate":
-            return (a.dueDate ?? "").localeCompare(b.dueDate ?? "");
+            return bidDateTimeKey(a).localeCompare(bidDateTimeKey(b));
+          case "boardStatus":
+            return boardStatusRank(a) - boardStatusRank(b);
+          case "location":
+            return (a.location ?? "").localeCompare(b.location ?? "", undefined, { sensitivity: "base" });
           case "bidDate":
             return (a.bidDate ?? "").localeCompare(b.bidDate ?? "");
           case "estimator":
@@ -836,74 +855,100 @@ export default function BiddingListPage() {
           }
         />
       ) : viewMode === "list" ? (
-        <div className="overflow-x-auto rounded-xl border border-ink/[0.08] bg-surface">
-          <table className="w-full min-w-[1180px] table-fixed border-collapse text-left">
+        <div className="overflow-x-auto rounded border border-ink/[0.12] bg-surface">
+          <table
+            className={`${tableFont.className} w-full min-w-[1320px] table-fixed border-collapse text-left text-sm leading-5 text-ink/[0.87]`}
+          >
             <thead>
-              <tr className="border-b border-ink/[0.08] bg-ink/[0.02] text-xs font-semibold text-ink/50">
+              <tr className="border-b border-ink/[0.12] bg-[#f8f9fa]">
                 {(
                   [
-                    ["name", "Name", "w-[18%]"],
-                    ["drawingNumber", "Drawing #", "w-[8%]"],
-                    ["dueDate", "Deadline", "w-[8%]"],
-                    ["office", "Company", "w-[8%]"],
-                    ["estimator", "Estimator", "w-[10%]"],
-                    ["stage", "Status", "w-[12%]"],
-                    ["outcome", "Outcome", "w-[9%]"],
-                    ["baseBid", "Base bid", "w-[9%]"],
-                    ["status", "Record", "w-[9%]"],
-                    ["updated", "Updated", "w-[11%]"],
+                    ["name", "Project name", "w-[22%]"],
+                    ["boardStatus", "Status", "w-[12%]"],
+                    ["dueDate", "Bid date", "w-[13%]"],
+                    ["location", "Location", "w-[10%]"],
+                    [null, "Assigned to", "w-[10%]"],
+                    [null, "Notes", "w-[17%]"],
+                    ["baseBid", "Base bid", "w-[8%]"],
+                    ["updated", "Updated", "w-[8%]"],
                   ] as const
-                ).map(([column, label, width]) => (
-                  <SortableTh
-                    key={column}
-                    label={label}
-                    column={column}
-                    active={sortKey === column}
-                    dir={sortDir}
-                    onSort={(key) => {
-                      if (sortKey === key) {
-                        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-                        return;
-                      }
-                      setSortKey(key);
-                      setSortDir(defaultSortDir(key));
-                    }}
-                    className={`${width} whitespace-nowrap px-4 py-3`}
-                  />
-                ))}
+                ).map(([column, label, width]) => {
+                  const thClass = `${width} relative h-11 whitespace-nowrap px-4 before:absolute before:left-0 before:top-1/2 before:h-4 before:w-px before:-translate-y-1/2 before:bg-ink/20 first:before:hidden`;
+                  return column ? (
+                    <SortableTh
+                      key={column}
+                      label={label}
+                      column={column}
+                      active={sortKey === column}
+                      dir={sortDir}
+                      onSort={(key) => {
+                        if (sortKey === key) {
+                          setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                          return;
+                        }
+                        setSortKey(key);
+                        setSortDir(defaultSortDir(key));
+                      }}
+                      className={thClass}
+                    />
+                  ) : (
+                    <th key={label} scope="col" className={`${thClass} font-medium text-ink/[0.87]`}>
+                      {label}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
-              {visibleBids.map((bid, idx) => (
-                <tr
-                  key={bid.id}
-                  className={`border-b border-ink/[0.06] text-sm transition hover:bg-brand/[0.03] ${idx % 2 === 1 ? "bg-ink/[0.012]" : ""}`}
-                >
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/bidding/${bid.id}?stage=intake`}
-                      className="block truncate font-semibold text-ink hover:text-brand"
-                    >
-                      {[bid.bidName, bid.estimateNumber].filter(Boolean).join(" · ") || "Untitled estimate"}
-                    </Link>
-                  </td>
-                  <td className="truncate px-4 py-3 font-mono text-xs text-ink/50">{bid.drawingNumber || "—"}</td>
-                  <td className="truncate px-4 py-3 text-ink/70">{bid.dueDate ? formatDate(bid.dueDate) : "—"}</td>
-                  <td className="truncate px-4 py-3 text-ink/70">{bid.companyName}</td>
-                  <td className="truncate px-4 py-3 text-ink/70">{bid.estimator || "—"}</td>
-                  <td className="truncate px-4 py-3 text-ink/70">
-                    {formatProcessStage(bid.processStage ?? undefined) || "—"}
-                  </td>
-                  <td className="truncate px-4 py-3 text-ink/70">{formatOutcome(bid.outcomeStatus ?? undefined)}</td>
-                  <td className="truncate px-4 py-3 text-ink/70">
-                    {bid.baseBidAmount != null ? formatMoney(bid.baseBidAmount) : "—"}
-                  </td>
-                  <td className="truncate px-4 py-3">
-                    {status === "draft" && bid.status === "draft" ? null : <BidStatusBadge status={bid.status} />}
-                  </td>
-                  <td className="truncate px-4 py-3 text-ink/50">{formatDate(bid.updatedAt.slice(0, 10))}</td>
-                </tr>
-              ))}
+              {visibleBids.map((bid) => {
+                const rowEditable = canWrite && bid.canEdit !== false && bid.status !== "archived";
+                return (
+                  <tr
+                    key={bid.id}
+                    className="h-[52px] border-b border-ink/[0.12] transition-colors last:border-b-0 hover:bg-ink/[0.03]"
+                  >
+                    <td className="px-4">
+                      <Link
+                        href={`/bidding/${bid.id}?stage=intake`}
+                        className="block truncate font-medium hover:text-brand hover:underline"
+                        title={[bid.bidName, bid.estimateNumber].filter(Boolean).join(" · ")}
+                      >
+                        {bid.bidName && bid.estimateNumber && !bid.bidName.startsWith(bid.estimateNumber)
+                          ? `${bid.estimateNumber} - ${bid.bidName}`
+                          : bid.bidName || bid.estimateNumber || "Untitled estimate"}
+                      </Link>
+                    </td>
+                    <td className="px-4">
+                      <BoardStatusCell
+                        bid={bid}
+                        editable={rowEditable}
+                        onChanged={(next) =>
+                          setBids((prev) => prev.map((b) => (b.id === bid.id ? { ...b, boardStatus: next } : b)))
+                        }
+                        onError={(message) => showToast(message, "error")}
+                      />
+                    </td>
+                    <td className="truncate px-4">{formatBidDateTime(bid.dueDate, bid.dueTime)}</td>
+                    <td className="truncate px-4">{bid.location || "—"}</td>
+                    <td className="px-4">
+                      <AssigneesCell bid={bid} />
+                    </td>
+                    <td className="px-4">
+                      <NotesCell
+                        bid={bid}
+                        editable={canWrite && bid.canEdit !== false}
+                        onAdded={(note) =>
+                          setBids((prev) => prev.map((b) => (b.id === bid.id ? { ...b, latestNote: note } : b)))
+                        }
+                      />
+                    </td>
+                    <td className="truncate px-4">
+                      {bid.baseBidAmount != null ? formatMoney(bid.baseBidAmount) : "—"}
+                    </td>
+                    <td className="truncate px-4">{formatDate(bid.updatedAt.slice(0, 10))}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
