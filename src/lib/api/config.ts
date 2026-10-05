@@ -22,7 +22,7 @@ export function getApiUrl(path: string, searchParams?: Record<string, string | n
   const url = `${base}${pathNorm}`;
   if (!searchParams) return url;
   /** Filter UIs use "all" to mean omit — except APIs that need the literal (pageSize=all, teamId=all). */
-  const allowLiteralAll = new Set(["pageSize", "teamId"]);
+  const allowLiteralAll = new Set(["pageSize", "teamId", "view"]);
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(searchParams)) {
     if (value === undefined || value === "") continue;

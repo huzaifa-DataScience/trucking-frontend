@@ -29,6 +29,8 @@ export interface AuthUser {
   teamId?: number | null;
   /** Relative path (e.g. /auth/avatar/12); resolve against the API base URL. Null when no photo set. */
   avatarUrl: string | null;
+  /** Estimates list filters the user kept. Empty means the default set. */
+  estimatesFilterKeys?: string[];
 }
 
 export interface LoginResponse {

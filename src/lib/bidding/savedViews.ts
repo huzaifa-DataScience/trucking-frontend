@@ -98,12 +98,12 @@ export const FILTER_FIELDS: FilterFieldDef[] = [
     ],
   },
   {
-    key: "estimator",
-    label: "Estimator",
+    key: "captain",
+    label: "Team captain",
     section: "Project Data",
     kind: "select",
     dynamic: true,
-    placeholder: "Select estimator",
+    placeholder: "Select team captain",
   },
   {
     key: "bidClerk",
@@ -367,3 +367,26 @@ export const FILTER_FIELDS: FilterFieldDef[] = [
 ];
 
 export const BIDDING_SAVED_VIEWS_KEY = "bidding-saved-views";
+export const BIDDING_FILTER_FIELDS_KEY = "bidding-filter-fields";
+
+export function loadSelectedFilterFields(storageKey: string): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const allow = new Set(FILTER_FIELDS.map((field) => field.key));
+    return parsed.filter((key): key is string => typeof key === "string" && allow.has(key));
+  } catch {
+    return [];
+  }
+}
+
+export function saveSelectedFilterFields(storageKey: string, keys: string[]): void {
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(keys));
+  } catch {
+    /* ignore storage failures */
+  }
+}

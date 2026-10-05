@@ -56,8 +56,12 @@ export interface BidListItem {
   dueDate?: string | null;
   dueTime?: string | null;
   teamId?: number | null;
-  /** Captain assigned to lead the estimate — FollowupCRM-style "Estimator" sort/filter. */
+  /** Captain assigned to lead the estimate — list column "Team captain". */
   estimator?: string | null;
+  captain?: string | null;
+  internalBidDate?: string | null;
+  baseBidPrice?: number | null;
+  takeoffTurnedIn?: boolean | null;
   assistantEstimator?: string | null;
   /** PJ estimate grand total, mirrored from the latest client calc snapshot. */
   baseBidAmount?: number | null;

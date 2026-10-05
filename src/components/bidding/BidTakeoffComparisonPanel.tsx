@@ -47,9 +47,6 @@ export function BidTakeoffComparisonPanel() {
         </span>
       </div>
       <div className="intake-section-body overflow-x-auto">
-        <p className="intake-section-hint">
-          Compare HVAC, duct, hydronic, and plumbing takeoffs before proposal.
-        </p>
         <table className="w-full min-w-[32rem] text-left text-[12.5px] text-[#374151]">
           <thead className="border-b border-[#e5e7eb] bg-[#f3f4f6] text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
             <tr>

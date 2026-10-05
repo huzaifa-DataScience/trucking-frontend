@@ -35,7 +35,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-dvh w-full overflow-x-hidden bg-canvas">
+    <div className="glass-app min-h-dvh w-full overflow-x-hidden">
       <Sidebar
         mobileOpen={mobileNavOpen}
         onMobileClose={() => setMobileNavOpen(false)}
@@ -48,7 +48,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         }`}
       >
         <Header onMenuClick={() => setMobileNavOpen(true)} />
-        <main className="flex min-h-0 min-w-0 w-full flex-1 flex-col bg-canvas px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+        <main className="flex min-h-0 min-w-0 w-full flex-1 flex-col bg-transparent px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
           <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">{children}</div>
         </main>
       </div>

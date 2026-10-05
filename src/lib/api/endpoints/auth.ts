@@ -43,7 +43,32 @@ function normalizeUser(raw: Record<string, unknown>): AuthUser {
           ? null
           : undefined,
     avatarUrl: typeof u.avatarUrl === "string" ? u.avatarUrl : null,
+    estimatesFilterKeys: normalizeEstimatesFilterKeys(raw.estimatesFilterKeys),
   };
+}
+
+const ESTIMATES_FILTER_KEYS = new Set([
+  "search",
+  "processStage",
+  "bidDate",
+  "captain",
+  "entityId",
+  "workType",
+  "outcome",
+  "bidKind",
+  "constructionType",
+]);
+
+function normalizeEstimatesFilterKeys(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const key of raw) {
+    const s = String(key ?? "").trim();
+    if (!ESTIMATES_FILTER_KEYS.has(s) || out.includes(s)) continue;
+    out.push(s);
+    if (out.length >= 12) break;
+  }
+  return out;
 }
 
 export async function login(body: LoginRequest): Promise<LoginResponse> {
@@ -331,8 +356,12 @@ export async function patchAuthTeam(body: {
   return { team: normalizeAuthTeam(data) };
 }
 
-/** Updates the current user's name. Throws with a user-facing message on failure. */
-export async function updateProfile(updates: { firstName?: string | null; lastName?: string | null }): Promise<AuthUser> {
+/** Updates the current user's name or saved Estimates filters. */
+export async function updateProfile(updates: {
+  firstName?: string | null;
+  lastName?: string | null;
+  estimatesFilterKeys?: string[];
+}): Promise<AuthUser> {
   const token = getAccessToken();
   if (!token) throw new Error("Not signed in");
 

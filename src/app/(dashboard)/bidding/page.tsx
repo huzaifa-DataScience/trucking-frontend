@@ -14,6 +14,7 @@ import { useBiddingAccess } from "@/hooks/useBiddingAccess";
 import { useCompany } from "@/contexts/CompanyContext";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
+import { updateProfile } from "@/lib/api/endpoints/auth";
 import { getApiErrorMessage } from "@/lib/api/client";
 import { formatDate, formatMoney } from "@/lib/bidding/format";
 import { formatOutcome, formatProcessStage, formatWorkType } from "@/lib/bidding/process-types";
@@ -28,7 +29,7 @@ import {
   type FilterGroup,
   type SavedView,
 } from "@/lib/filters/types";
-import { BIDDING_SAVED_VIEWS_KEY, FILTER_FIELDS } from "@/lib/bidding/savedViews";
+import { BIDDING_FILTER_FIELDS_KEY, BIDDING_SAVED_VIEWS_KEY, FILTER_FIELDS, loadSelectedFilterFields, saveSelectedFilterFields } from "@/lib/bidding/savedViews";
 import { newId } from "@/lib/bidding/newId";
 
 type StatusFilter = "all" | BidStatus;
@@ -40,6 +41,9 @@ type SortKey =
   | "dueDate"
   | "bidDate"
   | "estimator"
+  | "captain"
+  | "internalBidDate"
+  | "takeoffTurnedIn"
   | "status"
   | "stage"
   | "outcome"
@@ -83,7 +87,7 @@ const STAGE_FILTERS = [
   { value: "", label: "All" },
   { value: "intake", label: "Intake" },
   { value: "assignment", label: "Assignment" },
-  { value: "estimating_setup", label: "Setup" },
+  { value: "estimating_setup", label: "Handoff" },
   { value: "takeoff", label: "Takeoff" },
   { value: "proposal", label: "Proposal" },
   { value: "post_bid", label: "Post-Bid" },
@@ -103,20 +107,33 @@ const OUTCOME_FILTERS = [
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "bidDate", label: "Bid date" },
   { value: "name", label: "Name" },
-  { value: "drawingNumber", label: "Drawing #" },
-  { value: "dueDate", label: "Deadline" },
   { value: "office", label: "Company" },
-  { value: "estimator", label: "Estimator" },
-  { value: "stage", label: "Status" },
+  { value: "captain", label: "Team captain" },
+  { value: "stage", label: "Current progress" },
   { value: "outcome", label: "Outcome" },
   { value: "baseBid", label: "Base bid" },
   { value: "status", label: "Record" },
   { value: "updated", label: "Last updated" },
   { value: "estimate", label: "Estimate #" },
+  { value: "internalBidDate", label: "Internal bid date" },
   { value: "workType", label: "Work type" },
   { value: "contractAmount", label: "Contract amount" },
   { value: "jobStartDate", label: "Job start date" },
 ];
+
+const ESTIMATES_FILTER_CATALOG: { key: string; label: string }[] = [
+  { key: "search", label: "Search" },
+  { key: "processStage", label: "Current progress" },
+  { key: "bidDate", label: "Bid date" },
+  { key: "captain", label: "Team captain" },
+  { key: "entityId", label: "Company" },
+  { key: "workType", label: "Work type" },
+  { key: "outcome", label: "Outcome" },
+  { key: "bidKind", label: "Bid type" },
+  { key: "constructionType", label: "Building type" },
+];
+
+const DEFAULT_FILTER_KEYS = ["search", "processStage", "bidDate", "captain"];
 
 function defaultSortDir(key: SortKey): SortDir {
   if (
@@ -208,7 +225,7 @@ function FilterSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel ?? prefix}
-        className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-ink/10 bg-surface pl-3 pr-2.5 text-sm font-medium text-ink outline-none transition hover:border-ink/20 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+        className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-white/70 bg-white/50 pl-3 pr-2.5 text-sm font-medium text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] outline-none backdrop-blur-md transition hover:bg-white/70 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
       >
         <span className="truncate">
           {prefix}: {current?.label}
@@ -229,7 +246,7 @@ function FilterSelect({
         <div
           role="listbox"
           aria-label={ariaLabel ?? prefix}
-          className="absolute left-0 top-full z-30 mt-1.5 w-full min-w-max overflow-hidden rounded-xl border border-ink/[0.08] bg-white p-1.5 shadow-[0_12px_32px_-8px_rgba(1,1,1,0.18)]"
+          className="absolute left-0 top-full z-30 mt-1.5 w-full min-w-max overflow-hidden rounded-xl border border-white/70 bg-white/80 p-1.5 shadow-[0_8px_20px_rgba(255,123,17,0.12)] backdrop-blur-xl"
         >
           {options.map((o) => {
             const selected = o.value === value;
@@ -257,9 +274,25 @@ function FilterSelect({
   );
 }
 
+/** Let long emails wrap before @ instead of splitting a word in half. */
+function softBreakText(text: string) {
+  const parts = text.split("@");
+  if (parts.length === 1) return text;
+  return parts.map((part, index) => (
+    <span key={`${index}-${part}`}>
+      {index > 0 ? (
+        <>
+          <wbr />@
+        </>
+      ) : null}
+      {part}
+    </span>
+  ));
+}
+
 export default function BiddingListPage() {
   const { companyId } = useCompany();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { canRead, canWrite } = useBiddingAccess();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -280,13 +313,32 @@ export default function BiddingListPage() {
   const [exporting, setExporting] = useState(false);
   /** Show every crew — GET /bids?teamId=all (when user is normally team-scoped). */
   const [showAllTeams, setShowAllTeams] = useState(false);
+  /** AE / user: internal takeoff list unless they open the full team table. */
+  const [teamTable, setTeamTable] = useState(false);
+  const [captainFilter, setCaptainFilter] = useState("");
+  const [bidKindFilter, setBidKindFilter] = useState("");
+  const [constructionFilter, setConstructionFilter] = useState("");
+  const [localBidFrom, setLocalBidFrom] = useState("");
+  const [localBidTo, setLocalBidTo] = useState("");
+  const [filterKeys, setFilterKeys] = useState<string[]>(DEFAULT_FILTER_KEYS);
+  const [crmFieldKeys, setCrmFieldKeys] = useState<string[]>([]);
+  const [filterSaveError, setFilterSaveError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const filterKeysHydratedFor = useRef<number | null>(null);
+  const filterSaveTimer = useRef<number | null>(null);
+  const hasLoadedBids = useRef(false);
 
   /** Scoped per-user so switching accounts on the same browser doesn't leak someone else's saved views. */
   const savedViewsKey = user ? `${BIDDING_SAVED_VIEWS_KEY}:${user.id}` : null;
+  const crmFieldsKey = user ? `${BIDDING_FILTER_FIELDS_KEY}:${user.id}` : null;
 
   useEffect(() => {
     setSavedViews(savedViewsKey ? loadSavedViews(savedViewsKey) : []);
   }, [savedViewsKey]);
+
+  useEffect(() => {
+    setCrmFieldKeys(crmFieldsKey ? loadSelectedFilterFields(crmFieldsKey) : []);
+  }, [crmFieldsKey]);
 
   useEffect(() => {
     void biddingApi
@@ -312,6 +364,7 @@ export default function BiddingListPage() {
     };
     return {
       estimator: estimatorOptions.length > 0 ? estimatorOptions : uniqueOptions("estimator"),
+      captain: estimatorOptions.length > 0 ? estimatorOptions : uniqueOptions("captain"),
       bidClerk: uniqueOptions("bidClerk"),
       takeOffPerson: uniqueOptions("takeOffPerson"),
       takeOffPerson2: uniqueOptions("takeOffPerson2"),
@@ -331,6 +384,46 @@ export default function BiddingListPage() {
   const hasCrew = user?.teamId != null;
   const promptPickCrew =
     (role === "captain" || role === "assistant_estimator") && !hasCrew;
+  const isInternalRole = role === "assistant_estimator" || role === "user";
+  const internalList = isInternalRole && !teamTable;
+  useEffect(() => {
+    if (!user) return;
+    if (filterKeysHydratedFor.current === user.id) return;
+    filterKeysHydratedFor.current = user.id;
+    const saved = user.estimatesFilterKeys;
+    setFilterKeys(saved && saved.length > 0 ? saved : DEFAULT_FILTER_KEYS);
+  }, [user]);
+
+  useEffect(() => {
+    return () => {
+      if (filterSaveTimer.current != null) window.clearTimeout(filterSaveTimer.current);
+    };
+  }, []);
+
+  const showFilter = (key: string) => filterKeys.includes(key);
+
+  const toggleListFilter = (key: string, on: boolean) => {
+    setFilterSaveError(null);
+    setFilterKeys((prev) => {
+      const next = on ? (prev.includes(key) ? prev : [...prev, key]) : prev.filter((k) => k !== key);
+      const saved = next.length > 0 ? next : [...DEFAULT_FILTER_KEYS];
+      if (filterSaveTimer.current != null) window.clearTimeout(filterSaveTimer.current);
+      filterSaveTimer.current = window.setTimeout(() => {
+        void updateProfile({ estimatesFilterKeys: saved })
+          .then((updated) => setUser(updated))
+          .catch((e) => setFilterSaveError(getApiErrorMessage(e, "Couldn't save filters")));
+      }, 400);
+      return saved;
+    });
+  };
+
+  const toggleCrmField = (key: string, on: boolean) => {
+    setCrmFieldKeys((prev) => {
+      const next = on ? (prev.includes(key) ? prev : [...prev, key]) : prev.filter((k) => k !== key);
+      if (crmFieldsKey) saveSelectedFilterFields(crmFieldsKey, next);
+      return next;
+    });
+  };
 
   const sidebarDateFilters = useMemo(() => {
     if (filterGroups.length !== 1) return {};
@@ -353,7 +446,9 @@ export default function BiddingListPage() {
       status: status === "all" ? undefined : status,
       teamId: isTeamScopedRole && showAllTeams ? ("all" as const) : undefined,
       sort: sortKey === "bidDate" ? "bidDate" : undefined,
-      ...sidebarDateFilters,
+      view: isInternalRole ? (internalList ? ("internal" as const) : ("all" as const)) : undefined,
+      bidDateFrom: localBidFrom || sidebarDateFilters.bidDateFrom,
+      bidDateTo: localBidTo || sidebarDateFilters.bidDateTo,
     }),
     [
       entityId,
@@ -366,6 +461,10 @@ export default function BiddingListPage() {
       showAllTeams,
       sortKey,
       sidebarDateFilters,
+      isInternalRole,
+      internalList,
+      localBidFrom,
+      localBidTo,
     ]
   );
 
@@ -376,7 +475,8 @@ export default function BiddingListPage() {
   // Backend auto-scopes by JWT teamId; pass teamId=all only when toggled.
   const loadBids = useCallback(async () => {
     const seq = ++bidsRequestSeqRef.current;
-    setLoading(true);
+    if (hasLoadedBids.current) setRefreshing(true);
+    else setLoading(true);
     setError(null);
     try {
       const list = await biddingApi.listBids({
@@ -389,6 +489,7 @@ export default function BiddingListPage() {
         bidDateFrom: listParams.bidDateFrom,
         bidDateTo: listParams.bidDateTo,
         sort: listParams.sort,
+        view: listParams.view,
       });
       if (seq !== bidsRequestSeqRef.current) return; // a newer request superseded this one
       setBids(list);
@@ -397,7 +498,11 @@ export default function BiddingListPage() {
       setError(getApiErrorMessage(e, "Failed to load bids"));
       setBids([]);
     } finally {
-      if (seq === bidsRequestSeqRef.current) setLoading(false);
+      if (seq === bidsRequestSeqRef.current) {
+        hasLoadedBids.current = true;
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [listParams]);
 
@@ -405,15 +510,6 @@ export default function BiddingListPage() {
     const t = setTimeout(() => void loadBids(), search ? 300 : 0);
     return () => clearTimeout(t);
   }, [loadBids, search]);
-
-  const changeViewMode = (mode: ViewMode) => {
-    setViewMode(mode);
-    try {
-      window.localStorage.setItem(VIEW_MODE_KEY, mode);
-    } catch {
-      /* ignore storage failures */
-    }
-  };
 
   /**
    * Best-effort: pull bidDate/clientCompanyName out of the sidebar filters for the
@@ -467,9 +563,17 @@ export default function BiddingListPage() {
   }, [bids]);
 
   const visibleBids = useMemo(() => {
-    const filtered = (status === "all" ? bids : bids.filter((b) => b.status === status)).filter((b) =>
-      rowMatchesGroups(b as unknown as Record<string, unknown>, filterGroups)
-    );
+    const filtered = (status === "all" ? bids : bids.filter((b) => b.status === status))
+      .filter((b) => rowMatchesGroups(b as unknown as Record<string, unknown>, filterGroups))
+      .filter((b) => !captainFilter || (b.captain || b.estimator || "") === captainFilter)
+      .filter((b) => {
+        const q = bidKindFilter.trim().toLowerCase();
+        return !q || (b.bidKind || "").toLowerCase().includes(q);
+      })
+      .filter((b) => {
+        const q = constructionFilter.trim().toLowerCase();
+        return !q || (b.constructionType || "").toLowerCase().includes(q);
+      });
     return [...filtered].sort((a, b) => {
       const cmp = (() => {
         switch (sortKey) {
@@ -485,6 +589,14 @@ export default function BiddingListPage() {
             return (a.bidDate ?? "").localeCompare(b.bidDate ?? "");
           case "estimator":
             return (a.estimator ?? "").localeCompare(b.estimator ?? "", undefined, { sensitivity: "base" });
+          case "captain":
+            return (a.captain || a.estimator || "").localeCompare(b.captain || b.estimator || "", undefined, {
+              sensitivity: "base",
+            });
+          case "internalBidDate":
+            return (a.internalBidDate ?? "").localeCompare(b.internalBidDate ?? "");
+          case "takeoffTurnedIn":
+            return Number(a.takeoffTurnedIn === true) - Number(b.takeoffTurnedIn === true);
           case "status":
             return a.status.localeCompare(b.status);
           case "stage":
@@ -507,7 +619,7 @@ export default function BiddingListPage() {
       })();
       return sortDir === "desc" ? -cmp : cmp;
     });
-  }, [bids, status, sortKey, sortDir, filterGroups]);
+  }, [bids, status, sortKey, sortDir, filterGroups, captainFilter, bidKindFilter, constructionFilter]);
 
   const exportToExcel = useCallback(() => {
     import("xlsx").then((XLSX) => {
@@ -516,18 +628,19 @@ export default function BiddingListPage() {
           "Estimate #": b.estimateNumber,
           "Bid name": b.bidName,
           Contractor: b.clientCompanyName ?? "",
-          Estimator: b.estimator ?? "",
+          "Team captain": b.captain ?? "",
           "Contract amount": b.contractAmount ?? "",
           "Cash expense": b.cashExpense ?? "",
           "Job start date": b.jobStartDate ?? "",
           "Job end date": b.jobEndDate ?? "",
           Status: b.status,
           "Work type": formatWorkType(b.workType ?? undefined),
-          Stage: formatProcessStage(b.processStage ?? undefined),
+          "Current progress": formatProcessStage(b.processStage ?? undefined),
           Outcome: formatOutcome(b.outcomeStatus ?? undefined),
           "Bid date": b.bidDate ?? "",
-          "Due date": b.dueDate ?? "",
-          "Updated": b.updatedAt,
+          "Internal bid date": b.internalBidDate ?? "",
+          "Turned in": b.takeoffTurnedIn ? "Yes" : "",
+          Updated: b.updatedAt,
         }))
       );
       const wb = XLSX.utils.book_new();
@@ -600,6 +713,75 @@ export default function BiddingListPage() {
   const toggleStatus = (value: StatusFilter) =>
     setStatus((prev) => (prev === value ? "all" : value));
 
+  const changeViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    try {
+      window.localStorage.setItem(VIEW_MODE_KEY, mode);
+    } catch {
+      /* ignore storage failures */
+    }
+  };
+
+  const listColumns: { key: SortKey; label: string; width: string }[] = internalList
+    ? [
+        { key: "estimate", label: "Estimate #", width: "w-[18%]" },
+        { key: "name", label: "Name", width: "w-[42%]" },
+        { key: "internalBidDate", label: "Internal bid date", width: "w-[22%]" },
+        { key: "takeoffTurnedIn", label: "Turned in", width: "w-[18%]" },
+      ]
+    : [
+        { key: "estimate", label: "Estimate #", width: "w-[10%]" },
+        { key: "name", label: "Name", width: "w-[18%]" },
+        { key: "bidDate", label: "Bid date", width: "w-[9%]" },
+        { key: "office", label: "Company", width: "w-[10%]" },
+        { key: "captain", label: "Team captain", width: "w-[12%]" },
+        { key: "stage", label: "Current progress", width: "w-[12%]" },
+        { key: "outcome", label: "Outcome", width: "w-[8%]" },
+        { key: "baseBid", label: "Base bid", width: "w-[8%]" },
+        { key: "status", label: "Record", width: "w-[8%]" },
+        { key: "internalBidDate", label: "Internal bid date", width: "w-[10%]" },
+        { key: "takeoffTurnedIn", label: "Turned in", width: "w-[7%]" },
+        { key: "updated", label: "Updated", width: "w-[8%]" },
+      ];
+
+  const rowHref = (bid: BidListItem) =>
+    isInternalRole ? `/bidding/${bid.id}?stage=takeoff` : `/bidding/${bid.id}?stage=intake`;
+
+  const cellText = (bid: BidListItem, key: SortKey): string => {
+    switch (key) {
+      case "estimate":
+        return bid.estimateNumber || "—";
+      case "name":
+        return bid.bidName || "Untitled estimate";
+      case "drawingNumber":
+        return bid.drawingNumber || "—";
+      case "dueDate":
+        return bid.dueDate ? formatDate(bid.dueDate) : "—";
+      case "office":
+        return bid.companyName || "—";
+      case "estimator":
+        return bid.estimator || "—";
+      case "stage":
+        return formatProcessStage(bid.processStage ?? undefined) || "—";
+      case "outcome":
+        return formatOutcome(bid.outcomeStatus ?? undefined);
+      case "baseBid":
+        return bid.baseBidAmount != null ? formatMoney(bid.baseBidAmount) : "—";
+      case "updated":
+        return formatDate(bid.updatedAt.slice(0, 10));
+      case "bidDate":
+        return bid.bidDate ? formatDate(bid.bidDate) : "—";
+      case "captain":
+        return bid.captain || bid.estimator || "—";
+      case "internalBidDate":
+        return bid.internalBidDate ? formatDate(bid.internalBidDate.slice(0, 10)) : "—";
+      case "takeoffTurnedIn":
+        return bid.takeoffTurnedIn ? "Yes" : "—";
+      default:
+        return "—";
+    }
+  };
+
   if (!canRead) {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-6">
@@ -631,7 +813,7 @@ export default function BiddingListPage() {
                 className={`rounded-lg border px-2.5 py-2 text-xs font-semibold transition ${
                   showAllTeams
                     ? "border-brand/30 bg-brand/10 text-brand"
-                    : "border-ink/10 bg-surface text-ink/70 hover:border-ink/20 hover:text-ink"
+                    : "border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md hover:bg-white/70 hover:text-ink"
                 }`}
                 title="GET /bids?teamId=all"
               >
@@ -668,7 +850,7 @@ export default function BiddingListPage() {
         </p>
       ) : null}
 
-      <div className="w-fit rounded-2xl border border-ink/[0.08] bg-surface px-5 py-4 shadow-[0_1px_2px_rgba(1,1,1,0.04)]">
+      <div className="w-fit rounded-2xl border border-white/70 bg-white/45 px-5 py-4 shadow-[0_6px_16px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl">
         {loading && bids.length === 0 ? (
           <Skeleton className="h-9 w-24" />
         ) : (
@@ -712,7 +894,7 @@ export default function BiddingListPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="w-full sm:mr-auto sm:w-[320px]">
+          {showFilter("search") ? <div className="w-full sm:mr-auto sm:w-[320px]">
             <div className="relative">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" aria-hidden>
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -725,10 +907,10 @@ export default function BiddingListPage() {
                 placeholder="Search name, estimate #, drawing #, architect, owner…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-10 w-full rounded-lg border border-ink/10 bg-surface pl-9 pr-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+                className="h-10 w-full rounded-lg border border-white/70 bg-white/50 pl-9 pr-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] outline-none backdrop-blur-md transition focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </div>
-          </div>
+          </div> : null}
 
           <div className="w-44 shrink-0">
             <FilterSelect
@@ -747,7 +929,7 @@ export default function BiddingListPage() {
           <button
             type="button"
             onClick={() => setFilterOpen(true)}
-            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-ink/10 bg-surface px-3.5 text-sm font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand"
+            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-white/70 bg-white/50 px-3.5 text-sm font-semibold text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md transition hover:border-brand/30 hover:bg-white/70 hover:text-brand"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
@@ -759,13 +941,14 @@ export default function BiddingListPage() {
               </span>
             ) : null}
           </button>
+          {refreshing ? <span className="text-xs font-medium text-ink/40">Updating</span> : null}
 
           <button
             type="button"
             onClick={exportToExcel}
             disabled={visibleBids.length === 0}
             title="Export the currently filtered/sorted list to Excel"
-            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-ink/10 bg-surface px-3.5 text-sm font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-white/70 bg-white/50 px-3.5 text-sm font-semibold text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md transition hover:border-brand/30 hover:bg-white/70 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
@@ -773,7 +956,7 @@ export default function BiddingListPage() {
             Export
           </button>
 
-          <div className="flex h-10 shrink-0 items-center gap-0.5 rounded-lg border border-ink/10 bg-surface p-1">
+          <div className="flex h-10 shrink-0 items-center gap-0.5 rounded-lg border border-white/70 bg-white/50 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md">
             <button
               type="button"
               onClick={() => changeViewMode("tiles")}
@@ -809,6 +992,126 @@ export default function BiddingListPage() {
         </div>
       </div>
 
+      {isInternalRole ? (
+        <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Estimates chrome">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={internalList}
+            onClick={() => setTeamTable(false)}
+            className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+              internalList ? "bg-ink text-white" : "border border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+            }`}
+          >
+            Internal bid list
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!internalList}
+            onClick={() => setTeamTable(true)}
+            className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+              !internalList ? "bg-ink text-white" : "border border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+            }`}
+          >
+            Full team table
+          </button>
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-end gap-3">
+        {showFilter("processStage") ? (
+          <label className="flex w-44 flex-col gap-1 text-xs font-semibold text-ink/50">
+            Current progress
+            <FilterSelect
+              prefix="Stage"
+              value={processStage}
+              onChange={setProcessStage}
+              options={STAGE_FILTERS}
+              ariaLabel="Current progress"
+            />
+          </label>
+        ) : null}
+        {showFilter("bidDate") ? (
+          <div className="flex items-end gap-2">
+            <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+              Bid date from
+              <input
+                type="date"
+                value={localBidFrom}
+                onChange={(e) => setLocalBidFrom(e.target.value)}
+                className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+              to
+              <input
+                type="date"
+                value={localBidTo}
+                onChange={(e) => setLocalBidTo(e.target.value)}
+                className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+              />
+            </label>
+          </div>
+        ) : null}
+        {showFilter("captain") ? (
+          <label className="flex w-48 flex-col gap-1 text-xs font-semibold text-ink/50">
+            Team captain
+            <FilterSelect
+              prefix="Captain"
+              value={captainFilter}
+              onChange={setCaptainFilter}
+              options={[{ value: "", label: "All" }, ...(dynamicOptions.captain ?? [])]}
+              ariaLabel="Team captain"
+            />
+          </label>
+        ) : null}
+        {showFilter("workType") ? (
+          <label className="flex w-40 flex-col gap-1 text-xs font-semibold text-ink/50">
+            Work type
+            <FilterSelect
+              prefix="Work"
+              value={workType}
+              onChange={setWorkType}
+              options={WORK_TYPE_FILTERS}
+              ariaLabel="Work type"
+            />
+          </label>
+        ) : null}
+        {showFilter("outcome") ? (
+          <label className="flex w-40 flex-col gap-1 text-xs font-semibold text-ink/50">
+            Outcome
+            <FilterSelect
+              prefix="Outcome"
+              value={outcome}
+              onChange={setOutcome}
+              options={OUTCOME_FILTERS}
+              ariaLabel="Outcome"
+            />
+          </label>
+        ) : null}
+        {showFilter("bidKind") ? (
+          <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+            Bid type
+            <input
+              value={bidKindFilter}
+              onChange={(e) => setBidKindFilter(e.target.value)}
+              className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+            />
+          </label>
+        ) : null}
+        {showFilter("constructionType") ? (
+          <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+            Building type
+            <input
+              value={constructionFilter}
+              onChange={(e) => setConstructionFilter(e.target.value)}
+              className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+            />
+          </label>
+        ) : null}
+      </div>
+
       <SavedViewTabs
         views={savedViews}
         fields={FILTER_FIELDS}
@@ -819,7 +1122,7 @@ export default function BiddingListPage() {
         onClear={clearView}
       />
 
-      {loading ? (
+      {loading && bids.length === 0 ? (
         viewMode === "list" ? <TableSkeleton rows={8} toolbar={false} /> : <SkeletonCardGrid count={6} />
       ) : visibleBids.length === 0 ? (
         <EmptyState
@@ -836,29 +1139,16 @@ export default function BiddingListPage() {
           }
         />
       ) : viewMode === "list" ? (
-        <div className="overflow-x-auto rounded-xl border border-ink/[0.08] bg-surface">
-          <table className="w-full min-w-[1180px] table-fixed border-collapse text-left">
+        <div className="overflow-x-auto rounded-2xl border border-white/70 bg-white/45 px-1.5 py-2 shadow-[0_6px_16px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl">
+          <table className="w-full min-w-[720px] table-fixed border-collapse text-left">
             <thead>
-              <tr className="border-b border-ink/[0.08] bg-ink/[0.02] text-xs font-semibold text-ink/50">
-                {(
-                  [
-                    ["name", "Name", "w-[18%]"],
-                    ["drawingNumber", "Drawing #", "w-[8%]"],
-                    ["dueDate", "Deadline", "w-[8%]"],
-                    ["office", "Company", "w-[8%]"],
-                    ["estimator", "Estimator", "w-[10%]"],
-                    ["stage", "Status", "w-[12%]"],
-                    ["outcome", "Outcome", "w-[9%]"],
-                    ["baseBid", "Base bid", "w-[9%]"],
-                    ["status", "Record", "w-[9%]"],
-                    ["updated", "Updated", "w-[11%]"],
-                  ] as const
-                ).map(([column, label, width]) => (
+              <tr className="border-b border-[rgba(255,123,17,0.22)] bg-[rgba(255,123,17,0.18)] text-xs font-semibold text-[#5a5340]">
+                {listColumns.map((column) => (
                   <SortableTh
-                    key={column}
-                    label={label}
-                    column={column}
-                    active={sortKey === column}
+                    key={column.key}
+                    label={column.label}
+                    column={column.key}
+                    active={sortKey === column.key}
                     dir={sortDir}
                     onSort={(key) => {
                       if (sortKey === key) {
@@ -868,7 +1158,7 @@ export default function BiddingListPage() {
                       setSortKey(key);
                       setSortDir(defaultSortDir(key));
                     }}
-                    className={`${width} whitespace-nowrap px-4 py-3`}
+                    className={`${column.width} whitespace-nowrap px-4 py-3`}
                   />
                 ))}
               </tr>
@@ -877,31 +1167,28 @@ export default function BiddingListPage() {
               {visibleBids.map((bid, idx) => (
                 <tr
                   key={bid.id}
-                  className={`border-b border-ink/[0.06] text-sm transition hover:bg-brand/[0.03] ${idx % 2 === 1 ? "bg-ink/[0.012]" : ""}`}
+                  className={`group origin-center transform-gpu border-b border-ink/[0.06] text-sm transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform hover:relative hover:z-10 hover:scale-[1.02] hover:drop-shadow-[0_10px_18px_rgba(1,1,1,0.14)] ${idx % 2 === 1 ? "bg-ink/[0.012]" : ""}`}
                 >
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/bidding/${bid.id}?stage=intake`}
-                      className="block truncate font-semibold text-ink hover:text-brand"
+                  {listColumns.map((column) => {
+                    const text = cellText(bid, column.key);
+                    return (
+                    <td
+                      key={column.key}
+                      title={text}
+                      className="truncate bg-transparent px-4 py-3 align-top text-sm text-ink/80 transition-colors duration-300 group-hover:overflow-visible group-hover:whitespace-normal group-hover:bg-white/75"
                     >
-                      {[bid.bidName, bid.estimateNumber].filter(Boolean).join(" · ") || "Untitled estimate"}
-                    </Link>
-                  </td>
-                  <td className="truncate px-4 py-3 font-mono text-xs text-ink/50">{bid.drawingNumber || "—"}</td>
-                  <td className="truncate px-4 py-3 text-ink/70">{bid.dueDate ? formatDate(bid.dueDate) : "—"}</td>
-                  <td className="truncate px-4 py-3 text-ink/70">{bid.companyName}</td>
-                  <td className="truncate px-4 py-3 text-ink/70">{bid.estimator || "—"}</td>
-                  <td className="truncate px-4 py-3 text-ink/70">
-                    {formatProcessStage(bid.processStage ?? undefined) || "—"}
-                  </td>
-                  <td className="truncate px-4 py-3 text-ink/70">{formatOutcome(bid.outcomeStatus ?? undefined)}</td>
-                  <td className="truncate px-4 py-3 text-ink/70">
-                    {bid.baseBidAmount != null ? formatMoney(bid.baseBidAmount) : "—"}
-                  </td>
-                  <td className="truncate px-4 py-3">
-                    {status === "draft" && bid.status === "draft" ? null : <BidStatusBadge status={bid.status} />}
-                  </td>
-                  <td className="truncate px-4 py-3 text-ink/50">{formatDate(bid.updatedAt.slice(0, 10))}</td>
+                      {column.key === "estimate" || column.key === "name" ? (
+                        <Link href={rowHref(bid)} className="block truncate font-semibold text-ink hover:text-brand group-hover:overflow-visible group-hover:whitespace-normal">
+                          {softBreakText(text)}
+                        </Link>
+                      ) : column.key === "status" ? (
+                        status === "draft" && bid.status === "draft" ? null : <BidStatusBadge status={bid.status} />
+                      ) : (
+                        softBreakText(text)
+                      )}
+                    </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
@@ -924,6 +1211,12 @@ export default function BiddingListPage() {
         onApply={applyFilterGroups}
         onSaveAsView={saveAsView}
         dynamicOptions={dynamicOptions}
+        listFilters={ESTIMATES_FILTER_CATALOG}
+        selectedListFilters={filterKeys}
+        onToggleListFilter={toggleListFilter}
+        listFilterError={filterSaveError}
+        selectedFieldKeys={crmFieldKeys}
+        onToggleField={toggleCrmField}
       />
     </div>
   );

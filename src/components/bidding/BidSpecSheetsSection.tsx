@@ -119,16 +119,6 @@ function mergeIncomingSheets(
   });
 }
 
-const INSULATION_SPEC_KEYS: { key: string; label: string }[] = [
-  { key: "hydronic", label: "Hydronic" },
-  { key: "plumbing", label: "Plumbing" },
-  { key: "ductworkInsulation", label: "Ductwork insulation" },
-  { key: "piping", label: "Piping" },
-  { key: "ductwork", label: "Ductwork" },
-  { key: "equipment", label: "Equipment" },
-  { key: "other", label: "Other" },
-];
-
 const ADD_KINDS: SpecSheetKind[] = [
   "duct",
   "hydronic",
@@ -594,28 +584,14 @@ function ManufacturerPreferredSelect({
  */
 export function BidSpecSheetsSection({
   sheets: sheetsProp,
-  insulationSpecs,
-  buyAmerican,
-  aPlus,
   meta,
   editable,
-  showInsulationSpecs = true,
   onSheetsChange,
-  onInsulationSpecsChange,
-  onBuyAmericanChange,
-  onAPlusChange,
 }: {
   sheets: SpecSheet[];
-  insulationSpecs: Record<string, unknown> | null | undefined;
-  buyAmerican?: boolean | null;
-  aPlus?: boolean | null;
   meta: ProcessMeta | null;
   editable: boolean;
-  showInsulationSpecs?: boolean;
   onSheetsChange: (next: SpecSheet[]) => void;
-  onInsulationSpecsChange: (next: Record<string, unknown>) => void;
-  onBuyAmericanChange?: (next: boolean | null) => void;
-  onAPlusChange?: (next: boolean | null) => void;
 }) {
   const { bid, uploadAttachment, deleteAttachment, applyBidDetail } =
     useBidSheet();
@@ -1440,11 +1416,8 @@ export function BidSpecSheetsSection({
     }
   };
 
-  const specs = (insulationSpecs ?? {}) as Record<string, unknown>;
   const attachments = bid?.attachments ?? [];
   const showDuctShape = active?.kind === "duct";
-  const buyAmericanChecked = buyAmerican === true;
-  const aPlusChecked = aPlus === true;
   const specColDefs = useMemo(
     () =>
       buildSpecColDefs({
@@ -1479,91 +1452,10 @@ export function BidSpecSheetsSection({
 
   return (
     <div className="flex flex-col gap-3">
-      {showInsulationSpecs ? (
-        <section className="intake-section">
-          <h3 className="intake-section-head">Spec PDFs that apply</h3>
-          <div className="intake-section-body">
-          <p className="intake-section-hint">
-            Which client spec books apply — separate from the rules table below.
-          </p>
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            {INSULATION_SPEC_KEYS.map(({ key, label }) => (
-              <label
-                key={key}
-                className="inline-flex items-center gap-2 text-[12.5px] text-[#374151]"
-              >
-                <input
-                  type="checkbox"
-                  disabled={!editable}
-                  checked={Boolean(specs[key])}
-                  onChange={(e) =>
-                    onInsulationSpecsChange({
-                      ...specs,
-                      [key]: e.target.checked,
-                    })
-                  }
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-          </div>
-        </section>
-      ) : null}
-
-      {onBuyAmericanChange || onAPlusChange ? (
-        <section className="intake-section">
-          <h3 className="intake-section-head">Requirements</h3>
-          <div className="intake-section-body flex flex-wrap gap-x-6 gap-y-2">
-          {onBuyAmericanChange ? (
-            <label className="inline-flex items-center gap-2 text-[12.5px] text-[#374151]">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={buyAmericanChecked}
-                onChange={(e) =>
-                  onBuyAmericanChange(e.target.checked ? true : null)
-                }
-              />
-              <span>
-                <span className="font-semibold">Buy American?</span>
-                <span className="ml-1.5 text-[#6b7280]">
-                  Project-level · federal work
-                </span>
-              </span>
-            </label>
-          ) : null}
-          {onAPlusChange ? (
-            <label className="inline-flex items-center gap-2 text-[12.5px] text-[#374151]">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={aPlusChecked}
-                onChange={(e) =>
-                  onAPlusChange(e.target.checked ? true : null)
-                }
-              />
-              <span>
-                <span className="font-semibold">A+</span>
-                <span className="ml-1.5 text-[#6b7280]">
-                  Bid-level · Setup only
-                </span>
-              </span>
-            </label>
-          ) : null}
-          </div>
-        </section>
-      ) : null}
-
       <section className="intake-section">
         <div className="intake-section-head-bar">
           <div>
             <h3>Spec sheets</h3>
-            <p>
-              Cascade: System → Area → Family → Insulation (always 1). Layers
-              2/3/4 add more Insulation columns. Facing after insulation (or
-              Mike code).
-            </p>
           </div>
           {editable ? (
             <div className="flex flex-wrap gap-2">

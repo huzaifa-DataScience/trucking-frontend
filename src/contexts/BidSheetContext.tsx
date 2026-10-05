@@ -11,7 +11,8 @@ import {
   type ReactNode,
 } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
-import { getApiErrorMessage } from "@/lib/api/client";
+import { getApiErrorMessage, ApiError } from "@/lib/api/client";
+import { useToast } from "@/components/ui/ToastProvider";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import { insightsFromBid } from "@/lib/bidding/computed";
 import { normalizeSystems } from "@/lib/bidding/constants";
@@ -138,6 +139,7 @@ export function BidSheetProvider({
   const lookups = useBiddingLookups();
   const { canRead, canWrite } = useBiddingAccess();
   const confirmDialog = useConfirmDialog();
+  const { showToast } = useToast();
   const [bid, setBid] = useState<BidDetail | null>(null);
   const [burdenedRate, setBurdenedRate] = useState<BurdenedRateResult | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -290,13 +292,17 @@ export function BidSheetProvider({
             : (patch.computed ?? fallback?.computed ?? {});
         setBid({ ...updated, computed });
       } catch (e) {
-        setError(getApiErrorMessage(e, "Failed to save bid"));
+        const message = getApiErrorMessage(e, "Failed to save bid");
+        setError(message);
+        if (e instanceof ApiError && e.status === 403) {
+          showToast(message, "error");
+        }
         throw e;
       } finally {
         setSaving(false);
       }
     },
-    [bidId]
+    [bidId, showToast]
   );
 
   /** Mark estimate dirty + live preview — no network autosave. */

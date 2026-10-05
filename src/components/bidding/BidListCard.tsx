@@ -40,7 +40,7 @@ export function BidListCard({
       href={`/bidding/${bid.id}?stage=${encodeURIComponent(
         String(bid.processStage || "intake")
       )}`}
-      className="group ui-animate-in flex min-h-[164px] cursor-pointer flex-col justify-between rounded-[14px] border border-ink/[0.08] bg-surface p-6 shadow-[0_2px_6px_-2px_rgba(1,1,1,0.08)] transition hover:border-brand/35 hover:bg-brand/[0.03]"
+      className="group ui-animate-in flex min-h-[164px] cursor-pointer flex-col justify-between rounded-2xl border border-white/70 bg-white/45 p-6 shadow-[0_6px_16px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl transition hover:border-[rgba(255,123,17,0.35)] hover:bg-white/70"
     >
       <div>
         <div className="flex items-start justify-between gap-3">

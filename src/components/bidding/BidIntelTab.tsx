@@ -111,10 +111,6 @@ export function BidIntelTab() {
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="intake-title">Post-Bid</h2>
-          <p className="intake-sub mt-0.5">
-            Follow-up calls and competitor notes. Still Pre — pick win/lose on the Outcome tab next.
-            GCs / mechanicals now live on Intake.
-          </p>
           <p className="mt-1 text-[11px] text-[#9ca3af]">
             {saving
               ? "Saving…"
@@ -148,10 +144,6 @@ export function BidIntelTab() {
           <div className="intake-section-head-bar">
             <div>
               <h3>Follow-up calls</h3>
-              <p>
-                Up to {MAX_FOLLOWUP_COMPANIES} companies, each with up to {MAX_FOLLOWUP_CALL_ATTEMPTS}{" "}
-                dated call attempts.
-              </p>
             </div>
             {editable && followUpCalls.length < MAX_FOLLOWUP_COMPANIES ? (
               <button

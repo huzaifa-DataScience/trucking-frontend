@@ -8,7 +8,6 @@ import * as biddingPartiesApi from "@/lib/api/endpoints/biddingParties";
 import type { BidPartyLookup } from "@/lib/api/endpoints/biddingParties";
 import { PartyNameCombobox } from "@/components/bidding/PartyNameCombobox";
 import { BidAttachmentsSection } from "@/components/bidding/BidAttachmentsSection";
-import { TimePicker } from "@/components/ui/TimePicker";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
@@ -202,7 +201,6 @@ export function BidIntakeStage() {
   const selectClass = `${inputClass} appearance-none pr-8`;
   const sectionHead = "intake-section-head";
   const sectionBody = "intake-section-body";
-  const sectionHint = "intake-section-hint";
   const addBtnClass =
     "intake-head-btn";
   const [meta, setMeta] = useState<ProcessMeta | null>(null);
@@ -477,11 +475,6 @@ export function BidIntakeStage() {
       <section className="intake-section min-w-0">
         <h3 className={sectionHead}>{title}</h3>
         <div className={`${sectionBody} intake-stack`}>
-        <p className={sectionHint}>
-          {isMechanical
-            ? "Pick from saved list — also fills the first invitation. Or type a new name."
-            : "Pick from saved list, or type a new name."}
-        </p>
         <PartyNameCombobox
           label="Name"
           value={p.name ?? ""}
@@ -816,22 +809,20 @@ export function BidIntakeStage() {
           />
         </label>
         <label className="intake-row">
-          <span className={labelClass}>Due date</span>
-          <DatePicker
-            ariaLabel="Due date"
+          <span className={labelClass}>Base bid $</span>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
             className={inputClass}
             disabled={!editable}
-            value={draft.dueDate ?? ""}
-            onChange={(v) => setField("dueDate", v || null)}
-          />
-        </label>
-        <label className="intake-row">
-          <span className={labelClass}>Due time</span>
-          <TimePicker
-            ariaLabel="Due time"
-            disabled={!editable}
-            value={draft.dueTime}
-            onChange={(v) => setField("dueTime", v)}
+            value={draft.baseBidPrice ?? ""}
+            onChange={(e) =>
+              setField(
+                "baseBidPrice",
+                e.target.value === "" ? null : Number(e.target.value)
+              )
+            }
           />
         </label>
         <label className="intake-row">
@@ -1000,10 +991,6 @@ export function BidIntakeStage() {
         <section className="intake-section min-w-0">
           <h3 className={sectionHead}>Project address</h3>
           <div className={`${sectionBody} intake-stack`}>
-          <p className={sectionHint}>
-            Paste the full US line in Address line 1 — backend fills city / state /
-            ZIP when those are empty. Do not clear line 1.
-          </p>
           {(
             [
               ["line1", "Address line 1 (paste full)"],
@@ -1062,18 +1049,221 @@ export function BidIntakeStage() {
       </div>
 
       <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
-      <div className="min-w-0">
+      <div className="flex min-w-0 flex-col gap-3">
         {renderPartySection("mechanicalEngineer", "Mechanical", "mechanical")}
+      <section className="intake-section min-w-0">
+        <div className={sectionHead}>GCs / mechanicals</div>
+        <div className={`${sectionBody} flex flex-col gap-3`}>
+        {(
+          [
+            {
+              key: "gc" as const,
+              title: "General contractors",
+              list: gcs,
+              setList: setGcs,
+            },
+            {
+              key: "mech" as const,
+              title: "Mechanicals",
+              list: mechs,
+              setList: setMechs,
+            },
+          ] as const
+        ).map(({ key, title, list, setList }) => (
+          <div key={key}>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                {title}
+              </p>
+              {editable ? (
+                <button
+                  type="button"
+                  className="text-[11px] font-semibold text-[#4b5563] hover:underline"
+                  onClick={() => setList([...list, emptyGcOrMech()])}
+                >
+                  + Add
+                </button>
+              ) : null}
+            </div>
+            <div className="intake-gc-layers mt-2">
+            {list.length === 0 ? (
+              <p className="text-[12.5px] text-[#9ca3af]">None yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {list.map((row, index) => (
+                  <li
+                    key={`${key}-${index}`}
+                    className="flex flex-wrap items-center gap-2 rounded border border-[#e5e7eb] bg-[#f8fafc] px-2.5 py-1.5"
+                  >
+                    <input
+                      className={`${inputClass} min-w-[10rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Company"
+                      value={row.company ?? row.name ?? ""}
+                      onChange={(e) => {
+                        const company = e.target.value;
+                        setList(
+                          list.map((r, i) =>
+                            i === index
+                              ? { ...r, company, name: company || null }
+                              : r
+                          )
+                        );
+                      }}
+                    />
+                    <input
+                      className={`${inputClass} min-w-[8rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Contact name"
+                      value={row.contactName ?? ""}
+                      onChange={(e) => {
+                        const contactName = e.target.value || null;
+                        setList(list.map((r, i) => (i === index ? { ...r, contactName } : r)));
+                      }}
+                    />
+                    <input
+                      className={`${inputClass} min-w-[10rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Email"
+                      value={row.email ?? ""}
+                      onChange={(e) => {
+                        const email = e.target.value || null;
+                        setList(list.map((r, i) => (i === index ? { ...r, email } : r)));
+                      }}
+                    />
+                    <input
+                      className={`${inputClass} min-w-[8rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Phone"
+                      value={row.phone ?? ""}
+                      onChange={(e) => {
+                        const phone = e.target.value || null;
+                        setList(list.map((r, i) => (i === index ? { ...r, phone } : r)));
+                      }}
+                    />
+                    <label className="flex items-center gap-1.5 text-[11px] text-[#4b5563]">
+                      <input
+                        type="checkbox"
+                        disabled={!editable}
+                        checked={row.hasTheJob === true}
+                        onChange={(e) =>
+                          setList(
+                            list.map((r, i) =>
+                              i === index
+                                ? {
+                                    ...r,
+                                    hasTheJob: e.target.checked ? true : null,
+                                  }
+                                : r
+                            )
+                          )
+                        }
+                      />
+                      Has the job
+                    </label>
+                    <label className="flex items-center gap-1.5 text-[11px] text-[#4b5563]">
+                      <input
+                        type="checkbox"
+                        disabled={!editable}
+                        checked={row.stillBidding === true}
+                        onChange={(e) =>
+                          setList(
+                            list.map((r, i) =>
+                              i === index
+                                ? {
+                                    ...r,
+                                    stillBidding: e.target.checked
+                                      ? true
+                                      : null,
+                                  }
+                                : r
+                            )
+                          )
+                        }
+                      />
+                      Still bidding
+                    </label>
+                    <input
+                      type="number"
+                      className={`${inputClass} w-28`}
+                      disabled={!editable}
+                      placeholder="Bid price"
+                      value={row.bidPrice ?? ""}
+                      onChange={(e) => {
+                        const bidPrice = e.target.value === "" ? null : Number(e.target.value);
+                        setList(list.map((r, i) => (i === index ? { ...r, bidPrice } : r)));
+                      }}
+                    />
+                    <select
+                      className={`${inputClass} w-40`}
+                      disabled={!editable}
+                      value={row.contractorStatus ?? ""}
+                      onChange={(e) => {
+                        const contractorStatus = (e.target.value || null) as ProcessGcOrMech["contractorStatus"];
+                        setList(list.map((r, i) => (i === index ? { ...r, contractorStatus } : r)));
+                      }}
+                    >
+                      <option value="">Contractor status</option>
+                      {CONTRACTOR_STATUS_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className={`${inputClass} w-40`}
+                      disabled={!editable}
+                      value={row.proposalStatus ?? ""}
+                      onChange={(e) => {
+                        const proposalStatus = (e.target.value || null) as ProcessGcOrMech["proposalStatus"];
+                        setList(list.map((r, i) => (i === index ? { ...r, proposalStatus } : r)));
+                      }}
+                    >
+                      <option value="">Proposal status</option>
+                      {PROPOSAL_STATUS_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    {editable ? (
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-danger/80 hover:text-danger"
+                        onClick={() => {
+                          void (async () => {
+                            const ok = await confirmDialog({
+                              title:
+                                key === "gc"
+                                  ? "Remove GC?"
+                                  : "Remove mechanical?",
+                              message: `Remove this ${key === "gc" ? "GC" : "mechanical"}?`,
+                              confirmLabel: "Remove",
+                              variant: "danger",
+                            });
+                            if (!ok) return;
+                            setList(list.filter((_, i) => i !== index));
+                          })();
+                        }}
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+            </div>
+          </div>
+        ))}
+        </div>
+      </section>
       </div>
 
       <section className="intake-section min-w-0">
         <div className="intake-section-head-bar">
           <div>
             <h3>Invitations</h3>
-            <p>
-              Company first, then contacts. Selecting a contact also fills
-              Mechanical.
-            </p>
           </div>
           {editable ? (
             <button
@@ -1337,6 +1527,7 @@ export function BidIntakeStage() {
                       </button>
                     ) : null}
                   </div>
+                  <div className="intake-rows-scroll flex flex-col gap-2">
                   {addenda.length === 0 ? (
                     <p className="text-[11px] text-[#9ca3af]">No addenda yet.</p>
                   ) : (
@@ -1434,6 +1625,7 @@ export function BidIntakeStage() {
                       </div>
                     ))
                   )}
+                  </div>
                 </div>
 
                 {editable && invitations.length > 1 ? (
@@ -1472,9 +1664,6 @@ export function BidIntakeStage() {
           Who else is bidding?
         </div>
         <div className={`${sectionBody} flex flex-col gap-2`}>
-          <p className={sectionHint}>
-            Call GC / architect / ME. Do not ask the inviter.
-          </p>
         {needsWhoElseResearch ? (
           <p className="rounded border border-amber-500/30 bg-amber-50/60 px-2.5 py-1.5 text-[11px] text-[#4b5563]">
             {bid.workflow?.completeBlockedReason ||
@@ -1517,14 +1706,11 @@ export function BidIntakeStage() {
       </section>
       </div>
 
-      <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
+      <div className="grid grid-cols-2 items-start gap-3 max-[1000px]:grid-cols-1">
       <section className="intake-section min-w-0">
         <div className="intake-section-head-bar">
           <div>
             <h3>Project document hub</h3>
-            <p>
-              O-drive / portal / project document links. Upload files in Attachments or Drawings.
-            </p>
           </div>
           {editable ? (
             <button
@@ -1541,7 +1727,7 @@ export function BidIntakeStage() {
             </button>
           ) : null}
         </div>
-        <div className={`${sectionBody} flex flex-col gap-2`}>
+        <div className={`${sectionBody} intake-layer-scroll flex flex-col gap-2`}>
         {documentLinks.length === 0 ? (
           <p className="text-[12.5px] text-[#6b7280]">No owner links yet.</p>
         ) : (
@@ -1627,9 +1813,6 @@ export function BidIntakeStage() {
         <div className="intake-section-head-bar">
           <div>
             <h3>Contract chain</h3>
-            <p>
-              Optional. Add only the layers you know (owner → … → us).
-            </p>
           </div>
           {editable ? (
             <button
@@ -1641,7 +1824,7 @@ export function BidIntakeStage() {
             </button>
           ) : null}
         </div>
-        <div className={`${sectionBody} flex flex-col gap-2`}>
+        <div className={`${sectionBody} intake-layer-scroll flex flex-col gap-2`}>
         {tiers.length === 0 ? (
           <p className="text-[12.5px] text-[#6b7280]">
             No layers yet — not required to hand off.
@@ -1782,219 +1965,25 @@ export function BidIntakeStage() {
         </div>
       </section>
 
-      <section className="intake-section min-w-0">
-        <div className={sectionHead}>GCs / mechanicals</div>
-        <div className={`${sectionBody} flex flex-col gap-3`}>
-        <p className={sectionHint}>
-          Same opportunity — company + flags. Deeper follow-up stays on
-          Post-Bid.
-        </p>
-        {(
-          [
-            {
-              key: "gc" as const,
-              title: "General contractors",
-              list: gcs,
-              setList: setGcs,
-            },
-            {
-              key: "mech" as const,
-              title: "Mechanicals",
-              list: mechs,
-              setList: setMechs,
-            },
-          ] as const
-        ).map(({ key, title, list, setList }) => (
-          <div key={key}>
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
-                {title}
-              </p>
-              {editable ? (
-                <button
-                  type="button"
-                  className="text-[11px] font-semibold text-[#4b5563] hover:underline"
-                  onClick={() => setList([...list, emptyGcOrMech()])}
-                >
-                  + Add
-                </button>
-              ) : null}
-            </div>
-            {list.length === 0 ? (
-              <p className="mt-1 text-[12.5px] text-[#9ca3af]">None yet.</p>
-            ) : (
-              <ul className="mt-2 space-y-2">
-                {list.map((row, index) => (
-                  <li
-                    key={`${key}-${index}`}
-                    className="flex flex-wrap items-center gap-2 rounded border border-[#e5e7eb] bg-[#f8fafc] px-2.5 py-1.5"
-                  >
-                    <input
-                      className={`${inputClass} min-w-[10rem] flex-1`}
-                      disabled={!editable}
-                      placeholder="Company"
-                      value={row.company ?? row.name ?? ""}
-                      onChange={(e) => {
-                        const company = e.target.value;
-                        setList(
-                          list.map((r, i) =>
-                            i === index
-                              ? { ...r, company, name: company || null }
-                              : r
-                          )
-                        );
-                      }}
-                    />
-                    <input
-                      className={`${inputClass} min-w-[8rem] flex-1`}
-                      disabled={!editable}
-                      placeholder="Contact name"
-                      value={row.contactName ?? ""}
-                      onChange={(e) => {
-                        const contactName = e.target.value || null;
-                        setList(list.map((r, i) => (i === index ? { ...r, contactName } : r)));
-                      }}
-                    />
-                    <input
-                      className={`${inputClass} min-w-[10rem] flex-1`}
-                      disabled={!editable}
-                      placeholder="Email"
-                      value={row.email ?? ""}
-                      onChange={(e) => {
-                        const email = e.target.value || null;
-                        setList(list.map((r, i) => (i === index ? { ...r, email } : r)));
-                      }}
-                    />
-                    <input
-                      className={`${inputClass} min-w-[8rem] flex-1`}
-                      disabled={!editable}
-                      placeholder="Phone"
-                      value={row.phone ?? ""}
-                      onChange={(e) => {
-                        const phone = e.target.value || null;
-                        setList(list.map((r, i) => (i === index ? { ...r, phone } : r)));
-                      }}
-                    />
-                    <label className="flex items-center gap-1.5 text-[11px] text-[#4b5563]">
-                      <input
-                        type="checkbox"
-                        disabled={!editable}
-                        checked={row.hasTheJob === true}
-                        onChange={(e) =>
-                          setList(
-                            list.map((r, i) =>
-                              i === index
-                                ? {
-                                    ...r,
-                                    hasTheJob: e.target.checked ? true : null,
-                                  }
-                                : r
-                            )
-                          )
-                        }
-                      />
-                      Has the job
-                    </label>
-                    <label className="flex items-center gap-1.5 text-[11px] text-[#4b5563]">
-                      <input
-                        type="checkbox"
-                        disabled={!editable}
-                        checked={row.stillBidding === true}
-                        onChange={(e) =>
-                          setList(
-                            list.map((r, i) =>
-                              i === index
-                                ? {
-                                    ...r,
-                                    stillBidding: e.target.checked
-                                      ? true
-                                      : null,
-                                  }
-                                : r
-                            )
-                          )
-                        }
-                      />
-                      Still bidding
-                    </label>
-                    <input
-                      type="number"
-                      className={`${inputClass} w-28`}
-                      disabled={!editable}
-                      placeholder="Bid price"
-                      value={row.bidPrice ?? ""}
-                      onChange={(e) => {
-                        const bidPrice = e.target.value === "" ? null : Number(e.target.value);
-                        setList(list.map((r, i) => (i === index ? { ...r, bidPrice } : r)));
-                      }}
-                    />
-                    <select
-                      className={`${inputClass} w-40`}
-                      disabled={!editable}
-                      value={row.contractorStatus ?? ""}
-                      onChange={(e) => {
-                        const contractorStatus = (e.target.value || null) as ProcessGcOrMech["contractorStatus"];
-                        setList(list.map((r, i) => (i === index ? { ...r, contractorStatus } : r)));
-                      }}
-                    >
-                      <option value="">Contractor status</option>
-                      {CONTRACTOR_STATUS_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      className={`${inputClass} w-40`}
-                      disabled={!editable}
-                      value={row.proposalStatus ?? ""}
-                      onChange={(e) => {
-                        const proposalStatus = (e.target.value || null) as ProcessGcOrMech["proposalStatus"];
-                        setList(list.map((r, i) => (i === index ? { ...r, proposalStatus } : r)));
-                      }}
-                    >
-                      <option value="">Proposal status</option>
-                      {PROPOSAL_STATUS_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    {editable ? (
-                      <button
-                        type="button"
-                        className="text-xs font-medium text-danger/80 hover:text-danger"
-                        onClick={() => {
-                          void (async () => {
-                            const ok = await confirmDialog({
-                              title:
-                                key === "gc"
-                                  ? "Remove GC?"
-                                  : "Remove mechanical?",
-                              message: `Remove this ${key === "gc" ? "GC" : "mechanical"}?`,
-                              confirmLabel: "Remove",
-                              variant: "danger",
-                            });
-                            if (!ok) return;
-                            setList(list.filter((_, i) => i !== index));
-                          })();
-                        }}
-                      >
-                        Remove
-                      </button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ))}
-        </div>
-      </section>
       </div>
 
       <BidAttachmentsSection
-        attachments={(bid.attachments ?? []).filter((a) => a.label !== "drawings")}
+        title="Plans, specs, and invitation"
+        labels={["drawings", "specifications", "invitation"]}
+        attachments={(bid.attachments ?? []).filter(
+          (a) =>
+            a.category !== "takeoff_markup" &&
+            (a.label === "drawings" || a.label === "specifications" || a.label === "invitation" || !a.label)
+        )}
+        isEditable={editable}
+        uploading={saving}
+        onUpload={async (file, opts) => uploadAttachment(file, opts)}
+        onDelete={async (id) => deleteAttachment(id)}
+      />
+      <BidAttachmentsSection
+        title="Addenda"
+        labels={["addenda"]}
+        attachments={(bid.attachments ?? []).filter((a) => a.label === "addenda")}
         isEditable={editable}
         uploading={saving}
         onUpload={async (file, opts) => uploadAttachment(file, opts)}
