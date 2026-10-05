@@ -54,18 +54,12 @@ export function SpecsSetupStrip({
   onError: (message: string) => void;
 }) {
   const fileCount = mikeFiles.length;
-  const totalRows = mikeFiles.reduce((n, f) => n + (f.rowCount || 0), 0);
 
   return (
     <section className="intake-section">
       <div className="intake-section-head-bar">
         <div>
           <h3>Mike takeoff</h3>
-          <p>
-            {fileCount === 0
-              ? "None yet — upload Mike CSV(s). Extra uploads append here."
-              : `${mikeFiles[0]?.fileName || "Mike takeoff"} · ${totalRows.toLocaleString()} rows · More CSVs append here`}
-          </p>
         </div>
         <Link
           href="/estimation-files"

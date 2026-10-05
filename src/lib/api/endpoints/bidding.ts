@@ -63,6 +63,8 @@ export async function listBids(params?: {
   clientCompanyName?: string;
   /** e.g. bidDate — server orders the list. */
   sort?: string;
+  /** assistant_estimator / user default. `all` is the full team table. */
+  view?: "internal" | "all";
 }): Promise<BidListItem[]> {
   return get<BidListItem[]>("/bids", {
     status: params?.status,
@@ -78,6 +80,7 @@ export async function listBids(params?: {
     bidDateTo: params?.bidDateTo,
     clientCompanyName: params?.clientCompanyName,
     sort: params?.sort,
+    view: params?.view,
   });
 }
 
@@ -454,6 +457,14 @@ export async function uploadBidAttachment(
   }
 
   return response.json() as Promise<BidAttachment>;
+}
+
+export async function patchBidAttachment(
+  bidId: string,
+  attachmentId: number,
+  body: { drawingCategory?: string | null }
+): Promise<BidAttachment> {
+  return patch<BidAttachment>(`/bids/${bidId}/attachments/${attachmentId}`, body);
 }
 
 export async function deleteBidAttachment(

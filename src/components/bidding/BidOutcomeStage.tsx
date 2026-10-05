@@ -100,11 +100,6 @@ export function BidOutcomeStage() {
     <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       <header>
         <h2 className="intake-title">Outcome</h2>
-        <p className="intake-sub mt-0.5">
-          Last Pre step. Pick win / lose — change anytime. Post Awarded or Lost follows the{" "}
-          <span className="font-medium text-[#1f2937]">current</span> pick; saved fields are not
-          deleted.
-        </p>
         <p className="mt-1.5 text-[12.5px] text-[#4b5563]">
           Current:{" "}
           <span className="font-semibold text-[#1f2937]">{formatOutcome(current)}</span>

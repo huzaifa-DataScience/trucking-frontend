@@ -18,11 +18,13 @@ import {
   type MyPlateResponse,
   type MyPlateRow,
 } from "@/lib/bidding/process-types";
-import { chatHref } from "@/lib/bidding/notifications";
+import { formatDate } from "@/lib/bidding/format";
+import { chatHref, notificationHref, notificationKindLabel } from "@/lib/bidding/notifications";
 
 const DEFAULT_COLUMNS: MyPlateColumn[] = [
   { key: "estimateNumber", label: "Bid #" },
   { key: "bidName", label: "Project" },
+  { key: "bidDate", label: "Bid date" },
   { key: "dueDate", label: "Due date" },
   { key: "dueTime", label: "Due time" },
   { key: "teamId", label: "Team" },
@@ -65,6 +67,10 @@ function cellText(
   }
   if (key === "bidName" || key === "project" || key === "drawingName") {
     return String(row.bidName || row.drawingName || "—");
+  }
+  if (key === "bidDate" || key === "dueDate") {
+    const raw = String(row.bidDate || row.dueDate || "");
+    return raw ? formatDate(raw.slice(0, 10)) : "—";
   }
   if (key === "processStage") {
     return formatProcessStage(String(row.processStage ?? "")) || "—";
@@ -196,6 +202,37 @@ export function MyPlateDashboard() {
             );
           })}
         </div>
+      ) : null}
+
+      {(plate?.notifications?.length ?? 0) > 0 ? (
+        <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4">
+          <h2 className="mb-3 text-sm font-semibold text-ink">Notifications</h2>
+          <ul className="flex flex-col gap-1.5">
+            {(plate?.notifications ?? []).map((n, i) => {
+              const href = notificationHref(n);
+              const body = (
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink">
+                    {notificationKindLabel(n.kind)}
+                    {n.title ? ` · ${n.title}` : ""}
+                  </p>
+                  {n.body ? <p className="truncate text-xs text-ink/50">{n.body}</p> : null}
+                </div>
+              );
+              return (
+                <li key={`${n.kind}-${n.bidId ?? n.conversationId ?? i}`}>
+                  {href ? (
+                    <Link href={href} className="block rounded-xl px-2.5 py-2 hover:bg-ink/[0.03]">
+                      {body}
+                    </Link>
+                  ) : (
+                    <div className="px-2.5 py-2">{body}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       ) : null}
 
       <div className="grid gap-4">

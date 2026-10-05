@@ -109,9 +109,6 @@ export function BidAwardTab() {
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="intake-title">Awarded / startup</h2>
-          <p className="intake-sub mt-0.5">
-            Same bid. Confirm award + leftover startup. Contract tiers / bonds can expand next.
-          </p>
           <p className="mt-1 text-[11px] text-[#9ca3af]">
             {saving
               ? "Saving…"
@@ -176,9 +173,6 @@ export function BidAwardTab() {
         <section className="intake-section min-w-0">
           <div className="intake-section-head">Linked job</div>
           <div className="intake-section-body">
-            <p className="intake-section-hint">
-              bid.jobId — Trimble / Connecteam
-            </p>
             <label className="intake-row">
               <span className="intake-label">Job id</span>
               <div className="flex min-w-0 gap-1.5">

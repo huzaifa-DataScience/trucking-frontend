@@ -7,26 +7,10 @@ import { useProcessDraft } from "@/hooks/useProcessDraft";
 import type {
   ProcessAssignment,
   ProcessTakeoffAssignment,
-  ProcessTechnicalReview,
   TakeoffRole,
 } from "@/lib/bidding/process-types";
 import type { BidCaptainLookup, BidContactLookup, BidTeam } from "@/lib/bidding/types";
-import { DatePicker } from "@/components/ui/DatePicker";
 import { useBidSheet } from "@/contexts/BidSheetContext";
-
-const TAKEOFF_ROLES: TakeoffRole[] = [
-  "duct1",
-  "duct2",
-  "duct3",
-  "hydronic1",
-  "hydronic2",
-  "hydronic3",
-  "plumbing1",
-  "plumbing2",
-  "vrf",
-  "equipment",
-  "other",
-];
 
 function contactDisplayName(c: BidContactLookup): string {
   return (
@@ -54,7 +38,6 @@ export function BidAssignmentStage() {
   const labelClass = "intake-label";
   const sectionHead = "intake-section-head";
   const sectionBody = "intake-section-body";
-  const sectionHint = "intake-section-hint";
   const [teams, setTeams] = useState<BidTeam[]>([]);
   const [captains, setCaptains] = useState<BidCaptainLookup[]>([]);
   const [aes, setAes] = useState<BidContactLookup[]>([]);
@@ -219,8 +202,7 @@ export function BidAssignmentStage() {
         </p>
       ) : null}
 
-      <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
-        <section className="intake-section min-w-0">
+      <section className="intake-section min-w-0">
           <h3 className={sectionHead}>Assignment</h3>
           <div className={`${sectionBody} intake-stack`}>
             <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
@@ -359,49 +341,38 @@ export function BidAssignmentStage() {
                 }
               />
             </label>
-            <label className="intake-row">
-              <span className={labelClass}>Est. due</span>
-              <DatePicker
-                ariaLabel="Internal estimate due"
-                className={inputClass}
-                disabled={!editable}
-                value={a.internalEstimateDue?.slice(0, 10) ?? ""}
-                onChange={(v) => setAssignment({ internalEstimateDue: v || null })}
-              />
-            </label>
-            <label className="intake-row">
-              <span className={labelClass}>Review due</span>
-              <DatePicker
-                ariaLabel="Internal review due"
-                className={inputClass}
-                disabled={!editable}
-                value={a.internalReviewDue?.slice(0, 10) ?? ""}
-                onChange={(v) => setAssignment({ internalReviewDue: v || null })}
-              />
-            </label>
           </div>
         </section>
 
-        <TechnicalReviewFields
-          review={draft.technicalReview ?? {}}
-          editable={editable}
-          noBid={a.pursue === false}
-          blockedReason={bid.workflow?.completeBlockedReason}
-          onChange={(next) => setField("technicalReview", next)}
-          inputClass={inputClass}
-          labelClass={labelClass}
-          sectionHead={sectionHead}
-          sectionBody={sectionBody}
-          sectionHint={sectionHint}
-        />
-
-        <section className="intake-section min-w-0">
-          <h3 className={sectionHead}>Takeoff assignments</h3>
-          <div className={`${sectionBody} intake-stack`}>
-            <p className={sectionHint}>
-              Saved with the captain and team. The server fills names from that crew.
-            </p>
-            {TAKEOFF_ROLES.map((role) => (
+      <section className="intake-section min-w-0">
+        <h3 className={sectionHead}>Takeoff assignments</h3>
+        <div className={`${sectionBody} flex flex-col gap-4`}>
+          <div className="grid grid-cols-3 items-start gap-3 max-[900px]:grid-cols-1">
+            {(
+              [
+                ["Duct", ["duct1", "duct2"]],
+                ["Hydronic", ["hydronic1", "hydronic2"]],
+                ["Plumbing", ["plumbing1", "plumbing2"]],
+              ] as const
+            ).map(([title, roles]) => (
+              <div key={title} className="intake-stack min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">{title}</p>
+                {roles.map((role) => (
+                  <label key={role} className="intake-row">
+                    <span className={labelClass}>{role}</span>
+                    <input
+                      className={inputClass}
+                      disabled={!editable}
+                      value={assigneeFor(role)}
+                      onChange={(e) => upsertRole(role, e.target.value)}
+                    />
+                  </label>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-3 items-start gap-3 border-t border-[#e5e7eb] pt-4 max-[900px]:grid-cols-1">
+            {(["vrf", "equipment", "other"] as const).map((role) => (
               <label key={role} className="intake-row">
                 <span className={labelClass}>{role}</span>
                 <input
@@ -413,92 +384,8 @@ export function BidAssignmentStage() {
               </label>
             ))}
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
-  );
-}
-
-function TechnicalReviewFields({
-  review,
-  editable,
-  noBid,
-  blockedReason,
-  onChange,
-  inputClass,
-  labelClass,
-  sectionHead,
-  sectionBody,
-  sectionHint,
-}: {
-  review: ProcessTechnicalReview;
-  editable: boolean;
-  noBid: boolean;
-  blockedReason?: string | null;
-  onChange: (next: ProcessTechnicalReview) => void;
-  inputClass: string;
-  labelClass: string;
-  sectionHead: string;
-  sectionBody: string;
-  sectionHint: string;
-}) {
-  return (
-    <section className="intake-section min-w-0">
-      <h3 className={sectionHead}>Technical review</h3>
-      <div className={`${sectionBody} intake-stack`}>
-        <p className={sectionHint}>
-          {noBid
-            ? "No-bid does not need takeoff approval to leave Assignment."
-            : "Approve for takeoff before handing off. Otherwise the server blocks complete."}
-          {blockedReason ? ` ${blockedReason}` : ""}
-        </p>
-        <label className="intake-row">
-          <span className={labelClass}>Prepared by</span>
-          <input
-            className={inputClass}
-            disabled={!editable}
-            value={review.preparedBy ?? ""}
-            onChange={(e) => onChange({ ...review, preparedBy: e.target.value || null })}
-          />
-        </label>
-        <label className="intake-row">
-          <span className={labelClass}>Reviewed by</span>
-          <input
-            className={inputClass}
-            disabled={!editable}
-            value={review.reviewedBy ?? ""}
-            onChange={(e) => onChange({ ...review, reviewedBy: e.target.value || null })}
-          />
-        </label>
-        <label className="intake-row">
-          <span className={labelClass}>Review date</span>
-          <DatePicker
-            ariaLabel="Review date"
-            className={inputClass}
-            disabled={!editable}
-            value={review.reviewDate?.slice(0, 10) ?? ""}
-            onChange={(v) => onChange({ ...review, reviewDate: v || null })}
-          />
-        </label>
-        <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
-          <input
-            type="checkbox"
-            disabled={!editable}
-            checked={review.approvedForTakeoff === true}
-            onChange={(e) => onChange({ ...review, approvedForTakeoff: e.target.checked })}
-          />
-          <span className="font-medium">Approved for takeoff</span>
-        </label>
-        <label className="intake-row">
-          <span className={labelClass}>Comments</span>
-          <textarea
-            className={`${inputClass} min-h-[4.5rem] resize-y`}
-            disabled={!editable}
-            value={review.comments ?? ""}
-            onChange={(e) => onChange({ ...review, comments: e.target.value || null })}
-          />
-        </label>
-      </div>
-    </section>
   );
 }

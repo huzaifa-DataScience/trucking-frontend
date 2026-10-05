@@ -29,7 +29,6 @@ export function BidEstimatingSetupStage() {
   const labelClass = "intake-label";
   const sectionHead = "intake-section-head";
   const sectionBody = "intake-section-body";
-  const sectionHint = "intake-section-hint";
   const [meta, setMeta] = useState<ProcessMeta | null>(null);
   const [decisions, setDecisions] = useState<WageDecision[]>([]);
 
@@ -57,11 +56,9 @@ export function BidEstimatingSetupStage() {
   return (
     <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       <header>
-        <h2 className="intake-title">Estimating Setup</h2>
+        <h2 className="intake-title">Handoff</h2>
         <p className="intake-sub mt-0.5">
           {saving ? "Saving…" : dirty ? "Unsaved changes" : editable ? "Save to keep changes" : "Read only"}
-          {" · "}
-          Identity is on Intake — wage rate, schedule, parking, and lifts are filled here.
         </p>
       </header>
 
@@ -70,6 +67,22 @@ export function BidEstimatingSetupStage() {
           {error}
         </p>
       ) : null}
+
+      <section className="intake-section min-w-0 max-w-md">
+        <h3 className={sectionHead}>Internal bid date</h3>
+        <div className={`${sectionBody} intake-stack`}>
+          <label className="intake-row">
+            <span className={labelClass}>Turn-in date</span>
+            <DatePicker
+              ariaLabel="Internal bid date"
+              className={inputClass}
+              disabled={!editable}
+              value={draft.internalBidDate?.slice(0, 10) ?? ""}
+              onChange={(v) => setField("internalBidDate", v || null)}
+            />
+          </label>
+        </div>
+      </section>
 
       <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
         <section className="intake-section min-w-0">
@@ -189,9 +202,6 @@ export function BidEstimatingSetupStage() {
         <section className="intake-section min-w-0">
           <h3 className={sectionHead}>Site logistics</h3>
           <div className={`${sectionBody} intake-stack`}>
-            <p className={sectionHint}>
-              Calculator inputs. Percents are decimals (0.5 = 50%). Parking people: 1 = 100%.
-            </p>
             <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
               <input
                 type="checkbox"
@@ -286,9 +296,6 @@ export function BidEstimatingSetupStage() {
         <section className="intake-section min-w-0 row-span-2 max-[1000px]:row-span-1">
           <h3 className={sectionHead}>Wage and schedule</h3>
           <div className={`${sectionBody} intake-stack`}>
-            <p className={sectionHint}>
-              Estimate wage rate is not the wage decision. Margin and escalation are decimals (0.25 = 25%).
-            </p>
             <label className="intake-row">
               <span className={labelClass}>Wage rate</span>
               <select
@@ -357,6 +364,11 @@ export function BidEstimatingSetupStage() {
         <section className="intake-section min-w-0 col-span-2 max-[1000px]:col-span-1">
           <h3 className={sectionHead}>Technical review</h3>
           <div className={`${sectionBody} intake-grid`}>
+            {bid.workflow?.completeBlockedReason ? (
+              <p className="col-span-full text-[12.5px] text-[#9a3412]">
+                {bid.workflow.completeBlockedReason}
+              </p>
+            ) : null}
             <label className="intake-row">
               <span className={labelClass}>Prepared by</span>
               <input

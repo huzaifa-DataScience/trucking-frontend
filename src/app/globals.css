@@ -391,6 +391,36 @@ body {
   padding: 10px 12px 12px;
 }
 
+/* Add-row lists open at about three rows, even when empty. More rows scroll inside. */
+.intake-compact .intake-rows-scroll {
+  height: 9.25rem;
+  min-height: 9.25rem;
+  flex-shrink: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* Two full GC / mechanical layers. A third layer scrolls inside. */
+.intake-compact .intake-gc-layers {
+  max-height: 27rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.intake-compact .intake-layer-scroll {
+  height: 13rem;
+  min-height: 13rem;
+  flex-shrink: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.intake-compact .intake-layer-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+}
+
 .intake-compact .intake-section-hint {
   margin: 0 0 8px;
   font-size: 12px;
@@ -706,4 +736,210 @@ body {
   opacity: 0.45;
   cursor: default;
 }
+
+/* Glass treatment for every bidding stage that uses .intake-compact. */
+.intake-compact {
+  position: relative;
+  isolation: isolate;
+  color: var(--ink);
+  background: var(--canvas);
+  padding: 14px 14px 20px;
+}
+
+.intake-compact > * {
+  position: relative;
+  z-index: 1;
+}
+
+.intake-compact .intake-title {
+  color: var(--ink);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.intake-compact .intake-sub,
+.intake-compact .intake-section-hint,
+.intake-compact .intake-label {
+  color: rgba(1, 1, 1, 0.55);
+}
+
+.intake-compact .intake-section,
+.intake-compact .ui-shadow-card,
+.intake-compact header {
+  background: rgba(255, 255, 255, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 16px;
+  box-shadow:
+    0 6px 16px rgba(255, 123, 17, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(18px) saturate(1.45);
+  -webkit-backdrop-filter: blur(18px) saturate(1.45);
+}
+
+.intake-compact header {
+  padding: 10px 14px;
+}
+
+.intake-compact .intake-section-head,
+.intake-compact .intake-section-head-bar,
+.intake-compact .ui-shadow-card > :first-child {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 10px 14px;
+  background: rgba(255, 123, 17, 0.18);
+  border-bottom: 1px solid rgba(255, 123, 17, 0.22);
+  color: var(--ink);
+  text-align: center;
+}
+
+.intake-compact .intake-section-head-bar > button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.intake-compact .intake-section-head-bar h3,
+.intake-compact .ui-shadow-card > :first-child h3 {
+  color: var(--ink);
+}
+
+.intake-compact .intake-section-head-bar p,
+.intake-compact .ui-shadow-card > :first-child p {
+  color: rgba(1, 1, 1, 0.55);
+}
+
+.intake-compact .intake-field,
+.intake-compact input:not([type="checkbox"]):not([type="radio"]),
+.intake-compact select,
+.intake-compact textarea {
+  background: rgba(255, 255, 255, 0.46);
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.intake-compact .intake-field:focus,
+.intake-compact input:focus,
+.intake-compact select:focus,
+.intake-compact textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(255, 123, 17, 0.22);
+}
+
+.intake-compact .intake-field:disabled,
+.intake-compact input:disabled,
+.intake-compact select:disabled,
+.intake-compact textarea:disabled {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.intake-compact .intake-head-btn,
+.intake-compact button {
+  background: rgba(255, 255, 255, 0.42);
+  border-color: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.intake-compact .intake-head-btn:hover,
+.intake-compact button:hover {
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.intake-compact input[type="checkbox"] {
+  background-color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(1, 1, 1, 0.18);
+}
+
+.intake-compact input[type="checkbox"]:checked {
+  border-color: var(--ink);
+  background-color: var(--ink);
+}
+
+.intake-compact [class*="bg-[#f"],
+.intake-compact [class*="bg-[#e"],
+.intake-compact [class*="bg-[#fff"],
+.intake-compact [class*="bg-white"] {
+  background-color: rgba(255, 255, 255, 0.34) !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 12px rgba(255, 123, 17, 0.06);
+}
+
+/* Site glass. Same panels, orange header wash, and soft shadow as intake. */
+.glass-app {
+  background:
+    radial-gradient(1100px 480px at 0% -8%, rgba(255, 123, 17, 0.18), transparent 56%),
+    radial-gradient(820px 420px at 100% 0%, rgba(242, 102, 32, 0.12), transparent 48%),
+    var(--canvas);
+}
+
+.glass-app > div > header {
+  background: rgba(255, 255, 255, 0.55);
+  border-bottom-color: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 6px 16px rgba(255, 123, 17, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(18px) saturate(1.45);
+  -webkit-backdrop-filter: blur(18px) saturate(1.45);
+}
+
+.glass-app aside {
+  background: rgba(10, 10, 12, 0.84);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.glass-app main :is(
+  [class*="rounded-xl"][class*="border"][class*="bg-surface"],
+  [class*="rounded-2xl"][class*="border"][class*="bg-surface"],
+  [class*="rounded-[14px]"][class*="border"][class*="bg-surface"],
+  [class*="rounded-xl"][class*="border"][class*="bg-white"],
+  [class*="rounded-2xl"][class*="border"][class*="bg-white"]
+) {
+  background-color: rgba(255, 255, 255, 0.42);
+  border-color: rgba(255, 255, 255, 0.66);
+  box-shadow:
+    0 6px 16px rgba(255, 123, 17, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(18px) saturate(1.45);
+  -webkit-backdrop-filter: blur(18px) saturate(1.45);
+}
+
+.glass-app main :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  background-color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.74);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.glass-app main :is(input, select, textarea):focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(255, 123, 17, 0.22);
+}
+
+.glass-app main :is(button, a)[class*="bg-surface"][class*="border"] {
+  background-color: rgba(255, 255, 255, 0.48);
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.glass-app main thead tr {
+  background: rgba(255, 123, 17, 0.18);
+}
+
+.glass-app main thead th,
+.glass-app main thead th button {
+  color: #5a5340;
+}
+
 

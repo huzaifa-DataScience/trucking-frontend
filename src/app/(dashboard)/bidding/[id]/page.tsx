@@ -8,6 +8,10 @@ import { BidAssignmentStage } from "@/components/bidding/BidAssignmentStage";
 import { BidEstimatingSetupStage } from "@/components/bidding/BidEstimatingSetupStage";
 import { BidDrawingsStage } from "@/components/bidding/BidDrawingsStage";
 import { BidTakeoffComparisonPanel } from "@/components/bidding/BidTakeoffComparisonPanel";
+import { BidAttachmentsSection } from "@/components/bidding/BidAttachmentsSection";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProcessDraft } from "@/hooks/useProcessDraft";
 import { BidSystemsInputTable } from "@/components/bidding/BidSystemsInputTable";
 import { parseSystemsComputed } from "@/lib/bidding/parse-computed";
 import { BidSpecSheetsStage } from "@/components/bidding/BidSpecSheetsStage";
@@ -24,22 +28,30 @@ import { parseChromeStage } from "@/lib/bidding/process-types";
 function BidWorkspaceInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { bid, isEditable, updateSystemRow } = useBidSheet();
+  const { bid, isEditable, updateSystemRow, uploadAttachment, deleteAttachment, saving } = useBidSheet();
+  const { user } = useAuth();
+  const { draft, setField, editable: processEditable } = useProcessDraft();
   const bidId = bid?.id ?? "";
   const stage = parseChromeStage(
     searchParams.get("stage"),
     searchParams.get("tab"),
     bid?.processStage ?? bid?.process?.stage
   );
+  const takeoffOnly = user?.role === "assistant_estimator" || user?.role === "user";
 
   useEffect(() => {
     if (!bidId) return;
     const tab = searchParams.get("tab");
     const hasStage = searchParams.get("stage");
     if (tab && !hasStage) {
-      router.replace(`/bidding/${bidId}?stage=${stage}`);
+      router.replace(`/bidding/${bidId}?stage=${takeoffOnly ? "takeoff" : stage}`);
     }
-  }, [bidId, router, searchParams, stage]);
+  }, [bidId, router, searchParams, stage, takeoffOnly]);
+
+  useEffect(() => {
+    if (!bidId || !takeoffOnly || stage === "takeoff") return;
+    router.replace(`/bidding/${bidId}?stage=takeoff`);
+  }, [bidId, router, stage, takeoffOnly]);
 
   // Post screens only when workflow allows — else send to Outcome tab
   useEffect(() => {
@@ -56,7 +68,7 @@ function BidWorkspaceInner() {
     }
   }, [bid, bidId, router, stage]);
 
-  if (!bid) {
+  if (!bid || (takeoffOnly && stage !== "takeoff")) {
     return (
       <div className="flex-1 py-2">
         <FormSkeleton fields={5} />
@@ -83,10 +95,39 @@ function BidWorkspaceInner() {
         <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
           <header>
             <h2 className="intake-title">Takeoff</h2>
-            <p className="intake-sub mt-0.5">
-              Systems inputs, Mike Specs qty grid, and takeoff comparison.
-            </p>
           </header>
+          <section className="intake-section min-w-0 max-w-md">
+            <h3 className="intake-section-head">Internal bid date</h3>
+            <div className="intake-section-body">
+              <label className="intake-row">
+                <span className="intake-label">Turn-in date</span>
+                <DatePicker
+                  ariaLabel="Internal bid date"
+                  className="intake-field"
+                  disabled={!processEditable}
+                  value={draft.internalBidDate?.slice(0, 10) ?? ""}
+                  onChange={(v) => setField("internalBidDate", v || null)}
+                />
+              </label>
+            </div>
+          </section>
+          <BidAttachmentsSection
+            title="Takeoff files"
+            attachments={(bid.attachments ?? []).filter(
+              (a) =>
+                a.category === "takeoff_markup" ||
+                a.label === "takeoff-zip" ||
+                a.label === "takeoff-snap" ||
+                a.label === "takeoff-recap" ||
+                a.label === "master-scan"
+            )}
+            isEditable={isEditable}
+            uploading={saving}
+            mode="markup"
+            labels={["takeoff-zip", "takeoff-snap", "takeoff-recap"]}
+            onUpload={async (file, opts) => uploadAttachment(file, opts)}
+            onDelete={async (id) => deleteAttachment(id)}
+          />
           <div
             className={`grid grid-cols-1 items-start gap-3 ${
               hasComparison ? "xl:grid-cols-2" : ""

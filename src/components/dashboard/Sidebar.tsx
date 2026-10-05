@@ -131,6 +131,12 @@ const operationsNavItems: SidebarNavItem[] = [
     Icon: NavIconShield,
     permission: PERMISSIONS.forensicRead,
   },
+  {
+    href: "/project-financials",
+    label: "Project financials",
+    Icon: NavIconInvoice,
+    activePathPrefix: "/project-financials",
+  },
 ];
 
 const dashboardNavItems: SidebarNavItem[] = [

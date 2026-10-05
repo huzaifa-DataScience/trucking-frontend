@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { newId } from "@/lib/bidding/newId";
 import { FilterDateField } from "@/components/filters/FilterDateField";
@@ -24,10 +24,10 @@ function TrashIcon() {
   );
 }
 
-function SelectChevron() {
+function MenuChevron({ open }: { open: boolean }) {
   return (
     <svg
-      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+      className={`h-4 w-4 shrink-0 text-[rgba(255,123,17,0.8)] transition ${open ? "rotate-180" : ""}`}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -36,6 +36,160 @@ function SelectChevron() {
     >
       <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+const glassTriggerClass =
+  "flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-white/80 bg-white/70 px-3 text-left text-sm shadow-[0_4px_12px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md outline-none transition hover:border-[rgba(255,123,17,0.35)] focus-visible:ring-2 focus-visible:ring-[rgba(255,123,17,0.25)]";
+
+function GlassSelect({
+  options,
+  value,
+  values,
+  multiple,
+  placeholder,
+  onPick,
+}: {
+  options: { value: string; label: string }[];
+  value?: string;
+  values?: string[];
+  multiple?: boolean;
+  placeholder: string;
+  onPick: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 220 });
+  const picked = new Set(multiple ? values ?? [] : value ? [value] : []);
+  const labels = options.filter((option) => picked.has(option.value)).map((option) => option.label);
+  const summary = labels.length === 0 ? placeholder : labels.length <= 2 ? labels.join(", ") : `${labels.length} selected`;
+
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const width = Math.max(rect.width, 220);
+      const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
+      const menuHeight = 256;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top = spaceBelow < menuHeight && rect.top > spaceBelow ? Math.max(8, rect.top - menuHeight - 6) : rect.bottom + 6;
+      setPos({ top, left, width });
+    };
+    place();
+    const onDoc = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  return (
+    <>
+      <button ref={buttonRef} type="button" className={glassTriggerClass} onClick={() => setOpen((current) => !current)}>
+        <span className={`min-w-0 truncate ${labels.length ? "text-ink" : "text-ink/40"}`}>{summary}</span>
+        <MenuChevron open={open} />
+      </button>
+      {open
+        ? createPortal(
+            <div
+              ref={menuRef}
+              style={{ top: pos.top, left: pos.left, width: pos.width }}
+              className="fixed z-[70] max-h-64 overflow-auto rounded-xl border border-white/80 bg-white/80 p-1.5 shadow-[0_12px_28px_rgba(255,123,17,0.16),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl"
+            >
+              {options.length === 0 ? (
+                <p className="px-2 py-2 text-xs text-ink/40">No options</p>
+              ) : multiple ? (
+                options.map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-ink hover:bg-white/80"
+                  >
+                    <input type="checkbox" className="sr-only" checked={picked.has(option.value)} onChange={() => onPick(option.value)} />
+                    <GlassBox checked={picked.has(option.value)} />
+                    <span className="min-w-0 leading-snug">{option.label}</span>
+                  </label>
+                ))
+              ) : (
+                options.map((option) => {
+                  const active = picked.has(option.value);
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        onPick(option.value);
+                        setOpen(false);
+                      }}
+                      className={`flex w-full items-center rounded-lg px-2.5 py-2 text-left text-sm ${
+                        active ? "bg-[rgba(255,123,17,0.16)] font-semibold text-ink" : "text-ink hover:bg-white/80"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })
+              )}
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+function GlassBox({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-md border shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_2px_6px_rgba(255,123,17,0.16)] backdrop-blur-md ${
+        checked
+          ? "border-[rgba(255,123,17,0.25)] bg-[rgba(255,123,17,0.82)]"
+          : "border-[rgba(255,123,17,0.35)] bg-white/70"
+      }`}
+    >
+      <svg
+        className={`h-3 w-3 text-white ${checked ? "opacity-100" : "opacity-0"}`}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={3}
+      >
+        <path d="M5 12.5l4.2 4.2L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
+
+function GlassChoice({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (on: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-white/80 bg-white/55 px-3 py-2 shadow-[0_4px_12px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md">
+      <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <GlassBox checked={checked} />
+      <span className="min-w-0 text-sm leading-snug text-ink">{label}</span>
+    </label>
   );
 }
 
@@ -51,8 +205,7 @@ function FieldControl({
   dynamicOptions?: Record<string, { value: string; label: string }[]>;
 }) {
   const inputClass =
-    "h-10 w-full rounded-lg border border-ink/10 bg-surface px-3 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
-  const selectClass = `${inputClass} appearance-none pr-9`;
+    "h-10 w-full rounded-xl border border-white/80 bg-white/70 px-3 text-sm text-ink shadow-[0_4px_12px_rgba(255,123,17,0.06),inset_0_1px_0_rgba(255,255,255,0.9)] outline-none backdrop-blur-md transition focus:border-[rgba(255,123,17,0.45)] focus:ring-2 focus:ring-[rgba(255,123,17,0.18)]";
 
   if (field.kind === "select") {
     const options = field.dynamic ? dynamicOptions?.[field.key] ?? [] : field.options ?? [];
@@ -69,22 +222,13 @@ function FieldControl({
       onChange({ id: condition?.id ?? newId(), field: field.key, op: "in", values });
     };
     return (
-      <div className="max-h-40 overflow-auto rounded-lg border border-ink/10 bg-surface p-2">
-        {options.length === 0 ? (
-          <p className="px-1 py-1 text-xs text-ink/40">No options</p>
-        ) : (
-          options.map((o) => (
-            <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm text-ink hover:bg-ink/[0.04]">
-              <input
-                type="checkbox"
-                checked={selected.has(o.value)}
-                onChange={() => toggle(o.value)}
-              />
-              <span>{o.label}</span>
-            </label>
-          ))
-        )}
-      </div>
+      <GlassSelect
+        multiple
+        options={options}
+        values={[...selected]}
+        placeholder={field.placeholder ?? "Select"}
+        onPick={toggle}
+      />
     );
   }
 
@@ -107,35 +251,27 @@ function FieldControl({
   if (field.kind === "dateRange") {
     const preset = condition?.preset ?? CUSTOM_DATE_RANGE;
     return (
-      <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-ink/10 p-3">
+      <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-white/80 bg-white/55 p-3 shadow-[0_4px_12px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md">
         <div>
           <span className="mb-1 block text-[11px] text-ink/40">Filter by fixed date</span>
-          <div className="relative">
-            <select
-              className={selectClass}
-              value={preset}
-              onChange={(e) => {
-                const next = e.target.value;
-                if (next === CUSTOM_DATE_RANGE) {
-                  // Keep any dates already picked, just switch back to manual entry.
-                  if (condition) onChange({ ...condition, preset: undefined });
-                  return;
-                }
-                const def = DATE_PRESETS.find((p) => p.value === next);
-                if (!def) return;
-                const { start, end } = def.range();
-                onChange({ id: condition?.id ?? newId(), field: field.key, op: "between", start, end, preset: next });
-              }}
-            >
-              <option value={CUSTOM_DATE_RANGE}>Custom date range</option>
-              {DATE_PRESETS.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-            <SelectChevron />
-          </div>
+          <GlassSelect
+            options={[
+              { value: CUSTOM_DATE_RANGE, label: "Custom date range" },
+              ...DATE_PRESETS.map((preset) => ({ value: preset.value, label: preset.label })),
+            ]}
+            value={preset}
+            placeholder="Custom date range"
+            onPick={(next) => {
+              if (next === CUSTOM_DATE_RANGE) {
+                if (condition) onChange({ ...condition, preset: undefined });
+                return;
+              }
+              const def = DATE_PRESETS.find((p) => p.value === next);
+              if (!def) return;
+              const { start, end } = def.range();
+              onChange({ id: condition?.id ?? newId(), field: field.key, op: "between", start, end, preset: next });
+            }}
+          />
         </div>
 
         <div className="flex min-w-0 gap-2">
@@ -180,7 +316,7 @@ function FieldControl({
       <div className="flex h-10 items-center">
         <input
           type="checkbox"
-          className="h-4 w-4 rounded border-ink/20 text-brand focus:ring-brand/40"
+          className="sr-only"
           checked={checked}
           onChange={(e) => {
             if (!e.target.checked) {
@@ -190,6 +326,7 @@ function FieldControl({
             onChange({ id: condition?.id ?? newId(), field: field.key, op: "is", value: "true" });
           }}
         />
+        <GlassBox checked={checked} />
       </div>
     );
   }
@@ -246,6 +383,12 @@ export function FilterSidebar({
   onApply,
   onSaveAsView,
   dynamicOptions,
+  listFilters,
+  selectedListFilters,
+  onToggleListFilter,
+  listFilterError,
+  selectedFieldKeys,
+  onToggleField,
 }: {
   open: boolean;
   fields: FilterFieldDef[];
@@ -256,14 +399,24 @@ export function FilterSidebar({
   onSaveAsView: (name: string, groups: FilterGroup[]) => void;
   /** Live-data-derived option lists for fields marked `dynamic: true`, keyed by field key. */
   dynamicOptions?: Record<string, { value: string; label: string }[]>;
+  /** Which quick filters stay visible above the estimates list. Saved in the background. */
+  listFilters?: { key: string; label: string }[];
+  selectedListFilters?: string[];
+  onToggleListFilter?: (key: string, on: boolean) => void;
+  listFilterError?: string | null;
+  /** When set, Followup fields stay as checkboxes until chosen. Omitted = show every field. */
+  selectedFieldKeys?: string[];
+  onToggleField?: (key: string, on: boolean) => void;
 }) {
   const [groups, setGroups] = useState<FilterGroup[]>(() => (initialGroups?.length ? initialGroups : [emptyGroup()]));
   const [activeGroupIndex, setActiveGroupIndex] = useState(0);
+  const [panelTab, setPanelTab] = useState<"filters" | "fields">("filters");
 
   useEffect(() => {
     if (!open) return;
     setGroups(initialGroups?.length ? initialGroups : [emptyGroup()]);
     setActiveGroupIndex(0);
+    setPanelTab("filters");
   }, [open, initialGroups]);
 
   // Lock the page behind the dialog from scrolling while it's open.
@@ -323,6 +476,25 @@ export function FilterSidebar({
     return [...bySection.entries()];
   }, [fields]);
 
+  const choosingFields = Boolean(onToggleField);
+
+  const fieldChosen = (key: string) =>
+    !choosingFields ||
+    (selectedFieldKeys?.includes(key) ?? false) ||
+    groups.some((group) => group.conditions.some((condition) => condition.field === key));
+
+  const toggleField = (field: FilterFieldDef, on: boolean) => {
+    if (!on) {
+      setGroups((prev) =>
+        prev.map((group) => ({
+          ...group,
+          conditions: group.conditions.filter((condition) => condition.field !== field.key),
+        }))
+      );
+    }
+    onToggleField?.(field.key, on);
+  };
+
   if (!open) return null;
 
   // Portal to <body> — this dialog is `fixed`, and an ancestor page root runs a persistent
@@ -335,48 +507,122 @@ export function FilterSidebar({
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="flex h-full w-full max-w-3xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* Field picker */}
-        <div className="min-w-0 flex-1 overflow-y-auto p-6">
-          <div className="mb-5 flex items-center justify-between">
+        <div className={`min-w-0 flex-1 overflow-y-auto bg-[#f0f1f4] p-6`}>
+          <div className="mb-4 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-ink">{title}</h2>
-            <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
-              Editing Group {activeGroupIndex + 1}
-            </span>
+            {choosingFields && panelTab === "filters" ? (
+              <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+                Editing Group {activeGroupIndex + 1}
+              </span>
+            ) : null}
           </div>
 
-          {sections.map(([section, sectionFields]) => (
-            <div key={section} className="mb-6">
-              <h3 className="mb-3 border-b border-ink/[0.08] pb-2 text-sm font-semibold text-ink">{section}</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {sectionFields.map((field) => (
-                  <label
-                    key={field.key}
-                    className={`flex min-w-0 flex-col gap-1.5 ${field.soloRow ? "sm:col-span-2" : ""}`}
-                  >
-                    <span className="text-xs font-medium text-ink/55">{field.label}</span>
-                    <div className={field.soloRow ? "sm:w-1/2" : undefined}>
-                      <FieldControl
-                        field={field}
-                        condition={activeGroup?.conditions.find((c) => c.field === field.key)}
-                        onChange={(next) => setCondition(field, next)}
-                        dynamicOptions={dynamicOptions}
-                      />
-                    </div>
-                  </label>
-                ))}
-              </div>
+          {choosingFields ? (
+            <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl border border-white/80 bg-white/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_4px_12px_rgba(255,123,17,0.06)] backdrop-blur-md">
+              {(
+                [
+                  ["filters", "Filters"],
+                  ["fields", "Choose fields"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setPanelTab(id)}
+                  className={`h-9 rounded-lg text-sm font-semibold transition ${
+                    panelTab === id
+                      ? "bg-white/80 text-ink shadow-[0_4px_12px_rgba(255,123,17,0.12),inset_0_1px_0_rgba(255,255,255,0.95)]"
+                      : "text-ink/55 hover:text-ink"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-          ))}
+          ) : null}
+
+          {panelTab === "fields" && choosingFields ? (
+            <>
+              {listFilters && listFilters.length > 0 ? (
+                <div className="mb-6">
+                  <h3 className="mb-3 text-sm font-semibold text-ink">Show above the list</h3>
+                  <div className="grid grid-cols-2 items-stretch gap-2">
+                    {listFilters.map((item) => (
+                      <GlassChoice
+                        key={item.key}
+                        label={item.label}
+                        checked={selectedListFilters?.includes(item.key) ?? false}
+                        onChange={(on) => onToggleListFilter?.(item.key, on)}
+                      />
+                    ))}
+                  </div>
+                  {listFilterError ? <p className="mt-2 text-xs text-danger">{listFilterError}</p> : null}
+                </div>
+              ) : null}
+
+              {sections.map(([section, sectionFields]) => (
+                <div key={section} className="mb-6">
+                  <h3 className="mb-3 text-sm font-semibold text-ink">{section}</h3>
+                  <div className="grid grid-cols-2 items-stretch gap-2">
+                    {sectionFields.map((field) => (
+                      <GlassChoice
+                        key={field.key}
+                        label={field.label}
+                        checked={fieldChosen(field.key)}
+                        onChange={(on) => toggleField(field, on)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              {sections.map(([section, sectionFields]) => {
+                const visible = choosingFields
+                  ? sectionFields.filter((field) => fieldChosen(field.key))
+                  : sectionFields;
+                if (visible.length === 0) return null;
+                return (
+                  <div key={section} className="mb-6">
+                    <h3 className="mb-3 border-b border-ink/[0.08] pb-2 text-sm font-semibold text-ink">{section}</h3>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {visible.map((field) => (
+                        <label
+                          key={field.key}
+                          className={`flex min-w-0 flex-col gap-1.5 ${field.soloRow ? "sm:col-span-2" : ""}`}
+                        >
+                          <span className="text-xs font-medium text-ink/55">{field.label}</span>
+                          <div className={field.soloRow ? "sm:w-1/2" : undefined}>
+                            <FieldControl
+                              field={field}
+                              condition={activeGroup?.conditions.find((c) => c.field === field.key)}
+                              onChange={(next) => setCondition(field, next)}
+                              dynamicOptions={dynamicOptions}
+                            />
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              {choosingFields && sections.every(([, sectionFields]) => sectionFields.every((field) => !fieldChosen(field.key))) ? (
+                <p className="text-sm text-ink/45">Choose fields to add filters.</p>
+              ) : null}
+            </>
+          )}
         </div>
 
         {/* Filters summary */}
-        <div className="flex h-full w-72 shrink-0 flex-col border-l border-ink/[0.08]">
-          <div className="flex items-center justify-between border-b border-ink/[0.08] px-5 py-4">
+        <div className="flex h-full w-72 shrink-0 flex-col border-l border-white/70 bg-[#f0f1f4]">
+          <div className="flex items-center justify-between border-b border-white/70 px-5 py-4">
             <h3 className="text-sm font-semibold text-ink">Filters</h3>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="rounded-lg p-1.5 text-ink/40 transition hover:bg-ink/[0.06] hover:text-ink"
+              className="rounded-lg border border-white/80 bg-white/60 p-1.5 text-ink/50 shadow-[0_2px_8px_rgba(255,123,17,0.08)] backdrop-blur-md transition hover:text-ink"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
                 <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
@@ -397,8 +643,10 @@ export function FilterSidebar({
                 <button
                   type="button"
                   onClick={() => setActiveGroupIndex(gi)}
-                  className={`w-full rounded-xl border p-3 text-left transition ${
-                    gi === activeGroupIndex ? "border-brand/40 bg-brand/[0.04]" : "border-ink/10 hover:border-ink/20"
+                  className={`w-full rounded-xl border p-3 text-left shadow-[0_4px_12px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md transition ${
+                    gi === activeGroupIndex
+                      ? "border-[rgba(255,123,17,0.35)] bg-[rgba(255,123,17,0.1)]"
+                      : "border-white/80 bg-white/60 hover:border-[rgba(255,123,17,0.25)]"
                   }`}
                 >
                   <div className="mb-2 flex items-center justify-between">
@@ -418,7 +666,7 @@ export function FilterSidebar({
                     ) : null}
                   </div>
                   {g.conditions.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-ink/15 px-3 py-2.5 text-xs text-ink/40">
+                    <p className="rounded-lg border border-dashed border-[rgba(255,123,17,0.28)] bg-white/40 px-3 py-2.5 text-xs text-ink/40">
                       Your filter will appear here
                     </p>
                   ) : (
@@ -429,7 +677,7 @@ export function FilterSidebar({
                         return (
                           <div key={c.id}>
                             {ci > 0 ? <p className="py-0.5 text-center text-[11px] font-semibold text-ink/35">and</p> : null}
-                            <div className="flex items-center justify-between gap-2 rounded-lg bg-brand/10 px-3 py-2 text-xs">
+                            <div className="flex items-center justify-between gap-2 rounded-lg border border-white/70 bg-white/75 px-3 py-2 text-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
                               <span className="min-w-0 truncate text-ink">
                                 {splitIdx === -1 ? (
                                   desc
@@ -469,13 +717,13 @@ export function FilterSidebar({
             <button
               type="button"
               onClick={addGroup}
-              className="w-full rounded-xl border border-brand/30 px-3 py-2.5 text-xs font-semibold text-brand transition hover:bg-brand/[0.06]"
+              className="w-full rounded-xl border border-[rgba(255,123,17,0.35)] bg-white/55 px-3 py-2.5 text-xs font-semibold text-brand shadow-[0_4px_12px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md transition hover:bg-[rgba(255,123,17,0.08)]"
             >
               + Add filter group
             </button>
           </div>
 
-          <div className="flex shrink-0 gap-1.5 border-t border-ink/[0.08] p-3">
+          <div className="flex shrink-0 gap-1.5 border-t border-white/70 p-3">
             <button
               type="button"
               disabled={totalConditions === 0}
@@ -483,7 +731,7 @@ export function FilterSidebar({
                 const name = window.prompt('Name this view (e.g. "Bid in Process — Wilder")');
                 if (name?.trim()) onSaveAsView(name.trim(), groups);
               }}
-              className="flex-1 whitespace-nowrap rounded-xl border border-ink/10 px-2 py-2.5 text-xs font-semibold text-ink/70 transition hover:border-brand/30 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
+              className="flex-1 whitespace-nowrap rounded-xl border border-white/80 bg-white/70 px-2 py-2.5 text-xs font-semibold text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md transition hover:text-ink disabled:pointer-events-none disabled:opacity-40"
             >
               Save List
             </button>
@@ -494,14 +742,14 @@ export function FilterSidebar({
                 setGroups([emptyGroup()]);
                 setActiveGroupIndex(0);
               }}
-              className="flex-1 whitespace-nowrap rounded-xl border border-danger/30 px-2 py-2.5 text-xs font-semibold text-danger transition hover:bg-danger/[0.06] disabled:pointer-events-none disabled:opacity-40"
+              className="flex-1 whitespace-nowrap rounded-xl border border-[rgba(220,38,38,0.25)] bg-white/70 px-2 py-2.5 text-xs font-semibold text-danger shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md transition hover:bg-danger/[0.06] disabled:pointer-events-none disabled:opacity-40"
             >
               Clear
             </button>
             <button
               type="button"
               onClick={() => onApply(groups)}
-              className="flex-1 whitespace-nowrap rounded-xl bg-brand px-2 py-2.5 text-xs font-semibold text-white transition hover:bg-brand-secondary"
+              className="flex-1 whitespace-nowrap rounded-xl bg-[rgba(255,123,17,0.92)] px-2 py-2.5 text-xs font-semibold text-white shadow-[0_4px_12px_rgba(255,123,17,0.28)] transition hover:bg-brand-secondary"
             >
               Apply
             </button>

@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { useBidSheet } from "@/contexts/BidSheetContext";
-import { getApiErrorMessage } from "@/lib/api/client";
+import { getApiErrorMessage, ApiError } from "@/lib/api/client";
+import { useToast } from "@/components/ui/ToastProvider";
 import type { BidProcess, SpecSheet } from "@/lib/bidding/process-types";
 import {
   normalizeSpecSheets,
@@ -74,6 +75,7 @@ export function useProcessDraft() {
     setProcessDirty,
     registerProcessSave,
   } = useBidSheet();
+  const { showToast } = useToast();
   const [draft, setDraftState] = useState<BidProcess>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,7 @@ export function useProcessDraft() {
   const draftRef = useRef<BidProcess>({});
   const savedFp = useRef<string>("");
   const archived = bid?.status === "archived";
-  const editable = Boolean(canWrite && !archived);
+  const editable = Boolean(canWrite && !archived && bid?.canEdit !== false);
 
   useEffect(() => {
     if (!bid) return;
@@ -163,12 +165,16 @@ export function useProcessDraft() {
         process: changedDuringSave ? { ...(updated.process ?? {}), ...draftRef.current } : mergedProcess,
       });
     } catch (e) {
-      setError(getApiErrorMessage(e, "Failed to save"));
+      const message = getApiErrorMessage(e, "Failed to save");
+      setError(message);
+      if (e instanceof ApiError && e.status === 403) {
+        showToast(message, "error");
+      }
       throw e;
     } finally {
       setSaving(false);
     }
-  }, [bid, editable, applyBidDetail, setProcessDirty]);
+  }, [bid, editable, applyBidDetail, setProcessDirty, showToast]);
 
   useEffect(() => {
     registerProcessSave(persist);

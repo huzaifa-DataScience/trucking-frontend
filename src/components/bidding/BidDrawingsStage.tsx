@@ -19,7 +19,7 @@ const PHASE_SHORT: Record<string, string> = {
   ifr: "IFR",
 };
 
-/** Chrome tab after Setup, before Spec sheets — every drawing (attachments), by revision phase. */
+/** Drawing phases with upload, download, and delete. */
 export function BidDrawingsStage() {
   const { bid, editable, saving } = useProcessDraft();
   const { uploadAttachment, deleteAttachment } = useBidSheet();
@@ -45,9 +45,6 @@ export function BidDrawingsStage() {
     <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       <header>
         <h2 className="intake-title">Drawings</h2>
-        <p className="intake-sub mt-0.5">
-          Revision sets for this bid — SD through IFR. Separate from general Attachments.
-        </p>
       </header>
 
       <BidAttachmentsSection

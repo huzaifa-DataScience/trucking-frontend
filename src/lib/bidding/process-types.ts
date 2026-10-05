@@ -286,6 +286,8 @@ export interface ProcessTakeoffAssignment {
   finalQuantity?: number | null;
   reviewedBy?: string | null;
   versions?: ProcessTakeoffVersion[];
+  /** Estimator marked this scope turned in. */
+  completed?: boolean | null;
 }
 
 export interface ProcessTechnicalReview {
@@ -598,6 +600,10 @@ export interface BidProcess {
   clearance?: ClearanceType;
   entityRule?: ProcessEntityRule | null;
   dueDate?: string | null;
+  /** Invitation / advertised price. Not the calculator `baseBid` object. */
+  baseBidPrice?: number | null;
+  /** Overseas takeoff turn-in. Set on Handoff. Not client bidDate. */
+  internalBidDate?: string | null;
   dateSubmitted?: string | null;
   amountSubmitted?: number | null;
   amendments?: unknown[];
@@ -663,6 +669,13 @@ export interface BidWorkflow {
   showAward?: boolean;
   showLost?: boolean;
   takeoffComparisons?: unknown;
+  /** Chrome pills from the server. Render these; do not invent. */
+  tabs?: Array<{
+    id: string;
+    stage: string | null;
+    label: string;
+    pill?: "complete" | "in_progress" | "todo" | string | null;
+  }>;
   [key: string]: unknown;
 }
 
@@ -837,7 +850,7 @@ export type BidChromeStage =
   | "lost"
   | "production";
 
-/** Pre strip — Drawings then Spec sheets after Setup; Outcome last. */
+/** Chrome order from the 30 Sep handoff: Drawings and Specs before Setup. */
 export const BID_HANDOFF_STAGES: {
   id: Exclude<BidChromeStage, "award" | "lost" | "production">;
   label: string;
@@ -845,9 +858,9 @@ export const BID_HANDOFF_STAGES: {
 }[] = [
   { id: "intake", label: "Intake", short: "1 Intake" },
   { id: "assignment", label: "Assignment", short: "2 Assignment" },
-  { id: "estimating_setup", label: "Setup", short: "3 Setup" },
-  { id: "drawings", label: "Drawings", short: "4 Drawings" },
-  { id: "spec_sheets", label: "Spec sheets", short: "5 Spec sheets" },
+  { id: "drawings", label: "Drawings", short: "3 Drawings" },
+  { id: "spec_sheets", label: "Spec sheets", short: "4 Spec sheets" },
+  { id: "estimating_setup", label: "Handoff", short: "5 Handoff" },
   { id: "takeoff", label: "Takeoff", short: "6 Takeoff" },
   { id: "proposal", label: "Proposal", short: "7 Proposal" },
   { id: "post_bid", label: "Post-Bid", short: "8 Post-Bid" },
@@ -930,7 +943,7 @@ export function formatProcessStage(s: string | null | undefined): string {
   const map: Record<string, string> = {
     intake: "Intake",
     assignment: "Assignment",
-    estimating_setup: "Setup",
+    estimating_setup: "Handoff",
     drawings: "Drawings",
     spec_sheets: "Spec sheets",
     takeoff: "Takeoff",
@@ -942,7 +955,7 @@ export function formatProcessStage(s: string | null | undefined): string {
     lost: "Lost",
     production: "Production",
     first_input: "Intake",
-    estimating: "Setup",
+    estimating: "Handoff",
     intelligence: "Post-Bid",
     awarded: "Awarded",
   };

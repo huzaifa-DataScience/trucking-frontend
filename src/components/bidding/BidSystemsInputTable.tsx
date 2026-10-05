@@ -6,9 +6,6 @@ import { formatMoneyPrecise } from "@/lib/bidding/format";
 import type { BidSystemRow } from "@/lib/bidding/types";
 import type { SystemComputed } from "@/lib/bidding/engine/types";
 
-const COL_HINT =
-  "Excel rows 17→21: MIKE est #, Materials, Labor hrs, MIKE total $, Quantity";
-
 export function BidSystemsInputTable({
   systems,
   systemsComputed,
@@ -26,7 +23,6 @@ export function BidSystemsInputTable({
     <section className="intake-section min-w-0">
       <div className="intake-section-head">Systems — inputs</div>
       <div className="intake-section-body">
-        <p className="intake-section-hint">{COL_HINT}</p>
         <div className="overflow-x-auto rounded border border-[#e5e7eb]">
           <table className="w-full min-w-[40rem] text-left text-[12.5px] text-[#374151]">
             <thead>

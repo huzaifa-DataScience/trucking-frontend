@@ -210,9 +210,6 @@ export function BidSheetForm() {
       <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3">
       <header>
         <h2 className="intake-title">Proposal</h2>
-        <p className="intake-sub mt-0.5">
-          Bidding sheet calculator — cover sheet, wage, schedule, and live totals.
-        </p>
       </header>
       <nav aria-label="Breadcrumb" className="text-[12px] text-[#6b7280]">
         <Link href="/bidding" className="font-medium transition-colors hover:text-[#1f2937]">
@@ -568,7 +565,6 @@ export function BidSheetForm() {
             <section className="intake-section min-w-0">
               <div className="intake-section-head">Schedule & margin</div>
               <div className="intake-section-body">
-                <p className="intake-section-hint">Filled on Setup. Shown here for the calculator output.</p>
                 <div className="grid gap-3 grid-cols-2">
                   <BidFormField
                     label="Margin"
@@ -649,7 +645,6 @@ export function BidSheetForm() {
             <section className="intake-section min-w-0">
               <div className="intake-section-head">Parking & lifts</div>
               <div className="intake-section-body">
-                <p className="intake-section-hint">Filled on Setup. Results still use these calculator inputs.</p>
                 <div className="grid gap-3 grid-cols-2">
                   <BoolSelect
                     id="parking"
