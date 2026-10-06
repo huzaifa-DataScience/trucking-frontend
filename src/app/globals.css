@@ -2,12 +2,12 @@
 
 /*
   Product chrome: charcoal primary rail, white secondary, gray canvas, Roboto.
-  Brand accent = clearer blue CTA for buttons, focus, and selected secondary items.
+  Brand accent = CTA blue for buttons, focus, and selected items.
 */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
-  --sidebar #262d33, --sidebar-active #333d45, --canvas #f5f5f5, --ink #212121
+  --sidebar charcoal, --canvas #f5f5f5, --ink #212121
   --brand blue #1E88E5
 */
 :root {
@@ -23,7 +23,7 @@
   --ink-soft: #757575;
   /** App canvas behind white cards */
   --canvas: #f5f5f5;
-  /** Clearstory dark primary nav */
+  /** Primary nav — Clearstory-style charcoal */
   --sidebar: #262d33;
   --sidebar-active: #333d45;
   /** Secondary / settings sub-nav plane */
@@ -45,9 +45,9 @@
   --info-tint: #eff6ff;
   --info-border: #bfdbfe;
 
-  /* Compact SaaS type scale — 400 body / 500 UI / 600 headings */
-  --text-nav: 13px;
-  --text-nav-sm: 12px;
+  /* Clearstory / drywall uses Roboto — nav reads a bit larger than dense SaaS */
+  --text-nav: 18px;
+  --text-nav-sm: 16px;
   --text-page-title: 20px;
   --text-section: 15px;
   --text-label: 13px;
@@ -197,13 +197,15 @@ body {
   color: var(--ink);
 }
 .cs-rail-section {
-  margin-bottom: var(--space-1);
-  padding: 0;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
+  margin: 0 0 12px;
+  padding: 0 4px;
+  font-family: var(--font-geist-sans), "Roboto", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
 }
 .cs-content-panel {
   background: #ffffff;
@@ -1032,20 +1034,28 @@ body {
 
 .glass-app aside:not(.workspace-secondary-rail):not(.estimates-status-rail) {
   background: var(--sidebar);
+  color: #f5f5f5;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: var(--font-geist-sans), "Roboto", system-ui, sans-serif;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
-/* Clearstory white secondary rail — do not inherit dark nav glass. */
 .glass-app aside.workspace-secondary-rail,
 .glass-app aside.estimates-status-rail {
   background: var(--sidebar-secondary);
   border-left: none;
   border-right: 1px solid rgba(0, 0, 0, 0.08);
+  font-family: var(--font-geist-sans), "Roboto", system-ui, sans-serif;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
   color: var(--ink);
+  /* Secondary rail is never collapsible — lock full width */
+  width: 232px !important;
+  min-width: 232px !important;
+  max-width: 232px !important;
+  flex-shrink: 0 !important;
 }
 
 /* Never overlay forms on small screens — dual-rail is xl+ (1280px) only */

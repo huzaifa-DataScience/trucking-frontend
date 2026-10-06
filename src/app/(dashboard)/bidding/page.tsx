@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { BidStageProgressBar } from "@/components/bidding/BidStageProgressBar";
@@ -367,12 +368,22 @@ function softBreakText(text: string) {
   ));
 }
 
+function statusFromSearchParam(raw: string | null): StatusFilter {
+  if (raw === "draft" || raw === "submitted" || raw === "archived") return raw;
+  return "all";
+}
+
 export default function BiddingListPage() {
   const { companyId } = useCompany();
   const { user, setUser } = useAuth();
   const { canRead, canWrite } = useBiddingAccess();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>(() =>
+    statusFromSearchParam(searchParams.get("status"))
+  );
   const [workType, setWorkType] = useState("");
   const [processStage, setProcessStage] = useState("");
   const [outcome, setOutcome] = useState("");
@@ -913,8 +924,24 @@ export default function BiddingListPage() {
     return "No estimates yet.";
   }, [error, search, status]);
 
+  useEffect(() => {
+    setStatus(statusFromSearchParam(searchParams.get("status")));
+  }, [searchParams]);
+
+  const applyStatus = useCallback(
+    (value: StatusFilter) => {
+      setStatus(value);
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === "all") params.delete("status");
+      else params.set("status", value);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
   const toggleStatus = (value: StatusFilter) =>
-    setStatus((prev) => (prev === value ? "all" : value));
+    applyStatus(status === value ? "all" : value);
 
   const listColumns: { key: SortKey; label: string; width: string }[] = internalList
     ? [
@@ -1074,13 +1101,13 @@ export default function BiddingListPage() {
       </div>
 
       <div className="flex flex-col gap-4">
-        {/* Record status: secondary rail owns these on xl+; sticky horizontal strip below xl */}
+        {/* Record status — below xl only; xl+ uses secondary sidebar */}
         <div
           className="sticky top-14 z-20 -mx-4 border-b border-[var(--border-subtle)] bg-canvas px-4 sm:top-[3.75rem] sm:-mx-6 sm:px-6 xl:hidden"
           role="tablist"
           aria-label="Estimate record status"
         >
-          <div className="flex flex-nowrap items-center gap-5 overflow-x-auto pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {STATUS_FILTERS.map((f) => {
               const active = status === f.value;
               const count = tabCount(f.value);
@@ -1088,10 +1115,12 @@ export default function BiddingListPage() {
                 <button
                   key={f.value}
                   type="button"
-                  onClick={() => (f.value === "all" ? setStatus("all") : toggleStatus(f.value))}
+                  onClick={() => (f.value === "all" ? applyStatus("all") : toggleStatus(f.value))}
                   aria-pressed={active}
-                  className={`relative shrink-0 whitespace-nowrap pb-2.5 text-sm transition focus-visible:outline-none ${
-                    active ? "font-semibold text-ink" : "font-medium text-ink-muted hover:text-ink"
+                  className={`relative shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-[13px] transition focus-visible:outline-none ${
+                    active
+                      ? "bg-brand-tint font-semibold text-ink"
+                      : "font-medium text-ink-muted hover:bg-canvas hover:text-ink"
                   }`}
                 >
                   {f.label}{" "}
@@ -1099,7 +1128,7 @@ export default function BiddingListPage() {
                     {count == null ? "—" : count}
                   </span>
                   {active ? (
-                    <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />
+                    <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand" />
                   ) : null}
                 </button>
               );

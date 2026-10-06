@@ -46,8 +46,8 @@ type ViewMode =
 const WORKSPACE_STORAGE_KEY = "construction-logistics-workspace";
 
 /** Secondary rail width on xl+ (compact enterprise child nav). */
-export const SIDEBAR_SECONDARY_PX = 200;
-export const SIDEBAR_SECONDARY_W = "w-[200px]";
+export const SIDEBAR_SECONDARY_PX = 232;
+export const SIDEBAR_SECONDARY_W = "w-[232px]";
 
 /** Primary rail widths — documented for secondary offset math (w-64 / w-16). */
 // SIDEBAR_PRIMARY_EXPANDED_PX = 256; SIDEBAR_PRIMARY_COLLAPSED_PX = 64;
@@ -90,10 +90,6 @@ export function bidDetailIdFromPath(pathname: string): string | null {
   return id;
 }
 
-function isBiddingListPath(pathname: string): boolean {
-  return pathname === "/bidding" || pathname === "/bidding/all";
-}
-
 type SidebarNavItem = {
   href: string;
   label: string;
@@ -124,12 +120,11 @@ function workspaceShowsSecondaryRail(view: ViewMode, pathname: string, canSeeBil
 
 /**
  * Content offset for primary (+ optional secondary on xl+).
- * Keep in sync with Sidebar widths (w-64 / w-16 + 200px secondary / 32px strip).
+ * Keep in sync with Sidebar widths (w-64 / w-16 + 232px secondary).
  */
 export function dashboardMainOffsetClass(
   pathname: string,
-  collapsed: boolean,
-  secondaryCollapsed = false
+  collapsed: boolean
 ): string {
   const view = viewFromPathname(pathname);
   // Optimistic: assume secondary when path implies a workspace that uses one.
@@ -138,19 +133,13 @@ export function dashboardMainOffsetClass(
 
   // Mobile: overlay drawer — no permanent padding
   // sm–md: primary only (accordion hosts children)
-  // xl+: primary + secondary (or thin expand strip when secondary collapsed)
+  // xl+: primary + secondary (secondary stays full width; primary may collapse)
   if (!hasSecondary) {
     return collapsed ? "sm:pl-16" : "sm:pl-64";
   }
   const primary = collapsed ? "sm:pl-16" : "sm:pl-64";
-  // Bid sheet owns its own secondary rail — never use the thin collapsed strip there.
-  const isBidDetail = Boolean(bidDetailIdFromPath(pathname));
-  if (secondaryCollapsed && !isBidDetail) {
-    // Primary + 32px expand strip
-    return `${primary} ${collapsed ? "xl:pl-[96px]" : "xl:pl-[288px]"}`;
-  }
-  // Primary (256 / 64) + secondary (200) → 456 / 264
-  const withSecondary = collapsed ? "xl:pl-[264px]" : "xl:pl-[456px]";
+  // Primary (256 / 64) + secondary (232) → 488 / 296
+  const withSecondary = collapsed ? "xl:pl-[296px]" : "xl:pl-[488px]";
   return `${primary} ${withSecondary}`;
 }
 
@@ -371,13 +360,6 @@ const SETTINGS_RAIL_SECTIONS: {
   },
 ];
 
-const BID_STATUS_FILTERS: { value: string; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "draft", label: "Draft" },
-  { value: "submitted", label: "Submitted" },
-  { value: "archived", label: "Archived" },
-];
-
 /**
  * FRONTEND_RBAC.md — admin / super_admin see every workspace item
  * (except WFS — super_admin only). Do not hide other chrome on missing keys.
@@ -425,29 +407,18 @@ export function Sidebar({
   onMobileClose,
   collapsed = false,
   onToggleCollapsed,
-  secondaryCollapsed = false,
-  onToggleSecondaryCollapsed,
 }: {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
   /** Desktop-only (lg+) manual collapse to an icon-only rail; unrelated to the mobile drawer. */
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
-  /** xl+ only — hide workspace secondary rail; route stays put. */
-  secondaryCollapsed?: boolean;
-  onToggleSecondaryCollapsed?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAdmin, user, logout } = useAuth();
   const chatUnreadTotal = useChatUnreadTotal();
-  /** The mobile drawer always shows full labels regardless of the persisted desktop collapse preference. */
-  const iconOnly = collapsed && !mobileOpen;
-  /** Visible everywhere except when manually collapsed (sm+), where labels hide entirely. */
-  const lgLabel = collapsed ? "sm:hidden" : "";
-  const lgLabelInline = collapsed ? "sm:hidden" : "";
-  const lgLabelFlex = `flex ${collapsed ? "sm:hidden" : ""}`;
 
   useEffect(() => {
     onMobileClose?.();
@@ -478,6 +449,12 @@ export function Sidebar({
     can(user, PERMISSIONS.clearstoryRead) ||
     can(user, PERMISSIONS.sitelineRead);
 
+  /** Primary collapse is independent of the secondary rail (secondary never collapses). */
+  const iconOnly = collapsed && !mobileOpen;
+  const lgLabel = collapsed ? "sm:hidden" : "";
+  const lgLabelInline = collapsed ? "sm:hidden" : "";
+  const lgLabelFlex = `flex ${collapsed ? "sm:hidden" : ""}`;
+
   const visibleWorkspaces = WORKSPACES.filter(({ value }) => {
     // FRONTEND_WFS.md — never show WFS via admin chrome; super_admin only.
     if (value === "wfs") return showWfs;
@@ -507,9 +484,6 @@ export function Sidebar({
   });
 
   const handleViewChange = (value: ViewMode) => {
-    // Opening a workspace should reveal its secondary rail if it was collapsed.
-    if (secondaryCollapsed) onToggleSecondaryCollapsed?.();
-
     // Re-clicking Billing while inside Clearstory should return to /billings.
     if (value === currentView) {
       if (value === "billings" && pathname.startsWith("/clearstory")) {
@@ -560,35 +534,36 @@ export function Sidebar({
     workspaceShowsSecondaryRail(currentView, pathname, canSeeBillings) && !activeBidId;
 
   const navLinkClass = (active: boolean) =>
-    `flex h-9 items-center gap-2.5 rounded-[var(--radius)] px-2 text-[13px] font-medium transition-colors ${
-      iconOnly ? "justify-center" : "justify-start px-2.5"
+    `flex h-12 items-center gap-3 rounded-md px-2.5 font-[family-name:var(--font-geist-sans)] text-[var(--text-nav)] font-medium leading-none transition-colors ${
+      iconOnly ? "justify-center" : "justify-start px-3"
     } ${
       active
-        ? "bg-[var(--sidebar-active)] text-white"
-        : "text-white/75 hover:bg-white/[0.06] hover:text-white"
+        ? "bg-[var(--sidebar-active)] font-semibold text-white"
+        : "text-white hover:bg-white/[0.06] hover:text-white"
     }`;
 
   const accordionSubLinkClass = (active: boolean) =>
-    `flex h-8 items-center gap-2 rounded-[var(--radius)] text-[12px] font-medium transition-colors ${
-      iconOnly ? "justify-center px-2" : "pl-3 pr-2.5"
+    `flex h-11 items-center gap-2.5 rounded-md font-[family-name:var(--font-geist-sans)] text-[var(--text-nav-sm)] font-medium leading-none transition-colors ${
+      iconOnly ? "justify-center px-2" : "pl-3.5 pr-3"
     } ${
       active
-        ? "bg-[var(--sidebar-active)] text-white"
-        : "text-white/65 hover:bg-white/[0.05] hover:text-white"
+        ? "bg-[var(--sidebar-active)] font-semibold text-white"
+        : "text-white hover:bg-white/[0.05] hover:text-white"
     }`;
 
-  /** Secondary rail row — parent vs indented child; brand-tint active + green inset. */
+  /** Secondary rail — neutral type; brand reserved for active indicator. */
   const secondaryLinkClass = (active: boolean, child = false) =>
-    `flex h-9 items-center rounded-[var(--radius)] text-[13px] transition-colors ${
-      child ? "pl-5 pr-3" : "px-3"
+    `flex min-h-10 items-center rounded-md px-3 py-2.5 font-[family-name:var(--font-geist-sans)] text-[var(--text-nav-sm)] font-normal leading-snug transition-colors duration-150 ${
+      child ? "pl-5" : ""
     } ${
       active
-        ? "bg-brand-tint font-semibold text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
-        : "font-medium text-ink-muted hover:bg-canvas hover:text-ink"
+        ? "bg-brand-tint font-medium text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
+        : "text-ink hover:bg-canvas hover:text-ink"
     }`;
 
   const secondaryLeft = collapsed && !mobileOpen ? "left-16" : "left-64";
   const showSecondaryChrome = showSecondaryRail;
+  const isEstimatesList = currentView === "bidding" && !activeBidId && pathname === "/bidding";
 
   return (
     <>
@@ -600,28 +575,28 @@ export function Sidebar({
         />
       ) : null}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-white/[0.06] bg-sidebar transition-[width,transform] duration-200 sm:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-white/[0.06] bg-sidebar text-white transition-[width,transform] duration-200 sm:translate-x-0 ${
           collapsed ? "sm:w-16" : "sm:w-64"
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div
-          className={`flex items-center justify-between border-b border-white/[0.07] px-3 ${
-            collapsed ? "h-14 sm:h-auto sm:flex-col sm:justify-center sm:gap-1.5 sm:py-2.5" : "h-14"
+          className={`flex shrink-0 items-center justify-between border-b border-white/[0.08] px-4 ${
+            collapsed ? "h-16 sm:h-auto sm:flex-col sm:justify-center sm:gap-2 sm:py-4" : "h-16"
           }`}
         >
           <Link
             href={logoHref}
-            className="flex min-w-0 items-center gap-2.5 rounded-lg outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
+            className="flex min-w-0 items-center gap-3 rounded-lg outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
             aria-label="Home"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/95 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.5)]">
-              <AppLogo height={20} />
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.45)]">
+              <AppLogo height={22} />
             </span>
             <span className={`min-w-0 flex-col ${lgLabelFlex}`}>
-              <span className="truncate text-[13px] font-semibold leading-tight text-white/95">
+              <span className="truncate text-[18px] font-semibold leading-tight text-white">
                 Construction Logistics
               </span>
-              <span className="text-[10.5px] leading-tight text-white/50">GOEL Services</span>
+              <span className="mt-0.5 text-[13px] leading-tight text-white/70">GOEL Services</span>
             </span>
           </Link>
           <button
@@ -629,7 +604,7 @@ export function Sidebar({
             onClick={onToggleCollapsed}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="hidden shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] p-1.5 text-white/55 transition hover:border-white/[0.14] hover:bg-white/[0.09] hover:text-white sm:flex"
+            className="hidden shrink-0 items-center justify-center rounded-lg border border-white/[0.1] bg-white/[0.04] p-2 text-white/55 transition hover:border-white/[0.16] hover:bg-white/[0.08] hover:text-white sm:flex"
           >
             <svg
               className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
@@ -645,7 +620,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={onMobileClose}
-            className="flex shrink-0 items-center justify-center rounded-lg p-1.5 text-white/60 transition hover:bg-white/[0.08] hover:text-white sm:hidden"
+            className="flex shrink-0 items-center justify-center rounded-lg p-2 text-white/60 transition hover:bg-white/[0.08] hover:text-white sm:hidden"
             aria-label="Close navigation menu"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -654,12 +629,12 @@ export function Sidebar({
           </button>
         </div>
 
-        <nav className="ui-scroll-dark flex-1 space-y-5 overflow-y-auto px-2 py-3">
+        <nav className="ui-scroll-dark flex-1 space-y-6 overflow-y-auto px-3 pb-5 pt-5">
           <div>
-            <p className={`mb-1.5 px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-white/45 ${lgLabel}`}>
+            <p className={`mb-2.5 px-3 font-[family-name:var(--font-geist-sans)] text-[14px] font-medium text-white ${lgLabel}`}>
               Workspace
             </p>
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {visibleWorkspaces.map(({ value, Icon }) => {
                 const isActiveWorkspace = currentView === value;
                 /** Accordion below lg; lg+ children live in the light secondary rail. */
@@ -669,53 +644,32 @@ export function Sidebar({
                   workspaceShowsSecondaryRail(value, pathname, canSeeBillings) &&
                   (items.length > 0 || value === "billings");
                 return (
-                  <div key={value} className="space-y-0.5">
+                  <div key={value} className="space-y-1">
                     <button
                       type="button"
                       onClick={() => handleViewChange(value)}
                       title={WORKSPACE_FULL_LABELS[value]}
                       aria-expanded={isExpanded}
                       aria-current={isActiveWorkspace ? "page" : undefined}
-                      className={`flex h-9 w-full items-center gap-2.5 rounded-[var(--radius)] px-2 text-[13px] font-medium tracking-tight transition-colors ${
-                        iconOnly ? "justify-center" : "justify-start px-2.5"
+                      className={`flex h-12 w-full items-center gap-3 rounded-md px-2.5 font-[family-name:var(--font-geist-sans)] text-[var(--text-nav)] font-medium leading-none transition-colors ${
+                        iconOnly ? "justify-center" : "justify-start px-3"
                       } ${
                         isActiveWorkspace
-                          ? "bg-[var(--sidebar-active)] text-white"
-                          : "text-white/75 hover:bg-white/[0.06] hover:text-white"
+                          ? "bg-[var(--sidebar-active)] font-semibold text-white"
+                          : "text-white hover:bg-white/[0.06] hover:text-white"
                       }`}
                     >
-                      <Icon
-                        className={`h-4 w-4 shrink-0 ${
-                          isActiveWorkspace ? "text-white" : "text-white/55"
-                        }`}
-                      />
+                      <Icon className="h-5 w-5 shrink-0 text-white" />
                       <span className={`flex-1 truncate text-left ${lgLabelInline}`}>
                         {WORKSPACE_FULL_LABELS[value]}
                       </span>
-                      {hasChildren && !iconOnly ? (
-                        <svg
-                          className={`h-3.5 w-3.5 shrink-0 text-white/40 transition-transform xl:hidden ${isExpanded ? "rotate-90" : ""}`}
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                          aria-hidden
-                        >
-                          <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      ) : null}
-                      {hasChildren && !iconOnly ? (
-                        <span className="hidden text-[10px] font-semibold text-white/35 xl:inline" aria-hidden>
-                          ›
-                        </span>
-                      ) : null}
                     </button>
 
                     {/* Below xl: nest children under the active workspace (accordion) — same as before. */}
                     {isExpanded && hasChildren ? (
                       <div
                         className={`mt-1 space-y-0.5 xl:hidden ${
-                          iconOnly ? "" : "ml-3 border-l border-white/[0.1] pl-2.5"
+                          iconOnly ? "" : "ml-3 border-l border-white/[0.12] pl-2.5"
                         }`}
                       >
                         {items.map(({ href, label, Icon: ItemIcon, activePathPrefix, exact }) => {
@@ -723,9 +677,7 @@ export function Sidebar({
                           return (
                             <Link key={href} href={href} className={accordionSubLinkClass(active)} title={label}>
                               <ItemIcon
-                                className={`h-3.5 w-3.5 shrink-0 ${
-                                  active ? "text-white" : "text-white/45"
-                                }`}
+                                className={`h-4 w-4 shrink-0 text-white`}
                               />
                               <span className={`flex-1 ${lgLabelInline}`}>{label}</span>
                               {href === "/workforce/chat" && chatUnreadTotal > 0 ? (
@@ -743,29 +695,27 @@ export function Sidebar({
                               title="Clearstory"
                             >
                               <NavIconLayers
-                                className={`h-3.5 w-3.5 shrink-0 ${inClearstory ? "text-white" : "text-white/45"}`}
+                                className="h-4 w-4 shrink-0 text-white"
                               />
                               <span className={`flex-1 ${lgLabelInline}`}>Clearstory</span>
                             </Link>
                             {inClearstory ? (
                               <div className={`mt-0.5 ${lgLabel}`}>
-                                <div className="ml-2 space-y-0.5 border-l border-white/[0.08] pl-2.5">
+                                <div className="ml-2 space-y-0.5 border-l border-white/[0.1] pl-2.5">
                                   {clearstorySubItems.map(({ href, label, Icon: CsIcon }) => {
                                     const active = pathname === href || pathname.startsWith(`${href}/`);
                                     return (
                                       <Link
                                         key={href}
                                         href={href}
-                                        className={`flex items-center gap-2 rounded py-1.5 pl-2 pr-2.5 text-[12px] font-medium transition-colors ${
+                                        className={`flex items-center gap-2 rounded-md py-2 pl-2.5 pr-2.5 font-[family-name:var(--font-geist-sans)] text-[var(--text-nav-sm)] font-medium leading-none transition-colors ${
                                           active
-                                            ? "bg-[var(--sidebar-active)] text-white"
-                                            : "text-white/50 hover:bg-white/[0.05] hover:text-white/80"
+                                            ? "bg-[var(--sidebar-active)] font-semibold text-white"
+                                            : "text-white hover:bg-white/[0.05] hover:text-white"
                                         }`}
                                       >
                                         <CsIcon
-                                          className={`h-3.5 w-3.5 shrink-0 ${
-                                            active ? "text-white" : "text-white/40"
-                                          }`}
+                                          className="h-4 w-4 shrink-0 text-white"
                                         />
                                         <span className="flex-1">{label}</span>
                                       </Link>
@@ -786,16 +736,16 @@ export function Sidebar({
 
           {visibleAdminNav.length > 0 && (
             <div>
-              <p className={`mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 ${lgLabel}`}>
+              <p className={`mb-2.5 px-3 font-[family-name:var(--font-geist-sans)] text-[14px] font-medium text-white ${lgLabel}`}>
                 System
               </p>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {visibleAdminNav.map(({ href, label, Icon }) => {
                   const active = pathname === href || pathname.startsWith(`${href}/`);
                   return (
                     <Link key={href} href={href} className={navLinkClass(active)} title={label}>
                       <Icon
-                        className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-white/50"}`}
+                        className="h-5 w-5 shrink-0 text-white"
                       />
                       <span className={lgLabelInline}>{label}</span>
                     </Link>
@@ -806,14 +756,14 @@ export function Sidebar({
           )}
         </nav>
 
-        <div className={`border-t border-white/[0.07] p-2 ${collapsed ? "" : "sm:p-3"}`}>
+        <div className={`mt-auto border-t border-white/[0.08] p-3 ${collapsed ? "" : "sm:p-4"}`}>
           <div
-            className={`flex flex-col items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] p-2 ${
+            className={`flex flex-col items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.04] p-2.5 ${
               collapsed ? "" : "sm:flex-row sm:gap-3 sm:p-3"
             }`}
           >
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,0,0,0.25)] ${
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,0,0,0.28)] ${
                 collapsed ? "" : "sm:h-10 sm:w-10"
               }`}
               style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%)" }}
@@ -823,8 +773,8 @@ export function Sidebar({
               {userInitials(user)}
             </div>
             <div className={`min-w-0 flex-1 ${lgLabel}`}>
-              <p className="truncate text-sm font-semibold text-white/90">{displayName(user)}</p>
-              <p className="truncate text-xs text-white/55">
+              <p className="truncate text-[13px] font-semibold text-white/95">{displayName(user)}</p>
+              <p className="truncate text-[11px] text-white/50">
                 {roleLabel(user?.role ?? "user")}
               </p>
             </div>
@@ -847,89 +797,52 @@ export function Sidebar({
         </div>
       </aside>
 
-      {/* Workspace secondary rail — xl+ only */}
-      {showSecondaryChrome && secondaryCollapsed ? (
+      {/* Workspace secondary rail — xl+ only; never collapsible (always full width) */}
+      {showSecondaryChrome ? (
         <aside
-          className={`workspace-secondary-rail fixed top-0 z-30 hidden h-dvh w-8 flex-col border-r border-[var(--border-subtle)] bg-white transition-[left] duration-200 max-xl:!hidden xl:flex ${secondaryLeft}`}
-          aria-label="Expand secondary navigation"
-        >
-          <div className="flex h-14 shrink-0 items-center justify-center border-b border-[var(--border-subtle)]">
-            <button
-              type="button"
-              onClick={() => onToggleSecondaryCollapsed?.()}
-              title="Expand secondary navigation"
-              aria-label="Expand secondary navigation"
-              aria-expanded={false}
-              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius)] text-ink-muted transition hover:bg-canvas hover:text-ink"
-            >
-              <svg
-                className="h-3.5 w-3.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.25}
-                aria-hidden
-              >
-                <path d="M10 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
-        </aside>
-      ) : null}
-
-      {showSecondaryChrome && !secondaryCollapsed ? (
-        <aside
-          className={`workspace-secondary-rail fixed top-0 z-30 hidden h-dvh max-xl:!hidden ${SIDEBAR_SECONDARY_W} flex-col border-r border-[var(--border-subtle)] bg-white transition-[left] duration-200 xl:flex ${secondaryLeft}`}
+          className={`workspace-secondary-rail fixed top-0 z-30 hidden h-dvh max-xl:!hidden ${SIDEBAR_SECONDARY_W} min-w-[232px] max-w-[232px] shrink-0 flex-col border-r border-[var(--border-subtle)] bg-white transition-[left] duration-200 xl:flex ${secondaryLeft}`}
           aria-label={`${WORKSPACE_FULL_LABELS[currentView]} sections`}
+          data-collapsible="false"
         >
-          <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3">
-            <p className="min-w-0 truncate px-1 text-[13px] font-semibold text-ink">
-              {WORKSPACE_FULL_LABELS[currentView]}
-            </p>
-            <button
-              type="button"
-              onClick={() => onToggleSecondaryCollapsed?.()}
-              title="Collapse secondary navigation"
-              aria-label="Collapse secondary navigation"
-              aria-expanded={true}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius)] text-ink-muted transition hover:bg-canvas hover:text-ink"
-            >
-              <svg
-                className="h-3.5 w-3.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.25}
-                aria-hidden
-              >
-                <path d="M14 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
+          {/* Align with primary logo row; avoid repeating “Estimates” */}
+          <div className="flex h-16 shrink-0 items-center border-b border-[var(--border-subtle)] px-5">
+            {currentView === "bidding" ? (
+              <span className="sr-only">Estimates navigation</span>
+            ) : (
+              <p className="min-w-0 truncate text-[15px] font-semibold text-ink">
+                {WORKSPACE_FULL_LABELS[currentView]}
+              </p>
+            )}
           </div>
 
-          <nav className="flex-1 space-y-4 overflow-y-auto px-2 pb-4 pt-4">
+          <nav className="flex-1 space-y-7 overflow-y-auto px-4 pb-6 pt-5">
             {currentView === "settings" ? (
-              SETTINGS_RAIL_SECTIONS.map((section) => (
-                <div key={section.title} className="space-y-0.5">
-                  <p className="cs-rail-section mb-1.5 px-3">{section.title}</p>
-                  {section.links.map(({ href, label }) => {
-                    const active = pathname === href || pathname.startsWith(`${href}/`);
-                    return (
-                      <Link
-                        key={href}
-                        href={href}
-                        className={secondaryLinkClass(active)}
-                        title={label}
-                      >
-                        <span className="min-w-0 flex-1 truncate">{label}</span>
-                      </Link>
-                    );
-                  })}
+              SETTINGS_RAIL_SECTIONS.map((section, sectionIdx) => (
+                <div key={section.title}>
+                  {sectionIdx > 0 ? (
+                    <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />
+                  ) : null}
+                  <p className="cs-rail-section">{section.title}</p>
+                  <div className="space-y-1">
+                    {section.links.map(({ href, label }) => {
+                      const active = pathname === href || pathname.startsWith(`${href}/`);
+                      return (
+                        <Link
+                          key={href}
+                          href={href}
+                          className={secondaryLinkClass(active, true)}
+                          title={label}
+                        >
+                          <span className="min-w-0 flex-1 truncate">{label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
               ))
             ) : (currentView === "billings" || inClearstory) && canSeeBillings ? (
               <>
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   <Link
                     href="/billings"
                     className={secondaryLinkClass(
@@ -940,45 +853,94 @@ export function Sidebar({
                     <span className="min-w-0 flex-1 truncate">Billing</span>
                   </Link>
                 </div>
-                <div className="space-y-0.5">
-                  <p className="cs-rail-section mb-1.5 px-3">Clearstory</p>
-                  {clearstorySubItems.map(({ href, label }) => {
-                    const active = pathname === href || pathname.startsWith(`${href}/`);
+                <div>
+                  <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />
+                  <p className="cs-rail-section">Clearstory</p>
+                  <div className="space-y-1">
+                    {clearstorySubItems.map(({ href, label }) => {
+                      const active = pathname === href || pathname.startsWith(`${href}/`);
+                      return (
+                        <Link
+                          key={href}
+                          href={href}
+                          className={secondaryLinkClass(active, true)}
+                          title={label}
+                        >
+                          <span className="min-w-0 flex-1 truncate">{label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            ) : currentView === "bidding" ? (
+              <>
+                <div className="space-y-1">
+                  {secondaryItems.map((item) => {
+                    const isNewBid = item.href === "/bidding/new";
+                    const active =
+                      item.href === "/bidding" && activeBidId
+                        ? true
+                        : itemIsActive(pathname, item);
+                    const showAsActive = Boolean(
+                      active && !(item.href === "/bidding" && activeBidId)
+                    );
                     return (
                       <Link
-                        key={href}
-                        href={href}
-                        className={secondaryLinkClass(active, true)}
-                        title={label}
+                        key={item.href}
+                        href={item.href}
+                        className={secondaryLinkClass(showAsActive, isNewBid)}
+                        title={item.label}
                       >
-                        <span className="min-w-0 flex-1 truncate">{label}</span>
+                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
                       </Link>
                     );
                   })}
                 </div>
+
+                {isEstimatesList ? (
+                  <div>
+                    <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />
+                    <p className="cs-rail-section">Record status</p>
+                    <div className="space-y-1">
+                      {(
+                        [
+                          { value: "all", label: "All" },
+                          { value: "draft", label: "Draft" },
+                          { value: "submitted", label: "Submitted" },
+                          { value: "archived", label: "Archived" },
+                        ] as const
+                      ).map((f) => {
+                        const active = bidListStatus === f.value;
+                        const href =
+                          f.value === "all" ? "/bidding" : `/bidding?status=${f.value}`;
+                        return (
+                          <Link
+                            key={f.value}
+                            href={href}
+                            className={secondaryLinkClass(active, true)}
+                            title={f.label}
+                          >
+                            <span className="min-w-0 flex-1 truncate">{f.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
               </>
             ) : (
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {secondaryItems.map((item) => {
-                  const active =
-                    item.href === "/bidding" && activeBidId
-                      ? true
-                      : itemIsActive(pathname, item);
-                  const showAsActive = Boolean(active && !(item.href === "/bidding" && activeBidId));
+                  const active = itemIsActive(pathname, item);
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={secondaryLinkClass(showAsActive)}
+                      className={secondaryLinkClass(active)}
                       title={item.label}
                     >
-                      <span
-                        className={`min-w-0 flex-1 truncate ${
-                          item.href === "/bidding" && activeBidId ? "font-semibold text-ink" : ""
-                        }`}
-                      >
-                        {item.label}
-                      </span>
+                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
                       {item.href === "/workforce/chat" && chatUnreadTotal > 0 ? (
                         <ChatUnreadBadge count={chatUnreadTotal} />
                       ) : null}
@@ -988,49 +950,30 @@ export function Sidebar({
               </div>
             )}
 
-            {/* Record status — child filters under Estimates list */}
-            {currentView === "bidding" && isBiddingListPath(pathname) ? (
-              <div className="space-y-0.5">
-                <p className="cs-rail-section mb-1.5 px-3">Record status</p>
-                {BID_STATUS_FILTERS.map((f) => {
-                  const active = bidListStatus === f.value;
-                  const href =
-                    f.value === "all" ? "/bidding" : `/bidding?status=${f.value}`;
-                  return (
-                    <Link
-                      key={f.value}
-                      href={href}
-                      className={secondaryLinkClass(active, true)}
-                      title={f.label}
-                    >
-                      <span className="min-w-0 flex-1 truncate">{f.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : null}
-
             {/* Bid stages — only when workspace secondary shows an open bid (rare; sheet usually owns this) */}
             {currentView === "bidding" && activeBidId ? (
-              <div className="space-y-0.5">
-                <p className="cs-rail-section mb-1.5 px-3">Bid stages</p>
-                {BID_HANDOFF_STAGES.map((s) => {
-                  const active = activeBidStage === s.id;
-                  const statusQs =
-                    bidListStatus && bidListStatus !== "all"
-                      ? `&status=${encodeURIComponent(bidListStatus)}`
-                      : "";
-                  return (
-                    <Link
-                      key={s.id}
-                      href={`/bidding/${activeBidId}?stage=${s.id}${statusQs}`}
-                      className={secondaryLinkClass(active, true)}
-                      title={s.label}
-                    >
-                      <span className="min-w-0 flex-1 truncate">{s.label}</span>
-                    </Link>
-                  );
-                })}
+              <div>
+                <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />
+                <p className="cs-rail-section">Bid stages</p>
+                <div className="space-y-1">
+                  {BID_HANDOFF_STAGES.map((s) => {
+                    const active = activeBidStage === s.id;
+                    const statusQs =
+                      bidListStatus && bidListStatus !== "all"
+                        ? `&status=${encodeURIComponent(bidListStatus)}`
+                        : "";
+                    return (
+                      <Link
+                        key={s.id}
+                        href={`/bidding/${activeBidId}?stage=${s.id}${statusQs}`}
+                        className={secondaryLinkClass(active, true)}
+                        title={s.label}
+                      >
+                        <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
             ) : null}
           </nav>

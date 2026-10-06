@@ -152,16 +152,17 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
     })();
   };
 
-  /** Flush against primary rail — fixed so it does not scroll with the page. */
+  /** Secondary stays full width; only its left offset follows primary collapse. */
   const secondaryLeft = primaryCollapsed ? "left-16" : "left-64";
 
   return (
     <>
-      {/* Fixed second sidebar — xl+ only; small screens use compact header + stage strip */}
+      {/* Fixed second sidebar — xl+ only; never collapsible itself */}
       {isWide ? (
         <aside
-          className={`workspace-secondary-rail fixed top-0 z-30 flex h-dvh ${SIDEBAR_SECONDARY_W} flex-col border-r border-[var(--border-subtle)] bg-white transition-[left] duration-200 ${secondaryLeft}`}
+          className={`workspace-secondary-rail fixed top-0 z-30 flex h-dvh ${SIDEBAR_SECONDARY_W} min-w-[232px] max-w-[232px] shrink-0 flex-col border-r border-[var(--border-subtle)] bg-white transition-[left] duration-200 ${secondaryLeft}`}
           aria-label="Estimate and stages"
+          data-collapsible="false"
         >
           <div className="flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] px-4">
             <button

@@ -6,18 +6,15 @@ import { Header } from "./Header";
 import { Sidebar, dashboardMainOffsetClass } from "./Sidebar";
 
 const SIDEBAR_COLLAPSED_KEY = "construction-logistics-sidebar-collapsed";
-const SECONDARY_COLLAPSED_KEY = "construction-logistics-secondary-collapsed";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [secondaryCollapsed, setSecondaryCollapsed] = useState(false);
 
   useEffect(() => {
     try {
       setCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
-      setSecondaryCollapsed(localStorage.getItem(SECONDARY_COLLAPSED_KEY) === "1");
     } catch {
       /* ignore */
     }
@@ -38,19 +35,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const toggleSecondaryCollapsed = () => {
-    setSecondaryCollapsed((v) => {
-      const next = !v;
-      try {
-        localStorage.setItem(SECONDARY_COLLAPSED_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  };
-
-  const mainOffset = dashboardMainOffsetClass(pathname, collapsed, secondaryCollapsed);
+  const mainOffset = dashboardMainOffsetClass(pathname, collapsed);
 
   return (
     <div className="glass-app min-h-dvh w-full overflow-x-hidden">
@@ -60,8 +45,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           onMobileClose={() => setMobileNavOpen(false)}
           collapsed={collapsed}
           onToggleCollapsed={toggleCollapsed}
-          secondaryCollapsed={secondaryCollapsed}
-          onToggleSecondaryCollapsed={toggleSecondaryCollapsed}
         />
       </Suspense>
       <div
