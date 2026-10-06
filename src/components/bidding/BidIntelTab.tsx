@@ -6,21 +6,35 @@ import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import { getApiErrorMessage } from "@/lib/api/client";
 import { newId } from "@/lib/bidding/newId";
+import { seedFollowUpFromCompanyInfo } from "@/lib/bidding/bid-crm-snapshot";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { BidPostBidSummary } from "@/components/bidding/BidPostBidSummary";
 import type {
   BidProcess,
+  ProcessCompetitor,
   ProcessFollowUpCompany,
   ProcessIntelligence,
 } from "@/lib/bidding/process-types";
 
 const MAX_FOLLOWUP_COMPANIES = 10;
 const MAX_FOLLOWUP_CALL_ATTEMPTS = 5;
+const MAX_COMPETITORS = 40;
 
 function emptyFollowUpCompany(): ProcessFollowUpCompany {
   return { id: newId(), companyName: null, contactName: null, phone: null, callAttempts: [] };
 }
 
-/** Intel tab shell — Follow-up calls / competitors notes — manual Save */
+function emptyCompetitor(): ProcessCompetitor {
+  return { name: null, amount: null, source: null, confidence: null, atBid: true };
+}
+
+type IntelState = {
+  notes: string;
+  followUpCalls: ProcessFollowUpCompany[];
+  competitors: ProcessCompetitor[];
+};
+
+/** Intel tab — call summary, follow-up calls, structured competitors, notes. */
 export function BidIntelTab() {
   const {
     bid,
@@ -32,37 +46,83 @@ export function BidIntelTab() {
   const confirmDialog = useConfirmDialog();
   const [notes, setNotes] = useState("");
   const [followUpCalls, setFollowUpCalls] = useState<ProcessFollowUpCompany[]>([]);
+  const [competitors, setCompetitors] = useState<ProcessCompetitor[]>([]);
+  const [teamName, setTeamName] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const stateRef = useRef<{ notes: string; followUpCalls: ProcessFollowUpCompany[] }>({
+  const stateRef = useRef<IntelState>({
     notes: "",
     followUpCalls: [],
+    competitors: [],
   });
+  const seededRef = useRef<string | null>(null);
   const editable = canWrite && bid?.status !== "archived";
 
   useEffect(() => {
     if (!bid?.process) return;
     const intel = bid.process.intelligence as ProcessIntelligence | undefined;
     const nextNotes = intel?.notes ?? "";
-    const nextFollowUpCalls = intel?.followUpCalls ?? [];
+    let nextFollowUpCalls = [...(intel?.followUpCalls ?? [])];
+    const nextCompetitors = [...(intel?.competitors ?? [])];
+    let seeded = false;
+
+    if (
+      editable &&
+      nextFollowUpCalls.length === 0 &&
+      seededRef.current !== bid.id
+    ) {
+      const seed = seedFollowUpFromCompanyInfo(bid.companyInfo);
+      if (seed) {
+        nextFollowUpCalls = [seed];
+        seeded = true;
+      }
+      seededRef.current = bid.id;
+    }
+
     setNotes(nextNotes);
     setFollowUpCalls(nextFollowUpCalls);
-    stateRef.current = { notes: nextNotes, followUpCalls: nextFollowUpCalls };
-    setDirty(false);
-    setProcessDirty(false);
-  }, [bid, setProcessDirty]);
+    setCompetitors(nextCompetitors);
+    stateRef.current = {
+      notes: nextNotes,
+      followUpCalls: nextFollowUpCalls,
+      competitors: nextCompetitors,
+    };
+    setDirty(seeded);
+    setProcessDirty(seeded);
+  }, [bid, editable, setProcessDirty]);
+
+  const teamId = bid?.process?.assignment?.teamId ?? bid?.teamId ?? null;
+  useEffect(() => {
+    if (teamId == null) {
+      setTeamName(null);
+      return;
+    }
+    let cancelled = false;
+    void biddingApi.getBiddingTeams().then((teams) => {
+      if (cancelled) return;
+      setTeamName(teams.find((t) => t.id === teamId)?.teamName ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [teamId]);
 
   const persist = useCallback(async () => {
     if (!bid || !editable) return;
     setSaving(true);
     setError(null);
-    const { notes: nextNotes, followUpCalls: nextFollowUpCalls } = stateRef.current;
+    const {
+      notes: nextNotes,
+      followUpCalls: nextFollowUpCalls,
+      competitors: nextCompetitors,
+    } = stateRef.current;
     const process: Partial<BidProcess> = {
       intelligence: {
         ...(bid.process?.intelligence ?? {}),
         notes: nextNotes || null,
         followUpCalls: nextFollowUpCalls,
+        competitors: nextCompetitors,
       },
     };
     try {
@@ -88,8 +148,8 @@ export function BidIntelTab() {
     return () => setProcessDirty(false);
   }, [dirty, setProcessDirty]);
 
-  const markDirty = (n: string, f: ProcessFollowUpCompany[]) => {
-    stateRef.current = { notes: n, followUpCalls: f };
+  const markDirty = (next: IntelState) => {
+    stateRef.current = next;
     if (!editable) return;
     setDirty(true);
     setProcessDirty(true);
@@ -97,11 +157,20 @@ export function BidIntelTab() {
 
   const setCompanies = (next: ProcessFollowUpCompany[]) => {
     setFollowUpCalls(next);
-    markDirty(notes, next);
+    markDirty({ notes, followUpCalls: next, competitors });
+  };
+
+  const setCompetitorList = (next: ProcessCompetitor[]) => {
+    setCompetitors(next);
+    markDirty({ notes, followUpCalls, competitors: next });
   };
 
   const patchCompany = (index: number, patch: Partial<ProcessFollowUpCompany>) => {
     setCompanies(followUpCalls.map((c, i) => (i === index ? { ...c, ...patch } : c)));
+  };
+
+  const patchCompetitor = (index: number, patch: Partial<ProcessCompetitor>) => {
+    setCompetitorList(competitors.map((c, i) => (i === index ? { ...c, ...patch } : c)));
   };
 
   if (!bid) return null;
@@ -138,6 +207,8 @@ export function BidIntelTab() {
           {error}
         </p>
       ) : null}
+
+      <BidPostBidSummary bid={bid} teamName={teamName} />
 
       <div className="flex flex-col gap-3">
         <section className="intake-section min-w-0">
@@ -307,15 +378,139 @@ export function BidIntelTab() {
         </section>
 
         <section className="intake-section min-w-0">
-          <div className="intake-section-head">Notes / competitors</div>
+          <div className="intake-section-head-bar">
+            <div>
+              <h3>Competitors</h3>
+              <p>Bidder / competitor companies on this opportunity</p>
+            </div>
+            {editable && competitors.length < MAX_COMPETITORS ? (
+              <button
+                type="button"
+                className="text-[11px] font-semibold text-[#4b5563] hover:underline"
+                onClick={() => setCompetitorList([...competitors, emptyCompetitor()])}
+              >
+                + Add competitor
+              </button>
+            ) : null}
+          </div>
+          <div className="intake-section-body">
+            {competitors.length === 0 ? (
+              <p className="text-[12.5px] text-[#9ca3af]">No competitors recorded yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] border-collapse text-left text-[12.5px]">
+                  <thead>
+                    <tr className="border-b border-ink/[0.08] text-[11px] font-semibold text-ink/50">
+                      <th className="px-2 py-1.5">Company</th>
+                      <th className="px-2 py-1.5">Amount</th>
+                      <th className="px-2 py-1.5">Source</th>
+                      <th className="px-2 py-1.5">Confidence</th>
+                      <th className="px-2 py-1.5">At bid</th>
+                      <th className="px-2 py-1.5" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {competitors.map((row, index) => (
+                      <tr key={index} className="border-b border-ink/[0.05]">
+                        <td className="px-2 py-1.5">
+                          <input
+                            className="intake-field w-full min-w-[8rem]"
+                            disabled={!editable}
+                            placeholder="Company name"
+                            value={row.name ?? ""}
+                            onChange={(e) =>
+                              patchCompetitor(index, { name: e.target.value || null })
+                            }
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="number"
+                            className="intake-field w-full min-w-[6rem]"
+                            disabled={!editable}
+                            placeholder="0"
+                            value={row.amount ?? ""}
+                            onChange={(e) =>
+                              patchCompetitor(index, {
+                                amount:
+                                  e.target.value === "" ? null : Number(e.target.value),
+                              })
+                            }
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            className="intake-field w-full min-w-[6rem]"
+                            disabled={!editable}
+                            placeholder="Source"
+                            value={row.source ?? ""}
+                            onChange={(e) =>
+                              patchCompetitor(index, { source: e.target.value || null })
+                            }
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            className="intake-field w-full min-w-[5rem]"
+                            disabled={!editable}
+                            placeholder="e.g. high"
+                            value={row.confidence ?? ""}
+                            onChange={(e) =>
+                              patchCompetitor(index, {
+                                confidence: e.target.value || null,
+                              })
+                            }
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="checkbox"
+                            className="intake-check"
+                            disabled={!editable}
+                            checked={row.atBid !== false}
+                            onChange={(e) =>
+                              patchCompetitor(index, { atBid: e.target.checked })
+                            }
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          {editable ? (
+                            <button
+                              type="button"
+                              className="text-[11px] font-medium text-danger/80 hover:text-danger"
+                              onClick={() =>
+                                setCompetitorList(
+                                  competitors.filter((_, i) => i !== index)
+                                )
+                              }
+                            >
+                              Remove
+                            </button>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="intake-section min-w-0">
+          <div className="intake-section-head">Notes</div>
           <div className="intake-section-body">
             <textarea
-              className="intake-field min-h-[10rem] w-full"
+              className="intake-field min-h-[8rem] w-full"
               disabled={!editable}
               value={notes}
               onChange={(e) => {
                 setNotes(e.target.value);
-                markDirty(e.target.value, followUpCalls);
+                markDirty({
+                  notes: e.target.value,
+                  followUpCalls,
+                  competitors,
+                });
               }}
             />
           </div>

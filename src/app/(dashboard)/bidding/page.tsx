@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { BidListCard } from "@/components/bidding/BidListCard";
+import { BidStageProgressBar } from "@/components/bidding/BidStageProgressBar";
 import { BidStatusBadge } from "@/components/bidding/BidStatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Skeleton, SkeletonCardGrid, TableSkeleton } from "@/components/ui/Skeleton";
+import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import { buttonClasses } from "@/components/ui/Button";
 import { RestrictedState } from "@/components/ui/RestrictedState";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,9 +18,12 @@ import * as biddingApi from "@/lib/api/endpoints/bidding";
 import type { BidListStatusCounts } from "@/lib/api/endpoints/bidding";
 import { updateProfile } from "@/lib/api/endpoints/auth";
 import { getApiErrorMessage } from "@/lib/api/client";
-import { formatDate, formatMoney } from "@/lib/bidding/format";
+import { formatBidDateAndTime, formatDate, formatMoney } from "@/lib/bidding/format";
+import { personDisplayName } from "@/lib/bidding/person-label";
+import { teamColorForId } from "@/lib/bidding/team-colors";
+import { entityBrandForName } from "@/lib/branding/entity-colors";
 import { formatOutcome, formatProcessStage, formatWorkType } from "@/lib/bidding/process-types";
-import type { BidListItem, BidStatus } from "@/lib/bidding/types";
+import type { BidCaptainLookup, BidListItem, BidStatus, BidTeam } from "@/lib/bidding/types";
 import { FilterSidebar } from "@/components/filters/FilterSidebar";
 import { SavedViewTabs, conditionKey } from "@/components/filters/SavedViewTabs";
 import {
@@ -54,9 +58,7 @@ type SortKey =
   | "jobStartDate"
   | "office";
 type SortDir = "asc" | "desc";
-type ViewMode = "tiles" | "list";
 
-const VIEW_MODE_KEY = "bidding-view-mode";
 const BID_PAGE_SIZES = [25, 50, 100] as const;
 const DEFAULT_BID_PAGE_SIZE = 25;
 
@@ -111,7 +113,7 @@ function BidListPager({
           id="bids-page-size"
           value={pageSize}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className="h-9 rounded-lg border border-ink/10 bg-white px-2.5 text-sm font-medium text-ink"
+          className="cs-field h-9 border px-2.5 text-[13px] font-medium text-ink"
         >
           {BID_PAGE_SIZES.map((size) => (
             <option key={size} value={size}>
@@ -123,34 +125,24 @@ function BidListPager({
           type="button"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
-          className="h-9 rounded-lg border border-ink/10 bg-white px-3 text-sm font-medium text-ink disabled:opacity-40"
+          className="cs-field h-9 border px-3 text-[13px] font-medium text-ink disabled:opacity-40"
         >
           Previous
         </button>
-        <span className="min-w-[4.5rem] text-center text-xs font-medium text-ink/55">
+        <span className="min-w-[4.5rem] text-center text-xs font-medium text-ink-muted">
           {page} / {totalPages}
         </span>
         <button
           type="button"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
-          className="h-9 rounded-lg border border-ink/10 bg-white px-3 text-sm font-medium text-ink disabled:opacity-40"
+          className="cs-field h-9 border px-3 text-[13px] font-medium text-ink disabled:opacity-40"
         >
           Next
         </button>
       </div>
     </div>
   );
-}
-
-function loadViewMode(): ViewMode {
-  if (typeof window === "undefined") return "list";
-  try {
-    const v = window.localStorage.getItem(VIEW_MODE_KEY);
-    return v === "tiles" ? "tiles" : "list";
-  } catch {
-    return "list";
-  }
 }
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
@@ -376,19 +368,30 @@ function softBreakText(text: string) {
   ));
 }
 
+function statusFromSearchParam(raw: string | null): StatusFilter {
+  if (raw === "draft" || raw === "submitted" || raw === "archived") return raw;
+  return "all";
+}
+
 export default function BiddingListPage() {
   const { companyId } = useCompany();
   const { user, setUser } = useAuth();
   const { canRead, canWrite } = useBiddingAccess();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>(() =>
+    statusFromSearchParam(searchParams.get("status"))
+  );
   const [workType, setWorkType] = useState("");
   const [processStage, setProcessStage] = useState("");
   const [outcome, setOutcome] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("bidDate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [viewMode, setViewMode] = useState<ViewMode>(() => loadViewMode());
   const [estimatorOptions, setEstimatorOptions] = useState<{ value: string; label: string }[]>([]);
+  const [captainLookup, setCaptainLookup] = useState<BidCaptainLookup[]>([]);
+  const [teams, setTeams] = useState<BidTeam[]>([]);
   const [bids, setBids] = useState<BidListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -441,12 +444,70 @@ export default function BiddingListPage() {
     void biddingApi
       .getBiddingCaptains()
       .then((captains) => {
-        const names = [...new Set(captains.map((c) => c.name).filter((n) => n.trim()))];
+        setCaptainLookup(captains);
+        const names = [
+          ...new Set(
+            captains
+              .map((c) =>
+                personDisplayName({
+                  firstName: c.firstName,
+                  lastName: c.lastName,
+                  name: c.name,
+                  email: c.email,
+                })
+              )
+              .filter((n) => n.trim())
+          ),
+        ];
         names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
         setEstimatorOptions(names.map((name) => ({ value: name, label: name })));
       })
-      .catch(() => setEstimatorOptions([]));
+      .catch(() => {
+        setCaptainLookup([]);
+        setEstimatorOptions([]);
+      });
+    void biddingApi
+      .getBiddingTeams()
+      .then(setTeams)
+      .catch(() => setTeams([]));
   }, []);
+
+  const teamNameFor = useCallback(
+    (teamId: number | null | undefined) => {
+      if (teamId == null || !Number.isFinite(Number(teamId))) return null;
+      return teams.find((t) => t.id === Number(teamId))?.teamName ?? null;
+    },
+    [teams]
+  );
+
+  const resolveCaptainLabel = useCallback(
+    (raw: string | null | undefined) => {
+      const needle = raw?.trim();
+      if (!needle) return "—";
+      const lower = needle.toLowerCase();
+      const hit = captainLookup.find(
+        (c) =>
+          c.email?.toLowerCase() === lower ||
+          c.name?.toLowerCase() === lower ||
+          personDisplayName({
+            firstName: c.firstName,
+            lastName: c.lastName,
+            name: c.name,
+            email: c.email,
+          }).toLowerCase() === lower
+      );
+      if (hit) {
+        return personDisplayName({
+          firstName: hit.firstName,
+          lastName: hit.lastName,
+          name: hit.name,
+          email: hit.email,
+        });
+      }
+      return personDisplayName({ name: needle });
+    },
+    [captainLookup]
+  );
 
   /** Estimator options come from captains, not contacts?role=estimator.
    * Other dynamic selects still come from values already on loaded bids. */
@@ -711,7 +772,7 @@ export default function BiddingListPage() {
     if (serverPaged) return bids;
     const filtered = (status === "all" ? bids : bids.filter((b) => b.status === status))
       .filter((b) => rowMatchesGroups(b as unknown as Record<string, unknown>, filterGroups))
-      .filter((b) => !captainFilter || (b.captain || b.estimator || "") === captainFilter)
+      .filter((b) => !captainFilter || resolveCaptainLabel(b.captain || b.estimator) === captainFilter)
       .filter((b) => {
         const q = bidKindFilter.trim().toLowerCase();
         return !q || (b.bidKind || "").toLowerCase().includes(q);
@@ -765,7 +826,7 @@ export default function BiddingListPage() {
       })();
       return sortDir === "desc" ? -cmp : cmp;
     });
-  }, [bids, serverPaged, status, sortKey, sortDir, filterGroups, captainFilter, bidKindFilter, constructionFilter]);
+  }, [bids, serverPaged, status, sortKey, sortDir, filterGroups, captainFilter, bidKindFilter, constructionFilter, resolveCaptainLabel]);
 
   const filteredTotal = serverPaged ? serverTotal : visibleBids.length;
   const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize) || 1);
@@ -863,38 +924,45 @@ export default function BiddingListPage() {
     return "No estimates yet.";
   }, [error, search, status]);
 
-  const toggleStatus = (value: StatusFilter) =>
-    setStatus((prev) => (prev === value ? "all" : value));
+  useEffect(() => {
+    setStatus(statusFromSearchParam(searchParams.get("status")));
+  }, [searchParams]);
 
-  const changeViewMode = (mode: ViewMode) => {
-    setViewMode(mode);
-    try {
-      window.localStorage.setItem(VIEW_MODE_KEY, mode);
-    } catch {
-      /* ignore storage failures */
-    }
-  };
+  const applyStatus = useCallback(
+    (value: StatusFilter) => {
+      setStatus(value);
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === "all") params.delete("status");
+      else params.set("status", value);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
+  const toggleStatus = (value: StatusFilter) =>
+    applyStatus(status === value ? "all" : value);
 
   const listColumns: { key: SortKey; label: string; width: string }[] = internalList
     ? [
-        { key: "estimate", label: "Estimate #", width: "w-[18%]" },
-        { key: "name", label: "Name", width: "w-[42%]" },
-        { key: "internalBidDate", label: "Internal bid date", width: "w-[22%]" },
-        { key: "takeoffTurnedIn", label: "Turned in", width: "w-[18%]" },
+        { key: "estimate", label: "Estimate #", width: "min-w-[7.5rem]" },
+        { key: "name", label: "Name", width: "min-w-[14rem]" },
+        { key: "internalBidDate", label: "Internal bid date", width: "min-w-[8.5rem]" },
+        { key: "takeoffTurnedIn", label: "Turned in", width: "min-w-[5.5rem]" },
       ]
     : [
-        { key: "estimate", label: "Estimate #", width: "w-[10%]" },
-        { key: "name", label: "Name", width: "w-[18%]" },
-        { key: "bidDate", label: "Bid date", width: "w-[9%]" },
-        { key: "office", label: "Company", width: "w-[10%]" },
-        { key: "captain", label: "Team captain", width: "w-[12%]" },
-        { key: "stage", label: "Current progress", width: "w-[12%]" },
-        { key: "outcome", label: "Outcome", width: "w-[8%]" },
-        { key: "baseBid", label: "Base bid", width: "w-[8%]" },
-        { key: "status", label: "Record", width: "w-[8%]" },
-        { key: "internalBidDate", label: "Internal bid date", width: "w-[10%]" },
-        { key: "takeoffTurnedIn", label: "Turned in", width: "w-[7%]" },
-        { key: "updated", label: "Updated", width: "w-[8%]" },
+        { key: "estimate", label: "Estimate #", width: "min-w-[7.5rem]" },
+        { key: "name", label: "Name", width: "min-w-[14rem]" },
+        { key: "bidDate", label: "Bid date & time", width: "min-w-[8.5rem]" },
+        { key: "office", label: "Company", width: "min-w-[8rem]" },
+        { key: "captain", label: "Team captain", width: "min-w-[9rem]" },
+        { key: "stage", label: "Current progress", width: "min-w-[9.5rem]" },
+        { key: "outcome", label: "Outcome", width: "min-w-[5.5rem]" },
+        { key: "baseBid", label: "Base bid", width: "min-w-[6.5rem]" },
+        { key: "status", label: "Record", width: "min-w-[5.5rem]" },
+        { key: "internalBidDate", label: "Internal bid date", width: "min-w-[8.5rem]" },
+        { key: "takeoffTurnedIn", label: "Turned in", width: "min-w-[5.5rem]" },
+        { key: "updated", label: "Updated", width: "min-w-[6.5rem]" },
       ];
 
   const tabCount = (value: StatusFilter): number | null => {
@@ -930,9 +998,13 @@ export default function BiddingListPage() {
       case "updated":
         return formatDate(bid.updatedAt.slice(0, 10));
       case "bidDate":
-        return bid.bidDate ? formatDate(bid.bidDate) : "—";
+        return formatBidDateAndTime({
+          bidDate: bid.bidDate,
+          dueDate: bid.dueDate,
+          dueTime: bid.dueTime,
+        }).label;
       case "captain":
-        return bid.captain || bid.estimator || "—";
+        return resolveCaptainLabel(bid.captain || bid.estimator);
       case "internalBidDate":
         return bid.internalBidDate ? formatDate(bid.internalBidDate.slice(0, 10)) : "—";
       case "takeoffTurnedIn":
@@ -1029,28 +1101,39 @@ export default function BiddingListPage() {
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]">
-          {STATUS_FILTERS.map((f) => {
-            const active = status === f.value;
-            const count = tabCount(f.value);
-            return (
-              <button
-                key={f.value}
-                type="button"
-                onClick={() => (f.value === "all" ? setStatus("all") : toggleStatus(f.value))}
-                aria-pressed={active}
-                className={`relative pb-2.5 text-sm transition focus-visible:outline-none ${
-                  active ? "font-semibold text-ink" : "font-medium text-ink/55 hover:text-ink"
-                }`}
-              >
-                {f.label}{" "}
-                <span className={count == null || count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
-                  {count == null ? "—" : count}
-                </span>
-                {active && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />}
-              </button>
-            );
-          })}
+        {/* Record status — below xl only; xl+ uses secondary sidebar */}
+        <div
+          className="sticky top-14 z-20 -mx-4 border-b border-[var(--border-subtle)] bg-canvas px-4 sm:top-[3.75rem] sm:-mx-6 sm:px-6 xl:hidden"
+          role="tablist"
+          aria-label="Estimate record status"
+        >
+          <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {STATUS_FILTERS.map((f) => {
+              const active = status === f.value;
+              const count = tabCount(f.value);
+              return (
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => (f.value === "all" ? applyStatus("all") : toggleStatus(f.value))}
+                  aria-pressed={active}
+                  className={`relative shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-[13px] transition focus-visible:outline-none ${
+                    active
+                      ? "bg-brand-tint font-semibold text-ink"
+                      : "font-medium text-ink-muted hover:bg-canvas hover:text-ink"
+                  }`}
+                >
+                  {f.label}{" "}
+                  <span className={count == null || count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
+                    {count == null ? "—" : count}
+                  </span>
+                  {active ? (
+                    <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -1115,40 +1198,6 @@ export default function BiddingListPage() {
             </svg>
             Export
           </button>
-
-          <div className="flex h-10 shrink-0 items-center gap-0.5 rounded-lg border border-white/70 bg-white/50 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => changeViewMode("tiles")}
-              aria-pressed={viewMode === "tiles"}
-              title="Tile view"
-              className={`flex h-full items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition ${
-                viewMode === "tiles" ? "bg-ink text-white" : "text-ink/50 hover:text-ink"
-              }`}
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                <rect x="14" y="14" width="7" height="7" rx="1.5" />
-              </svg>
-              Tiles
-            </button>
-            <button
-              type="button"
-              onClick={() => changeViewMode("list")}
-              aria-pressed={viewMode === "list"}
-              title="List view"
-              className={`flex h-full items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition ${
-                viewMode === "list" ? "bg-ink text-white" : "text-ink/50 hover:text-ink"
-              }`}
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-              </svg>
-              List
-            </button>
-          </div>
         </div>
       </div>
 
@@ -1283,7 +1332,7 @@ export default function BiddingListPage() {
       />
 
       {loading && bids.length === 0 ? (
-        viewMode === "list" ? <TableSkeleton rows={8} toolbar={false} /> : <SkeletonCardGrid count={6} />
+        <TableSkeleton rows={8} toolbar={false} />
       ) : filteredTotal === 0 ? (
         <EmptyState
           message={emptyMessage}
@@ -1291,18 +1340,18 @@ export default function BiddingListPage() {
             !error && canWrite ? (
               <Link
                 href="/bidding/new"
-                className="text-sm font-semibold text-brand hover:underline"
+                className="text-sm font-semibold text-ink underline underline-offset-2 hover:text-ink"
               >
                 Start a new estimate
               </Link>
             ) : undefined
           }
         />
-      ) : viewMode === "list" ? (
-        <div className="overflow-x-auto rounded-2xl border border-white/70 bg-white/45 px-1.5 py-2 shadow-[0_6px_16px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl">
-          <table className="w-full min-w-[720px] table-fixed border-collapse text-left">
+      ) : (
+        <div className="cs-data-table -mx-4 overflow-x-auto overscroll-x-contain border-y border-[var(--border-subtle)] bg-surface sm:-mx-6 md:mx-0 md:rounded-[var(--radius)] md:border">
+          <table className="w-max min-w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-[rgba(255,123,17,0.22)] bg-[rgba(255,123,17,0.18)] text-xs font-semibold text-[#5a5340]">
+              <tr>
                 {listColumns.map((column) => (
                   <SortableTh
                     key={column.key}
@@ -1318,47 +1367,91 @@ export default function BiddingListPage() {
                       setSortKey(key);
                       setSortDir(defaultSortDir(key));
                     }}
-                    className={`${column.width} whitespace-nowrap px-4 py-3`}
+                    className={`${column.width} whitespace-nowrap px-3 py-2`}
                   />
                 ))}
               </tr>
             </thead>
             <tbody>
-              {pageRows.map((bid, idx) => (
-                <tr
-                  key={bid.id}
-                  className={`group origin-center transform-gpu border-b border-ink/[0.06] text-sm transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform hover:relative hover:z-10 hover:scale-[1.02] hover:drop-shadow-[0_10px_18px_rgba(1,1,1,0.14)] ${idx % 2 === 1 ? "bg-ink/[0.012]" : ""}`}
-                >
-                  {listColumns.map((column) => {
-                    const text = cellText(bid, column.key);
-                    return (
-                    <td
-                      key={column.key}
-                      title={text}
-                      className="truncate bg-transparent px-4 py-3 align-top text-sm text-ink/80 transition-colors duration-300 group-hover:overflow-visible group-hover:whitespace-normal group-hover:bg-white/75"
-                    >
-                      {column.key === "estimate" || column.key === "name" ? (
-                        <Link href={rowHref(bid)} className="block truncate font-semibold text-ink hover:text-brand group-hover:overflow-visible group-hover:whitespace-normal">
-                          {softBreakText(text)}
-                        </Link>
-                      ) : column.key === "status" ? (
-                        status === "draft" && bid.status === "draft" ? null : <BidStatusBadge status={bid.status} />
-                      ) : (
-                        softBreakText(text)
-                      )}
-                    </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {pageRows.map((bid, idx) => {
+                const teamColors = teamColorForId(bid.teamId);
+                const officeBrand = entityBrandForName(bid.companyName);
+                const schedule = formatBidDateAndTime({
+                  bidDate: bid.bidDate,
+                  dueDate: bid.dueDate,
+                  dueTime: bid.dueTime,
+                });
+                const crewLabel = teamNameFor(bid.teamId);
+                return (
+                  <tr
+                    key={bid.id}
+                    className={`border-b border-[var(--border-subtle)] transition-colors hover:bg-canvas ${idx % 2 === 1 ? "bg-canvas/50" : "bg-white"}`}
+                  >
+                    {listColumns.map((column) => {
+                      const text = cellText(bid, column.key);
+                      return (
+                        <td
+                          key={column.key}
+                          title={text}
+                          className={`whitespace-nowrap px-3 py-2.5 align-middle text-[13px] ${column.width}`}
+                        >
+                          {column.key === "estimate" || column.key === "name" ? (
+                            <Link
+                              href={rowHref(bid)}
+                              className="block max-w-[16rem] truncate font-medium text-ink hover:underline"
+                            >
+                              {softBreakText(text)}
+                            </Link>
+                          ) : column.key === "status" ? (
+                            status === "draft" && bid.status === "draft" ? null : (
+                              <BidStatusBadge status={bid.status} />
+                            )
+                          ) : column.key === "bidDate" ? (
+                            <div className="min-w-0">
+                              <p className="font-medium text-ink">{schedule.date}</p>
+                              {schedule.time ? (
+                                <p className="cs-helper">{schedule.time}</p>
+                              ) : null}
+                            </div>
+                          ) : column.key === "office" ? (
+                            <span className="inline-flex max-w-[10rem] items-center gap-2 truncate">
+                              <span
+                                className={`h-2 w-2 shrink-0 rounded-full ${officeBrand.dot}`}
+                                aria-hidden
+                                title={text}
+                              />
+                              <span className="truncate">{text}</span>
+                            </span>
+                          ) : column.key === "captain" ? (
+                            <div className="min-w-0 max-w-[11rem]">
+                              <p className="truncate">{softBreakText(text)}</p>
+                              {bid.teamId != null && crewLabel ? (
+                                <p className="cs-helper mt-0.5 inline-flex max-w-full items-center gap-1.5 truncate">
+                                  <span
+                                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${teamColors.dot}`}
+                                    aria-hidden
+                                  />
+                                  {crewLabel}
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : column.key === "stage" ? (
+                            <BidStageProgressBar
+                              processStage={bid.processStage}
+                              teamId={bid.teamId}
+                              compact
+                            />
+                          ) : (
+                            <span className="block max-w-[12rem] truncate">{softBreakText(text)}</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-        </div>
-      ) : (
-        <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {pageRows.map((bid) => (
-            <BidListCard key={bid.id} bid={bid} hideDraftChip={status === "draft"} />
-          ))}
         </div>
       )}
 

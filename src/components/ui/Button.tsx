@@ -7,26 +7,27 @@ export type ButtonSize = "sm" | "md";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    "bg-brand text-white shadow-sm hover:bg-brand-secondary focus-visible:outline-brand",
+    "border border-brand bg-brand text-white hover:bg-brand-secondary hover:border-brand-secondary focus-visible:outline-brand",
+  /** Outline CTA — bluish border + label. */
   secondary:
-    "bg-ink text-white shadow-sm hover:bg-ink/90 focus-visible:outline-brand",
+    "border border-brand bg-surface text-brand hover:bg-brand-tint focus-visible:outline-brand",
   outline:
-    "border border-ink/15 bg-surface text-ink hover:bg-ink/[0.04] focus-visible:outline-brand",
-  ghost: "text-ink/60 hover:bg-ink/[0.05] hover:text-ink focus-visible:outline-brand",
+    "border border-[var(--border-subtle)] bg-surface text-ink hover:bg-canvas focus-visible:outline-brand",
+  ghost: "border-transparent text-ink-muted hover:bg-canvas hover:text-ink focus-visible:outline-brand",
   danger:
-    "bg-danger text-white shadow-sm hover:bg-danger/90 focus-visible:outline-danger",
+    "border border-danger bg-danger text-white hover:bg-danger/90 focus-visible:outline-danger",
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: "px-3 py-1.5 text-xs",
-  md: "px-4 py-2.5 text-sm",
+  sm: "h-8 px-3 text-[12px]",
+  md: "h-9 px-3.5 text-[13px]",
 };
 
 /**
  * Shared button classes — use directly on <Link> elements that should look like buttons.
  */
 export function buttonClasses(variant: ButtonVariant = "secondary", size: ButtonSize = "md"): string {
-  return `inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition duration-150 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]}`;
+  return `inline-flex items-center justify-center gap-1.5 rounded-[var(--radius)] border font-medium leading-none shadow-none transition-colors duration-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]}`;
 }
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -54,7 +55,7 @@ export function Button({
     >
       {loading ? (
         <span
-          className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+          className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
           aria-hidden
         />
       ) : null}

@@ -8,7 +8,7 @@ import type { FinancialsFilters, FinancialsQuery } from "@/lib/project-financial
 import { useFinancialsQuery } from "@/components/project-financials/useFinancialsQuery";
 
 const fieldClass =
-  "h-10 rounded-lg border border-ink/10 bg-white/80 px-3 text-sm text-ink shadow-[0_4px_12px_rgba(255,123,17,0.06)] outline-none backdrop-blur-sm focus:border-brand/40";
+  "h-10 rounded-lg border border-ink/10 bg-white/80 px-3 text-sm text-ink shadow-[0_4px_12px_rgba(91,173,232,0.06)] outline-none backdrop-blur-sm focus:border-brand/40";
 
 export function FinancialsChrome({
   screen,
@@ -112,7 +112,7 @@ export function FinancialsChrome({
             value={searchDraft}
             onChange={(e) => setSearchDraft(e.target.value)}
           />
-          <div className="flex h-10 items-center rounded-lg border border-ink/10 bg-white/80 p-1 shadow-[0_4px_12px_rgba(255,123,17,0.06)]">
+          <div className="flex h-10 items-center rounded-lg border border-ink/10 bg-white/80 p-1 shadow-[0_4px_12px_rgba(91,173,232,0.06)]">
             {(
               [
                 ["active", "Active"],

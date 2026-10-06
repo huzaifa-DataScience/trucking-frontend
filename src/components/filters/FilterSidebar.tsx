@@ -27,7 +27,7 @@ function TrashIcon() {
 function MenuChevron({ open }: { open: boolean }) {
   return (
     <svg
-      className={`h-4 w-4 shrink-0 text-[rgba(255,123,17,0.8)] transition ${open ? "rotate-180" : ""}`}
+      className={`h-4 w-4 shrink-0 text-[rgba(91,173,232,0.8)] transition ${open ? "rotate-180" : ""}`}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -40,7 +40,7 @@ function MenuChevron({ open }: { open: boolean }) {
 }
 
 const glassTriggerClass =
-  "flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-white/80 bg-white/70 px-3 text-left text-sm shadow-[0_4px_12px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md outline-none transition hover:border-[rgba(255,123,17,0.35)] focus-visible:ring-2 focus-visible:ring-[rgba(255,123,17,0.25)]";
+  "flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-white/80 bg-white/70 px-3 text-left text-sm shadow-[0_4px_12px_rgba(91,173,232,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md outline-none transition hover:border-[rgba(91,173,232,0.35)] focus-visible:ring-2 focus-visible:ring-[rgba(91,173,232,0.25)]";
 
 function GlassSelect({
   options,
@@ -109,7 +109,7 @@ function GlassSelect({
             <div
               ref={menuRef}
               style={{ top: pos.top, left: pos.left, width: pos.width }}
-              className="fixed z-[70] max-h-64 overflow-auto rounded-xl border border-ink/10 bg-white p-1.5 shadow-[0_12px_28px_rgba(1,1,1,0.16)]"
+              className="fixed z-[70] max-h-64 overflow-auto rounded-xl border border-white/80 bg-white/80 p-1.5 shadow-[0_12px_28px_rgba(91,173,232,0.16),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl"
             >
               {options.length === 0 ? (
                 <p className="px-2 py-2 text-xs text-ink/40">No options</p>
@@ -136,7 +136,7 @@ function GlassSelect({
                         setOpen(false);
                       }}
                       className={`flex w-full items-center rounded-lg px-2.5 py-2 text-left text-sm ${
-                        active ? "bg-[rgba(255,123,17,0.16)] font-semibold text-ink" : "text-ink hover:bg-white/80"
+                        active ? "bg-[rgba(91,173,232,0.16)] font-semibold text-ink" : "text-ink hover:bg-white/80"
                       }`}
                     >
                       {option.label}
@@ -156,10 +156,10 @@ function GlassBox({ checked }: { checked: boolean }) {
   return (
     <span
       aria-hidden
-      className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-md border shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_2px_6px_rgba(255,123,17,0.16)] backdrop-blur-md ${
+      className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-md border shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_2px_6px_rgba(91,173,232,0.16)] backdrop-blur-md ${
         checked
-          ? "border-[rgba(255,123,17,0.25)] bg-[rgba(255,123,17,0.82)]"
-          : "border-[rgba(255,123,17,0.35)] bg-white/70"
+          ? "border-[rgba(91,173,232,0.25)] bg-[rgba(91,173,232,0.82)]"
+          : "border-[rgba(91,173,232,0.35)] bg-white/70"
       }`}
     >
       <svg
@@ -185,7 +185,7 @@ function GlassChoice({
   label: string;
 }) {
   return (
-    <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-white/80 bg-white/55 px-3 py-2 shadow-[0_4px_12px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md">
+    <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-white/80 bg-white/55 px-3 py-2 shadow-[0_4px_12px_rgba(91,173,232,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md">
       <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <GlassBox checked={checked} />
       <span className="min-w-0 text-sm leading-snug text-ink">{label}</span>
@@ -205,7 +205,7 @@ function FieldControl({
   dynamicOptions?: Record<string, { value: string; label: string }[]>;
 }) {
   const inputClass =
-    "h-10 w-full rounded-xl border border-white/80 bg-white/70 px-3 text-sm text-ink shadow-[0_4px_12px_rgba(255,123,17,0.06),inset_0_1px_0_rgba(255,255,255,0.9)] outline-none backdrop-blur-md transition focus:border-[rgba(255,123,17,0.45)] focus:ring-2 focus:ring-[rgba(255,123,17,0.18)]";
+    "h-10 w-full rounded-xl border border-white/80 bg-white/70 px-3 text-sm text-ink shadow-[0_4px_12px_rgba(91,173,232,0.06),inset_0_1px_0_rgba(255,255,255,0.9)] outline-none backdrop-blur-md transition focus:border-[rgba(91,173,232,0.45)] focus:ring-2 focus:ring-[rgba(91,173,232,0.18)]";
 
   if (field.kind === "select") {
     const options = field.dynamic ? dynamicOptions?.[field.key] ?? [] : field.options ?? [];
@@ -251,7 +251,7 @@ function FieldControl({
   if (field.kind === "dateRange") {
     const preset = condition?.preset ?? CUSTOM_DATE_RANGE;
     return (
-      <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-white/80 bg-white/55 p-3 shadow-[0_4px_12px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md">
+      <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-white/80 bg-white/55 p-3 shadow-[0_4px_12px_rgba(91,173,232,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md">
         <div>
           <span className="mb-1 block text-[11px] text-ink/40">Filter by fixed date</span>
           <GlassSelect
@@ -518,7 +518,7 @@ export function FilterSidebar({
           </div>
 
           {choosingFields ? (
-            <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl border border-white/80 bg-white/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_4px_12px_rgba(255,123,17,0.06)] backdrop-blur-md">
+            <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl border border-white/80 bg-white/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_4px_12px_rgba(91,173,232,0.06)] backdrop-blur-md">
               {(
                 [
                   ["filters", "Filters"],
@@ -531,7 +531,7 @@ export function FilterSidebar({
                   onClick={() => setPanelTab(id)}
                   className={`h-9 rounded-lg text-sm font-semibold transition ${
                     panelTab === id
-                      ? "bg-white/80 text-ink shadow-[0_4px_12px_rgba(255,123,17,0.12),inset_0_1px_0_rgba(255,255,255,0.95)]"
+                      ? "bg-white/80 text-ink shadow-[0_4px_12px_rgba(91,173,232,0.12),inset_0_1px_0_rgba(255,255,255,0.95)]"
                       : "text-ink/55 hover:text-ink"
                   }`}
                 >
@@ -622,7 +622,7 @@ export function FilterSidebar({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="rounded-lg border border-white/80 bg-white/60 p-1.5 text-ink/50 shadow-[0_2px_8px_rgba(255,123,17,0.08)] backdrop-blur-md transition hover:text-ink"
+              className="rounded-lg border border-white/80 bg-white/60 p-1.5 text-ink/50 shadow-[0_2px_8px_rgba(91,173,232,0.08)] backdrop-blur-md transition hover:text-ink"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
                 <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
@@ -643,10 +643,10 @@ export function FilterSidebar({
                 <button
                   type="button"
                   onClick={() => setActiveGroupIndex(gi)}
-                  className={`w-full rounded-xl border p-3 text-left shadow-[0_4px_12px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md transition ${
+                  className={`w-full rounded-xl border p-3 text-left shadow-[0_4px_12px_rgba(91,173,232,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md transition ${
                     gi === activeGroupIndex
-                      ? "border-[rgba(255,123,17,0.35)] bg-[rgba(255,123,17,0.1)]"
-                      : "border-white/80 bg-white/60 hover:border-[rgba(255,123,17,0.25)]"
+                      ? "border-[rgba(91,173,232,0.35)] bg-[rgba(91,173,232,0.1)]"
+                      : "border-white/80 bg-white/60 hover:border-[rgba(91,173,232,0.25)]"
                   }`}
                 >
                   <div className="mb-2 flex items-center justify-between">
@@ -666,7 +666,7 @@ export function FilterSidebar({
                     ) : null}
                   </div>
                   {g.conditions.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-[rgba(255,123,17,0.28)] bg-white/40 px-3 py-2.5 text-xs text-ink/40">
+                    <p className="rounded-lg border border-dashed border-[rgba(91,173,232,0.28)] bg-white/40 px-3 py-2.5 text-xs text-ink/40">
                       Your filter will appear here
                     </p>
                   ) : (
@@ -717,7 +717,7 @@ export function FilterSidebar({
             <button
               type="button"
               onClick={addGroup}
-              className="w-full rounded-xl border border-[rgba(255,123,17,0.35)] bg-white/55 px-3 py-2.5 text-xs font-semibold text-brand shadow-[0_4px_12px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md transition hover:bg-[rgba(255,123,17,0.08)]"
+              className="w-full rounded-xl border border-[rgba(91,173,232,0.35)] bg-white/55 px-3 py-2.5 text-xs font-semibold text-brand shadow-[0_4px_12px_rgba(91,173,232,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md transition hover:bg-[rgba(91,173,232,0.08)]"
             >
               + Add filter group
             </button>
@@ -749,7 +749,7 @@ export function FilterSidebar({
             <button
               type="button"
               onClick={() => onApply(groups)}
-              className="flex-1 whitespace-nowrap rounded-xl bg-[rgba(255,123,17,0.92)] px-2 py-2.5 text-xs font-semibold text-white shadow-[0_4px_12px_rgba(255,123,17,0.28)] transition hover:bg-brand-secondary"
+              className="flex-1 whitespace-nowrap rounded-xl bg-[rgba(91,173,232,0.92)] px-2 py-2.5 text-xs font-semibold text-white shadow-[0_4px_12px_rgba(91,173,232,0.28)] transition hover:bg-brand-secondary"
             >
               Apply
             </button>

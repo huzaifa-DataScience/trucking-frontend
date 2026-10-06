@@ -158,7 +158,7 @@ export function BidSheetResultsRail({
       {canViewSummary ? (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#d5dbe3] bg-white">
         <div className="border-b border-[#e5e7eb] bg-[#f3f1ea] px-3 py-2">
-          <h2 className="text-[13px] font-semibold text-[#5a5340]">Calculation detail</h2>
+          <h2 className="text-[13px] font-semibold text-[#333333]">Calculation detail</h2>
           <p className="mt-0.5 text-[11px] text-[#7a7360]">Excel rows 37–49 · D10–D13</p>
         </div>
 

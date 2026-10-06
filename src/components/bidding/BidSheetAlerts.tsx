@@ -57,7 +57,7 @@ export function BidSheetAlerts({
             type="button"
             onClick={onReopen}
             disabled={saving}
-            className="rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-3 py-1.5 text-[12px] font-medium text-[#5a5340] hover:bg-[#ebe8df] disabled:opacity-50"
+            className="rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-3 py-1.5 text-[12px] font-medium text-[#333333] hover:bg-[#ebe8df] disabled:opacity-50"
           >
             Reopen as draft
           </button>

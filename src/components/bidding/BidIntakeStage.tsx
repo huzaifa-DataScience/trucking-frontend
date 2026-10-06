@@ -9,6 +9,7 @@ import type { BidPartyLookup } from "@/lib/api/endpoints/biddingParties";
 import { PartyNameCombobox } from "@/components/bidding/PartyNameCombobox";
 import { BidAttachmentsSection } from "@/components/bidding/BidAttachmentsSection";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { TimePicker } from "@/components/ui/TimePicker";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
@@ -634,7 +635,7 @@ export function BidIntakeStage() {
     <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       <header>
         <h2 className="intake-title">Intake</h2>
-        <p className="intake-sub mt-0.5">
+        <p className="intake-sub">
           {saving ? "Saving…" : editable ? (dirty ? "Unsaved changes" : "Save to keep changes") : "Read only"}
         </p>
       </header>
@@ -869,28 +870,34 @@ export function BidIntakeStage() {
             }
           />
         </label>
-        <label className="intake-row">
-          <span className={labelClass}>Linked job</span>
-          <div className="relative">
-            <select
-              className={selectClass}
-              disabled={!editable}
-              value={bid.jobId ? String(bid.jobId) : ""}
-              onChange={(e) => {
-                const jobId = e.target.value ? Number(e.target.value) : null;
-                void setJobId(jobId, { prefillCompany: Boolean(jobId && jobId !== bid.jobId) });
-              }}
-            >
-              <option value="">No job linked</option>
-              {lookups.jobs.map((j) => (
-                <option key={j.id} value={String(j.id)}>
-                  {j.name || `Job #${j.id}`}
-                </option>
-              ))}
-            </select>
-            <SelectChevron />
-          </div>
-        </label>
+        {/* PJ: no jobId on intake — link when awarded. Opt-in via intakeEditor.jobIdOnIntake. */}
+        {meta?.intakeEditor?.jobIdOnIntake === true &&
+        meta?.intakeEditor?.hideJobIdOnIntake !== true ? (
+          <label className="intake-row">
+            <span className={labelClass}>Linked job</span>
+            <div className="relative">
+              <select
+                className={selectClass}
+                disabled={!editable}
+                value={bid.jobId ? String(bid.jobId) : ""}
+                onChange={(e) => {
+                  const jobId = e.target.value ? Number(e.target.value) : null;
+                  void setJobId(jobId, {
+                    prefillCompany: Boolean(jobId && jobId !== bid.jobId),
+                  });
+                }}
+              >
+                <option value="">No job linked</option>
+                {lookups.jobs.map((j) => (
+                  <option key={j.id} value={String(j.id)}>
+                    {j.name || `Job #${j.id}`}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
+          </label>
+        ) : null}
         <label className="intake-row">
           <span className={labelClass}>Bid date</span>
           <DatePicker
@@ -902,7 +909,23 @@ export function BidIntakeStage() {
                 ? String(bid.baseBid.bidDate).slice(0, 10)
                 : bid.bidDate?.slice(0, 10) ?? ""
             }
-            onChange={(v) => setBaseBidField("bidDate", v)}
+            onChange={(v) => {
+              setBaseBidField("bidDate", v);
+              const date = v?.slice(0, 10) || null;
+              if (date && !draft.dueDate) {
+                setField("dueDate", date);
+              }
+            }}
+          />
+        </label>
+        <label className="intake-row">
+          <span className={labelClass}>Bid time</span>
+          <TimePicker
+            ariaLabel="Bid time"
+            className={inputClass}
+            disabled={!editable}
+            value={draft.dueTime ?? ""}
+            onChange={(v) => setField("dueTime", v || null)}
           />
         </label>
         <label className="intake-row">
