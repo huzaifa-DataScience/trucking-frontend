@@ -47,21 +47,19 @@ function formatBytes(n: number): string {
 }
 
 function fileKindLabel(att: BidAttachment): string {
-  if (att.mimeType === "application/pdf" || att.fileName.toLowerCase().endsWith(".pdf")) {
-    return "PDF";
-  }
-  if (att.mimeType === "text/csv" || att.fileName.toLowerCase().endsWith(".csv")) {
-    return "CSV";
-  }
-  if (isWordDoc(att.mimeType)) return "DOC";
-  if (att.mimeType.startsWith("image/")) return "IMG";
+  const name = att.fileName.toLowerCase();
+  const mime = att.mimeType;
+  if (mime === "application/pdf" || name.endsWith(".pdf")) return "PDF";
+  if (mime === "text/csv" || name.endsWith(".csv")) return "CSV";
+  if (isWordDoc(mime) || name.endsWith(".doc") || name.endsWith(".docx")) return "DOC";
   if (
-    att.mimeType === "application/zip" ||
-    att.mimeType === "application/x-zip-compressed" ||
-    att.fileName.toLowerCase().endsWith(".zip")
+    mime === "application/zip" ||
+    mime === "application/x-zip-compressed" ||
+    name.endsWith(".zip")
   ) {
     return "ZIP";
   }
+  if (mime.startsWith("image/")) return "IMG";
   return "FILE";
 }
 

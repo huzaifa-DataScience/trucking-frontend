@@ -170,7 +170,12 @@ export type BidAttachmentMime =
   | "image/png"
   | "image/webp"
   | "application/pdf"
-  | "text/csv";
+  | "text/csv"
+  | "application/zip"
+  | "application/x-zip-compressed"
+  | "application/msword"
+  | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  | (string & {});
 
 export interface BidAttachment {
   id: number;
