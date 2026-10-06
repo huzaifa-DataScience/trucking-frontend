@@ -48,7 +48,7 @@ export async function getMyPlate(): Promise<MyPlateResponse> {
   return getDashboard();
 }
 
-export async function listBids(params?: {
+export type BidListParams = {
   status?: string;
   entityId?: number;
   search?: string;
@@ -61,12 +61,35 @@ export async function listBids(params?: {
   bidDateFrom?: string;
   bidDateTo?: string;
   clientCompanyName?: string;
-  /** e.g. bidDate — server orders the list. */
+  /** Column id. Today the server only orders `bidDate` and `updated`. */
   sort?: string;
+  sortDir?: "asc" | "desc";
   /** assistant_estimator / user default. `all` is the full team table. */
   view?: "internal" | "all";
-}): Promise<BidListItem[]> {
-  return get<BidListItem[]>("/bids", {
+  /** 1-based. Omit to keep the legacy full array (duplicate search, export callers). */
+  page?: number;
+  pageSize?: number;
+};
+
+export type BidListStatusCounts = {
+  all: number;
+  draft: number;
+  submitted: number;
+  archived: number;
+};
+
+export type BidListPage = {
+  items: BidListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  /** False when the body is still a bare array — the list paginates in the browser. */
+  serverPaged: boolean;
+  counts?: BidListStatusCounts;
+};
+
+function listBidsQuery(params?: BidListParams) {
+  return {
     status: params?.status,
     entityId: params?.entityId,
     search: params?.search,
@@ -80,8 +103,77 @@ export async function listBids(params?: {
     bidDateTo: params?.bidDateTo,
     clientCompanyName: params?.clientCompanyName,
     sort: params?.sort,
+    sortDir: params?.sortDir,
     view: params?.view,
-  });
+    page: params?.page,
+    pageSize: params?.pageSize,
+  };
+}
+
+function asCount(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+/** Bare array = today's full list. `{ items, page, pageSize, total }` = server page. */
+export function parseBidListPage(
+  raw: unknown,
+  fallbackPage = 1,
+  fallbackSize = 25
+): BidListPage {
+  if (Array.isArray(raw)) {
+    const items = raw as BidListItem[];
+    return {
+      items,
+      page: 1,
+      pageSize: items.length || fallbackSize,
+      total: items.length,
+      serverPaged: false,
+    };
+  }
+  if (raw && typeof raw === "object" && Array.isArray((raw as { items?: unknown }).items)) {
+    const body = raw as Record<string, unknown>;
+    const items = body.items as BidListItem[];
+    const countsRaw = body.counts;
+    let counts: BidListStatusCounts | undefined;
+    if (countsRaw && typeof countsRaw === "object") {
+      const c = countsRaw as Record<string, unknown>;
+      const all = asCount(c.all);
+      const draft = asCount(c.draft);
+      const submitted = asCount(c.submitted);
+      const archived = asCount(c.archived);
+      if (all != null && draft != null && submitted != null && archived != null) {
+        counts = { all, draft, submitted, archived };
+      }
+    }
+    return {
+      items,
+      page: asCount(body.page) ?? fallbackPage,
+      pageSize: asCount(body.pageSize) ?? fallbackSize,
+      total: asCount(body.total) ?? items.length,
+      serverPaged: true,
+      counts,
+    };
+  }
+  return {
+    items: [],
+    page: fallbackPage,
+    pageSize: fallbackSize,
+    total: 0,
+    serverPaged: false,
+  };
+}
+
+export async function listBids(params?: BidListParams): Promise<BidListItem[]> {
+  const raw = await get<unknown>("/bids", listBidsQuery(params));
+  return parseBidListPage(raw, params?.page ?? 1, params?.pageSize ?? 25).items;
+}
+
+/** Estimates list. Sends page/pageSize; still accepts a bare array until the server pages. */
+export async function listBidsPage(params?: BidListParams): Promise<BidListPage> {
+  const page = params?.page ?? 1;
+  const pageSize = params?.pageSize ?? 25;
+  const raw = await get<unknown>("/bids", listBidsQuery(params));
+  return parseBidListPage(raw, page, pageSize);
 }
 
 /** Same filters as listBids → Excel download (bids.xlsx). */

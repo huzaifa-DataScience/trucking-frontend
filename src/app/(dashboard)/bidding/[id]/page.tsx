@@ -116,6 +116,7 @@ function BidWorkspaceInner() {
             attachments={(bid.attachments ?? []).filter(
               (a) =>
                 a.category === "takeoff_markup" ||
+                a.label === "takeoff" ||
                 a.label === "takeoff-zip" ||
                 a.label === "takeoff-snap" ||
                 a.label === "takeoff-recap" ||
@@ -124,7 +125,6 @@ function BidWorkspaceInner() {
             isEditable={isEditable}
             uploading={saving}
             mode="markup"
-            labels={["takeoff-zip", "takeoff-snap", "takeoff-recap"]}
             onUpload={async (file, opts) => uploadAttachment(file, opts)}
             onDelete={async (id) => deleteAttachment(id)}
           />

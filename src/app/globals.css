@@ -561,9 +561,12 @@ body {
   overscroll-behavior: contain;
 }
 
-/* Two full GC / mechanical layers. A third layer scrolls inside. */
+/* One GC or mechanicals list. Extra rows scroll inside; the box does not grow. */
 .intake-compact .intake-gc-layers {
+  height: 27rem;
+  min-height: 27rem;
   max-height: 27rem;
+  flex-shrink: 0;
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -968,6 +971,42 @@ body {
   color: var(--ink);
 }
 
+.intake-compact .intake-head-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.intake-compact .intake-section-head > .intake-head-count,
+.intake-compact .intake-section-head-bar > .intake-head-count {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.intake-compact .intake-section-head-bar > button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.intake-compact .intake-section-head-bar:has(.intake-head-count) > button {
+  right: 48px;
+}
+
 .intake-compact .intake-section-head-bar h3,
 .intake-compact .intake-section-head h3 {
   color: var(--ink);
@@ -1118,6 +1157,46 @@ body {
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+/* Open dropdowns stay solid. A frosted menu was letting the page show through the options. */
+.glass-app select,
+.intake-compact select,
+select option {
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  color: var(--ink);
+}
+
+[role="listbox"],
+[role="menu"] {
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-color: rgba(1, 1, 1, 0.12) !important;
+  box-shadow: 0 12px 28px rgba(1, 1, 1, 0.16) !important;
+}
+
+.intake-compact [role="listbox"] button,
+.intake-compact [role="menu"] button,
+.glass-app [role="listbox"] button,
+.glass-app [role="menu"] button,
+[role="listbox"] button,
+[role="menu"] button {
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+.intake-compact [role="listbox"] button:hover,
+.intake-compact [role="menu"] button:hover,
+.glass-app [role="listbox"] button:hover,
+.glass-app [role="menu"] button:hover,
+[role="listbox"] button:hover,
+[role="menu"] button:hover {
+  background-color: #f3f1ea !important;
 }
 
 
