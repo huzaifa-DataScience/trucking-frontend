@@ -74,6 +74,7 @@ export function useProcessDraft() {
     applyBidDetail,
     setProcessDirty,
     registerProcessSave,
+    getHeaderOurEntityId,
   } = useBidSheet();
   const { showToast } = useToast();
   const [draft, setDraftState] = useState<BidProcess>({});
@@ -117,13 +118,14 @@ export function useProcessDraft() {
         // eslint-disable-next-line no-console
         console.log("[Save] PATCH /bids/%s { process }", bid.id);
       }
+      const ourEntityId = getHeaderOurEntityId();
       const updated = await biddingApi.patchBid(bid.id, {
         process: snapshot,
-        // Header fields (Estimate #, Bid name) are edited on the Intake tab via
-        // setBidHeader, but that only updates local state — this is the actual
-        // save, so they must be sent explicitly or the edit is lost on persist.
+        // Header fields edited on Intake live outside the process draft.
+        // Send them here so a process save cannot drop the company change.
         estimateNumber: bid.estimateNumber ?? undefined,
         bidName: bid.bidName ?? undefined,
+        ...(typeof ourEntityId === "number" ? { ourEntityId } : {}),
         // Dual-bind Setup ↔ Proposal calculator flags
         baseBid: {
           ...(bid.baseBid ?? {}),
@@ -162,6 +164,7 @@ export function useProcessDraft() {
       }
       applyBidDetail({
         ...updated,
+        ourEntityId: getHeaderOurEntityId() ?? updated.ourEntityId,
         process: changedDuringSave ? { ...(updated.process ?? {}), ...draftRef.current } : mergedProcess,
       });
     } catch (e) {
@@ -174,7 +177,7 @@ export function useProcessDraft() {
     } finally {
       setSaving(false);
     }
-  }, [bid, editable, applyBidDetail, setProcessDirty, showToast]);
+  }, [bid, editable, applyBidDetail, setProcessDirty, showToast, getHeaderOurEntityId]);
 
   useEffect(() => {
     registerProcessSave(persist);

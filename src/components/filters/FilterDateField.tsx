@@ -38,7 +38,7 @@ function formatDisplay(date: CalendarDate): string {
 }
 
 const popoverClass =
-  "w-auto overflow-auto rounded-xl border border-white/80 bg-white/85 p-3 shadow-[0_12px_28px_rgba(255,123,17,0.16),inset_0_1px_0_rgba(255,255,255,0.95)] outline-none backdrop-blur-xl";
+  "w-auto overflow-auto rounded-xl border border-ink/10 bg-white p-3 shadow-[0_12px_28px_rgba(1,1,1,0.16)] outline-none";
 const navButtonClass =
   "flex h-7 w-7 items-center justify-center rounded-lg text-ink/50 outline-none transition hover:bg-ink/5 hover:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-30";
 const cellClass =

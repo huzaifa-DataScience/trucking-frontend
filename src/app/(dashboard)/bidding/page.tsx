@@ -14,6 +14,7 @@ import { useBiddingAccess } from "@/hooks/useBiddingAccess";
 import { useCompany } from "@/contexts/CompanyContext";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
+import type { BidListStatusCounts } from "@/lib/api/endpoints/bidding";
 import { updateProfile } from "@/lib/api/endpoints/auth";
 import { getApiErrorMessage } from "@/lib/api/client";
 import { formatDate, formatMoney } from "@/lib/bidding/format";
@@ -56,6 +57,91 @@ type SortDir = "asc" | "desc";
 type ViewMode = "tiles" | "list";
 
 const VIEW_MODE_KEY = "bidding-view-mode";
+const BID_PAGE_SIZES = [25, 50, 100] as const;
+const DEFAULT_BID_PAGE_SIZE = 25;
+
+function sortQuery(key: SortKey): string {
+  switch (key) {
+    case "name":
+      return "bidName";
+    case "estimate":
+      return "estimateNumber";
+    case "stage":
+      return "processStage";
+    case "outcome":
+      return "outcomeStatus";
+    case "baseBid":
+      return "baseBidAmount";
+    case "office":
+      return "companyName";
+    case "updated":
+      return "updated";
+    default:
+      return key;
+  }
+}
+
+function BidListPager({
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
+  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-xs text-ink/50">
+        {total === 0 ? "0 estimates" : `${start}–${end} of ${total.toLocaleString()}`}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="sr-only" htmlFor="bids-page-size">
+          Rows per page
+        </label>
+        <select
+          id="bids-page-size"
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          className="h-9 rounded-lg border border-ink/10 bg-white px-2.5 text-sm font-medium text-ink"
+        >
+          {BID_PAGE_SIZES.map((size) => (
+            <option key={size} value={size}>
+              {size} / page
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+          className="h-9 rounded-lg border border-ink/10 bg-white px-3 text-sm font-medium text-ink disabled:opacity-40"
+        >
+          Previous
+        </button>
+        <span className="min-w-[4.5rem] text-center text-xs font-medium text-ink/55">
+          {page} / {totalPages}
+        </span>
+        <button
+          type="button"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+          className="h-9 rounded-lg border border-ink/10 bg-white px-3 text-sm font-medium text-ink disabled:opacity-40"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function loadViewMode(): ViewMode {
   if (typeof window === "undefined") return "list";
@@ -246,7 +332,7 @@ function FilterSelect({
         <div
           role="listbox"
           aria-label={ariaLabel ?? prefix}
-          className="absolute left-0 top-full z-30 mt-1.5 w-full min-w-max overflow-hidden rounded-xl border border-white/70 bg-white/80 p-1.5 shadow-[0_8px_20px_rgba(255,123,17,0.12)] backdrop-blur-xl"
+          className="absolute left-0 top-full z-30 mt-1.5 w-full min-w-max overflow-hidden rounded-xl border border-ink/10 bg-white p-1.5 shadow-[0_12px_28px_rgba(1,1,1,0.16)]"
         >
           {options.map((o) => {
             const selected = o.value === value;
@@ -324,6 +410,17 @@ export default function BiddingListPage() {
   const [crmFieldKeys, setCrmFieldKeys] = useState<string[]>([]);
   const [filterSaveError, setFilterSaveError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_BID_PAGE_SIZE);
+  const [serverPaged, setServerPaged] = useState(false);
+  const pageRef = useRef(page);
+  const pageSizeRef = useRef(pageSize);
+  const serverPagedRef = useRef(serverPaged);
+  pageRef.current = page;
+  pageSizeRef.current = pageSize;
+  serverPagedRef.current = serverPaged;
+  const [serverTotal, setServerTotal] = useState(0);
+  const [serverCounts, setServerCounts] = useState<BidListStatusCounts | null>(null);
   const filterKeysHydratedFor = useRef<number | null>(null);
   const filterSaveTimer = useRef<number | null>(null);
   const hasLoadedBids = useRef(false);
@@ -445,7 +542,8 @@ export default function BiddingListPage() {
       outcome: outcome || undefined,
       status: status === "all" ? undefined : status,
       teamId: isTeamScopedRole && showAllTeams ? ("all" as const) : undefined,
-      sort: sortKey === "bidDate" ? "bidDate" : undefined,
+      sort: sortQuery(sortKey),
+      sortDir,
       view: isInternalRole ? (internalList ? ("internal" as const) : ("all" as const)) : undefined,
       bidDateFrom: localBidFrom || sidebarDateFilters.bidDateFrom,
       bidDateTo: localBidTo || sidebarDateFilters.bidDateTo,
@@ -465,8 +563,39 @@ export default function BiddingListPage() {
       internalList,
       localBidFrom,
       localBidTo,
+      sortDir,
     ]
   );
+
+  /** Sidebar OR-groups, captain, bid type, and building type are still applied in the browser. */
+  const needsFullList = useMemo(() => {
+    if (captainFilter || bidKindFilter.trim() || constructionFilter.trim()) return true;
+    if (filterGroups.length > 1) return true;
+    if (filterGroups.length === 1) {
+      return filterGroups[0].conditions.some(
+        (c) => !(c.field === "bidDate" && c.op === "between")
+      );
+    }
+    return false;
+  }, [captainFilter, bidKindFilter, constructionFilter, filterGroups]);
+
+  const listQueryKey = useMemo(
+    () =>
+      JSON.stringify({
+        listParams,
+        captainFilter,
+        bidKindFilter,
+        constructionFilter,
+        filterGroups,
+        needsFullList,
+      }),
+    [listParams, captainFilter, bidKindFilter, constructionFilter, filterGroups, needsFullList]
+  );
+  const listQueryKeyRef = useRef(listQueryKey);
+  if (listQueryKeyRef.current !== listQueryKey) {
+    listQueryKeyRef.current = listQueryKey;
+    if (page !== 1) setPage(1);
+  }
 
   /** Guards against an earlier in-flight fetch resolving after a newer one and
    * clobbering fresher data — e.g. one fired before auth/role context settled. */
@@ -479,7 +608,7 @@ export default function BiddingListPage() {
     else setLoading(true);
     setError(null);
     try {
-      const list = await biddingApi.listBids({
+      const result = await biddingApi.listBidsPage({
         entityId: listParams.entityId,
         search: listParams.search,
         workType: listParams.workType,
@@ -489,14 +618,28 @@ export default function BiddingListPage() {
         bidDateFrom: listParams.bidDateFrom,
         bidDateTo: listParams.bidDateTo,
         sort: listParams.sort,
+        sortDir: listParams.sortDir,
         view: listParams.view,
+        // Status stays client-side while the body is still a full array.
+        status: !needsFullList && serverPagedRef.current ? listParams.status : undefined,
+        page: needsFullList ? undefined : pageRef.current,
+        pageSize: needsFullList ? undefined : pageSizeRef.current,
       });
       if (seq !== bidsRequestSeqRef.current) return; // a newer request superseded this one
-      setBids(list);
+      setBids(result.items);
+      setServerPaged(result.serverPaged && !needsFullList);
+      setServerTotal(result.total);
+      setServerCounts(result.counts ?? null);
+      if (result.serverPaged && !needsFullList && result.page !== pageRef.current) {
+        setPage(result.page);
+      }
     } catch (e) {
       if (seq !== bidsRequestSeqRef.current) return;
       setError(getApiErrorMessage(e, "Failed to load bids"));
       setBids([]);
+      setServerPaged(false);
+      setServerTotal(0);
+      setServerCounts(null);
     } finally {
       if (seq === bidsRequestSeqRef.current) {
         hasLoadedBids.current = true;
@@ -504,12 +647,14 @@ export default function BiddingListPage() {
         setRefreshing(false);
       }
     }
-  }, [listParams]);
+  }, [listParams, needsFullList]);
 
+  // Page clicks hit the network only after the server returns a page envelope.
+  // A bare array is sliced in the browser.
   useEffect(() => {
     const t = setTimeout(() => void loadBids(), search ? 300 : 0);
     return () => clearTimeout(t);
-  }, [loadBids, search]);
+  }, [loadBids, search, serverPaged, serverPaged ? page : 0, serverPaged ? pageSize : 0]);
 
   /**
    * Best-effort: pull bidDate/clientCompanyName out of the sidebar filters for the
@@ -563,6 +708,7 @@ export default function BiddingListPage() {
   }, [bids]);
 
   const visibleBids = useMemo(() => {
+    if (serverPaged) return bids;
     const filtered = (status === "all" ? bids : bids.filter((b) => b.status === status))
       .filter((b) => rowMatchesGroups(b as unknown as Record<string, unknown>, filterGroups))
       .filter((b) => !captainFilter || (b.captain || b.estimator || "") === captainFilter)
@@ -619,7 +765,14 @@ export default function BiddingListPage() {
       })();
       return sortDir === "desc" ? -cmp : cmp;
     });
-  }, [bids, status, sortKey, sortDir, filterGroups, captainFilter, bidKindFilter, constructionFilter]);
+  }, [bids, serverPaged, status, sortKey, sortDir, filterGroups, captainFilter, bidKindFilter, constructionFilter]);
+
+  const filteredTotal = serverPaged ? serverTotal : visibleBids.length;
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize) || 1);
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = serverPaged
+    ? visibleBids
+    : visibleBids.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const exportToExcel = useCallback(() => {
     import("xlsx").then((XLSX) => {
@@ -744,6 +897,13 @@ export default function BiddingListPage() {
         { key: "updated", label: "Updated", width: "w-[8%]" },
       ];
 
+  const tabCount = (value: StatusFilter): number | null => {
+    if (serverCounts) return value === "all" ? serverCounts.all : serverCounts[value];
+    if (!serverPaged) return value === "all" ? counts.total : counts[value];
+    if (value === status) return serverTotal;
+    return null;
+  };
+
   const rowHref = (bid: BidListItem) =>
     isInternalRole ? `/bidding/${bid.id}?stage=takeoff` : `/bidding/${bid.id}?stage=intake`;
 
@@ -856,8 +1016,8 @@ export default function BiddingListPage() {
         ) : (
           <div>
             <p className="text-2xl font-semibold leading-none text-ink">
-              {visibleBids.length}
-              {visibleBids.length !== counts.total ? (
+              {filteredTotal.toLocaleString()}
+              {!serverPaged && filteredTotal !== counts.total ? (
                 <span className="text-base font-normal text-ink/40"> of {counts.total}</span>
               ) : null}
             </p>
@@ -872,7 +1032,7 @@ export default function BiddingListPage() {
         <div className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]">
           {STATUS_FILTERS.map((f) => {
             const active = status === f.value;
-            const count = f.value === "all" ? counts.total : counts[f.value];
+            const count = tabCount(f.value);
             return (
               <button
                 key={f.value}
@@ -884,8 +1044,8 @@ export default function BiddingListPage() {
                 }`}
               >
                 {f.label}{" "}
-                <span className={count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
-                  {count}
+                <span className={count == null || count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
+                  {count == null ? "—" : count}
                 </span>
                 {active && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />}
               </button>
@@ -1124,7 +1284,7 @@ export default function BiddingListPage() {
 
       {loading && bids.length === 0 ? (
         viewMode === "list" ? <TableSkeleton rows={8} toolbar={false} /> : <SkeletonCardGrid count={6} />
-      ) : visibleBids.length === 0 ? (
+      ) : filteredTotal === 0 ? (
         <EmptyState
           message={emptyMessage}
           action={
@@ -1164,7 +1324,7 @@ export default function BiddingListPage() {
               </tr>
             </thead>
             <tbody>
-              {visibleBids.map((bid, idx) => (
+              {pageRows.map((bid, idx) => (
                 <tr
                   key={bid.id}
                   className={`group origin-center transform-gpu border-b border-ink/[0.06] text-sm transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform hover:relative hover:z-10 hover:scale-[1.02] hover:drop-shadow-[0_10px_18px_rgba(1,1,1,0.14)] ${idx % 2 === 1 ? "bg-ink/[0.012]" : ""}`}
@@ -1196,11 +1356,24 @@ export default function BiddingListPage() {
         </div>
       ) : (
         <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {visibleBids.map((bid) => (
+          {pageRows.map((bid) => (
             <BidListCard key={bid.id} bid={bid} hideDraftChip={status === "draft"} />
           ))}
         </div>
       )}
+
+      {filteredTotal > 0 ? (
+        <BidListPager
+          page={currentPage}
+          pageSize={pageSize}
+          total={filteredTotal}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+      ) : null}
 
       <FilterSidebar
         open={filterOpen}

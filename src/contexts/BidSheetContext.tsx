@@ -60,6 +60,10 @@ type BidSheetContextValue = {
   serverVerifyWarnings: string[];
   selectedTeam: ReturnType<typeof useBiddingLookups>["teams"][number] | null;
   setBidHeader: (patch: BidHeaderPatch) => void;
+  /** Intake company — PATCH /bids/:id { ourEntityId } only. Any stage while the bid is editable. */
+  patchOurEntityId: (ourEntityId: number) => Promise<void>;
+  /** Latest header company, including an in-flight Intake change. */
+  getHeaderOurEntityId: () => number | undefined;
   setJobId: (jobId: number | null, options?: { prefillCompany?: boolean }) => Promise<void>;
   setCompanyInfoField: (key: keyof BidCompanyInfo, value: string | null) => void;
   prefillCompanyFromJob: () => Promise<void>;
@@ -432,6 +436,53 @@ export function BidSheetProvider({
     [scheduleAutoSave]
   );
 
+  const getHeaderOurEntityId = useCallback(
+    () => bidRef.current?.ourEntityId,
+    []
+  );
+
+  const patchOurEntityId = useCallback(
+    async (ourEntityId: number) => {
+      const current = bidRef.current;
+      if (!current || !canWriteRef.current) return;
+      if (current.status === "archived" || current.canEdit === false) return;
+      if (!Number.isFinite(ourEntityId) || ourEntityId <= 0) return;
+      if (current.ourEntityId === ourEntityId) return;
+      const previous = current.ourEntityId;
+      bidRef.current = { ...current, ourEntityId };
+      setBid((prev) => (prev ? { ...prev, ourEntityId } : prev));
+      setSaving(true);
+      setError(null);
+      try {
+        const updated = await biddingApi.patchBid(current.id, { ourEntityId });
+        setBid((prev) => {
+          if (!prev) return prev;
+          if (bidRef.current?.ourEntityId !== ourEntityId) return prev;
+          const next = {
+            ...prev,
+            ourEntityId: updated.ourEntityId ?? ourEntityId,
+          };
+          bidRef.current = next;
+          return next;
+        });
+      } catch (e) {
+        const message = getApiErrorMessage(e, "Couldn't update company");
+        setError(message);
+        showToast(message, "error");
+        setBid((prev) => {
+          if (!prev) return prev;
+          if (bidRef.current?.ourEntityId !== ourEntityId) return prev;
+          const next = { ...prev, ourEntityId: previous };
+          bidRef.current = next;
+          return next;
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [showToast]
+  );
+
   const setCompanyInfoField = useCallback(
     (key: keyof BidCompanyInfo, value: string | null) => {
       setBid((prev) => {
@@ -787,6 +838,8 @@ export function BidSheetProvider({
     serverVerifyWarnings,
     selectedTeam,
     setBidHeader,
+    patchOurEntityId,
+    getHeaderOurEntityId,
     setJobId,
     setCompanyInfoField,
     prefillCompanyFromJob,

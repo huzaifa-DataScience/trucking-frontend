@@ -182,7 +182,15 @@ function contactsForCompany(
 /** Stage 1 — Intake (FRONTEND_INTAKE.md). Bid clerk. Incomplete OK. */
 export function BidIntakeStage() {
   const router = useRouter();
-  const { setBidHeader, setJobId, setBaseBidField, lookups, uploadAttachment, deleteAttachment } = useBidSheet();
+  const {
+    setBidHeader,
+    patchOurEntityId,
+    setJobId,
+    setBaseBidField,
+    lookups,
+    uploadAttachment,
+    deleteAttachment,
+  } = useBidSheet();
   const confirmDialog = useConfirmDialog();
   const {
     bid,
@@ -703,6 +711,42 @@ export function BidIntakeStage() {
           />
         </label>
         <label className="intake-row">
+          <span className={labelClass}>Company bidding (us)</span>
+          <div className="min-w-0">
+            <div className="relative">
+              <select
+                className={selectClass}
+                disabled={!editable}
+                value={String(bid.ourEntityId ?? "")}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (!Number.isFinite(n) || n <= 0) return;
+                  void patchOurEntityId(n);
+                }}
+              >
+                {(lookups.ourEntities.length
+                  ? lookups.ourEntities
+                  : [
+                      { id: 1, name: "GOEL" },
+                      { id: 2, name: "GOEL DC" },
+                      { id: 3, name: "DCB" },
+                    ]
+                ).map((e) => (
+                  <option key={e.id} value={String(e.id)}>
+                    {e.name}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
+            <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
+              {draft.entityRule?.suggestedOurEntity
+                ? `Rule suggests ${draft.entityRule.suggestedOurEntity.replace(/_/g, " ")} — change anytime on Intake`
+                : "GOEL / GOEL DC / DCB — change anytime on Intake"}
+            </span>
+          </div>
+        </label>
+        <label className="intake-row">
           <span className={labelClass}>Bid type (mandatory)</span>
           <div className="relative">
             <select
@@ -809,7 +853,7 @@ export function BidIntakeStage() {
           />
         </label>
         <label className="intake-row">
-          <span className={labelClass}>Base bid $</span>
+          <span className={labelClass}>Bid price</span>
           <input
             type="number"
             min={0}
@@ -954,8 +998,8 @@ export function BidIntakeStage() {
           <span className={labelClass}>Entity rule</span>
           <p className="rounded border border-[#e5e7eb] bg-[#f3f4f6] px-2.5 py-1.5 text-[12.5px] text-[#4b5563]">
             {draft.entityRule?.suggestedOurEntity
-              ? `Suggests ${draft.entityRule.suggestedOurEntity.replace(/_/g, " ")}`
-              : "Pick company on the bid header — rule only suggests"}
+              ? `Suggests ${draft.entityRule.suggestedOurEntity.replace(/_/g, " ")} — pick above, not locked`
+              : "Suggests GOEL / GOEL DC / DCB from state. Actual company is the dropdown above."}
           </p>
         </label>
         <label className="intake-row">
@@ -1052,8 +1096,11 @@ export function BidIntakeStage() {
       <div className="flex min-w-0 flex-col gap-3">
         {renderPartySection("mechanicalEngineer", "Mechanical", "mechanical")}
       <section className="intake-section min-w-0">
-        <div className={sectionHead}>GCs / mechanicals</div>
-        <div className={`${sectionBody} flex flex-col gap-3`}>
+        <div className={sectionHead}>
+          GCs / mechanicals
+          <span className="intake-head-count">{gcs.length + mechs.length}</span>
+        </div>
+        <div className={`${sectionBody} intake-gc-layers flex flex-col gap-3`}>
         {(
           [
             {
@@ -1075,17 +1122,20 @@ export function BidIntakeStage() {
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
                 {title}
               </p>
-              {editable ? (
-                <button
-                  type="button"
-                  className="text-[11px] font-semibold text-[#4b5563] hover:underline"
-                  onClick={() => setList([...list, emptyGcOrMech()])}
-                >
-                  + Add
-                </button>
-              ) : null}
+              <div className="flex items-center gap-2">
+                {editable ? (
+                  <button
+                    type="button"
+                    className="text-[11px] font-semibold text-[#4b5563] hover:underline"
+                    onClick={() => setList([...list, emptyGcOrMech()])}
+                  >
+                    + Add
+                  </button>
+                ) : null}
+                <span className="intake-head-count">{list.length}</span>
+              </div>
             </div>
-            <div className="intake-gc-layers mt-2">
+            <div className="mt-2">
             {list.length === 0 ? (
               <p className="text-[12.5px] text-[#9ca3af]">None yet.</p>
             ) : (
@@ -1183,17 +1233,6 @@ export function BidIntakeStage() {
                       />
                       Still bidding
                     </label>
-                    <input
-                      type="number"
-                      className={`${inputClass} w-28`}
-                      disabled={!editable}
-                      placeholder="Bid price"
-                      value={row.bidPrice ?? ""}
-                      onChange={(e) => {
-                        const bidPrice = e.target.value === "" ? null : Number(e.target.value);
-                        setList(list.map((r, i) => (i === index ? { ...r, bidPrice } : r)));
-                      }}
-                    />
                     <select
                       className={`${inputClass} w-40`}
                       disabled={!editable}
@@ -1265,6 +1304,7 @@ export function BidIntakeStage() {
           <div>
             <h3>Invitations</h3>
           </div>
+          <span className="intake-head-count">{invitations.length}</span>
           {editable ? (
             <button
               type="button"
@@ -1513,19 +1553,22 @@ export function BidIntakeStage() {
                     <span className="text-[11px] font-semibold text-[#6b7280]">
                       Addenda from this inviter
                     </span>
-                    {editable ? (
-                      <button
-                        type="button"
-                        className="text-[11px] font-semibold text-[#4b5563] hover:underline"
-                        onClick={() =>
-                          patchInvitation(index, {
-                            addenda: [...addenda, emptyAddendum()],
-                          })
-                        }
-                      >
-                        + Add addendum
-                      </button>
-                    ) : null}
+                    <div className="flex items-center gap-2">
+                      {editable ? (
+                        <button
+                          type="button"
+                          className="text-[11px] font-semibold text-[#4b5563] hover:underline"
+                          onClick={() =>
+                            patchInvitation(index, {
+                              addenda: [...addenda, emptyAddendum()],
+                            })
+                          }
+                        >
+                          + Add addendum
+                        </button>
+                      ) : null}
+                      <span className="intake-head-count">{addenda.length}</span>
+                    </div>
                   </div>
                   <div className="intake-rows-scroll flex flex-col gap-2">
                   {addenda.length === 0 ? (
@@ -1712,6 +1755,7 @@ export function BidIntakeStage() {
           <div>
             <h3>Project document hub</h3>
           </div>
+          <span className="intake-head-count">{documentLinks.length}</span>
           {editable ? (
             <button
               type="button"
@@ -1814,6 +1858,7 @@ export function BidIntakeStage() {
           <div>
             <h3>Contract chain</h3>
           </div>
+          <span className="intake-head-count">{tiers.length}</span>
           {editable ? (
             <button
               type="button"
