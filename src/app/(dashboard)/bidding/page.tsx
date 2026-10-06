@@ -918,24 +918,24 @@ export default function BiddingListPage() {
 
   const listColumns: { key: SortKey; label: string; width: string }[] = internalList
     ? [
-        { key: "estimate", label: "Estimate #", width: "w-[18%]" },
-        { key: "name", label: "Name", width: "w-[42%]" },
-        { key: "internalBidDate", label: "Internal bid date", width: "w-[22%]" },
-        { key: "takeoffTurnedIn", label: "Turned in", width: "w-[18%]" },
+        { key: "estimate", label: "Estimate #", width: "min-w-[7.5rem]" },
+        { key: "name", label: "Name", width: "min-w-[14rem]" },
+        { key: "internalBidDate", label: "Internal bid date", width: "min-w-[8.5rem]" },
+        { key: "takeoffTurnedIn", label: "Turned in", width: "min-w-[5.5rem]" },
       ]
     : [
-        { key: "estimate", label: "Estimate #", width: "w-[10%]" },
-        { key: "name", label: "Name", width: "w-[18%]" },
-        { key: "bidDate", label: "Bid date & time", width: "w-[11%]" },
-        { key: "office", label: "Company", width: "w-[10%]" },
-        { key: "captain", label: "Team captain", width: "w-[11%]" },
-        { key: "stage", label: "Current progress", width: "w-[13%]" },
-        { key: "outcome", label: "Outcome", width: "w-[8%]" },
-        { key: "baseBid", label: "Base bid", width: "w-[8%]" },
-        { key: "status", label: "Record", width: "w-[8%]" },
-        { key: "internalBidDate", label: "Internal bid date", width: "w-[10%]" },
-        { key: "takeoffTurnedIn", label: "Turned in", width: "w-[7%]" },
-        { key: "updated", label: "Updated", width: "w-[8%]" },
+        { key: "estimate", label: "Estimate #", width: "min-w-[7.5rem]" },
+        { key: "name", label: "Name", width: "min-w-[14rem]" },
+        { key: "bidDate", label: "Bid date & time", width: "min-w-[8.5rem]" },
+        { key: "office", label: "Company", width: "min-w-[8rem]" },
+        { key: "captain", label: "Team captain", width: "min-w-[9rem]" },
+        { key: "stage", label: "Current progress", width: "min-w-[9.5rem]" },
+        { key: "outcome", label: "Outcome", width: "min-w-[5.5rem]" },
+        { key: "baseBid", label: "Base bid", width: "min-w-[6.5rem]" },
+        { key: "status", label: "Record", width: "min-w-[5.5rem]" },
+        { key: "internalBidDate", label: "Internal bid date", width: "min-w-[8.5rem]" },
+        { key: "takeoffTurnedIn", label: "Turned in", width: "min-w-[5.5rem]" },
+        { key: "updated", label: "Updated", width: "min-w-[6.5rem]" },
       ];
 
   const tabCount = (value: StatusFilter): number | null => {
@@ -1074,28 +1074,37 @@ export default function BiddingListPage() {
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]">
-          {STATUS_FILTERS.map((f) => {
-            const active = status === f.value;
-            const count = tabCount(f.value);
-            return (
-              <button
-                key={f.value}
-                type="button"
-                onClick={() => (f.value === "all" ? setStatus("all") : toggleStatus(f.value))}
-                aria-pressed={active}
-                className={`relative pb-2.5 text-sm transition focus-visible:outline-none ${
-                  active ? "font-semibold text-ink" : "font-medium text-ink/55 hover:text-ink"
-                }`}
-              >
-                {f.label}{" "}
-                <span className={count == null || count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
-                  {count == null ? "—" : count}
-                </span>
-                {active && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />}
-              </button>
-            );
-          })}
+        {/* Record status: secondary rail owns these on xl+; sticky horizontal strip below xl */}
+        <div
+          className="sticky top-14 z-20 -mx-4 border-b border-[var(--border-subtle)] bg-canvas px-4 sm:top-[3.75rem] sm:-mx-6 sm:px-6 xl:hidden"
+          role="tablist"
+          aria-label="Estimate record status"
+        >
+          <div className="flex flex-nowrap items-center gap-5 overflow-x-auto pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {STATUS_FILTERS.map((f) => {
+              const active = status === f.value;
+              const count = tabCount(f.value);
+              return (
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => (f.value === "all" ? setStatus("all") : toggleStatus(f.value))}
+                  aria-pressed={active}
+                  className={`relative shrink-0 whitespace-nowrap pb-2.5 text-sm transition focus-visible:outline-none ${
+                    active ? "font-semibold text-ink" : "font-medium text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  {f.label}{" "}
+                  <span className={count == null || count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
+                    {count == null ? "—" : count}
+                  </span>
+                  {active ? (
+                    <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -1310,8 +1319,8 @@ export default function BiddingListPage() {
           }
         />
       ) : (
-        <div className="cs-data-table overflow-x-auto rounded-[var(--radius)] border border-[var(--border-subtle)] bg-surface">
-          <table className="w-full min-w-[720px] table-fixed border-collapse text-left">
+        <div className="cs-data-table -mx-4 overflow-x-auto overscroll-x-contain border-y border-[var(--border-subtle)] bg-surface sm:-mx-6 md:mx-0 md:rounded-[var(--radius)] md:border">
+          <table className="w-max min-w-full border-collapse text-left">
             <thead>
               <tr>
                 {listColumns.map((column) => (
@@ -1345,67 +1354,72 @@ export default function BiddingListPage() {
                 });
                 const crewLabel = teamNameFor(bid.teamId);
                 return (
-                <tr
-                  key={bid.id}
-                  className={`border-b border-[var(--border-subtle)] transition-colors hover:bg-canvas ${idx % 2 === 1 ? "bg-canvas/50" : "bg-white"}`}
-                >
-                  {listColumns.map((column) => {
-                    const text = cellText(bid, column.key);
-                    return (
-                    <td
-                      key={column.key}
-                      title={text}
-                      className="truncate px-3 py-2.5 align-middle"
-                    >
-                      {column.key === "estimate" || column.key === "name" ? (
-                        <Link href={rowHref(bid)} className="block truncate font-medium text-ink hover:underline">
-                          {softBreakText(text)}
-                        </Link>
-                      ) : column.key === "status" ? (
-                        status === "draft" && bid.status === "draft" ? null : <BidStatusBadge status={bid.status} />
-                      ) : column.key === "bidDate" ? (
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-ink">{schedule.date}</p>
-                          {schedule.time ? (
-                            <p className="cs-helper truncate">{schedule.time}</p>
-                          ) : null}
-                        </div>
-                      ) : column.key === "office" ? (
-                        <span className="inline-flex max-w-full items-center gap-2 truncate">
-                          <span
-                            className={`h-2 w-2 shrink-0 rounded-full ${officeBrand.dot}`}
-                            aria-hidden
-                            title={text}
-                          />
-                          <span>{text}</span>
-                        </span>
-                      ) : column.key === "captain" ? (
-                        <div className="min-w-0">
-                          <p className="truncate">{softBreakText(text)}</p>
-                          {bid.teamId != null && crewLabel ? (
-                            <p className="cs-helper mt-0.5 inline-flex max-w-full items-center gap-1.5 truncate">
+                  <tr
+                    key={bid.id}
+                    className={`border-b border-[var(--border-subtle)] transition-colors hover:bg-canvas ${idx % 2 === 1 ? "bg-canvas/50" : "bg-white"}`}
+                  >
+                    {listColumns.map((column) => {
+                      const text = cellText(bid, column.key);
+                      return (
+                        <td
+                          key={column.key}
+                          title={text}
+                          className={`whitespace-nowrap px-3 py-2.5 align-middle text-[13px] ${column.width}`}
+                        >
+                          {column.key === "estimate" || column.key === "name" ? (
+                            <Link
+                              href={rowHref(bid)}
+                              className="block max-w-[16rem] truncate font-medium text-ink hover:underline"
+                            >
+                              {softBreakText(text)}
+                            </Link>
+                          ) : column.key === "status" ? (
+                            status === "draft" && bid.status === "draft" ? null : (
+                              <BidStatusBadge status={bid.status} />
+                            )
+                          ) : column.key === "bidDate" ? (
+                            <div className="min-w-0">
+                              <p className="font-medium text-ink">{schedule.date}</p>
+                              {schedule.time ? (
+                                <p className="cs-helper">{schedule.time}</p>
+                              ) : null}
+                            </div>
+                          ) : column.key === "office" ? (
+                            <span className="inline-flex max-w-[10rem] items-center gap-2 truncate">
                               <span
-                                className={`h-1.5 w-1.5 shrink-0 rounded-full ${teamColors.dot}`}
+                                className={`h-2 w-2 shrink-0 rounded-full ${officeBrand.dot}`}
                                 aria-hidden
+                                title={text}
                               />
-                              {crewLabel}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : column.key === "stage" ? (
-                        <BidStageProgressBar
-                          processStage={bid.processStage}
-                          teamId={bid.teamId}
-                          compact
-                        />
-                      ) : (
-                        softBreakText(text)
-                      )}
-                    </td>
-                    );
-                  })}
-                </tr>
-              );
+                              <span className="truncate">{text}</span>
+                            </span>
+                          ) : column.key === "captain" ? (
+                            <div className="min-w-0 max-w-[11rem]">
+                              <p className="truncate">{softBreakText(text)}</p>
+                              {bid.teamId != null && crewLabel ? (
+                                <p className="cs-helper mt-0.5 inline-flex max-w-full items-center gap-1.5 truncate">
+                                  <span
+                                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${teamColors.dot}`}
+                                    aria-hidden
+                                  />
+                                  {crewLabel}
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : column.key === "stage" ? (
+                            <BidStageProgressBar
+                              processStage={bid.processStage}
+                              teamId={bid.teamId}
+                              compact
+                            />
+                          ) : (
+                            <span className="block max-w-[12rem] truncate">{softBreakText(text)}</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
               })}
             </tbody>
           </table>
