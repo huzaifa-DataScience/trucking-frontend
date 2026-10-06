@@ -9,6 +9,7 @@ export function BidSheetHeaderSection({
   bid,
   isEditable,
   identityLocked = false,
+  companyLocked = false,
   entityOptions,
   jobs,
   onEstimateNumber,
@@ -23,6 +24,8 @@ export function BidSheetHeaderSection({
   isEditable: boolean;
   /** Proposal output mode — estimate #, bid name, company from Intake (read-only). */
   identityLocked?: boolean;
+  /** ourEntityId is in proposalEditor.readOnly — company stays text on Proposal. */
+  companyLocked?: boolean;
   entityOptions: { value: string; label: string }[];
   jobs: LookupItem[];
   onEstimateNumber: (v: string) => void;
@@ -41,6 +44,7 @@ export function BidSheetHeaderSection({
     "";
   const submitDate = bid.submitDate?.slice(0, 10) ?? "";
   const identityDisabled = !isEditable || identityLocked;
+  const companyReadOnly = companyLocked || identityLocked;
 
   const jobOptions = [
     { value: "", label: "No job linked" },
@@ -124,12 +128,12 @@ export function BidSheetHeaderSection({
           label="Company bidding (us)"
           htmlFor="entity"
           hint={
-            identityLocked
-              ? "From Intake — ourEntityId / entityRule"
+            companyReadOnly
+              ? "From Intake — change company there"
               : "GOEL / GOEL DC / DCB"
           }
         >
-          {identityLocked ? (
+          {companyReadOnly ? (
             <p
               id="entity"
               className="mt-1.5 rounded-xl border border-ink/[0.06] bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink"

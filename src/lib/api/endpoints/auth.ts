@@ -207,6 +207,8 @@ export interface AuthTeam {
   captainUserId?: number | null;
   /** Optional contact book / directory blob from GET /auth/team */
   contacts?: unknown;
+  /** Full picker list from GET /auth/team (same as GET /lookups/bidding/contacts) */
+  people?: unknown;
   slots?: Partial<Record<AuthTeamSlotKey, AuthTeamSlotAssignee>> | null;
   /** Flat name fallbacks if BE still sends Bid_Teams shape */
   bidClerk?: string | null;
@@ -280,6 +282,7 @@ function normalizeAuthTeam(raw: Record<string, unknown>): AuthTeam {
     captainUserId:
       typeof raw.captainUserId === "number" ? raw.captainUserId : null,
     contacts: raw.contacts ?? undefined,
+    people: raw.people ?? undefined,
     slots,
     bidClerk: typeof raw.bidClerk === "string" ? raw.bidClerk : null,
     duct1: typeof raw.duct1 === "string" ? raw.duct1 : null,

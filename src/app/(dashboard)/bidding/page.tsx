@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { BidStageProgressBar } from "@/components/bidding/BidStageProgressBar";
 import { BidStatusBadge } from "@/components/bidding/BidStatusBadge";
@@ -15,6 +14,7 @@ import { useBiddingAccess } from "@/hooks/useBiddingAccess";
 import { useCompany } from "@/contexts/CompanyContext";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
+import type { BidListStatusCounts } from "@/lib/api/endpoints/bidding";
 import { updateProfile } from "@/lib/api/endpoints/auth";
 import { getApiErrorMessage } from "@/lib/api/client";
 import { formatBidDateAndTime, formatDate, formatMoney } from "@/lib/bidding/format";
@@ -57,6 +57,92 @@ type SortKey =
   | "jobStartDate"
   | "office";
 type SortDir = "asc" | "desc";
+
+const BID_PAGE_SIZES = [25, 50, 100] as const;
+const DEFAULT_BID_PAGE_SIZE = 25;
+
+function sortQuery(key: SortKey): string {
+  switch (key) {
+    case "name":
+      return "bidName";
+    case "estimate":
+      return "estimateNumber";
+    case "stage":
+      return "processStage";
+    case "outcome":
+      return "outcomeStatus";
+    case "baseBid":
+      return "baseBidAmount";
+    case "office":
+      return "companyName";
+    case "updated":
+      return "updated";
+    default:
+      return key;
+  }
+}
+
+function BidListPager({
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
+  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-xs text-ink/50">
+        {total === 0 ? "0 estimates" : `${start}–${end} of ${total.toLocaleString()}`}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="sr-only" htmlFor="bids-page-size">
+          Rows per page
+        </label>
+        <select
+          id="bids-page-size"
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          className="cs-field h-9 border px-2.5 text-[13px] font-medium text-ink"
+        >
+          {BID_PAGE_SIZES.map((size) => (
+            <option key={size} value={size}>
+              {size} / page
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+          className="cs-field h-9 border px-3 text-[13px] font-medium text-ink disabled:opacity-40"
+        >
+          Previous
+        </button>
+        <span className="min-w-[4.5rem] text-center text-xs font-medium text-ink-muted">
+          {page} / {totalPages}
+        </span>
+        <button
+          type="button"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+          className="cs-field h-9 border px-3 text-[13px] font-medium text-ink disabled:opacity-40"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -160,8 +246,8 @@ function SortableTh({
       <button
         type="button"
         onClick={() => onSort(column)}
-        className={`inline-flex items-center gap-1 text-left text-[12px] font-medium ${
-          active ? "text-ink" : "text-ink-muted hover:text-ink"
+        className={`inline-flex items-center gap-1 text-left font-semibold ${
+          active ? "text-ink" : "text-ink/50 hover:text-ink"
         }`}
         aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
       >
@@ -216,7 +302,7 @@ function FilterSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel ?? prefix}
-        className="cs-field flex h-9 w-full items-center justify-between gap-2 border px-2.5 text-[13px] font-medium text-ink outline-none transition hover:bg-canvas focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+        className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-white/70 bg-white/50 pl-3 pr-2.5 text-sm font-medium text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] outline-none backdrop-blur-md transition hover:bg-white/70 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
       >
         <span className="truncate">
           {prefix}: {current?.label}
@@ -237,7 +323,7 @@ function FilterSelect({
         <div
           role="listbox"
           aria-label={ariaLabel ?? prefix}
-          className="absolute left-0 top-full z-30 mt-1.5 w-full min-w-max overflow-hidden rounded-xl border border-ink/[0.12] bg-white p-1.5 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.15)]"
+          className="absolute left-0 top-full z-30 mt-1.5 w-full min-w-max overflow-hidden rounded-xl border border-ink/10 bg-white p-1.5 shadow-[0_12px_28px_rgba(1,1,1,0.16)]"
         >
           {options.map((o) => {
             const selected = o.value === value;
@@ -281,21 +367,12 @@ function softBreakText(text: string) {
   ));
 }
 
-function parseStatusParam(raw: string | null): StatusFilter {
-  if (raw === "draft" || raw === "submitted" || raw === "archived") return raw;
-  return "all";
-}
-
-function BiddingListPageInner() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export default function BiddingListPage() {
   const { companyId } = useCompany();
   const { user, setUser } = useAuth();
   const { canRead, canWrite } = useBiddingAccess();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFilter>(() =>
-    parseStatusParam(searchParams.get("status"))
-  );
+  const [status, setStatus] = useState<StatusFilter>("all");
   const [workType, setWorkType] = useState("");
   const [processStage, setProcessStage] = useState("");
   const [outcome, setOutcome] = useState("");
@@ -325,25 +402,20 @@ function BiddingListPageInner() {
   const [crmFieldKeys, setCrmFieldKeys] = useState<string[]>([]);
   const [filterSaveError, setFilterSaveError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_BID_PAGE_SIZE);
+  const [serverPaged, setServerPaged] = useState(false);
+  const pageRef = useRef(page);
+  const pageSizeRef = useRef(pageSize);
+  const serverPagedRef = useRef(serverPaged);
+  pageRef.current = page;
+  pageSizeRef.current = pageSize;
+  serverPagedRef.current = serverPaged;
+  const [serverTotal, setServerTotal] = useState(0);
+  const [serverCounts, setServerCounts] = useState<BidListStatusCounts | null>(null);
   const filterKeysHydratedFor = useRef<number | null>(null);
   const filterSaveTimer = useRef<number | null>(null);
   const hasLoadedBids = useRef(false);
-
-  /** Keep list status in sync with the secondary rail (`?status=`). */
-  useEffect(() => {
-    setStatus(parseStatusParam(searchParams.get("status")));
-  }, [searchParams]);
-
-  const writeStatusToUrl = useCallback(
-    (next: StatusFilter) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (next === "all") params.delete("status");
-      else params.set("status", next);
-      const qs = params.toString();
-      router.replace(qs ? `/bidding?${qs}` : "/bidding", { scroll: false });
-    },
-    [router, searchParams]
-  );
 
   /** Scoped per-user so switching accounts on the same browser doesn't leak someone else's saved views. */
   const savedViewsKey = user ? `${BIDDING_SAVED_VIEWS_KEY}:${user.id}` : null;
@@ -373,7 +445,7 @@ function BiddingListPageInner() {
                   email: c.email,
                 })
               )
-              .filter((n) => n.trim() && n !== "Unknown")
+              .filter((n) => n.trim())
           ),
         ];
         names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
@@ -383,9 +455,6 @@ function BiddingListPageInner() {
         setCaptainLookup([]);
         setEstimatorOptions([]);
       });
-  }, []);
-
-  useEffect(() => {
     void biddingApi
       .getBiddingTeams()
       .then(setTeams)
@@ -523,7 +592,8 @@ function BiddingListPageInner() {
       outcome: outcome || undefined,
       status: status === "all" ? undefined : status,
       teamId: isTeamScopedRole && showAllTeams ? ("all" as const) : undefined,
-      sort: sortKey === "bidDate" ? "bidDate" : undefined,
+      sort: sortQuery(sortKey),
+      sortDir,
       view: isInternalRole ? (internalList ? ("internal" as const) : ("all" as const)) : undefined,
       bidDateFrom: localBidFrom || sidebarDateFilters.bidDateFrom,
       bidDateTo: localBidTo || sidebarDateFilters.bidDateTo,
@@ -543,8 +613,39 @@ function BiddingListPageInner() {
       internalList,
       localBidFrom,
       localBidTo,
+      sortDir,
     ]
   );
+
+  /** Sidebar OR-groups, captain, bid type, and building type are still applied in the browser. */
+  const needsFullList = useMemo(() => {
+    if (captainFilter || bidKindFilter.trim() || constructionFilter.trim()) return true;
+    if (filterGroups.length > 1) return true;
+    if (filterGroups.length === 1) {
+      return filterGroups[0].conditions.some(
+        (c) => !(c.field === "bidDate" && c.op === "between")
+      );
+    }
+    return false;
+  }, [captainFilter, bidKindFilter, constructionFilter, filterGroups]);
+
+  const listQueryKey = useMemo(
+    () =>
+      JSON.stringify({
+        listParams,
+        captainFilter,
+        bidKindFilter,
+        constructionFilter,
+        filterGroups,
+        needsFullList,
+      }),
+    [listParams, captainFilter, bidKindFilter, constructionFilter, filterGroups, needsFullList]
+  );
+  const listQueryKeyRef = useRef(listQueryKey);
+  if (listQueryKeyRef.current !== listQueryKey) {
+    listQueryKeyRef.current = listQueryKey;
+    if (page !== 1) setPage(1);
+  }
 
   /** Guards against an earlier in-flight fetch resolving after a newer one and
    * clobbering fresher data — e.g. one fired before auth/role context settled. */
@@ -557,7 +658,7 @@ function BiddingListPageInner() {
     else setLoading(true);
     setError(null);
     try {
-      const list = await biddingApi.listBids({
+      const result = await biddingApi.listBidsPage({
         entityId: listParams.entityId,
         search: listParams.search,
         workType: listParams.workType,
@@ -567,14 +668,28 @@ function BiddingListPageInner() {
         bidDateFrom: listParams.bidDateFrom,
         bidDateTo: listParams.bidDateTo,
         sort: listParams.sort,
+        sortDir: listParams.sortDir,
         view: listParams.view,
+        // Status stays client-side while the body is still a full array.
+        status: !needsFullList && serverPagedRef.current ? listParams.status : undefined,
+        page: needsFullList ? undefined : pageRef.current,
+        pageSize: needsFullList ? undefined : pageSizeRef.current,
       });
       if (seq !== bidsRequestSeqRef.current) return; // a newer request superseded this one
-      setBids(list);
+      setBids(result.items);
+      setServerPaged(result.serverPaged && !needsFullList);
+      setServerTotal(result.total);
+      setServerCounts(result.counts ?? null);
+      if (result.serverPaged && !needsFullList && result.page !== pageRef.current) {
+        setPage(result.page);
+      }
     } catch (e) {
       if (seq !== bidsRequestSeqRef.current) return;
       setError(getApiErrorMessage(e, "Failed to load bids"));
       setBids([]);
+      setServerPaged(false);
+      setServerTotal(0);
+      setServerCounts(null);
     } finally {
       if (seq === bidsRequestSeqRef.current) {
         hasLoadedBids.current = true;
@@ -582,12 +697,14 @@ function BiddingListPageInner() {
         setRefreshing(false);
       }
     }
-  }, [listParams]);
+  }, [listParams, needsFullList]);
 
+  // Page clicks hit the network only after the server returns a page envelope.
+  // A bare array is sliced in the browser.
   useEffect(() => {
     const t = setTimeout(() => void loadBids(), search ? 300 : 0);
     return () => clearTimeout(t);
-  }, [loadBids, search]);
+  }, [loadBids, search, serverPaged, serverPaged ? page : 0, serverPaged ? pageSize : 0]);
 
   /**
    * Best-effort: pull bidDate/clientCompanyName out of the sidebar filters for the
@@ -641,13 +758,10 @@ function BiddingListPageInner() {
   }, [bids]);
 
   const visibleBids = useMemo(() => {
+    if (serverPaged) return bids;
     const filtered = (status === "all" ? bids : bids.filter((b) => b.status === status))
       .filter((b) => rowMatchesGroups(b as unknown as Record<string, unknown>, filterGroups))
-      .filter(
-        (b) =>
-          !captainFilter ||
-          resolveCaptainLabel(b.captain || b.estimator) === captainFilter
-      )
+      .filter((b) => !captainFilter || resolveCaptainLabel(b.captain || b.estimator) === captainFilter)
       .filter((b) => {
         const q = bidKindFilter.trim().toLowerCase();
         return !q || (b.bidKind || "").toLowerCase().includes(q);
@@ -701,7 +815,14 @@ function BiddingListPageInner() {
       })();
       return sortDir === "desc" ? -cmp : cmp;
     });
-  }, [bids, status, sortKey, sortDir, filterGroups, captainFilter, bidKindFilter, constructionFilter, resolveCaptainLabel]);
+  }, [bids, serverPaged, status, sortKey, sortDir, filterGroups, captainFilter, bidKindFilter, constructionFilter, resolveCaptainLabel]);
+
+  const filteredTotal = serverPaged ? serverTotal : visibleBids.length;
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize) || 1);
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = serverPaged
+    ? visibleBids
+    : visibleBids.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const exportToExcel = useCallback(() => {
     import("xlsx").then((XLSX) => {
@@ -710,12 +831,7 @@ function BiddingListPageInner() {
           "Estimate #": b.estimateNumber,
           "Bid name": b.bidName,
           Contractor: b.clientCompanyName ?? "",
-          "Team captain": resolveCaptainLabel(b.captain || b.estimator),
-          "Bid date": formatBidDateAndTime({
-            bidDate: b.bidDate,
-            dueDate: b.dueDate,
-            dueTime: b.dueTime,
-          }).label,
+          "Team captain": b.captain ?? "",
           "Contract amount": b.contractAmount ?? "",
           "Cash expense": b.cashExpense ?? "",
           "Job start date": b.jobStartDate ?? "",
@@ -724,6 +840,7 @@ function BiddingListPageInner() {
           "Work type": formatWorkType(b.workType ?? undefined),
           "Current progress": formatProcessStage(b.processStage ?? undefined),
           Outcome: formatOutcome(b.outcomeStatus ?? undefined),
+          "Bid date": b.bidDate ?? "",
           "Internal bid date": b.internalBidDate ?? "",
           "Turned in": b.takeoffTurnedIn ? "Yes" : "",
           Updated: b.updatedAt,
@@ -733,7 +850,7 @@ function BiddingListPageInner() {
       XLSX.utils.book_append_sheet(wb, ws, "Estimates");
       XLSX.writeFile(wb, "estimates-export.xlsx");
     });
-  }, [visibleBids, resolveCaptainLabel]);
+  }, [visibleBids]);
 
   const applyFilterGroups = (groups: FilterGroup[]) => {
     setActiveConditionKeys([]);
@@ -796,63 +913,8 @@ function BiddingListPageInner() {
     return "No estimates yet.";
   }, [error, search, status]);
 
-  const toggleStatus = (value: StatusFilter) => {
-    setStatus((prev) => {
-      const next = prev === value ? "all" : value;
-      writeStatusToUrl(next);
-      return next;
-    });
-  };
-
-  const selectStatus = (value: StatusFilter) => {
-    setStatus(value);
-    writeStatusToUrl(value);
-  };
-
-  const statusFilterButtons = (layout: "tabs" | "rail") =>
-    STATUS_FILTERS.map((f) => {
-      const active = status === f.value;
-      const count = f.value === "all" ? counts.total : counts[f.value];
-      if (layout === "rail") {
-        return (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => selectStatus(f.value)}
-            aria-pressed={active}
-            className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-sm transition ${
-              active
-                ? "bg-brand/10 font-semibold text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
-                : "font-medium text-ink/55 hover:bg-ink/[0.04] hover:text-ink"
-            }`}
-          >
-            <span>{f.label}</span>
-            <span className={count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
-              {count}
-            </span>
-          </button>
-        );
-      }
-      return (
-        <button
-          key={f.value}
-          type="button"
-          onClick={() => (f.value === "all" ? selectStatus("all") : toggleStatus(f.value))}
-          aria-pressed={active}
-          className={`relative pb-2.5 text-sm transition focus-visible:outline-none ${
-            active ? "font-semibold text-ink" : "font-medium text-ink/55 hover:text-ink"
-          }`}
-        >
-          {f.label}{" "}
-          <span className={count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
-            {count}
-          </span>
-          {active ? (
-            <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />
-          ) : null}
-        </button>
-      );
-    });
+  const toggleStatus = (value: StatusFilter) =>
+    setStatus((prev) => (prev === value ? "all" : value));
 
   const listColumns: { key: SortKey; label: string; width: string }[] = internalList
     ? [
@@ -876,10 +938,15 @@ function BiddingListPageInner() {
         { key: "updated", label: "Updated", width: "w-[8%]" },
       ];
 
-  const rowHref = (bid: BidListItem) => {
-    const stage = isInternalRole ? "takeoff" : "intake";
-    return `/bidding/${bid.id}?stage=${stage}&status=${encodeURIComponent(bid.status)}`;
+  const tabCount = (value: StatusFilter): number | null => {
+    if (serverCounts) return value === "all" ? serverCounts.all : serverCounts[value];
+    if (!serverPaged) return value === "all" ? counts.total : counts[value];
+    if (value === status) return serverTotal;
+    return null;
   };
+
+  const rowHref = (bid: BidListItem) =>
+    isInternalRole ? `/bidding/${bid.id}?stage=takeoff` : `/bidding/${bid.id}?stage=intake`;
 
   const cellText = (bid: BidListItem, key: SortKey): string => {
     switch (key) {
@@ -922,7 +989,7 @@ function BiddingListPageInner() {
 
   if (!canRead) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-6">
         <PageHeader
           title="Estimates"
           subtitle="Base Bid estimator — team, wage rates, systems, and live MIKE/PJ totals."
@@ -937,7 +1004,7 @@ function BiddingListPageInner() {
   }
 
   return (
-    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-4 ui-animate-in">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 ui-animate-in">
       <PageHeader
         title="Estimates"
         subtitle="Track each estimate from Intake through Outcome. Awarded or Lost bids continue on from their final outcome."
@@ -950,8 +1017,8 @@ function BiddingListPageInner() {
                 onClick={() => setShowAllTeams((v) => !v)}
                 className={`rounded-lg border px-2.5 py-2 text-xs font-semibold transition ${
                   showAllTeams
-                    ? "border-brand/30 bg-brand-tint text-ink"
-                    : "cs-field border text-ink/70 hover:bg-canvas/60 hover:text-ink"
+                    ? "border-brand/30 bg-brand/10 text-brand"
+                    : "border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md hover:bg-white/70 hover:text-ink"
                 }`}
                 title="GET /bids?teamId=all"
               >
@@ -988,18 +1055,18 @@ function BiddingListPageInner() {
         </p>
       ) : null}
 
-      <div className="cs-stat-card w-fit border border-[var(--border-subtle)] bg-surface px-4 py-3">
+      <div className="w-fit rounded-2xl border border-white/70 bg-white/45 px-5 py-4 shadow-[0_6px_16px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl">
         {loading && bids.length === 0 ? (
           <Skeleton className="h-9 w-24" />
         ) : (
           <div>
-            <p className="text-[22px] font-semibold leading-none text-ink">
-              {visibleBids.length}
-              {visibleBids.length !== counts.total ? (
-                <span className="text-[14px] font-normal text-ink-muted"> of {counts.total}</span>
+            <p className="text-2xl font-semibold leading-none text-ink">
+              {filteredTotal.toLocaleString()}
+              {!serverPaged && filteredTotal !== counts.total ? (
+                <span className="text-base font-normal text-ink/40"> of {counts.total}</span>
               ) : null}
             </p>
-            <p className="cs-label mt-1.5">
+            <p className="mt-1.5 text-xs font-medium uppercase tracking-wide text-ink/40">
               {status === "all" ? "Estimates shown" : `${STATUS_FILTERS.find((f) => f.value === status)?.label} estimates shown`}
             </p>
           </div>
@@ -1007,15 +1074,28 @@ function BiddingListPageInner() {
       </div>
 
       <div className="flex flex-col gap-4">
-        {/* Smaller screens: keep horizontal tabs, sticky under the top bar */}
-        <div
-          className="sticky top-14 z-20 -mx-4 border-b border-ink/[0.08] bg-white px-4 sm:top-[3.75rem] sm:-mx-6 sm:px-6 lg:hidden"
-          role="tablist"
-          aria-label="Estimate record status"
-        >
-          <div className="flex flex-wrap items-center gap-5 pt-1">
-            {statusFilterButtons("tabs")}
-          </div>
+        <div className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]">
+          {STATUS_FILTERS.map((f) => {
+            const active = status === f.value;
+            const count = tabCount(f.value);
+            return (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => (f.value === "all" ? setStatus("all") : toggleStatus(f.value))}
+                aria-pressed={active}
+                className={`relative pb-2.5 text-sm transition focus-visible:outline-none ${
+                  active ? "font-semibold text-ink" : "font-medium text-ink/55 hover:text-ink"
+                }`}
+              >
+                {f.label}{" "}
+                <span className={count == null || count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
+                  {count == null ? "—" : count}
+                </span>
+                {active && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />}
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -1032,7 +1112,7 @@ function BiddingListPageInner() {
                 placeholder="Search name, estimate #, drawing #, architect, owner…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="cs-field h-9 w-full border pl-9 pr-3 text-[13px] outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+                className="h-10 w-full rounded-lg border border-white/70 bg-white/50 pl-9 pr-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] outline-none backdrop-blur-md transition focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </div>
           </div> : null}
@@ -1054,7 +1134,7 @@ function BiddingListPageInner() {
           <button
             type="button"
             onClick={() => setFilterOpen(true)}
-            className="cs-field flex h-9 shrink-0 items-center gap-2 border px-3 text-[13px] font-medium text-ink-muted transition hover:border-brand/40 hover:bg-canvas hover:text-ink"
+            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-white/70 bg-white/50 px-3.5 text-sm font-semibold text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md transition hover:border-brand/30 hover:bg-white/70 hover:text-brand"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
@@ -1073,7 +1153,7 @@ function BiddingListPageInner() {
             onClick={exportToExcel}
             disabled={visibleBids.length === 0}
             title="Export the currently filtered/sorted list to Excel"
-            className="cs-field flex h-9 shrink-0 items-center gap-2 border px-3 text-[13px] font-medium text-ink-muted transition hover:border-brand/40 hover:bg-canvas hover:text-ink disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-white/70 bg-white/50 px-3.5 text-sm font-semibold text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md transition hover:border-brand/30 hover:bg-white/70 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
@@ -1091,7 +1171,7 @@ function BiddingListPageInner() {
             aria-selected={internalList}
             onClick={() => setTeamTable(false)}
             className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-              internalList ? "bg-ink text-white" : "cs-field border text-ink/70"
+              internalList ? "bg-ink text-white" : "border border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
             }`}
           >
             Internal bid list
@@ -1102,7 +1182,7 @@ function BiddingListPageInner() {
             aria-selected={!internalList}
             onClick={() => setTeamTable(true)}
             className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-              !internalList ? "bg-ink text-white" : "cs-field border text-ink/70"
+              !internalList ? "bg-ink text-white" : "border border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
             }`}
           >
             Full team table
@@ -1112,7 +1192,7 @@ function BiddingListPageInner() {
 
       <div className="flex flex-wrap items-end gap-3">
         {showFilter("processStage") ? (
-          <label className="flex w-44 flex-col gap-1 text-xs font-medium text-ink-muted">
+          <label className="flex w-44 flex-col gap-1 text-xs font-semibold text-ink/50">
             Current progress
             <FilterSelect
               prefix="Stage"
@@ -1125,28 +1205,28 @@ function BiddingListPageInner() {
         ) : null}
         {showFilter("bidDate") ? (
           <div className="flex items-end gap-2">
-            <label className="flex flex-col gap-1 text-xs font-medium text-ink-muted">
+            <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
               Bid date from
               <input
                 type="date"
                 value={localBidFrom}
                 onChange={(e) => setLocalBidFrom(e.target.value)}
-                className="cs-field h-9 border px-2 text-[13px] text-ink"
+                className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs font-medium text-ink-muted">
+            <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
               to
               <input
                 type="date"
                 value={localBidTo}
                 onChange={(e) => setLocalBidTo(e.target.value)}
-                className="cs-field h-9 border px-2 text-[13px] text-ink"
+                className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
               />
             </label>
           </div>
         ) : null}
         {showFilter("captain") ? (
-          <label className="flex w-48 flex-col gap-1 text-xs font-medium text-ink-muted">
+          <label className="flex w-48 flex-col gap-1 text-xs font-semibold text-ink/50">
             Team captain
             <FilterSelect
               prefix="Captain"
@@ -1158,7 +1238,7 @@ function BiddingListPageInner() {
           </label>
         ) : null}
         {showFilter("workType") ? (
-          <label className="flex w-40 flex-col gap-1 text-xs font-medium text-ink-muted">
+          <label className="flex w-40 flex-col gap-1 text-xs font-semibold text-ink/50">
             Work type
             <FilterSelect
               prefix="Work"
@@ -1170,7 +1250,7 @@ function BiddingListPageInner() {
           </label>
         ) : null}
         {showFilter("outcome") ? (
-          <label className="flex w-40 flex-col gap-1 text-xs font-medium text-ink-muted">
+          <label className="flex w-40 flex-col gap-1 text-xs font-semibold text-ink/50">
             Outcome
             <FilterSelect
               prefix="Outcome"
@@ -1182,22 +1262,22 @@ function BiddingListPageInner() {
           </label>
         ) : null}
         {showFilter("bidKind") ? (
-          <label className="flex flex-col gap-1 text-xs font-medium text-ink-muted">
+          <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
             Bid type
             <input
               value={bidKindFilter}
               onChange={(e) => setBidKindFilter(e.target.value)}
-              className="cs-field h-9 border px-2 text-[13px] text-ink"
+              className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
             />
           </label>
         ) : null}
         {showFilter("constructionType") ? (
-          <label className="flex flex-col gap-1 text-xs font-medium text-ink-muted">
+          <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
             Building type
             <input
               value={constructionFilter}
               onChange={(e) => setConstructionFilter(e.target.value)}
-              className="cs-field h-9 border px-2 text-[13px] text-ink"
+              className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
             />
           </label>
         ) : null}
@@ -1215,7 +1295,7 @@ function BiddingListPageInner() {
 
       {loading && bids.length === 0 ? (
         <TableSkeleton rows={8} toolbar={false} />
-      ) : visibleBids.length === 0 ? (
+      ) : filteredTotal === 0 ? (
         <EmptyState
           message={emptyMessage}
           action={
@@ -1255,7 +1335,7 @@ function BiddingListPageInner() {
               </tr>
             </thead>
             <tbody>
-              {visibleBids.map((bid, idx) => {
+              {pageRows.map((bid, idx) => {
                 const teamColors = teamColorForId(bid.teamId);
                 const officeBrand = entityBrandForName(bid.companyName);
                 const schedule = formatBidDateAndTime({
@@ -1332,6 +1412,19 @@ function BiddingListPageInner() {
         </div>
       )}
 
+      {filteredTotal > 0 ? (
+        <BidListPager
+          page={currentPage}
+          pageSize={pageSize}
+          total={filteredTotal}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+      ) : null}
+
       <FilterSidebar
         open={filterOpen}
         fields={FILTER_FIELDS}
@@ -1349,13 +1442,5 @@ function BiddingListPageInner() {
         onToggleField={toggleCrmField}
       />
     </div>
-  );
-}
-
-export default function BiddingListPage() {
-  return (
-    <Suspense fallback={null}>
-      <BiddingListPageInner />
-    </Suspense>
   );
 }

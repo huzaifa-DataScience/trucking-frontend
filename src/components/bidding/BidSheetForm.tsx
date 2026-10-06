@@ -26,7 +26,7 @@ import { RestrictedState } from "@/components/ui/RestrictedState";
 import { useBiddingAccess } from "@/hooks/useBiddingAccess";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
-import type { ProcessMeta } from "@/lib/bidding/process-types";
+import { processMetaFlagOn, type ProcessMeta } from "@/lib/bidding/process-types";
 
 function BoolSelect({
   id,
@@ -150,6 +150,10 @@ export function BidSheetForm() {
   const warnings = parseWarnings(c);
   /** Proposal screen is output + calculator — identity is RO (process-meta.proposalEditor). */
   const identityLocked = processMeta?.proposalEditor?.isOutput !== false;
+  /** Company bidding (us) stays read-only on Proposal when meta lists ourEntityId. */
+  const companyLocked =
+    identityLocked ||
+    processMetaFlagOn(processMeta?.proposalEditor?.readOnly, "ourEntityId");
   /** Job, dates, wage, schedule, parking, and Mike grid are filled on earlier tabs. */
   const capturedEarlier = identityLocked;
   const assignment = bid.process?.assignment;
@@ -268,6 +272,7 @@ export function BidSheetForm() {
                 bid={bid}
                 isEditable={isEditable}
                 identityLocked={identityLocked}
+                companyLocked={companyLocked}
                 entityOptions={entityOptions}
                 jobs={lookups.jobs}
                 onEstimateNumber={(v) => setBidHeader({ estimateNumber: v })}

@@ -26,12 +26,6 @@ const HUB_LABEL_OPTIONS: { value: string; label: string }[] = [
   { value: "addenda", label: "Addenda" },
 ];
 
-const MARKUP_LABEL_OPTIONS: { value: string; label: string }[] = [
-  { value: "takeoff-zip", label: "Takeoff zip" },
-  { value: "takeoff-snap", label: "Takeoff snap" },
-  { value: "takeoff-recap", label: "Takeoff recap" },
-];
-
 const DRAWING_PHASE_TITLES: Record<string, string> = {
   sd: "SD — Schematic Design",
   dd: "DD — Design Development",
@@ -71,11 +65,6 @@ function fileKindLabel(att: BidAttachment): string {
   return "FILE";
 }
 
-function isZipFile(file: File): boolean {
-  const name = file.name.toLowerCase();
-  return name.endsWith(".zip") || file.type === "application/zip" || file.type === "application/x-zip-compressed";
-}
-
 async function downloadAttachment(att: BidAttachment) {
   const blob = await biddingApi.fetchBidAttachmentBlob(att.downloadPath);
   const url = URL.createObjectURL(blob);
@@ -84,6 +73,21 @@ async function downloadAttachment(att: BidAttachment) {
   a.download = att.fileName;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+async function viewAttachment(att: BidAttachment) {
+  const blob = await biddingApi.fetchBidAttachmentBlob(att.downloadPath);
+  const url = URL.createObjectURL(blob);
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    // Popup blocked — fall back to download.
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = att.fileName;
+    a.click();
+  }
+  // Revoke after the tab has a chance to load the blob.
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 function AttachmentPreview({ attachment }: { attachment: BidAttachment }) {
@@ -239,7 +243,7 @@ function DrawingFileRows({
           key={att.id}
           className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-[#e5e7eb] bg-white px-3 py-2.5 first:border-t-0 hover:bg-[#faf7f0]"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f3f1ea] text-[10px] font-bold tracking-wide text-[#333333]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f3f1ea] text-[10px] font-bold tracking-wide text-[#5a5340]">
             {fileKindLabel(att)}
           </div>
           <div className="min-w-0">
@@ -340,14 +344,14 @@ function DrawingsPanel({
               onClick={() => onPhaseChange(o.value)}
               className={`inline-flex h-[30px] cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-semibold transition-colors ${
                 active
-                  ? "border-[#d9d4c8] bg-[#f3f1ea] text-[#333333]"
+                  ? "border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340]"
                   : "border-[#d5dbe3] bg-white text-[#4b5563] hover:border-[#94a3b8] hover:bg-[#fafafa]"
               }`}
             >
               <span>{o.label}</span>
               <span
                 className={`inline-flex min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-[18px] ${
-                  active ? "bg-[#ebe6da] text-[#333333]" : "bg-[#eef1f4] text-[#6b7280]"
+                  active ? "bg-[#ebe6da] text-[#5a5340]" : "bg-[#eef1f4] text-[#6b7280]"
                 }`}
               >
                 {count}
@@ -359,7 +363,7 @@ function DrawingsPanel({
 
       <section className="intake-section">
         <div className="intake-section-head flex items-center justify-between gap-3">
-          <h3 className="m-0 text-[13px] font-semibold tracking-[0.02em] text-[#333333]">
+          <h3 className="m-0 text-[13px] font-semibold tracking-[0.02em] text-[#5a5340]">
             {phaseTitle}
           </h3>
           <span className="shrink-0 text-[12px] font-normal text-[#7a7360]">{fileMeta}</span>
@@ -411,7 +415,7 @@ function DrawingsPanel({
               <button
                 type="button"
                 disabled={busy || atLimit}
-                className="intake-head-btn shrink-0 cursor-pointer border-[#d9d4c8] bg-[#f3f1ea] text-[#333333] hover:bg-[#ebe6da] disabled:cursor-default disabled:opacity-50"
+                className="intake-head-btn shrink-0 cursor-pointer border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340] hover:bg-[#ebe6da] disabled:cursor-default disabled:opacity-50"
                 onClick={(e) => {
                   e.stopPropagation();
                   onBrowse();
@@ -464,7 +468,7 @@ export function BidAttachmentsSection({
   uploading?: boolean;
   onUpload: (file: File, opts?: { label?: string; category?: string; drawingCategory?: string }) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
-  /** drawings = phase tabs. markup = takeoff zip/snap/recap only. */
+  /** drawings = phase tabs. markup = Takeoff — one open file drop + list. */
   mode?: "general" | "drawings" | "markup";
   /** Only used in "drawings" mode — [{value, label}], from processMeta().drawingCategories. */
   drawingCategoryOptions?: { value: string; label: string }[];
@@ -476,7 +480,7 @@ export function BidAttachmentsSection({
   const [localError, setLocalError] = useState<string | null>(null);
   const [localUploading, setLocalUploading] = useState(false);
   const [pendingLabel, setPendingLabel] = useState(
-    labels?.[0] ?? (mode === "markup" ? "takeoff-zip" : "drawings")
+    labels?.[0] ?? (mode === "markup" ? "takeoff" : "drawings")
   );
   const [pendingCategory, setPendingCategory] = useState("project_documents");
   const phaseOptions = drawingCategoryOptions ?? [];
@@ -500,17 +504,7 @@ export function BidAttachmentsSection({
       setLocalError(null);
 
       const label = labelOverride ?? pendingLabel;
-      let batch = Array.from(files);
-      if (label === "takeoff-zip") {
-        const zips = batch.filter(isZipFile);
-        if (zips.length !== batch.length) {
-          setLocalError(
-            zips.length === 0 ? "Takeoff zip only accepts .zip files." : "Skipped files that are not .zip."
-          );
-        }
-        batch = zips;
-        if (batch.length === 0) return;
-      }
+      const batch = Array.from(files);
 
       if (attachments.length + batch.length > MAX_FILES) {
         setLocalError(`Maximum ${MAX_FILES} attachments per bid.`);
@@ -526,7 +520,10 @@ export function BidAttachmentsSection({
               drawingCategory: pendingDrawingCategory || undefined,
             });
           } else if (mode === "markup") {
-            await onUpload(file, { label, category: "takeoff_markup" });
+            await onUpload(file, {
+              label: label || "takeoff",
+              category: "takeoff_markup",
+            });
           } else {
             await onUpload(file, { label, category: pendingCategory });
           }
@@ -559,19 +556,23 @@ export function BidAttachmentsSection({
   }
 
   if (mode === "markup") {
-    const markupLabels = MARKUP_LABEL_OPTIONS.filter((o) => !labels || labels.includes(o.value));
     return (
       <MarkupPanel
         title={title ?? "Takeoff files"}
         attachments={attachments.filter(
-          (a) => a.category === "takeoff_markup" || markupLabels.some((o) => o.value === a.label) || a.label === "master-scan"
+          (a) =>
+            a.category === "takeoff_markup" ||
+            a.label === "takeoff" ||
+            a.label === "takeoff-zip" ||
+            a.label === "takeoff-snap" ||
+            a.label === "takeoff-recap" ||
+            a.label === "master-scan"
         )}
-        labels={markupLabels}
         isEditable={isEditable}
         busy={Boolean(uploading || localUploading)}
         localError={localError}
         confirmDialog={confirmDialog}
-        onUploadFiles={(files, label) => void handleFiles(files, label)}
+        onUploadFiles={(files) => void handleFiles(files, "takeoff")}
         onDelete={onDelete}
       />
     );
@@ -672,28 +673,9 @@ export function BidAttachmentsSection({
   );
 }
 
-const MARKUP_SLOT_COPY: Record<string, { hint: string; detail: string; browse: string }> = {
-  "takeoff-zip": {
-    hint: "Drop a zip here",
-    detail: ".zip files only",
-    browse: "Browse zip",
-  },
-  "takeoff-snap": {
-    hint: "Drop a snap here",
-    detail: "Image or PDF",
-    browse: "Browse",
-  },
-  "takeoff-recap": {
-    hint: "Drop a recap here",
-    detail: "PDF or spreadsheet",
-    browse: "Browse",
-  },
-};
-
 function MarkupPanel({
   title,
   attachments,
-  labels,
   isEditable,
   busy,
   localError,
@@ -703,243 +685,150 @@ function MarkupPanel({
 }: {
   title: string;
   attachments: BidAttachment[];
-  labels: { value: string; label: string }[];
   isEditable: boolean;
   busy: boolean;
   localError: string | null;
-  confirmDialog: ReturnType<typeof useConfirmDialog>;
-  onUploadFiles: (files: FileList | null, label: string) => void;
-  onDelete: (id: number) => Promise<void>;
-}) {
-  const [activeLabel, setActiveLabel] = useState<string | null>(null);
-  const bucketed = groupBy(attachments, (a) => (a.label === "master-scan" ? "takeoff-snap" : a.label || "takeoff-zip"));
-  const zip = labels.find((label) => label.value === "takeoff-zip");
-  const rest = labels.filter((label) => label.value !== "takeoff-zip");
-
-  useEffect(() => {
-    if (!busy) setActiveLabel(null);
-  }, [busy]);
-
-  const send = (files: FileList | null, label: string) => {
-    if (!files?.length) return;
-    setActiveLabel(label);
-    onUploadFiles(files, label);
-  };
-
-  return (
-    <section className="intake-section">
-      <div className="intake-section-head">{title}</div>
-      <div className="intake-section-body flex flex-col gap-3">
-        {localError ? <p className="text-[12.5px] text-danger">{localError}</p> : null}
-        {zip ? (
-          <MarkupSlot
-            option={zip}
-            files={bucketed[zip.value] ?? []}
-            prominent
-            zipOnly
-            isEditable={isEditable}
-            busy={busy}
-            uploadingHere={busy && activeLabel === zip.value}
-            confirmDialog={confirmDialog}
-            onUploadFiles={(files) => send(files, zip.value)}
-            onDelete={onDelete}
-          />
-        ) : null}
-        {rest.length > 0 ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {rest.map((option) => (
-              <MarkupSlot
-                key={option.value}
-                option={option}
-                files={bucketed[option.value] ?? []}
-                isEditable={isEditable}
-                busy={busy}
-                uploadingHere={busy && activeLabel === option.value}
-                confirmDialog={confirmDialog}
-                onUploadFiles={(files) => send(files, option.value)}
-                onDelete={onDelete}
-              />
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
-function MarkupSlot({
-  option,
-  files,
-  prominent,
-  zipOnly,
-  isEditable,
-  busy,
-  uploadingHere,
-  confirmDialog,
-  onUploadFiles,
-  onDelete,
-}: {
-  option: { value: string; label: string };
-  files: BidAttachment[];
-  prominent?: boolean;
-  zipOnly?: boolean;
-  isEditable: boolean;
-  busy: boolean;
-  uploadingHere: boolean;
   confirmDialog: ReturnType<typeof useConfirmDialog>;
   onUploadFiles: (files: FileList | null) => void;
   onDelete: (id: number) => Promise<void>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const copy = MARKUP_SLOT_COPY[option.value] ?? {
-    hint: `Drop a ${option.label.toLowerCase()} here`,
-    detail: "PDF or image",
-    browse: "Browse",
-  };
-  const atLimit = files.length >= MAX_FILES;
+  const atLimit = attachments.length >= MAX_FILES;
   const locked = busy || atLimit;
-  const countLabel = files.length === 1 ? "1 file" : `${files.length} files`;
+  const countLabel =
+    attachments.length === 0
+      ? null
+      : attachments.length === 1
+        ? "1 file"
+        : `${attachments.length} files`;
 
   return (
-    <div className="rounded-xl border border-white/70 bg-white/40 p-3 shadow-[0_4px_12px_rgba(91,173,232,0.06)]">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-[#333333]">{option.label}</p>
-        <span className="text-[11px] text-ink/45">{countLabel}</span>
+    <section className="intake-section">
+      <div className="intake-section-head-bar flex items-center justify-between gap-2">
+        <div className="intake-section-head">{title}</div>
+        {countLabel ? <span className="intake-head-count pr-3 text-[12px] font-semibold text-ink/45">{countLabel}</span> : null}
       </div>
-      {isEditable ? (
-        <div
-          className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed px-4 text-center ${
-            prominent ? "min-h-[148px] py-6" : "min-h-[96px] py-3"
-          } ${dragging ? "border-[#b45309] bg-[#fff7ed]" : "border-[#c5ccd6] bg-[#fafbfc]"} ${
-            locked ? "cursor-default opacity-70" : ""
-          }`}
-          onClick={() => {
-            if (!locked) inputRef.current?.click();
-          }}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            if (!locked) setDragging(true);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            if (!locked) setDragging(true);
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault();
-            setDragging(false);
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            if (!locked) onUploadFiles(e.dataTransfer.files);
-          }}
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e5e7eb] bg-white text-[11px] font-bold tracking-wide text-[#333333]">
-            {zipOnly ? "ZIP" : "FILE"}
-          </div>
-          <p className="text-[13px] font-semibold text-[#374151]">{uploadingHere ? "Uploading…" : copy.hint}</p>
-          <p className="text-[12px] text-[#6b7280]">{copy.detail}</p>
-          <button
-            type="button"
-            disabled={locked}
-            className="intake-head-btn mt-1 cursor-pointer disabled:cursor-default disabled:opacity-50"
-            onClick={(e) => {
-              e.stopPropagation();
+      <div className="intake-section-body flex flex-col gap-2">
+        {localError ? <p className="text-[12.5px] text-danger">{localError}</p> : null}
+        {isEditable ? (
+          <div
+            className={`flex cursor-pointer items-center gap-3 rounded-xl border border-dashed px-3 py-2.5 ${
+              dragging ? "border-[#b45309] bg-[#fff7ed]" : "border-[#c5ccd6] bg-[#fafbfc]"
+            } ${locked ? "cursor-default opacity-70" : ""}`}
+            onClick={() => {
               if (!locked) inputRef.current?.click();
             }}
-          >
-            {copy.browse}
-          </button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept={zipOnly ? ".zip,application/zip,application/x-zip-compressed" : ACCEPT}
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              onUploadFiles(e.target.files);
-              e.target.value = "";
+            onDragEnter={(e) => {
+              e.preventDefault();
+              if (!locked) setDragging(true);
             }}
-          />
-        </div>
-      ) : null}
-      <MarkupFileRows
-        attachments={files}
-        isEditable={isEditable}
-        confirmDialog={confirmDialog}
-        onDelete={onDelete}
-        emptyLabel={isEditable ? null : `No ${option.label.toLowerCase()} uploaded.`}
-      />
-    </div>
-  );
-}
-
-function MarkupFileRows({
-  attachments,
-  isEditable,
-  confirmDialog,
-  onDelete,
-  emptyLabel,
-}: {
-  attachments: BidAttachment[];
-  isEditable: boolean;
-  confirmDialog: ReturnType<typeof useConfirmDialog>;
-  onDelete: (id: number) => Promise<void>;
-  emptyLabel: string | null;
-}) {
-  if (attachments.length === 0) {
-    return emptyLabel ? <p className="mt-2 text-[12.5px] text-[#6b7280]">{emptyLabel}</p> : null;
-  }
-
-  return (
-    <ul className="mt-2.5 overflow-hidden rounded-lg border border-[#e5e7eb]">
-      {attachments.map((att) => (
-        <li
-          key={att.id}
-          className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-[#e5e7eb] bg-white px-3 py-2.5 first:border-t-0"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f3f1ea] text-[10px] font-bold tracking-wide text-[#333333]">
-            {fileKindLabel(att)}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[12.5px] font-semibold text-[#1f2937]" title={att.fileName}>
-              {att.fileName}
-            </p>
-            <p className="mt-0.5 text-[11px] text-[#9ca3af]">{formatBytes(att.sizeBytes)}</p>
-          </div>
-          <div className="flex items-center gap-2.5">
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (!locked) setDragging(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              setDragging(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              if (!locked) onUploadFiles(e.dataTransfer.files);
+            }}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-[#374151]">
+                {busy ? "Uploading…" : "Drop file here or browse"}
+              </p>
+            </div>
             <button
               type="button"
-              onClick={() => void downloadAttachment(att)}
-              className="cursor-pointer text-[11px] font-semibold text-[#4b5563] hover:underline"
+              disabled={locked}
+              className="intake-head-btn shrink-0 cursor-pointer disabled:cursor-default disabled:opacity-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!locked) inputRef.current?.click();
+              }}
             >
-              Download
+              Browse
             </button>
-            {isEditable ? (
-              <button
-                type="button"
-                onClick={() => {
-                  void (async () => {
-                    const ok = await confirmDialog({
-                      title: "Remove file?",
-                      message: `Remove "${att.fileName}"?`,
-                      confirmLabel: "Remove",
-                      variant: "danger",
-                    });
-                    if (!ok) return;
-                    void onDelete(att.id);
-                  })();
-                }}
-                className="cursor-pointer text-[11px] font-semibold text-[#9ca3af] hover:text-danger"
-              >
-                Remove
-              </button>
-            ) : null}
+            <input
+              ref={inputRef}
+              type="file"
+              accept={ACCEPT}
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                onUploadFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
           </div>
-        </li>
-      ))}
-    </ul>
+        ) : null}
+
+        {attachments.length === 0 ? (
+          isEditable ? null : (
+            <p className="text-[12.5px] text-[#6b7280]">No takeoff files uploaded.</p>
+          )
+        ) : (
+          <ul className="overflow-hidden rounded-lg border border-[#e5e7eb]">
+            {attachments.map((att) => (
+              <li
+                key={att.id}
+                className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-[#e5e7eb] bg-white px-3 py-2 first:border-t-0"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f3f1ea] text-[10px] font-bold tracking-wide text-[#5a5340]">
+                  {fileKindLabel(att)}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[12.5px] font-semibold text-[#1f2937]" title={att.fileName}>
+                    {att.fileName}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[#9ca3af]">{formatBytes(att.sizeBytes)}</p>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => void viewAttachment(att)}
+                    className="cursor-pointer text-[11px] font-semibold text-brand hover:underline"
+                  >
+                    View
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void downloadAttachment(att)}
+                    className="cursor-pointer text-[11px] font-semibold text-[#4b5563] hover:underline"
+                  >
+                    Download
+                  </button>
+                  {isEditable ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void (async () => {
+                          const ok = await confirmDialog({
+                            title: "Remove file?",
+                            message: `Remove "${att.fileName}"?`,
+                            confirmLabel: "Remove",
+                            variant: "danger",
+                          });
+                          if (!ok) return;
+                          void onDelete(att.id);
+                        })();
+                      }}
+                      className="cursor-pointer text-[11px] font-semibold text-[#9ca3af] hover:text-danger"
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
   );
 }
 
