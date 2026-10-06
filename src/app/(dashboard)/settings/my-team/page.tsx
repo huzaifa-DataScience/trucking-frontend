@@ -413,13 +413,13 @@ export default function MyTeamPage() {
           title="My team"
           subtitle="Captains build their estimating crew here."
           breadcrumbs={[
-            { label: "Settings", href: "/settings/my-team" },
+            { label: "Settings", href: "/settings/profile" },
             { label: "My team" },
           ]}
         />
         <p className="rounded-xl border border-ink/[0.08] bg-surface px-4 py-3 text-sm text-ink/70">
           Your role does not manage an estimating crew.{" "}
-          <Link href="/account" className="font-semibold text-brand hover:underline">
+          <Link href="/account" className="font-semibold text-ink underline underline-offset-2 hover:text-ink">
             Back to Account
           </Link>
         </p>
@@ -437,7 +437,7 @@ export default function MyTeamPage() {
             : "Read-only — only the captain can save this crew."
         }
         breadcrumbs={[
-          { label: "Settings", href: "/settings/my-team" },
+          { label: "Settings", href: "/settings/profile" },
           { label: "My team" },
         ]}
       />

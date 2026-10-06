@@ -8,7 +8,7 @@ import { useBiddingAccess } from "@/hooks/useBiddingAccess";
 import { useToast } from "@/components/ui/ToastProvider";
 import { RestrictedState } from "@/components/ui/RestrictedState";
 import { PERMISSIONS } from "@/lib/auth/permissions";
-import { SpecsPageSkeleton } from "@/components/bidding/MikeModuleSkeletons";
+import { SpecsEmbeddedSkeleton, SpecsPageSkeleton } from "@/components/bidding/MikeModuleSkeletons";
 import { SpecsProductionTabNav } from "@/components/bidding/SpecsProductionTabNav";
 import { SpecsSetupStrip } from "@/components/bidding/specs/SpecsSetupStrip";
 import { SpecsGrid } from "@/components/bidding/specs/SpecsGrid";
@@ -69,28 +69,32 @@ export function SpecsPage({
     setLines([]);
     setMikeFiles([]);
     try {
-      const [bidRes, lineRes, filesRes, sys, mat, area, face] = await Promise.all([
+      // Core takeoff data first — don't wait forever on catalog lookups.
+      const [bidRes, lineRes, filesRes] = await Promise.all([
         biddingApi.getBid(bidId),
         biddingSpecsApi.getSpecLines(bidId),
         biddingSpecsApi.getMikeFiles(bidId).catch(() => ({
           files: [] as MikeFileInfo[],
           activeMikeFileId: null as number | null,
         })),
-        biddingSpecsApi.getSpecSystems(),
-        biddingSpecsApi.getSpecMaterials(),
-        biddingSpecsApi.getSpecAreas(),
-        biddingSpecsApi.getSpecFacings(),
       ]);
       setBid(bidRes);
       setLines(lineRes);
       setMikeFiles(filesRes.files ?? []);
+      setLoading(false);
+
+      const [sys, mat, area, face] = await Promise.all([
+        biddingSpecsApi.getSpecSystems().catch(() => [] as SpecSystem[]),
+        biddingSpecsApi.getSpecMaterials().catch(() => [] as SpecMaterial[]),
+        biddingSpecsApi.getSpecAreas().catch(() => [] as SpecArea[]),
+        biddingSpecsApi.getSpecFacings().catch(() => [] as SpecFacing[]),
+      ]);
       setSystems(sys.filter((s) => s.isActive !== false));
       setMaterials(mat.filter((m) => m.isActive !== false));
       setAreas(area.filter((a) => a.isActive !== false));
       setFacings(face);
     } catch (e) {
       setError(getSpecsErrorMessage(e, "Failed to load Specs"));
-    } finally {
       setLoading(false);
     }
   }, [bidId]);
@@ -247,7 +251,7 @@ export function SpecsPage({
   }
 
   if (loading) {
-    return <SpecsPageSkeleton />;
+    return embedded ? <SpecsEmbeddedSkeleton /> : <SpecsPageSkeleton />;
   }
 
   if (error && !bid) {

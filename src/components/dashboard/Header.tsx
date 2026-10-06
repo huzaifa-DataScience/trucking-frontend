@@ -11,6 +11,7 @@ import type { ApiTicketRow } from "@/lib/api/types";
 import { useLookups } from "@/hooks/useLookups";
 import { AvatarCircle } from "@/components/ui/AvatarCircle";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
+import { entityBrandForName } from "@/lib/branding/entity-colors";
 
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { companyId, company, setCompanyId, companies } = useCompany();
@@ -142,13 +143,13 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   }, [menuOpen]);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-ink/[0.06] bg-surface/75 shadow-[0_1px_0_rgba(255,255,255,0.6)_inset] backdrop-blur-xl">
-      <div className="flex h-auto w-full flex-wrap items-center gap-2 px-3 py-2 sm:h-[3.75rem] sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-0 lg:px-8">
-        <div className="order-2 flex min-w-0 flex-1 items-center gap-2 sm:order-1 sm:gap-3">
+    <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-white">
+      <div className="flex h-auto w-full flex-wrap items-center gap-2 px-3 py-2 sm:h-14 sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-0 lg:px-6">
+        <div className="order-2 flex min-w-0 flex-1 items-center gap-2 sm:order-1 sm:gap-2.5">
           <button
             type="button"
             onClick={onMenuClick}
-            className="-ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink/60 transition hover:bg-ink/[0.05] hover:text-ink sm:hidden"
+            className="-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius)] text-ink-muted transition hover:bg-canvas hover:text-ink sm:hidden"
             aria-label="Open navigation menu"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -156,14 +157,24 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
             </svg>
           </button>
           <label className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial">
-            <span className="hidden text-xs font-medium uppercase tracking-wide text-ink/40 sm:inline">
+            <span className="hidden text-[11px] font-medium uppercase tracking-[0.06em] text-ink-soft sm:inline">
               Company
             </span>
-            <span className="relative inline-block min-w-0 max-w-full flex-1 sm:max-w-[220px] sm:flex-none">
+            <span className="relative inline-flex min-w-0 max-w-full flex-1 items-center gap-1.5 sm:max-w-[220px] sm:flex-none">
+              {company ? (
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${entityBrandForName(company.name).dot}`}
+                  aria-hidden
+                />
+              ) : null}
               <select
                 value={companyId ?? "all"}
                 onChange={(e) => setCompanyId(e.target.value === "all" ? null : e.target.value)}
-                className="min-h-11 w-full min-w-0 max-w-full appearance-none rounded-xl border border-ink/10 bg-[#f8f9fb] py-2 pl-3 pr-7 text-sm font-medium text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 sm:w-auto"
+                className={`h-9 w-full min-w-0 max-w-full appearance-none rounded-[var(--radius)] border bg-white py-1.5 pl-2.5 pr-7 text-[13px] font-medium outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 sm:w-auto ${
+                  company
+                    ? `${entityBrandForName(company.name).border} ${entityBrandForName(company.name).text}`
+                    : "border-[var(--border-subtle)] text-ink"
+                }`}
                 aria-label="Select company or branch"
               >
                 <option value="all">All companies</option>
@@ -186,7 +197,10 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
             </span>
           </label>
           {company ? (
-            <span className="hidden truncate text-xs text-ink/45 lg:inline lg:max-w-[200px]" title={company.name}>
+            <span
+              className={`hidden truncate text-xs lg:inline lg:max-w-[200px] ${entityBrandForName(company.name).text}`}
+              title={company.name}
+            >
               {company.name}
             </span>
           ) : null}
@@ -218,7 +232,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
               }
             }}
             placeholder="Search jobs, tickets, materials…"
-            className="min-h-11 w-full rounded-full border border-ink/10 bg-[#f8f9fb] py-2 pl-9 pr-16 text-sm text-ink placeholder:text-ink/35 outline-none transition focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand/15"
+            className="h-9 w-full rounded-[var(--radius)] border border-[var(--border-subtle)] bg-white py-1.5 pl-9 pr-14 text-[13px] text-ink placeholder:text-ink-soft outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15"
             aria-label="Search"
           />
           <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-ink/10 bg-surface px-1.5 py-0.5 font-mono text-[10px] font-medium text-ink/40 sm:inline">
@@ -283,7 +297,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                           className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition hover:bg-ink/[0.04]"
                         >
                           <span className="min-w-0">
-                            <span className="block truncate text-sm font-semibold text-brand">{t.ticketNumber}</span>
+                            <span className="block truncate text-sm font-semibold text-ink">{t.ticketNumber}</span>
                             <span className="block truncate text-xs text-ink/50">
                               {t.jobName} · {t.material}
                             </span>
@@ -299,7 +313,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                 <button
                   type="button"
                   onClick={goToAllResults}
-                  className="block w-full border-t border-ink/[0.06] px-4 py-2.5 text-left text-sm font-medium text-brand transition hover:bg-ink/[0.04]"
+                  className="block w-full border-t border-ink/[0.06] px-4 py-2.5 text-left text-sm font-medium text-ink transition hover:bg-ink/[0.04]"
                 >
                   See all ticket results for “{trimmedQuery}” →
                 </button>
@@ -349,8 +363,8 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                           [user.firstName, user.lastName].filter(Boolean).join(" ") ||
                           user.email}
                       </p>
-                      <p className="truncate text-xs text-ink/45">{user.email}</p>
-                      <p className="mt-0.5 text-xs font-medium text-brand">{roleLabel(user.role)}</p>
+                      <p className="truncate text-xs text-ink-muted">{user.email}</p>
+                      <p className="mt-0.5 text-xs font-medium text-ink">{roleLabel(user.role)}</p>
                     </div>
                   </div>
 

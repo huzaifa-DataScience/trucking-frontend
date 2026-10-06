@@ -62,8 +62,8 @@ export default function ProjectFinancialsJobPage() {
   const revised = job.contract.revised;
   const backlogLeft = revised > 0 && job.billing.backlog != null ? job.billing.backlog / revised : null;
   const costParts = [
-    ["LAB", job.cost.lab, "#5a5340"],
-    ["MAT", job.cost.mat, "#ff7b11"],
+    ["LAB", job.cost.lab, "#333333"],
+    ["MAT", job.cost.mat, "#5bade8"],
     ["SUB", job.cost.sub, "#c4a574"],
     ["EQU", job.cost.equ, "#6b7280"],
     ["BUR", job.cost.bur, "#b45309"],
@@ -106,7 +106,7 @@ export default function ProjectFinancialsJobPage() {
         />
       </div>
 
-      <section className="overflow-hidden rounded-xl border border-white/70 bg-white/55 px-4 py-3 shadow-[0_6px_16px_rgba(255,123,17,0.08)] backdrop-blur-md">
+      <section className="overflow-hidden rounded-xl border border-white/70 bg-white/55 px-4 py-3 shadow-[0_6px_16px_rgba(91,173,232,0.08)] backdrop-blur-md">
         <Track label="Billed" value={ratio(job.billing.pctBilled)} ratio={job.billing.pctBilled} />
         <Track label="Complete" value={ratio(job.billing.percentComplete)} ratio={job.billing.percentComplete} />
         <Track label="Backlog remaining" value={backlogLeft == null ? "—" : ratio(backlogLeft)} ratio={backlogLeft} />
@@ -215,7 +215,7 @@ export default function ProjectFinancialsJobPage() {
 
 function Hero({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
-    <div className="rounded-xl border border-white/70 bg-white/55 px-4 py-4 shadow-[0_6px_16px_rgba(255,123,17,0.08)] backdrop-blur-md">
+    <div className="rounded-xl border border-white/70 bg-white/55 px-4 py-4 shadow-[0_6px_16px_rgba(91,173,232,0.08)] backdrop-blur-md">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-ink/45">{label}</p>
       <p className={`mt-1 text-2xl font-semibold tabular-nums ${danger ? "text-danger" : "text-ink"}`}>{value}</p>
     </div>
@@ -231,7 +231,7 @@ function Track({ label, value, ratio: share }: { label: string; value: string; r
         <span className="font-semibold tabular-nums text-ink">{value}</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-ink/[0.06]">
-        <div className="h-full rounded-full bg-[#5a5340]" style={{ width: `${width}%` }} />
+        <div className="h-full rounded-full bg-[#333333]" style={{ width: `${width}%` }} />
       </div>
     </div>
   );
@@ -239,8 +239,8 @@ function Track({ label, value, ratio: share }: { label: string; value: string; r
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-white/70 bg-white/55 shadow-[0_6px_16px_rgba(255,123,17,0.08)] backdrop-blur-md">
-      <h2 className="border-b border-[rgba(255,123,17,0.22)] bg-[rgba(255,123,17,0.18)] px-4 py-3 text-center text-[13px] font-semibold text-[#5a5340]">
+    <section className="overflow-hidden rounded-xl border border-white/70 bg-white/55 shadow-[0_6px_16px_rgba(91,173,232,0.08)] backdrop-blur-md">
+      <h2 className="border-b border-[rgba(91,173,232,0.22)] bg-[rgba(91,173,232,0.18)] px-4 py-3 text-center text-[13px] font-semibold text-[#333333]">
         {title}
       </h2>
       <dl className="flex flex-col gap-2 px-4 py-3">{children}</dl>

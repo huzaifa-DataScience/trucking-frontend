@@ -66,7 +66,7 @@ const buttonClass =
 const popoverClass =
   "max-h-64 w-[--trigger-width] min-w-40 overflow-auto rounded-md border border-[#d5dbe3] bg-white p-1 shadow-lg outline-none";
 const optionClass =
-  "cursor-pointer rounded px-2.5 py-1.5 text-[12.5px] text-[#374151] outline-none data-[focused]:bg-[#f3f1ea] data-[selected]:bg-[#f3f1ea] data-[selected]:font-medium data-[selected]:text-[#5a5340]";
+  "cursor-pointer rounded px-2.5 py-1.5 text-[12.5px] text-[#374151] outline-none data-[focused]:bg-[#f3f1ea] data-[selected]:bg-[#f3f1ea] data-[selected]:font-medium data-[selected]:text-[#333333]";
 
 function ClockIcon() {
   return (

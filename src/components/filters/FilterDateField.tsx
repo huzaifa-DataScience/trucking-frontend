@@ -38,7 +38,7 @@ function formatDisplay(date: CalendarDate): string {
 }
 
 const popoverClass =
-  "w-auto overflow-auto rounded-xl border border-white/80 bg-white/85 p-3 shadow-[0_12px_28px_rgba(255,123,17,0.16),inset_0_1px_0_rgba(255,255,255,0.95)] outline-none backdrop-blur-xl";
+  "w-auto overflow-auto rounded-xl border border-white/80 bg-white/85 p-3 shadow-[0_12px_28px_rgba(91,173,232,0.16),inset_0_1px_0_rgba(255,255,255,0.95)] outline-none backdrop-blur-xl";
 const navButtonClass =
   "flex h-7 w-7 items-center justify-center rounded-lg text-ink/50 outline-none transition hover:bg-ink/5 hover:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-30";
 const cellClass =
@@ -90,7 +90,7 @@ export function FilterDateField({
       <Button
         aria-label={ariaLabel ?? "Date"}
         isDisabled={disabled}
-        className={`flex items-center gap-2 rounded-xl border border-white/80 bg-white/70 px-3 text-left text-sm text-ink shadow-[0_4px_12px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] outline-none backdrop-blur-md transition hover:border-[rgba(255,123,17,0.35)] focus-visible:ring-2 focus-visible:ring-[rgba(255,123,17,0.25)] data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${className}`}
+        className={`flex items-center gap-2 rounded-xl border border-white/80 bg-white/70 px-3 text-left text-sm text-ink shadow-[0_4px_12px_rgba(91,173,232,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] outline-none backdrop-blur-md transition hover:border-[rgba(91,173,232,0.35)] focus-visible:ring-2 focus-visible:ring-[rgba(91,173,232,0.25)] data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${className}`}
       >
         <CalendarIcon />
         <span className={`min-w-0 flex-1 truncate ${parsed ? "" : "text-ink/30"}`}>

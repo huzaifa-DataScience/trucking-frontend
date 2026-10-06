@@ -7,9 +7,7 @@ interface CardProps {
 
 export function Card({ children, className = "" }: CardProps) {
   return (
-    <div
-      className={`ui-shadow-card min-w-0 rounded-2xl border border-ink/[0.06] bg-surface p-5 ${className}`}
-    >
+    <div className={`cs-content-panel min-w-0 p-5 ${className}`}>
       {children}
     </div>
   );
@@ -23,16 +21,10 @@ interface CardHeaderProps {
 
 export function CardHeader({ title, subtitle, action }: CardHeaderProps) {
   return (
-    <div className="mb-4 flex min-w-0 items-start justify-between gap-4">
+    <div className="mb-3 flex min-w-0 items-start justify-between gap-3">
       <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-ink dark:text-white">
-          {title}
-        </h3>
-        {subtitle && (
-          <p className="mt-0.5 text-xs text-ink/55 dark:text-white/55">
-            {subtitle}
-          </p>
-        )}
+        <h3 className="cs-section-title">{title}</h3>
+        {subtitle ? <p className="cs-helper mt-0.5">{subtitle}</p> : null}
       </div>
       {action}
     </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, type ComponentType } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { roleLabel, isAdminPanelRole, canSeeWfs } from "@/lib/auth/roles";
 import { can, canBidding, PERMISSIONS } from "@/lib/auth/permissions";
@@ -31,6 +31,7 @@ import {
 import type { AuthUser } from "@/lib/auth/types";
 import { useChatUnreadTotal } from "@/hooks/useChatUnreadTotal";
 import { ChatUnreadBadge } from "@/components/workforce/chat/ChatUnreadBadge";
+import { BID_HANDOFF_STAGES } from "@/lib/bidding/process-types";
 
 type ViewMode =
   | "operations"
@@ -43,6 +44,13 @@ type ViewMode =
   | "settings";
 
 const WORKSPACE_STORAGE_KEY = "construction-logistics-workspace";
+
+/** Secondary rail width on xl+ (compact enterprise child nav). */
+export const SIDEBAR_SECONDARY_PX = 200;
+export const SIDEBAR_SECONDARY_W = "w-[200px]";
+
+/** Primary rail widths — documented for secondary offset math (w-64 / w-16). */
+// SIDEBAR_PRIMARY_EXPANDED_PX = 256; SIDEBAR_PRIMARY_COLLAPSED_PX = 64;
 
 function viewFromPathname(pathname: string): ViewMode {
   if (pathname.startsWith("/settings")) return "settings";
@@ -69,8 +77,21 @@ function defaultHrefForView(view: ViewMode): string {
   if (view === "mike") return "/estimation-files";
   if (view === "workforce") return "/workforce";
   if (view === "wfs") return "/wfs";
-  if (view === "settings") return "/settings/my-team";
+  if (view === "settings") return "/settings/profile";
   return "/job";
+}
+
+/** Open bid detail (`/bidding/:id`), not list / new / all. */
+export function bidDetailIdFromPath(pathname: string): string | null {
+  const m = pathname.match(/^\/bidding\/([^/]+)(?:\/|$)/);
+  if (!m) return null;
+  const id = m[1]!;
+  if (id === "new" || id === "all") return null;
+  return id;
+}
+
+function isBiddingListPath(pathname: string): boolean {
+  return pathname === "/bidding" || pathname === "/bidding/all";
 }
 
 type SidebarNavItem = {
@@ -85,6 +106,53 @@ type SidebarNavItem = {
   /** Bidding keys use legacy canBidding fallback. */
   biddingPermission?: "bidding:read" | "bidding:write" | "bidding:summary";
 };
+
+function workspaceShowsSecondaryRail(view: ViewMode, pathname: string, canSeeBillings: boolean): boolean {
+  // Open bid uses a fixed sheet secondary rail (same width) — still reserve space.
+  if (bidDetailIdFromPath(pathname)) return true;
+  if (pathname.startsWith("/clearstory")) return canSeeBillings;
+  if (view === "billings") return canSeeBillings;
+  if (view === "operations") return true;
+  if (view === "bidding") return true;
+  if (view === "mike") return true;
+  if (view === "workforce") return true;
+  if (view === "dashboard") return true;
+  if (view === "wfs") return true;
+  if (view === "settings") return true;
+  return false;
+}
+
+/**
+ * Content offset for primary (+ optional secondary on xl+).
+ * Keep in sync with Sidebar widths (w-64 / w-16 + 200px secondary / 32px strip).
+ */
+export function dashboardMainOffsetClass(
+  pathname: string,
+  collapsed: boolean,
+  secondaryCollapsed = false
+): string {
+  const view = viewFromPathname(pathname);
+  // Optimistic: assume secondary when path implies a workspace that uses one.
+  // Billings visibility is gated inside Sidebar; offset still reserves space on billings routes.
+  const hasSecondary = workspaceShowsSecondaryRail(view, pathname, true);
+
+  // Mobile: overlay drawer — no permanent padding
+  // sm–md: primary only (accordion hosts children)
+  // xl+: primary + secondary (or thin expand strip when secondary collapsed)
+  if (!hasSecondary) {
+    return collapsed ? "sm:pl-16" : "sm:pl-64";
+  }
+  const primary = collapsed ? "sm:pl-16" : "sm:pl-64";
+  // Bid sheet owns its own secondary rail — never use the thin collapsed strip there.
+  const isBidDetail = Boolean(bidDetailIdFromPath(pathname));
+  if (secondaryCollapsed && !isBidDetail) {
+    // Primary + 32px expand strip
+    return `${primary} ${collapsed ? "xl:pl-[96px]" : "xl:pl-[288px]"}`;
+  }
+  // Primary (256 / 64) + secondary (200) → 456 / 264
+  const withSecondary = collapsed ? "xl:pl-[264px]" : "xl:pl-[456px]";
+  return `${primary} ${withSecondary}`;
+}
 
 function userInitials(user: AuthUser | null): string {
   if (!user) return "?";
@@ -104,6 +172,21 @@ function displayName(user: AuthUser | null): string {
     [user.firstName, user.lastName].filter(Boolean).join(" ") ||
     user.email
   );
+}
+
+function itemIsActive(
+  pathname: string,
+  item: Pick<SidebarNavItem, "href" | "activePathPrefix" | "exact">
+): boolean {
+  if (item.exact) return pathname === item.href;
+  if (item.href === "/workforce") return pathname === "/workforce";
+  if (item.activePathPrefix) {
+    return (
+      pathname === item.activePathPrefix ||
+      pathname.startsWith(`${item.activePathPrefix}/`)
+    );
+  }
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
 const operationsNavItems: SidebarNavItem[] = [
@@ -261,12 +344,38 @@ const adminNavItems: SidebarNavItem[] = [
 
 const settingsNavItems: SidebarNavItem[] = [
   {
+    href: "/settings/profile",
+    label: "My Profile",
+    Icon: NavIconUsers,
+    exact: true,
+  },
+  {
     href: "/settings/my-team",
     label: "My team",
     Icon: NavIconUsers,
-    activePathPrefix: "/settings",
     biddingPermission: "bidding:read",
   },
+];
+
+const SETTINGS_RAIL_SECTIONS: {
+  title: string;
+  links: { href: string; label: string }[];
+}[] = [
+  {
+    title: "General",
+    links: [{ href: "/settings/profile", label: "My Profile" }],
+  },
+  {
+    title: "Account",
+    links: [{ href: "/settings/my-team", label: "My team" }],
+  },
+];
+
+const BID_STATUS_FILTERS: { value: string; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "draft", label: "Draft" },
+  { value: "submitted", label: "Submitted" },
+  { value: "archived", label: "Archived" },
 ];
 
 /**
@@ -316,15 +425,21 @@ export function Sidebar({
   onMobileClose,
   collapsed = false,
   onToggleCollapsed,
+  secondaryCollapsed = false,
+  onToggleSecondaryCollapsed,
 }: {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
   /** Desktop-only (lg+) manual collapse to an icon-only rail; unrelated to the mobile drawer. */
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
+  /** xl+ only — hide workspace secondary rail; route stays put. */
+  secondaryCollapsed?: boolean;
+  onToggleSecondaryCollapsed?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAdmin, user, logout } = useAuth();
   const chatUnreadTotal = useChatUnreadTotal();
   /** The mobile drawer always shows full labels regardless of the persisted desktop collapse preference. */
@@ -392,7 +507,16 @@ export function Sidebar({
   });
 
   const handleViewChange = (value: ViewMode) => {
-    if (value === currentView) return;
+    // Opening a workspace should reveal its secondary rail if it was collapsed.
+    if (secondaryCollapsed) onToggleSecondaryCollapsed?.();
+
+    // Re-clicking Billing while inside Clearstory should return to /billings.
+    if (value === currentView) {
+      if (value === "billings" && pathname.startsWith("/clearstory")) {
+        router.push("/billings");
+      }
+      return;
+    }
     try {
       localStorage.setItem(WORKSPACE_STORAGE_KEY, value);
     } catch {
@@ -417,9 +541,7 @@ export function Sidebar({
   }
 
   // Admin layout roles always get System links (Users + Settings).
-  const visibleAdminNav = isAdmin
-    ? adminNavItems
-    : [];
+  const visibleAdminNav = isAdmin ? adminNavItems : [];
 
   const logoHref =
     currentView === "billings"
@@ -429,24 +551,44 @@ export function Sidebar({
       : defaultHrefForView(currentView);
 
   const inClearstory = pathname.startsWith("/clearstory");
+  const activeBidId = bidDetailIdFromPath(pathname);
+  const activeBidStage = searchParams.get("stage") ?? "intake";
+  const bidListStatus = searchParams.get("status") ?? "all";
+  const secondaryItems = itemsForView(currentView).filter((i) => navItemVisible(user, i));
+  // Bid detail owns its own fixed secondary rail — don't double-render the workspace one.
+  const showSecondaryRail =
+    workspaceShowsSecondaryRail(currentView, pathname, canSeeBillings) && !activeBidId;
 
   const navLinkClass = (active: boolean) =>
-    `flex items-center gap-3 rounded-lg px-2 py-2.5 text-[15px] font-semibold transition-colors ${
+    `flex h-9 items-center gap-2.5 rounded-[var(--radius)] px-2 text-[13px] font-medium transition-colors ${
       iconOnly ? "justify-center" : "justify-start px-2.5"
     } ${
       active
-        ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
-        : "text-white/70 hover:bg-white/[0.05] hover:text-white"
+        ? "bg-[var(--sidebar-active)] text-white"
+        : "text-white/75 hover:bg-white/[0.06] hover:text-white"
     }`;
 
-  const subLinkClass = (active: boolean) =>
-    `flex items-center gap-2.5 rounded-md py-1.5 text-[12.5px] font-medium transition-colors ${
+  const accordionSubLinkClass = (active: boolean) =>
+    `flex h-8 items-center gap-2 rounded-[var(--radius)] text-[12px] font-medium transition-colors ${
       iconOnly ? "justify-center px-2" : "pl-3 pr-2.5"
     } ${
       active
-        ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
-        : "text-white/55 hover:bg-white/[0.05] hover:text-white/85"
+        ? "bg-[var(--sidebar-active)] text-white"
+        : "text-white/65 hover:bg-white/[0.05] hover:text-white"
     }`;
+
+  /** Secondary rail row — parent vs indented child; brand-tint active + green inset. */
+  const secondaryLinkClass = (active: boolean, child = false) =>
+    `flex h-9 items-center rounded-[var(--radius)] text-[13px] transition-colors ${
+      child ? "pl-5 pr-3" : "px-3"
+    } ${
+      active
+        ? "bg-brand-tint font-semibold text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
+        : "font-medium text-ink-muted hover:bg-canvas hover:text-ink"
+    }`;
+
+  const secondaryLeft = collapsed && !mobileOpen ? "left-16" : "left-64";
+  const showSecondaryChrome = showSecondaryRail;
 
   return (
     <>
@@ -458,283 +600,440 @@ export function Sidebar({
         />
       ) : null}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-white/[0.06] bg-[#0a0a0c] transition-[width,transform] duration-200 sm:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-white/[0.06] bg-sidebar transition-[width,transform] duration-200 sm:translate-x-0 ${
           collapsed ? "sm:w-16" : "sm:w-64"
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-      <div
-        className={`flex items-center justify-between border-b border-white/[0.07] px-3 lg:px-4 ${
-          collapsed ? "h-16 sm:h-auto sm:flex-col sm:justify-center sm:gap-1.5 sm:py-3" : "h-16"
-        }`}
-      >
-        <Link
-          href={logoHref}
-          className="flex min-w-0 items-center gap-2.5 rounded-lg outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
-          aria-label="Home"
+        <div
+          className={`flex items-center justify-between border-b border-white/[0.07] px-3 ${
+            collapsed ? "h-14 sm:h-auto sm:flex-col sm:justify-center sm:gap-1.5 sm:py-2.5" : "h-14"
+          }`}
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/95 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.5)]">
-            <AppLogo height={20} />
-          </span>
-          <span className={`min-w-0 flex-col ${lgLabelFlex}`}>
-            <span className="truncate text-[13px] font-semibold leading-tight text-white/95">
-              Construction Logistics
-            </span>
-            <span className="text-[10.5px] leading-tight text-white/50">GOEL Services</span>
-          </span>
-        </Link>
-        <button
-          type="button"
-          onClick={onToggleCollapsed}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="hidden shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] p-1.5 text-white/55 transition hover:border-white/[0.14] hover:bg-white/[0.09] hover:text-white sm:flex"
-        >
-          <svg
-            className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2.25}
-            aria-hidden
+          <Link
+            href={logoHref}
+            className="flex min-w-0 items-center gap-2.5 rounded-lg outline-none ring-brand/0 focus-visible:ring-2 focus-visible:ring-brand"
+            aria-label="Home"
           >
-            <path d="M14 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={onMobileClose}
-          className="flex shrink-0 items-center justify-center rounded-lg p-1.5 text-white/60 transition hover:bg-white/[0.08] hover:text-white sm:hidden"
-          aria-label="Close navigation menu"
-        >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-            <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      </div>
-
-      <nav className="ui-scroll-dark flex-1 space-y-6 overflow-y-auto px-2 py-4 lg:px-3">
-        <div>
-          <p className={`mb-2.5 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 ${lgLabel}`}>
-            Workspace
-          </p>
-          <div className="space-y-1.5">
-            {visibleWorkspaces.map(({ value, Icon }) => {
-              const isActiveWorkspace = currentView === value;
-              /** Accordion: only the selected workspace stays open. */
-              const isExpanded = isActiveWorkspace;
-              const items = itemsForView(value).filter((i) => navItemVisible(user, i));
-              return (
-                <div key={value} className="space-y-0.5">
-                  <button
-                    type="button"
-                    onClick={() => handleViewChange(value)}
-                    title={WORKSPACE_FULL_LABELS[value]}
-                    aria-expanded={isExpanded}
-                    className={`flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-[15px] font-semibold tracking-tight transition-colors ${
-                      iconOnly ? "justify-center" : "justify-start px-2.5"
-                    } ${
-                      isActiveWorkspace
-                        ? "bg-white/[0.08] text-white"
-                        : "text-white/75 hover:bg-white/[0.05] hover:text-white"
-                    }`}
-                  >
-                    <Icon
-                      className={`h-5 w-5 shrink-0 ${
-                        isActiveWorkspace ? "text-brand" : "text-white/55"
-                      }`}
-                    />
-                    <span className={`flex-1 truncate text-left ${lgLabelInline}`}>
-                      {WORKSPACE_FULL_LABELS[value]}
-                    </span>
-                    <svg
-                      className={`h-3.5 w-3.5 shrink-0 text-white/40 transition-transform ${lgLabel} ${isExpanded ? "rotate-90" : ""}`}
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      aria-hidden
-                    >
-                      <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-
-                  {isExpanded && (items.length > 0 || value === "billings") ? (
-                    <div
-                      className={`mt-1 space-y-0.5 ${
-                        iconOnly ? "" : "ml-3 border-l border-white/[0.1] pl-2.5"
-                      }`}
-                    >
-                      {items.map(({ href, label, Icon: ItemIcon, activePathPrefix, exact }) => {
-                        const active = exact
-                          ? pathname === href
-                          : href === "/workforce"
-                            ? pathname === "/workforce"
-                            : activePathPrefix
-                              ? pathname === activePathPrefix ||
-                                pathname.startsWith(`${activePathPrefix}/`)
-                              : pathname === href || pathname.startsWith(`${href}/`);
-                        return (
-                          <Link key={href} href={href} className={subLinkClass(active)} title={label}>
-                            <ItemIcon
-                              className={`h-3.5 w-3.5 shrink-0 ${
-                                active ? "text-brand" : "text-white/45"
-                              }`}
-                            />
-                            <span className={`flex-1 ${lgLabelInline}`}>{label}</span>
-                            {href === "/workforce/chat" && chatUnreadTotal > 0 ? (
-                              <ChatUnreadBadge count={chatUnreadTotal} />
-                            ) : null}
-                          </Link>
-                        );
-                      })}
-
-                      {value === "billings" && canSeeBillings && (
-                        <div>
-                          <Link
-                            href="/clearstory/projects"
-                            className={subLinkClass(inClearstory)}
-                            aria-expanded={inClearstory}
-                            title="Clearstory"
-                          >
-                            <NavIconLayers
-                              className={`h-3.5 w-3.5 shrink-0 ${inClearstory ? "text-brand" : "text-white/45"}`}
-                            />
-                            <span className={`flex-1 ${lgLabelInline}`}>Clearstory</span>
-                            <svg
-                              className={`h-3 w-3 shrink-0 text-white/40 transition-transform ${lgLabel} ${inClearstory ? "rotate-90" : ""}`}
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                              aria-hidden
-                            >
-                              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </Link>
-                          {inClearstory && (
-                            <div className={`mt-0.5 ${lgLabel}`}>
-                              <div className="ml-2 space-y-0.5 border-l border-white/[0.08] pl-2.5">
-                                {clearstorySubItems.map(({ href, label, Icon }) => {
-                                  const active = pathname === href || pathname.startsWith(`${href}/`);
-                                  return (
-                                    <Link
-                                      key={href}
-                                      href={href}
-                                      className={`flex items-center gap-2 rounded-md py-1.5 pl-2 pr-2.5 text-[12px] font-medium transition-colors ${
-                                        active
-                                          ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
-                                          : "text-white/50 hover:bg-white/[0.05] hover:text-white/80"
-                                      }`}
-                                    >
-                                      <Icon
-                                        className={`h-3.5 w-3.5 shrink-0 ${
-                                          active ? "text-brand" : "text-white/40"
-                                        }`}
-                                      />
-                                      <span className="flex-1">{label}</span>
-                                    </Link>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/95 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.5)]">
+              <AppLogo height={20} />
+            </span>
+            <span className={`min-w-0 flex-col ${lgLabelFlex}`}>
+              <span className="truncate text-[13px] font-semibold leading-tight text-white/95">
+                Construction Logistics
+              </span>
+              <span className="text-[10.5px] leading-tight text-white/50">GOEL Services</span>
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="hidden shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] p-1.5 text-white/55 transition hover:border-white/[0.14] hover:bg-white/[0.09] hover:text-white sm:flex"
+          >
+            <svg
+              className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.25}
+              aria-hidden
+            >
+              <path d="M14 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="flex shrink-0 items-center justify-center rounded-lg p-1.5 text-white/60 transition hover:bg-white/[0.08] hover:text-white sm:hidden"
+            aria-label="Close navigation menu"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
 
-        {visibleAdminNav.length > 0 && (
+        <nav className="ui-scroll-dark flex-1 space-y-5 overflow-y-auto px-2 py-3">
           <div>
-            <p className={`mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 ${lgLabel}`}>
-              System
+            <p className={`mb-1.5 px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-white/45 ${lgLabel}`}>
+              Workspace
             </p>
             <div className="space-y-0.5">
-              {visibleAdminNav.map(({ href, label, Icon }) => {
-                const active = pathname === href || pathname.startsWith(`${href}/`);
+              {visibleWorkspaces.map(({ value, Icon }) => {
+                const isActiveWorkspace = currentView === value;
+                /** Accordion below lg; lg+ children live in the light secondary rail. */
+                const isExpanded = isActiveWorkspace;
+                const items = itemsForView(value).filter((i) => navItemVisible(user, i));
+                const hasChildren =
+                  workspaceShowsSecondaryRail(value, pathname, canSeeBillings) &&
+                  (items.length > 0 || value === "billings");
                 return (
-                  <Link key={href} href={href} className={navLinkClass(active)} title={label}>
-                    <Icon
-                      className={`h-[1.15rem] w-[1.15rem] shrink-0 ${active ? "text-brand" : "text-white/50"}`}
-                    />
-                    <span className={lgLabelInline}>{label}</span>
-                  </Link>
+                  <div key={value} className="space-y-0.5">
+                    <button
+                      type="button"
+                      onClick={() => handleViewChange(value)}
+                      title={WORKSPACE_FULL_LABELS[value]}
+                      aria-expanded={isExpanded}
+                      aria-current={isActiveWorkspace ? "page" : undefined}
+                      className={`flex h-9 w-full items-center gap-2.5 rounded-[var(--radius)] px-2 text-[13px] font-medium tracking-tight transition-colors ${
+                        iconOnly ? "justify-center" : "justify-start px-2.5"
+                      } ${
+                        isActiveWorkspace
+                          ? "bg-[var(--sidebar-active)] text-white"
+                          : "text-white/75 hover:bg-white/[0.06] hover:text-white"
+                      }`}
+                    >
+                      <Icon
+                        className={`h-4 w-4 shrink-0 ${
+                          isActiveWorkspace ? "text-white" : "text-white/55"
+                        }`}
+                      />
+                      <span className={`flex-1 truncate text-left ${lgLabelInline}`}>
+                        {WORKSPACE_FULL_LABELS[value]}
+                      </span>
+                      {hasChildren && !iconOnly ? (
+                        <svg
+                          className={`h-3.5 w-3.5 shrink-0 text-white/40 transition-transform xl:hidden ${isExpanded ? "rotate-90" : ""}`}
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          aria-hidden
+                        >
+                          <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      ) : null}
+                      {hasChildren && !iconOnly ? (
+                        <span className="hidden text-[10px] font-semibold text-white/35 xl:inline" aria-hidden>
+                          ›
+                        </span>
+                      ) : null}
+                    </button>
+
+                    {/* Below xl: nest children under the active workspace (accordion) — same as before. */}
+                    {isExpanded && hasChildren ? (
+                      <div
+                        className={`mt-1 space-y-0.5 xl:hidden ${
+                          iconOnly ? "" : "ml-3 border-l border-white/[0.1] pl-2.5"
+                        }`}
+                      >
+                        {items.map(({ href, label, Icon: ItemIcon, activePathPrefix, exact }) => {
+                          const active = itemIsActive(pathname, { href, activePathPrefix, exact });
+                          return (
+                            <Link key={href} href={href} className={accordionSubLinkClass(active)} title={label}>
+                              <ItemIcon
+                                className={`h-3.5 w-3.5 shrink-0 ${
+                                  active ? "text-white" : "text-white/45"
+                                }`}
+                              />
+                              <span className={`flex-1 ${lgLabelInline}`}>{label}</span>
+                              {href === "/workforce/chat" && chatUnreadTotal > 0 ? (
+                                <ChatUnreadBadge count={chatUnreadTotal} />
+                              ) : null}
+                            </Link>
+                          );
+                        })}
+
+                        {value === "billings" && canSeeBillings ? (
+                          <div>
+                            <Link
+                              href="/clearstory/projects"
+                              className={accordionSubLinkClass(inClearstory)}
+                              title="Clearstory"
+                            >
+                              <NavIconLayers
+                                className={`h-3.5 w-3.5 shrink-0 ${inClearstory ? "text-white" : "text-white/45"}`}
+                              />
+                              <span className={`flex-1 ${lgLabelInline}`}>Clearstory</span>
+                            </Link>
+                            {inClearstory ? (
+                              <div className={`mt-0.5 ${lgLabel}`}>
+                                <div className="ml-2 space-y-0.5 border-l border-white/[0.08] pl-2.5">
+                                  {clearstorySubItems.map(({ href, label, Icon: CsIcon }) => {
+                                    const active = pathname === href || pathname.startsWith(`${href}/`);
+                                    return (
+                                      <Link
+                                        key={href}
+                                        href={href}
+                                        className={`flex items-center gap-2 rounded py-1.5 pl-2 pr-2.5 text-[12px] font-medium transition-colors ${
+                                          active
+                                            ? "bg-[var(--sidebar-active)] text-white"
+                                            : "text-white/50 hover:bg-white/[0.05] hover:text-white/80"
+                                        }`}
+                                      >
+                                        <CsIcon
+                                          className={`h-3.5 w-3.5 shrink-0 ${
+                                            active ? "text-white" : "text-white/40"
+                                          }`}
+                                        />
+                                        <span className="flex-1">{label}</span>
+                                      </Link>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })}
             </div>
           </div>
-        )}
-      </nav>
 
-      <div className={`border-t border-white/[0.07] p-2 ${collapsed ? "" : "sm:p-3"}`}>
-        <div
-          className={`flex flex-col items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] p-2 ${
-            collapsed ? "" : "sm:flex-row sm:gap-3 sm:p-3"
-          }`}
-        >
+          {visibleAdminNav.length > 0 && (
+            <div>
+              <p className={`mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 ${lgLabel}`}>
+                System
+              </p>
+              <div className="space-y-0.5">
+                {visibleAdminNav.map(({ href, label, Icon }) => {
+                  const active = pathname === href || pathname.startsWith(`${href}/`);
+                  return (
+                    <Link key={href} href={href} className={navLinkClass(active)} title={label}>
+                      <Icon
+                        className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-white/50"}`}
+                      />
+                      <span className={lgLabelInline}>{label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </nav>
+
+        <div className={`border-t border-white/[0.07] p-2 ${collapsed ? "" : "sm:p-3"}`}>
           <div
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-[0_4px_12px_rgba(255,123,17,0.35)] ${
-              collapsed ? "" : "sm:h-10 sm:w-10"
+            className={`flex flex-col items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] p-2 ${
+              collapsed ? "" : "sm:flex-row sm:gap-3 sm:p-3"
             }`}
-            style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%)" }}
-            title={displayName(user)}
-            aria-hidden
           >
-            {userInitials(user)}
+            <div
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,0,0,0.25)] ${
+                collapsed ? "" : "sm:h-10 sm:w-10"
+              }`}
+              style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%)" }}
+              title={displayName(user)}
+              aria-hidden
+            >
+              {userInitials(user)}
+            </div>
+            <div className={`min-w-0 flex-1 ${lgLabel}`}>
+              <p className="truncate text-sm font-semibold text-white/90">{displayName(user)}</p>
+              <p className="truncate text-xs text-white/55">
+                {roleLabel(user?.role ?? "user")}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="shrink-0 rounded-lg p-2 text-white/40 transition hover:bg-white/10 hover:text-white"
+              title="Log out"
+              aria-label="Log out"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+                <path
+                  d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
           </div>
-          <div className={`min-w-0 flex-1 ${lgLabel}`}>
-            <p className="truncate text-sm font-semibold text-white/90">{displayName(user)}</p>
-            <p className="truncate text-xs text-white/55">
-              {roleLabel(user?.role ?? "user")}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => logout()}
-            className="shrink-0 rounded-lg p-2 text-white/40 transition hover:bg-white/10 hover:text-white"
-            title="Log out"
-            aria-label="Log out"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-              <path
-                d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
         </div>
-      </div>
       </aside>
 
-      {/* Collapsed + inside Clearstory: a persistent second rail for its modules — more reliable
-          than a hover flyout, and mirrors a dedicated-workspace pattern (icon rail + module list). */}
-      {iconOnly && inClearstory ? (
-        <aside className="fixed left-16 top-0 z-30 hidden h-dvh w-48 flex-col overflow-y-auto border-r border-white/[0.06] bg-[#111114] px-2 py-4 sm:flex">
-          <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">Clearstory</p>
-          <div className="space-y-0.5">
-            {clearstorySubItems.map(({ href, label, Icon }) => {
-              const active = pathname === href || pathname.startsWith(`${href}/`);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
-                    active
-                      ? "bg-brand/10 text-white shadow-[inset_2px_0_0_0_var(--brand)]"
-                      : "text-white/65 hover:bg-white/[0.06] hover:text-white"
-                  }`}
-                >
-                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-brand" : "text-white/50"}`} />
-                  <span>{label}</span>
-                </Link>
-              );
-            })}
+      {/* Workspace secondary rail — xl+ only */}
+      {showSecondaryChrome && secondaryCollapsed ? (
+        <aside
+          className={`workspace-secondary-rail fixed top-0 z-30 hidden h-dvh w-8 flex-col border-r border-[var(--border-subtle)] bg-white transition-[left] duration-200 max-xl:!hidden xl:flex ${secondaryLeft}`}
+          aria-label="Expand secondary navigation"
+        >
+          <div className="flex h-14 shrink-0 items-center justify-center border-b border-[var(--border-subtle)]">
+            <button
+              type="button"
+              onClick={() => onToggleSecondaryCollapsed?.()}
+              title="Expand secondary navigation"
+              aria-label="Expand secondary navigation"
+              aria-expanded={false}
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius)] text-ink-muted transition hover:bg-canvas hover:text-ink"
+            >
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.25}
+                aria-hidden
+              >
+                <path d="M10 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
+        </aside>
+      ) : null}
+
+      {showSecondaryChrome && !secondaryCollapsed ? (
+        <aside
+          className={`workspace-secondary-rail fixed top-0 z-30 hidden h-dvh max-xl:!hidden ${SIDEBAR_SECONDARY_W} flex-col border-r border-[var(--border-subtle)] bg-white transition-[left] duration-200 xl:flex ${secondaryLeft}`}
+          aria-label={`${WORKSPACE_FULL_LABELS[currentView]} sections`}
+        >
+          <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3">
+            <p className="min-w-0 truncate px-1 text-[13px] font-semibold text-ink">
+              {WORKSPACE_FULL_LABELS[currentView]}
+            </p>
+            <button
+              type="button"
+              onClick={() => onToggleSecondaryCollapsed?.()}
+              title="Collapse secondary navigation"
+              aria-label="Collapse secondary navigation"
+              aria-expanded={true}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius)] text-ink-muted transition hover:bg-canvas hover:text-ink"
+            >
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.25}
+                aria-hidden
+              >
+                <path d="M14 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+
+          <nav className="flex-1 space-y-4 overflow-y-auto px-2 pb-4 pt-4">
+            {currentView === "settings" ? (
+              SETTINGS_RAIL_SECTIONS.map((section) => (
+                <div key={section.title} className="space-y-0.5">
+                  <p className="cs-rail-section mb-1.5 px-3">{section.title}</p>
+                  {section.links.map(({ href, label }) => {
+                    const active = pathname === href || pathname.startsWith(`${href}/`);
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        className={secondaryLinkClass(active)}
+                        title={label}
+                      >
+                        <span className="min-w-0 flex-1 truncate">{label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ))
+            ) : (currentView === "billings" || inClearstory) && canSeeBillings ? (
+              <>
+                <div className="space-y-0.5">
+                  <Link
+                    href="/billings"
+                    className={secondaryLinkClass(
+                      pathname === "/billings" || pathname.startsWith("/billings/")
+                    )}
+                    title="Billing"
+                  >
+                    <span className="min-w-0 flex-1 truncate">Billing</span>
+                  </Link>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="cs-rail-section mb-1.5 px-3">Clearstory</p>
+                  {clearstorySubItems.map(({ href, label }) => {
+                    const active = pathname === href || pathname.startsWith(`${href}/`);
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        className={secondaryLinkClass(active, true)}
+                        title={label}
+                      >
+                        <span className="min-w-0 flex-1 truncate">{label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-0.5">
+                {secondaryItems.map((item) => {
+                  const active =
+                    item.href === "/bidding" && activeBidId
+                      ? true
+                      : itemIsActive(pathname, item);
+                  const showAsActive = Boolean(active && !(item.href === "/bidding" && activeBidId));
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={secondaryLinkClass(showAsActive)}
+                      title={item.label}
+                    >
+                      <span
+                        className={`min-w-0 flex-1 truncate ${
+                          item.href === "/bidding" && activeBidId ? "font-semibold text-ink" : ""
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                      {item.href === "/workforce/chat" && chatUnreadTotal > 0 ? (
+                        <ChatUnreadBadge count={chatUnreadTotal} />
+                      ) : null}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Record status — child filters under Estimates list */}
+            {currentView === "bidding" && isBiddingListPath(pathname) ? (
+              <div className="space-y-0.5">
+                <p className="cs-rail-section mb-1.5 px-3">Record status</p>
+                {BID_STATUS_FILTERS.map((f) => {
+                  const active = bidListStatus === f.value;
+                  const href =
+                    f.value === "all" ? "/bidding" : `/bidding?status=${f.value}`;
+                  return (
+                    <Link
+                      key={f.value}
+                      href={href}
+                      className={secondaryLinkClass(active, true)}
+                      title={f.label}
+                    >
+                      <span className="min-w-0 flex-1 truncate">{f.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {/* Bid stages — only when workspace secondary shows an open bid (rare; sheet usually owns this) */}
+            {currentView === "bidding" && activeBidId ? (
+              <div className="space-y-0.5">
+                <p className="cs-rail-section mb-1.5 px-3">Bid stages</p>
+                {BID_HANDOFF_STAGES.map((s) => {
+                  const active = activeBidStage === s.id;
+                  const statusQs =
+                    bidListStatus && bidListStatus !== "all"
+                      ? `&status=${encodeURIComponent(bidListStatus)}`
+                      : "";
+                  return (
+                    <Link
+                      key={s.id}
+                      href={`/bidding/${activeBidId}?stage=${s.id}${statusQs}`}
+                      className={secondaryLinkClass(active, true)}
+                      title={s.label}
+                    >
+                      <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
+          </nav>
         </aside>
       ) : null}
     </>
