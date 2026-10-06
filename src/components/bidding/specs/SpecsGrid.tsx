@@ -115,7 +115,7 @@ export function SpecsGrid({
       <div className="intake-section-body !p-0">
       <table className="min-w-[1600px] w-full border-collapse text-left text-[12.5px] text-[#374151]">
         <thead className="sticky top-0 z-10">
-          <tr className="border-b border-[#e5e7eb] bg-[#f3f1ea] text-[11px] font-semibold uppercase tracking-wide text-[#5a5340]">
+          <tr className="border-b border-[#e5e7eb] bg-[#f3f1ea] text-[11px] font-semibold uppercase tracking-wide text-[#333333]">
             <th className="px-2 py-2">Type</th>
             <th className="px-2 py-2">System</th>
             <th className="px-2 py-2">Area</th>

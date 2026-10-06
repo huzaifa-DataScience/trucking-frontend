@@ -245,13 +245,13 @@ function AddressBookModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-[#e5e7eb] bg-[#f3f1ea] px-4 py-2.5">
-          <h3 className="text-[13px] font-semibold tracking-wide text-[#5a5340]">
+          <h3 className="text-[13px] font-semibold tracking-wide text-[#333333]">
             {title}
           </h3>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e5e7eb] bg-[#f8fafc] px-4 py-2.5">
-          <span className="inline-flex items-center rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-2.5 py-1 text-[11px] font-semibold text-[#5a5340]">
+          <span className="inline-flex items-center rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-2.5 py-1 text-[11px] font-semibold text-[#333333]">
             Email Address Book
           </span>
           <div className="relative min-w-[14rem] flex-1 sm:max-w-sm">
@@ -339,7 +339,7 @@ function AddressBookModal({
                           title="Add this contact"
                           aria-label={`Add ${label}`}
                           onClick={() => onPick(o)}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340] transition hover:bg-[#ebe8df]"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#d9d4c8] bg-[#f3f1ea] text-[#333333] transition hover:bg-[#ebe8df]"
                         >
                           <svg
                             className="h-3.5 w-3.5"
@@ -366,7 +366,7 @@ function AddressBookModal({
             <button
               type="button"
               onClick={() => onAddNew(query.trim())}
-              className="text-[12.5px] font-semibold text-[#5a5340] transition hover:underline"
+              className="text-[12.5px] font-semibold text-[#333333] transition hover:underline"
             >
               Use “{query.trim()}” as new
             </button>
@@ -397,7 +397,7 @@ function AddressBookModal({
               onClick={() => setPage(n)}
               className={`min-w-7 rounded-md px-2 py-1 text-[11px] font-semibold transition ${
                 n === safePage
-                  ? "border border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340]"
+                  ? "border border-[#d9d4c8] bg-[#f3f1ea] text-[#333333]"
                   : "border border-transparent text-[#6b7280] hover:border-[#cfd5dd] hover:bg-white"
               }`}
             >

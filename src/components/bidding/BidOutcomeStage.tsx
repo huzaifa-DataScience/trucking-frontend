@@ -162,7 +162,7 @@ export function BidOutcomeStage() {
           {bid.workflow?.showAward ? (
             <Link
               href={`/bidding/${bid.id}?stage=award`}
-              className="intake-head-btn bg-[#f3f1ea] text-[#5a5340]"
+              className="intake-head-btn bg-[#f3f1ea] text-[#333333]"
             >
               Open Awarded / startup →
             </Link>

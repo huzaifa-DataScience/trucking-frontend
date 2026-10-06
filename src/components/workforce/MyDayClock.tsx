@@ -306,7 +306,7 @@ export function MyDayClock() {
             type="button"
             disabled={acting || !timeClockId}
             onClick={() => void handleClockOut()}
-            className="w-full rounded-2xl bg-brand py-4 text-base font-semibold text-white shadow-[0_2px_8px_rgba(255,123,17,0.35)] transition hover:bg-brand-secondary disabled:opacity-50"
+            className="w-full rounded-2xl bg-brand py-4 text-base font-semibold text-white shadow-[0_2px_8px_rgba(91,173,232,0.35)] transition hover:bg-brand-secondary disabled:opacity-50"
           >
             {acting ? "Clocking out…" : "Clock out"}
           </button>
@@ -315,7 +315,7 @@ export function MyDayClock() {
             type="button"
             disabled={acting || !timeClockId}
             onClick={() => void handleClockIn()}
-            className="w-full rounded-2xl bg-brand py-4 text-base font-semibold text-white shadow-[0_2px_8px_rgba(255,123,17,0.35)] transition hover:bg-brand-secondary disabled:opacity-50"
+            className="w-full rounded-2xl bg-brand py-4 text-base font-semibold text-white shadow-[0_2px_8px_rgba(91,173,232,0.35)] transition hover:bg-brand-secondary disabled:opacity-50"
           >
             {acting ? "Clocking in…" : "Clock in"}
           </button>
