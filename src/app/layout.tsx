@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-surface text-ink">
       <body
-        className={`${roboto.variable} ${robotoMono.variable} min-h-screen bg-surface text-ink`}
+        className={`${roboto.variable} ${robotoMono.variable} ${roboto.className} min-h-screen bg-surface text-ink antialiased`}
       >
         <AuthProvider>
           <ToastProvider>{children}</ToastProvider>
