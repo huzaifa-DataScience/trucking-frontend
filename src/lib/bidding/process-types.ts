@@ -714,7 +714,7 @@ export interface ProcessMeta {
     firstHere?: string[] | Record<string, boolean>;
     /** Also editable on Setup (PLA, preference, CCIP, …) */
     alsoOnSetup?: string[] | Record<string, boolean>;
-    /** Identity / assignment — show only */
+    /** Identity / assignment — show only. Includes ourEntityId. */
     readOnly?: string[] | Record<string, boolean>;
     [key: string]: unknown;
   };
@@ -734,6 +734,16 @@ export interface ProcessMeta {
   /** Role home catalog — GET /bids/my-plate uses JWT role; this is labels only. */
   dashboardPlates?: DashboardPlateMeta[];
   [key: string]: unknown;
+}
+
+/** True when process-meta lists a field as on (array of names, or `{ field: true }`). */
+export function processMetaFlagOn(
+  flag: string[] | Record<string, boolean> | undefined,
+  key: string
+): boolean {
+  if (!flag) return false;
+  if (Array.isArray(flag)) return flag.includes(key);
+  return flag[key] === true;
 }
 
 /** Catalog entry from process-meta.dashboardPlates (no rows). */

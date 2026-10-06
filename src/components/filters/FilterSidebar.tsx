@@ -109,7 +109,7 @@ function GlassSelect({
             <div
               ref={menuRef}
               style={{ top: pos.top, left: pos.left, width: pos.width }}
-              className="fixed z-[70] max-h-64 overflow-auto rounded-xl border border-white/80 bg-white/80 p-1.5 shadow-[0_12px_28px_rgba(255,123,17,0.16),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl"
+              className="fixed z-[70] max-h-64 overflow-auto rounded-xl border border-ink/10 bg-white p-1.5 shadow-[0_12px_28px_rgba(1,1,1,0.16)]"
             >
               {options.length === 0 ? (
                 <p className="px-2 py-2 text-xs text-ink/40">No options</p>

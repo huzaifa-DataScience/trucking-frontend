@@ -109,8 +109,9 @@ function SlotPersonPicker({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  const q = query.trim().toLowerCase();
-  const hits = !q
+  const q = query.trim();
+  const qLower = q.toLowerCase();
+  const hits = !qLower
     ? roster
     : roster.filter((c) => {
         const hay = [
@@ -125,8 +126,12 @@ function SlotPersonPicker({
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
-        return hay.includes(q);
+        return hay.includes(qLower);
       });
+  const exactName = q
+    ? roster.some((c) => contactLabel(c).toLowerCase() === qLower)
+    : true;
+  const canUseTypedName = q.length >= 2 && !exactName;
 
   const display = value.name || "— Unassigned —";
 
@@ -193,7 +198,7 @@ function SlotPersonPicker({
               </li>
               {rosterLoading && roster.length === 0 ? (
                 <li className="px-3 py-2 text-xs text-ink/45">Loading people…</li>
-              ) : hits.length === 0 ? (
+              ) : hits.length === 0 && !canUseTypedName ? (
                 <li className="px-3 py-2 text-xs text-ink/45">No people match.</li>
               ) : (
                 hits.map((c, i) => {
@@ -233,6 +238,25 @@ function SlotPersonPicker({
                   );
                 })
               )}
+              {canUseTypedName ? (
+                <li>
+                  <button
+                    type="button"
+                    role="option"
+                    className="block w-full px-3 py-2 text-left text-sm text-brand hover:bg-brand/[0.06]"
+                    onClick={() => {
+                      onChange({
+                        connecteamUserId: null,
+                        appUserId: null,
+                        name: q,
+                      });
+                      setOpen(false);
+                    }}
+                  >
+                    Use “{q}”
+                  </button>
+                </li>
+              ) : null}
             </ul>
           </div>
         ) : null}
@@ -260,10 +284,16 @@ function MyTeamSkeleton() {
   );
 }
 
+function asPeopleList(raw: unknown): unknown[] {
+  // GET /auth/team `contacts` is a URL string ("GET /lookups/bidding/contacts"), not rows.
+  if (typeof raw === "string" || !Array.isArray(raw)) return [];
+  return raw;
+}
+
 function contactsFromAuthTeam(team: AuthTeam | null): BidContactLookup[] {
-  if (!team?.contacts) return [];
-  const raw = team.contacts;
-  if (!Array.isArray(raw)) return [];
+  if (!team) return [];
+  const fromPeople = asPeopleList(team.people);
+  const raw = fromPeople.length > 0 ? fromPeople : asPeopleList(team.contacts);
   const out: BidContactLookup[] = [];
   for (const item of raw) {
     if (!item || typeof item !== "object") continue;
