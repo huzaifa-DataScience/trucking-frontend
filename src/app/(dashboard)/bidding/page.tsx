@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { BidListCard } from "@/components/bidding/BidListCard";
+import { BidStageProgressBar } from "@/components/bidding/BidStageProgressBar";
 import { BidStatusBadge } from "@/components/bidding/BidStatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Skeleton, SkeletonCardGrid, TableSkeleton } from "@/components/ui/Skeleton";
+import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import { buttonClasses } from "@/components/ui/Button";
 import { RestrictedState } from "@/components/ui/RestrictedState";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,9 +17,12 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { updateProfile } from "@/lib/api/endpoints/auth";
 import { getApiErrorMessage } from "@/lib/api/client";
-import { formatDate, formatMoney } from "@/lib/bidding/format";
+import { formatBidDateAndTime, formatDate, formatMoney } from "@/lib/bidding/format";
+import { personDisplayName } from "@/lib/bidding/person-label";
+import { teamColorForId } from "@/lib/bidding/team-colors";
+import { entityBrandForName } from "@/lib/branding/entity-colors";
 import { formatOutcome, formatProcessStage, formatWorkType } from "@/lib/bidding/process-types";
-import type { BidListItem, BidStatus } from "@/lib/bidding/types";
+import type { BidCaptainLookup, BidListItem, BidStatus, BidTeam } from "@/lib/bidding/types";
 import { FilterSidebar } from "@/components/filters/FilterSidebar";
 import { SavedViewTabs, conditionKey } from "@/components/filters/SavedViewTabs";
 import {
@@ -53,19 +57,6 @@ type SortKey =
   | "jobStartDate"
   | "office";
 type SortDir = "asc" | "desc";
-type ViewMode = "tiles" | "list";
-
-const VIEW_MODE_KEY = "bidding-view-mode";
-
-function loadViewMode(): ViewMode {
-  if (typeof window === "undefined") return "list";
-  try {
-    const v = window.localStorage.getItem(VIEW_MODE_KEY);
-    return v === "tiles" ? "tiles" : "list";
-  } catch {
-    return "list";
-  }
-}
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -169,8 +160,8 @@ function SortableTh({
       <button
         type="button"
         onClick={() => onSort(column)}
-        className={`inline-flex items-center gap-1 text-left font-semibold ${
-          active ? "text-ink" : "text-ink/50 hover:text-ink"
+        className={`inline-flex items-center gap-1 text-left text-[12px] font-medium ${
+          active ? "text-ink" : "text-ink-muted hover:text-ink"
         }`}
         aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
       >
@@ -225,7 +216,7 @@ function FilterSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel ?? prefix}
-        className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-white/70 bg-white/50 pl-3 pr-2.5 text-sm font-medium text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] outline-none backdrop-blur-md transition hover:bg-white/70 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+        className="cs-field flex h-9 w-full items-center justify-between gap-2 border px-2.5 text-[13px] font-medium text-ink outline-none transition hover:bg-canvas focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
       >
         <span className="truncate">
           {prefix}: {current?.label}
@@ -246,7 +237,7 @@ function FilterSelect({
         <div
           role="listbox"
           aria-label={ariaLabel ?? prefix}
-          className="absolute left-0 top-full z-30 mt-1.5 w-full min-w-max overflow-hidden rounded-xl border border-white/70 bg-white/80 p-1.5 shadow-[0_8px_20px_rgba(255,123,17,0.12)] backdrop-blur-xl"
+          className="absolute left-0 top-full z-30 mt-1.5 w-full min-w-max overflow-hidden rounded-xl border border-ink/[0.12] bg-white p-1.5 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.15)]"
         >
           {options.map((o) => {
             const selected = o.value === value;
@@ -290,19 +281,29 @@ function softBreakText(text: string) {
   ));
 }
 
-export default function BiddingListPage() {
+function parseStatusParam(raw: string | null): StatusFilter {
+  if (raw === "draft" || raw === "submitted" || raw === "archived") return raw;
+  return "all";
+}
+
+function BiddingListPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { companyId } = useCompany();
   const { user, setUser } = useAuth();
   const { canRead, canWrite } = useBiddingAccess();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>(() =>
+    parseStatusParam(searchParams.get("status"))
+  );
   const [workType, setWorkType] = useState("");
   const [processStage, setProcessStage] = useState("");
   const [outcome, setOutcome] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("bidDate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [viewMode, setViewMode] = useState<ViewMode>(() => loadViewMode());
   const [estimatorOptions, setEstimatorOptions] = useState<{ value: string; label: string }[]>([]);
+  const [captainLookup, setCaptainLookup] = useState<BidCaptainLookup[]>([]);
+  const [teams, setTeams] = useState<BidTeam[]>([]);
   const [bids, setBids] = useState<BidListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -328,6 +329,22 @@ export default function BiddingListPage() {
   const filterSaveTimer = useRef<number | null>(null);
   const hasLoadedBids = useRef(false);
 
+  /** Keep list status in sync with the secondary rail (`?status=`). */
+  useEffect(() => {
+    setStatus(parseStatusParam(searchParams.get("status")));
+  }, [searchParams]);
+
+  const writeStatusToUrl = useCallback(
+    (next: StatusFilter) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "all") params.delete("status");
+      else params.set("status", next);
+      const qs = params.toString();
+      router.replace(qs ? `/bidding?${qs}` : "/bidding", { scroll: false });
+    },
+    [router, searchParams]
+  );
+
   /** Scoped per-user so switching accounts on the same browser doesn't leak someone else's saved views. */
   const savedViewsKey = user ? `${BIDDING_SAVED_VIEWS_KEY}:${user.id}` : null;
   const crmFieldsKey = user ? `${BIDDING_FILTER_FIELDS_KEY}:${user.id}` : null;
@@ -344,12 +361,73 @@ export default function BiddingListPage() {
     void biddingApi
       .getBiddingCaptains()
       .then((captains) => {
-        const names = [...new Set(captains.map((c) => c.name).filter((n) => n.trim()))];
+        setCaptainLookup(captains);
+        const names = [
+          ...new Set(
+            captains
+              .map((c) =>
+                personDisplayName({
+                  firstName: c.firstName,
+                  lastName: c.lastName,
+                  name: c.name,
+                  email: c.email,
+                })
+              )
+              .filter((n) => n.trim() && n !== "Unknown")
+          ),
+        ];
         names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
         setEstimatorOptions(names.map((name) => ({ value: name, label: name })));
       })
-      .catch(() => setEstimatorOptions([]));
+      .catch(() => {
+        setCaptainLookup([]);
+        setEstimatorOptions([]);
+      });
   }, []);
+
+  useEffect(() => {
+    void biddingApi
+      .getBiddingTeams()
+      .then(setTeams)
+      .catch(() => setTeams([]));
+  }, []);
+
+  const teamNameFor = useCallback(
+    (teamId: number | null | undefined) => {
+      if (teamId == null || !Number.isFinite(Number(teamId))) return null;
+      return teams.find((t) => t.id === Number(teamId))?.teamName ?? null;
+    },
+    [teams]
+  );
+
+  const resolveCaptainLabel = useCallback(
+    (raw: string | null | undefined) => {
+      const needle = raw?.trim();
+      if (!needle) return "—";
+      const lower = needle.toLowerCase();
+      const hit = captainLookup.find(
+        (c) =>
+          c.email?.toLowerCase() === lower ||
+          c.name?.toLowerCase() === lower ||
+          personDisplayName({
+            firstName: c.firstName,
+            lastName: c.lastName,
+            name: c.name,
+            email: c.email,
+          }).toLowerCase() === lower
+      );
+      if (hit) {
+        return personDisplayName({
+          firstName: hit.firstName,
+          lastName: hit.lastName,
+          name: hit.name,
+          email: hit.email,
+        });
+      }
+      return personDisplayName({ name: needle });
+    },
+    [captainLookup]
+  );
 
   /** Estimator options come from captains, not contacts?role=estimator.
    * Other dynamic selects still come from values already on loaded bids. */
@@ -565,7 +643,11 @@ export default function BiddingListPage() {
   const visibleBids = useMemo(() => {
     const filtered = (status === "all" ? bids : bids.filter((b) => b.status === status))
       .filter((b) => rowMatchesGroups(b as unknown as Record<string, unknown>, filterGroups))
-      .filter((b) => !captainFilter || (b.captain || b.estimator || "") === captainFilter)
+      .filter(
+        (b) =>
+          !captainFilter ||
+          resolveCaptainLabel(b.captain || b.estimator) === captainFilter
+      )
       .filter((b) => {
         const q = bidKindFilter.trim().toLowerCase();
         return !q || (b.bidKind || "").toLowerCase().includes(q);
@@ -619,7 +701,7 @@ export default function BiddingListPage() {
       })();
       return sortDir === "desc" ? -cmp : cmp;
     });
-  }, [bids, status, sortKey, sortDir, filterGroups, captainFilter, bidKindFilter, constructionFilter]);
+  }, [bids, status, sortKey, sortDir, filterGroups, captainFilter, bidKindFilter, constructionFilter, resolveCaptainLabel]);
 
   const exportToExcel = useCallback(() => {
     import("xlsx").then((XLSX) => {
@@ -628,7 +710,12 @@ export default function BiddingListPage() {
           "Estimate #": b.estimateNumber,
           "Bid name": b.bidName,
           Contractor: b.clientCompanyName ?? "",
-          "Team captain": b.captain ?? "",
+          "Team captain": resolveCaptainLabel(b.captain || b.estimator),
+          "Bid date": formatBidDateAndTime({
+            bidDate: b.bidDate,
+            dueDate: b.dueDate,
+            dueTime: b.dueTime,
+          }).label,
           "Contract amount": b.contractAmount ?? "",
           "Cash expense": b.cashExpense ?? "",
           "Job start date": b.jobStartDate ?? "",
@@ -637,7 +724,6 @@ export default function BiddingListPage() {
           "Work type": formatWorkType(b.workType ?? undefined),
           "Current progress": formatProcessStage(b.processStage ?? undefined),
           Outcome: formatOutcome(b.outcomeStatus ?? undefined),
-          "Bid date": b.bidDate ?? "",
           "Internal bid date": b.internalBidDate ?? "",
           "Turned in": b.takeoffTurnedIn ? "Yes" : "",
           Updated: b.updatedAt,
@@ -647,7 +733,7 @@ export default function BiddingListPage() {
       XLSX.utils.book_append_sheet(wb, ws, "Estimates");
       XLSX.writeFile(wb, "estimates-export.xlsx");
     });
-  }, [visibleBids]);
+  }, [visibleBids, resolveCaptainLabel]);
 
   const applyFilterGroups = (groups: FilterGroup[]) => {
     setActiveConditionKeys([]);
@@ -710,17 +796,63 @@ export default function BiddingListPage() {
     return "No estimates yet.";
   }, [error, search, status]);
 
-  const toggleStatus = (value: StatusFilter) =>
-    setStatus((prev) => (prev === value ? "all" : value));
-
-  const changeViewMode = (mode: ViewMode) => {
-    setViewMode(mode);
-    try {
-      window.localStorage.setItem(VIEW_MODE_KEY, mode);
-    } catch {
-      /* ignore storage failures */
-    }
+  const toggleStatus = (value: StatusFilter) => {
+    setStatus((prev) => {
+      const next = prev === value ? "all" : value;
+      writeStatusToUrl(next);
+      return next;
+    });
   };
+
+  const selectStatus = (value: StatusFilter) => {
+    setStatus(value);
+    writeStatusToUrl(value);
+  };
+
+  const statusFilterButtons = (layout: "tabs" | "rail") =>
+    STATUS_FILTERS.map((f) => {
+      const active = status === f.value;
+      const count = f.value === "all" ? counts.total : counts[f.value];
+      if (layout === "rail") {
+        return (
+          <button
+            key={f.value}
+            type="button"
+            onClick={() => selectStatus(f.value)}
+            aria-pressed={active}
+            className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-sm transition ${
+              active
+                ? "bg-brand/10 font-semibold text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
+                : "font-medium text-ink/55 hover:bg-ink/[0.04] hover:text-ink"
+            }`}
+          >
+            <span>{f.label}</span>
+            <span className={count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
+              {count}
+            </span>
+          </button>
+        );
+      }
+      return (
+        <button
+          key={f.value}
+          type="button"
+          onClick={() => (f.value === "all" ? selectStatus("all") : toggleStatus(f.value))}
+          aria-pressed={active}
+          className={`relative pb-2.5 text-sm transition focus-visible:outline-none ${
+            active ? "font-semibold text-ink" : "font-medium text-ink/55 hover:text-ink"
+          }`}
+        >
+          {f.label}{" "}
+          <span className={count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
+            {count}
+          </span>
+          {active ? (
+            <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />
+          ) : null}
+        </button>
+      );
+    });
 
   const listColumns: { key: SortKey; label: string; width: string }[] = internalList
     ? [
@@ -732,10 +864,10 @@ export default function BiddingListPage() {
     : [
         { key: "estimate", label: "Estimate #", width: "w-[10%]" },
         { key: "name", label: "Name", width: "w-[18%]" },
-        { key: "bidDate", label: "Bid date", width: "w-[9%]" },
+        { key: "bidDate", label: "Bid date & time", width: "w-[11%]" },
         { key: "office", label: "Company", width: "w-[10%]" },
-        { key: "captain", label: "Team captain", width: "w-[12%]" },
-        { key: "stage", label: "Current progress", width: "w-[12%]" },
+        { key: "captain", label: "Team captain", width: "w-[11%]" },
+        { key: "stage", label: "Current progress", width: "w-[13%]" },
         { key: "outcome", label: "Outcome", width: "w-[8%]" },
         { key: "baseBid", label: "Base bid", width: "w-[8%]" },
         { key: "status", label: "Record", width: "w-[8%]" },
@@ -744,8 +876,10 @@ export default function BiddingListPage() {
         { key: "updated", label: "Updated", width: "w-[8%]" },
       ];
 
-  const rowHref = (bid: BidListItem) =>
-    isInternalRole ? `/bidding/${bid.id}?stage=takeoff` : `/bidding/${bid.id}?stage=intake`;
+  const rowHref = (bid: BidListItem) => {
+    const stage = isInternalRole ? "takeoff" : "intake";
+    return `/bidding/${bid.id}?stage=${stage}&status=${encodeURIComponent(bid.status)}`;
+  };
 
   const cellText = (bid: BidListItem, key: SortKey): string => {
     switch (key) {
@@ -770,9 +904,13 @@ export default function BiddingListPage() {
       case "updated":
         return formatDate(bid.updatedAt.slice(0, 10));
       case "bidDate":
-        return bid.bidDate ? formatDate(bid.bidDate) : "—";
+        return formatBidDateAndTime({
+          bidDate: bid.bidDate,
+          dueDate: bid.dueDate,
+          dueTime: bid.dueTime,
+        }).label;
       case "captain":
-        return bid.captain || bid.estimator || "—";
+        return resolveCaptainLabel(bid.captain || bid.estimator);
       case "internalBidDate":
         return bid.internalBidDate ? formatDate(bid.internalBidDate.slice(0, 10)) : "—";
       case "takeoffTurnedIn":
@@ -784,7 +922,7 @@ export default function BiddingListPage() {
 
   if (!canRead) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col gap-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
         <PageHeader
           title="Estimates"
           subtitle="Base Bid estimator — team, wage rates, systems, and live MIKE/PJ totals."
@@ -799,7 +937,7 @@ export default function BiddingListPage() {
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 ui-animate-in">
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-4 ui-animate-in">
       <PageHeader
         title="Estimates"
         subtitle="Track each estimate from Intake through Outcome. Awarded or Lost bids continue on from their final outcome."
@@ -812,8 +950,8 @@ export default function BiddingListPage() {
                 onClick={() => setShowAllTeams((v) => !v)}
                 className={`rounded-lg border px-2.5 py-2 text-xs font-semibold transition ${
                   showAllTeams
-                    ? "border-brand/30 bg-brand/10 text-brand"
-                    : "border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md hover:bg-white/70 hover:text-ink"
+                    ? "border-brand/30 bg-brand-tint text-ink"
+                    : "cs-field border text-ink/70 hover:bg-canvas/60 hover:text-ink"
                 }`}
                 title="GET /bids?teamId=all"
               >
@@ -850,18 +988,18 @@ export default function BiddingListPage() {
         </p>
       ) : null}
 
-      <div className="w-fit rounded-2xl border border-white/70 bg-white/45 px-5 py-4 shadow-[0_6px_16px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl">
+      <div className="cs-stat-card w-fit border border-[var(--border-subtle)] bg-surface px-4 py-3">
         {loading && bids.length === 0 ? (
           <Skeleton className="h-9 w-24" />
         ) : (
           <div>
-            <p className="text-2xl font-semibold leading-none text-ink">
+            <p className="text-[22px] font-semibold leading-none text-ink">
               {visibleBids.length}
               {visibleBids.length !== counts.total ? (
-                <span className="text-base font-normal text-ink/40"> of {counts.total}</span>
+                <span className="text-[14px] font-normal text-ink-muted"> of {counts.total}</span>
               ) : null}
             </p>
-            <p className="mt-1.5 text-xs font-medium uppercase tracking-wide text-ink/40">
+            <p className="cs-label mt-1.5">
               {status === "all" ? "Estimates shown" : `${STATUS_FILTERS.find((f) => f.value === status)?.label} estimates shown`}
             </p>
           </div>
@@ -869,28 +1007,15 @@ export default function BiddingListPage() {
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]">
-          {STATUS_FILTERS.map((f) => {
-            const active = status === f.value;
-            const count = f.value === "all" ? counts.total : counts[f.value];
-            return (
-              <button
-                key={f.value}
-                type="button"
-                onClick={() => (f.value === "all" ? setStatus("all") : toggleStatus(f.value))}
-                aria-pressed={active}
-                className={`relative pb-2.5 text-sm transition focus-visible:outline-none ${
-                  active ? "font-semibold text-ink" : "font-medium text-ink/55 hover:text-ink"
-                }`}
-              >
-                {f.label}{" "}
-                <span className={count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
-                  {count}
-                </span>
-                {active && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand" />}
-              </button>
-            );
-          })}
+        {/* Smaller screens: keep horizontal tabs, sticky under the top bar */}
+        <div
+          className="sticky top-14 z-20 -mx-4 border-b border-ink/[0.08] bg-white px-4 sm:top-[3.75rem] sm:-mx-6 sm:px-6 lg:hidden"
+          role="tablist"
+          aria-label="Estimate record status"
+        >
+          <div className="flex flex-wrap items-center gap-5 pt-1">
+            {statusFilterButtons("tabs")}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -907,7 +1032,7 @@ export default function BiddingListPage() {
                 placeholder="Search name, estimate #, drawing #, architect, owner…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-10 w-full rounded-lg border border-white/70 bg-white/50 pl-9 pr-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] outline-none backdrop-blur-md transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+                className="cs-field h-9 w-full border pl-9 pr-3 text-[13px] outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </div>
           </div> : null}
@@ -929,7 +1054,7 @@ export default function BiddingListPage() {
           <button
             type="button"
             onClick={() => setFilterOpen(true)}
-            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-white/70 bg-white/50 px-3.5 text-sm font-semibold text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md transition hover:border-brand/30 hover:bg-white/70 hover:text-brand"
+            className="cs-field flex h-9 shrink-0 items-center gap-2 border px-3 text-[13px] font-medium text-ink-muted transition hover:border-brand/40 hover:bg-canvas hover:text-ink"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
@@ -948,47 +1073,13 @@ export default function BiddingListPage() {
             onClick={exportToExcel}
             disabled={visibleBids.length === 0}
             title="Export the currently filtered/sorted list to Excel"
-            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-white/70 bg-white/50 px-3.5 text-sm font-semibold text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md transition hover:border-brand/30 hover:bg-white/70 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
+            className="cs-field flex h-9 shrink-0 items-center gap-2 border px-3 text-[13px] font-medium text-ink-muted transition hover:border-brand/40 hover:bg-canvas hover:text-ink disabled:pointer-events-none disabled:opacity-40"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Export
           </button>
-
-          <div className="flex h-10 shrink-0 items-center gap-0.5 rounded-lg border border-white/70 bg-white/50 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => changeViewMode("tiles")}
-              aria-pressed={viewMode === "tiles"}
-              title="Tile view"
-              className={`flex h-full items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition ${
-                viewMode === "tiles" ? "bg-ink text-white" : "text-ink/50 hover:text-ink"
-              }`}
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                <rect x="14" y="14" width="7" height="7" rx="1.5" />
-              </svg>
-              Tiles
-            </button>
-            <button
-              type="button"
-              onClick={() => changeViewMode("list")}
-              aria-pressed={viewMode === "list"}
-              title="List view"
-              className={`flex h-full items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition ${
-                viewMode === "list" ? "bg-ink text-white" : "text-ink/50 hover:text-ink"
-              }`}
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-              </svg>
-              List
-            </button>
-          </div>
         </div>
       </div>
 
@@ -1000,7 +1091,7 @@ export default function BiddingListPage() {
             aria-selected={internalList}
             onClick={() => setTeamTable(false)}
             className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-              internalList ? "bg-ink text-white" : "border border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+              internalList ? "bg-ink text-white" : "cs-field border text-ink/70"
             }`}
           >
             Internal bid list
@@ -1011,7 +1102,7 @@ export default function BiddingListPage() {
             aria-selected={!internalList}
             onClick={() => setTeamTable(true)}
             className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-              !internalList ? "bg-ink text-white" : "border border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+              !internalList ? "bg-ink text-white" : "cs-field border text-ink/70"
             }`}
           >
             Full team table
@@ -1021,7 +1112,7 @@ export default function BiddingListPage() {
 
       <div className="flex flex-wrap items-end gap-3">
         {showFilter("processStage") ? (
-          <label className="flex w-44 flex-col gap-1 text-xs font-semibold text-ink/50">
+          <label className="flex w-44 flex-col gap-1 text-xs font-medium text-ink-muted">
             Current progress
             <FilterSelect
               prefix="Stage"
@@ -1034,28 +1125,28 @@ export default function BiddingListPage() {
         ) : null}
         {showFilter("bidDate") ? (
           <div className="flex items-end gap-2">
-            <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+            <label className="flex flex-col gap-1 text-xs font-medium text-ink-muted">
               Bid date from
               <input
                 type="date"
                 value={localBidFrom}
                 onChange={(e) => setLocalBidFrom(e.target.value)}
-                className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+                className="cs-field h-9 border px-2 text-[13px] text-ink"
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+            <label className="flex flex-col gap-1 text-xs font-medium text-ink-muted">
               to
               <input
                 type="date"
                 value={localBidTo}
                 onChange={(e) => setLocalBidTo(e.target.value)}
-                className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+                className="cs-field h-9 border px-2 text-[13px] text-ink"
               />
             </label>
           </div>
         ) : null}
         {showFilter("captain") ? (
-          <label className="flex w-48 flex-col gap-1 text-xs font-semibold text-ink/50">
+          <label className="flex w-48 flex-col gap-1 text-xs font-medium text-ink-muted">
             Team captain
             <FilterSelect
               prefix="Captain"
@@ -1067,7 +1158,7 @@ export default function BiddingListPage() {
           </label>
         ) : null}
         {showFilter("workType") ? (
-          <label className="flex w-40 flex-col gap-1 text-xs font-semibold text-ink/50">
+          <label className="flex w-40 flex-col gap-1 text-xs font-medium text-ink-muted">
             Work type
             <FilterSelect
               prefix="Work"
@@ -1079,7 +1170,7 @@ export default function BiddingListPage() {
           </label>
         ) : null}
         {showFilter("outcome") ? (
-          <label className="flex w-40 flex-col gap-1 text-xs font-semibold text-ink/50">
+          <label className="flex w-40 flex-col gap-1 text-xs font-medium text-ink-muted">
             Outcome
             <FilterSelect
               prefix="Outcome"
@@ -1091,22 +1182,22 @@ export default function BiddingListPage() {
           </label>
         ) : null}
         {showFilter("bidKind") ? (
-          <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+          <label className="flex flex-col gap-1 text-xs font-medium text-ink-muted">
             Bid type
             <input
               value={bidKindFilter}
               onChange={(e) => setBidKindFilter(e.target.value)}
-              className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+              className="cs-field h-9 border px-2 text-[13px] text-ink"
             />
           </label>
         ) : null}
         {showFilter("constructionType") ? (
-          <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+          <label className="flex flex-col gap-1 text-xs font-medium text-ink-muted">
             Building type
             <input
               value={constructionFilter}
               onChange={(e) => setConstructionFilter(e.target.value)}
-              className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
+              className="cs-field h-9 border px-2 text-[13px] text-ink"
             />
           </label>
         ) : null}
@@ -1123,7 +1214,7 @@ export default function BiddingListPage() {
       />
 
       {loading && bids.length === 0 ? (
-        viewMode === "list" ? <TableSkeleton rows={8} toolbar={false} /> : <SkeletonCardGrid count={6} />
+        <TableSkeleton rows={8} toolbar={false} />
       ) : visibleBids.length === 0 ? (
         <EmptyState
           message={emptyMessage}
@@ -1131,18 +1222,18 @@ export default function BiddingListPage() {
             !error && canWrite ? (
               <Link
                 href="/bidding/new"
-                className="text-sm font-semibold text-brand hover:underline"
+                className="text-sm font-semibold text-ink underline underline-offset-2 hover:text-ink"
               >
                 Start a new estimate
               </Link>
             ) : undefined
           }
         />
-      ) : viewMode === "list" ? (
-        <div className="overflow-x-auto rounded-2xl border border-white/70 bg-white/45 px-1.5 py-2 shadow-[0_6px_16px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl">
+      ) : (
+        <div className="cs-data-table overflow-x-auto rounded-[var(--radius)] border border-[var(--border-subtle)] bg-surface">
           <table className="w-full min-w-[720px] table-fixed border-collapse text-left">
             <thead>
-              <tr className="border-b border-[rgba(255,123,17,0.22)] bg-[rgba(255,123,17,0.18)] text-xs font-semibold text-[#5a5340]">
+              <tr>
                 {listColumns.map((column) => (
                   <SortableTh
                     key={column.key}
@@ -1158,16 +1249,25 @@ export default function BiddingListPage() {
                       setSortKey(key);
                       setSortDir(defaultSortDir(key));
                     }}
-                    className={`${column.width} whitespace-nowrap px-4 py-3`}
+                    className={`${column.width} whitespace-nowrap px-3 py-2`}
                   />
                 ))}
               </tr>
             </thead>
             <tbody>
-              {visibleBids.map((bid, idx) => (
+              {visibleBids.map((bid, idx) => {
+                const teamColors = teamColorForId(bid.teamId);
+                const officeBrand = entityBrandForName(bid.companyName);
+                const schedule = formatBidDateAndTime({
+                  bidDate: bid.bidDate,
+                  dueDate: bid.dueDate,
+                  dueTime: bid.dueTime,
+                });
+                const crewLabel = teamNameFor(bid.teamId);
+                return (
                 <tr
                   key={bid.id}
-                  className={`group origin-center transform-gpu border-b border-ink/[0.06] text-sm transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform hover:relative hover:z-10 hover:scale-[1.02] hover:drop-shadow-[0_10px_18px_rgba(1,1,1,0.14)] ${idx % 2 === 1 ? "bg-ink/[0.012]" : ""}`}
+                  className={`border-b border-[var(--border-subtle)] transition-colors hover:bg-canvas ${idx % 2 === 1 ? "bg-canvas/50" : "bg-white"}`}
                 >
                   {listColumns.map((column) => {
                     const text = cellText(bid, column.key);
@@ -1175,14 +1275,49 @@ export default function BiddingListPage() {
                     <td
                       key={column.key}
                       title={text}
-                      className="truncate bg-transparent px-4 py-3 align-top text-sm text-ink/80 transition-colors duration-300 group-hover:overflow-visible group-hover:whitespace-normal group-hover:bg-white/75"
+                      className="truncate px-3 py-2.5 align-middle"
                     >
                       {column.key === "estimate" || column.key === "name" ? (
-                        <Link href={rowHref(bid)} className="block truncate font-semibold text-ink hover:text-brand group-hover:overflow-visible group-hover:whitespace-normal">
+                        <Link href={rowHref(bid)} className="block truncate font-medium text-ink hover:underline">
                           {softBreakText(text)}
                         </Link>
                       ) : column.key === "status" ? (
                         status === "draft" && bid.status === "draft" ? null : <BidStatusBadge status={bid.status} />
+                      ) : column.key === "bidDate" ? (
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-ink">{schedule.date}</p>
+                          {schedule.time ? (
+                            <p className="cs-helper truncate">{schedule.time}</p>
+                          ) : null}
+                        </div>
+                      ) : column.key === "office" ? (
+                        <span className="inline-flex max-w-full items-center gap-2 truncate">
+                          <span
+                            className={`h-2 w-2 shrink-0 rounded-full ${officeBrand.dot}`}
+                            aria-hidden
+                            title={text}
+                          />
+                          <span>{text}</span>
+                        </span>
+                      ) : column.key === "captain" ? (
+                        <div className="min-w-0">
+                          <p className="truncate">{softBreakText(text)}</p>
+                          {bid.teamId != null && crewLabel ? (
+                            <p className="cs-helper mt-0.5 inline-flex max-w-full items-center gap-1.5 truncate">
+                              <span
+                                className={`h-1.5 w-1.5 shrink-0 rounded-full ${teamColors.dot}`}
+                                aria-hidden
+                              />
+                              {crewLabel}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : column.key === "stage" ? (
+                        <BidStageProgressBar
+                          processStage={bid.processStage}
+                          teamId={bid.teamId}
+                          compact
+                        />
                       ) : (
                         softBreakText(text)
                       )}
@@ -1190,15 +1325,10 @@ export default function BiddingListPage() {
                     );
                   })}
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
-        </div>
-      ) : (
-        <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {visibleBids.map((bid) => (
-            <BidListCard key={bid.id} bid={bid} hideDraftChip={status === "draft"} />
-          ))}
         </div>
       )}
 
@@ -1219,5 +1349,13 @@ export default function BiddingListPage() {
         onToggleField={toggleCrmField}
       />
     </div>
+  );
+}
+
+export default function BiddingListPage() {
+  return (
+    <Suspense fallback={null}>
+      <BiddingListPageInner />
+    </Suspense>
   );
 }

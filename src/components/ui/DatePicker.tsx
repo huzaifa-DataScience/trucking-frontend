@@ -44,7 +44,7 @@ const popoverClass =
 const navButtonClass =
   "flex h-7 w-7 items-center justify-center rounded-lg text-ink/50 outline-none transition hover:bg-ink/5 hover:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-30";
 const cellClass =
-  "flex h-8 w-8 cursor-pointer items-center justify-center rounded text-[12.5px] text-[#374151] outline-none data-[outside-month]:text-[#d1d5db] data-[hovered]:bg-[#f3f1ea] data-[selected]:bg-[#5a5340] data-[selected]:text-white data-[unavailable]:pointer-events-none data-[unavailable]:text-[#d1d5db] data-[today]:font-semibold";
+  "flex h-8 w-8 cursor-pointer items-center justify-center rounded text-[12.5px] text-[#374151] outline-none data-[outside-month]:text-[#d1d5db] data-[hovered]:bg-[#f3f1ea] data-[selected]:bg-[#333333] data-[selected]:text-white data-[unavailable]:pointer-events-none data-[unavailable]:text-[#d1d5db] data-[today]:font-semibold";
 
 function CalendarIcon() {
   return (

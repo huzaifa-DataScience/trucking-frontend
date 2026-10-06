@@ -7,10 +7,23 @@ import { useProcessDraft } from "@/hooks/useProcessDraft";
 import type {
   ProcessAssignment,
   ProcessTakeoffAssignment,
+  ProcessTechnicalReview,
   TakeoffRole,
 } from "@/lib/bidding/process-types";
 import type { BidCaptainLookup, BidContactLookup, BidTeam } from "@/lib/bidding/types";
+import { personDisplayName } from "@/lib/bidding/person-label";
+import { BidTeamBadge } from "@/components/bidding/BidTeamBadge";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { useBidSheet } from "@/contexts/BidSheetContext";
+
+function captainDisplayName(c: BidCaptainLookup): string {
+  return personDisplayName({
+    firstName: c.firstName,
+    lastName: c.lastName,
+    name: c.name,
+    email: c.email,
+  });
+}
 
 function contactDisplayName(c: BidContactLookup): string {
   return (
@@ -65,6 +78,11 @@ export function BidAssignmentStage() {
   const rows: ProcessTakeoffAssignment[] = [
     ...(draft.takeoffAssignments ?? []),
   ];
+  const review: ProcessTechnicalReview = { ...(draft.technicalReview ?? {}) };
+
+  const setReview = (patch: Partial<ProcessTechnicalReview>) => {
+    setField("technicalReview", { ...review, ...patch });
+  };
 
   const setAssignment = (patch: Partial<ProcessAssignment>) => {
     const next = { ...a, ...patch };
@@ -125,7 +143,7 @@ export function BidAssignmentStage() {
     setAssignment({
       captainUserId: cap.userId,
       // Optimistic label; BE overwrites captain + teamId on save
-      captain: cap.name,
+      captain: captainDisplayName(cap),
       teamId: cap.teamId,
       assistantEstimator:
         team?.assistantEstimator ?? a.assistantEstimator ?? null,
@@ -151,7 +169,7 @@ export function BidAssignmentStage() {
       ...(loginCaptain
         ? {
             captainUserId: loginCaptain.userId,
-            captain: loginCaptain.name,
+            captain: captainDisplayName(loginCaptain),
           }
         : {
             // No active captain login for this team — clear captain
@@ -231,7 +249,7 @@ export function BidAssignmentStage() {
                   ) : (
                     captains.map((c) => (
                       <option key={c.userId} value={c.userId}>
-                        {c.name}
+                        {captainDisplayName(c)}
                         {c.teamName ? ` · ${c.teamName}` : ""}
                         {c.teamId == null ? " (crew later in Settings)" : ""}
                       </option>
@@ -246,19 +264,28 @@ export function BidAssignmentStage() {
             <label className="intake-row">
               <span className={labelClass}>Team</span>
               <div className="min-w-0">
-                <select
-                  className={inputClass}
-                  disabled={!editable}
-                  value={a.teamId != null ? String(a.teamId) : ""}
-                  onChange={(e) => pickTeam(e.target.value)}
-                >
-                  <option value="">—</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.teamName}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    className={inputClass}
+                    disabled={!editable}
+                    value={a.teamId != null ? String(a.teamId) : ""}
+                    onChange={(e) => pickTeam(e.target.value)}
+                  >
+                    <option value="">—</option>
+                    {teams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.teamName}
+                      </option>
+                    ))}
+                  </select>
+                  <BidTeamBadge
+                    teamId={a.teamId}
+                    teamName={
+                      teams.find((t) => t.id === a.teamId)?.teamName ?? null
+                    }
+                    compact
+                  />
+                </div>
                 <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
                   Changing team sets captain only if that crew has a login captain.
                 </span>
@@ -383,6 +410,101 @@ export function BidAssignmentStage() {
                 />
               </label>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="intake-section min-w-0">
+        <h3 className={sectionHead}>Technical review</h3>
+        <div className={`${sectionBody} intake-grid`}>
+          {bid.workflow?.completeBlockedReason ? (
+            <p className="col-span-full text-[12.5px] text-[#9a3412]">
+              {bid.workflow.completeBlockedReason}
+            </p>
+          ) : null}
+          <label className="intake-row">
+            <span className={labelClass}>Prepared by</span>
+            <input
+              className={inputClass}
+              disabled={!editable}
+              value={review.preparedBy ?? ""}
+              onChange={(e) => setReview({ preparedBy: e.target.value || null })}
+            />
+          </label>
+          <label className="intake-row">
+            <span className={labelClass}>Reviewed by</span>
+            <input
+              className={inputClass}
+              disabled={!editable}
+              value={review.reviewedBy ?? ""}
+              onChange={(e) => setReview({ reviewedBy: e.target.value || null })}
+            />
+          </label>
+          <label className="intake-row">
+            <span className={labelClass}>Review date</span>
+            <DatePicker
+              ariaLabel="Review date"
+              className={inputClass}
+              disabled={!editable}
+              value={review.reviewDate?.slice(0, 10) ?? ""}
+              onChange={(v) => setReview({ reviewDate: v || null })}
+            />
+          </label>
+          <label className="intake-row col-span-full">
+            <span className={labelClass}>Comments</span>
+            <textarea
+              className={`${inputClass} min-h-[4.5rem] resize-y`}
+              disabled={!editable}
+              value={review.comments ?? ""}
+              onChange={(e) => setReview({ comments: e.target.value || null })}
+            />
+          </label>
+          <div className="col-span-full flex flex-wrap items-center justify-between gap-2 rounded border border-[#e5e7eb] bg-[#f8fafc] px-2.5 py-2">
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-semibold text-[#1f2937]">
+                {review.approvedForTakeoff
+                  ? "Approved for takeoff"
+                  : "Takeoff approval required"}
+              </p>
+              <p className="text-[11px] text-[#6b7280]">
+                {review.approvedForTakeoff
+                  ? "Assignment can hand off to Setup. You can revoke if review needs another pass."
+                  : "Complete & Hand Off stays blocked until you approve (unless No-bid)."}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {review.approvedForTakeoff ? (
+                <>
+                  <span className="text-[11px] font-semibold text-[#047857]">
+                    Approved
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!editable}
+                    onClick={() => setReview({ approvedForTakeoff: false })}
+                    className="intake-head-btn disabled:opacity-40"
+                  >
+                    Revoke approval
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!editable}
+                  onClick={() =>
+                    setReview({
+                      approvedForTakeoff: true,
+                      reviewDate:
+                        review.reviewDate ||
+                        new Date().toISOString().slice(0, 10),
+                    })
+                  }
+                  className="intake-head-btn disabled:opacity-40"
+                >
+                  Approve for takeoff
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </section>

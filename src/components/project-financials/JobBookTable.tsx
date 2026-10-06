@@ -15,7 +15,7 @@ const STATUS_LABEL: Record<JobStatus, string> = {
 };
 
 const shell =
-  "overflow-hidden rounded-xl border border-white/70 bg-white/55 shadow-[0_6px_16px_rgba(255,123,17,0.08)] backdrop-blur-md";
+  "overflow-hidden rounded-xl border border-white/70 bg-white/55 shadow-[0_6px_16px_rgba(91,173,232,0.08)] backdrop-blur-md";
 
 export function JobBookTable({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boolean }) {
   const [view, setView] = useState<BookView>("overview");
@@ -28,7 +28,7 @@ export function JobBookTable({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boo
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex h-10 w-fit items-center rounded-lg border border-ink/10 bg-white/80 p-1 shadow-[0_4px_12px_rgba(255,123,17,0.06)]">
+      <div className="flex h-10 w-fit items-center rounded-lg border border-ink/10 bg-white/80 p-1 shadow-[0_4px_12px_rgba(91,173,232,0.06)]">
         {views.map((item) => (
           <button
             key={item.id}
@@ -44,7 +44,7 @@ export function JobBookTable({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boo
       </div>
 
       <div className={shell}>
-        <div className="hidden grid-cols-[minmax(16rem,1.5fr)_11rem_11rem_10rem_10rem] gap-3 border-b border-[rgba(255,123,17,0.22)] bg-[rgba(255,123,17,0.18)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-[#5a5340] lg:grid">
+        <div className="hidden grid-cols-[minmax(16rem,1.5fr)_11rem_11rem_10rem_10rem] gap-3 border-b border-[rgba(91,173,232,0.22)] bg-[rgba(91,173,232,0.18)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-[#333333] lg:grid">
           <span>Job</span>
           {view === "overview" ? (
             <>
@@ -143,7 +143,7 @@ function JobLine({ job, view, hideCost }: { job: JobRow; view: BookView; hideCos
               <p className="text-[11px] font-medium uppercase tracking-wide text-ink/40 lg:hidden">Billed</p>
               <p className="text-sm font-semibold tabular-nums text-ink">{money(job.billing.billed)}</p>
               <div className="mt-1.5 ml-auto h-1.5 w-full max-w-[7rem] overflow-hidden rounded-full bg-ink/[0.06]">
-                <div className="h-full rounded-full bg-[#5a5340]" style={{ width: `${billedPct * 100}%` }} />
+                <div className="h-full rounded-full bg-[#333333]" style={{ width: `${billedPct * 100}%` }} />
               </div>
               <p className="mt-0.5 text-[11px] tabular-nums text-ink/45">{ratio(job.billing.pctBilled)}</p>
             </div>
@@ -204,7 +204,7 @@ function ReconChips({ alerts }: { alerts: JobRecon["alerts"] }) {
 function FullSheet({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boolean }) {
   return (
     <div className={shell}>
-      <h2 className="border-b border-[rgba(255,123,17,0.22)] bg-[rgba(255,123,17,0.18)] px-4 py-3 text-center text-[13px] font-semibold text-[#5a5340]">
+      <h2 className="border-b border-[rgba(91,173,232,0.22)] bg-[rgba(91,173,232,0.18)] px-4 py-3 text-center text-[13px] font-semibold text-[#333333]">
         Full sheet
       </h2>
       <div className="overflow-x-auto">
@@ -258,7 +258,7 @@ function FullSheet({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boolean }) {
               ].map((label) => (
                 <th
                   key={label}
-                  className="whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-[#5a5340]"
+                  className="whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-[#333333]"
                 >
                   {label}
                 </th>

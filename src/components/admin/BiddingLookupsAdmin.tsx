@@ -11,7 +11,7 @@ import type { BidTeam, BidWageRate, PayrollBurdenItem, PayrollBurdenRateType } f
 import type { TeamCrewSlot } from "@/lib/api/endpoints/bidding";
 
 const CREW_SLOTS: { key: TeamCrewSlot; label: string }[] = [
-  { key: "bidClerk", label: "Bid clerk" },
+  { key: "bidClerk", label: "Assistant Estimator" },
   { key: "assistantManager", label: "Assistant manager" },
   { key: "duct1", label: "Duct 1" },
   { key: "duct2", label: "Duct 2" },
@@ -179,7 +179,7 @@ function TeamsSection({
             <tr>
               <th className="px-3 py-2">Team name</th>
               <th className="px-3 py-2">Captain</th>
-              <th className="px-3 py-2">Bid clerk</th>
+              <th className="px-3 py-2">Asst. estimator</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>

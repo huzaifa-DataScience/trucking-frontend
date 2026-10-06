@@ -86,7 +86,7 @@ export function BidAwardTab() {
             <span className="font-semibold text-[#1f2937]">Awarded</span> on the{" "}
             <Link
               href={`/bidding/${bid.id}?stage=result`}
-              className="font-medium text-[#5a5340] hover:underline"
+              className="font-medium text-[#333333] hover:underline"
               onClick={(e) => {
                 e.preventDefault();
                 void (async () => {

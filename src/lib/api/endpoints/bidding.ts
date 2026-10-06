@@ -214,9 +214,14 @@ export async function getBiddingCaptains(): Promise<BidCaptainLookup[]> {
     const firstName = typeof r.firstName === "string" ? r.firstName : null;
     const lastName = typeof r.lastName === "string" ? r.lastName : null;
     const fromParts = [firstName, lastName].filter(Boolean).join(" ").trim();
+    const displayName =
+      typeof r.displayName === "string" ? r.displayName.trim() : "";
+    const rawName = typeof r.name === "string" ? r.name.trim() : "";
     const name =
-      (typeof r.name === "string" && r.name.trim()) ||
       fromParts ||
+      (displayName && !displayName.includes("@") ? displayName : "") ||
+      (rawName && !rawName.includes("@") ? rawName : "") ||
+      rawName ||
       (typeof r.email === "string" ? r.email : "") ||
       `User #${userId}`;
     out.push({

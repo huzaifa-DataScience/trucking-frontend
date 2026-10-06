@@ -27,7 +27,7 @@ export function ConfirmModal({
   const confirmClass =
     variant === "danger"
       ? "border-danger/40 bg-danger text-white hover:bg-danger/90"
-      : "border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340] hover:bg-[#ebe8df]";
+      : "border-[#d9d4c8] bg-[#f3f1ea] text-[#333333] hover:bg-[#ebe8df]";
 
   return (
     <div
@@ -45,7 +45,7 @@ export function ConfirmModal({
         <div className="border-b border-[#e5e7eb] bg-[#f3f1ea] px-4 py-2.5">
           <h3
             id="confirm-modal-title"
-            className="text-[13px] font-semibold tracking-wide text-[#5a5340]"
+            className="text-[13px] font-semibold tracking-wide text-[#333333]"
           >
             {title}
           </h3>

@@ -6,26 +6,38 @@ const LABELS: Record<BidStatus, string> = {
   archived: "Archived",
 };
 
+/** Compact record-status chips — high contrast, medium weight. */
 const STYLES: Record<BidStatus, { wrap: string; dot: string }> = {
   draft: {
-    wrap: "border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340]",
-    dot: "bg-[#5a5340]",
+    wrap: "border-warning-border bg-warning-tint text-warning",
+    dot: "bg-warning",
   },
   submitted: {
-    wrap: "border-info-border bg-info-tint text-info",
-    dot: "bg-info",
+    wrap: "border-brand/30 bg-brand-tint text-ink",
+    dot: "bg-brand",
   },
   archived: {
-    wrap: "border-ink/10 bg-ink/[0.05] text-ink/60",
-    dot: "bg-ink/35",
+    wrap: "border-[var(--border-subtle)] bg-canvas text-ink-muted",
+    dot: "bg-ink-soft",
   },
 };
 
-export function BidStatusBadge({ status }: { status: BidStatus }) {
+export function BidStatusBadge({
+  status,
+  size = "md",
+}: {
+  status: BidStatus;
+  size?: "sm" | "md";
+}) {
   const style = STYLES[status];
+  const sizing =
+    size === "sm"
+      ? "h-5 gap-1 px-1.5 text-[11px]"
+      : "h-6 gap-1.5 px-2 text-[12px]";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${style.wrap}`}
+      className={`inline-flex items-center rounded border font-medium leading-none ${sizing} ${style.wrap}`}
+      title={`Record status: ${LABELS[status]}`}
     >
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${style.dot}`} aria-hidden />
       {LABELS[status]}

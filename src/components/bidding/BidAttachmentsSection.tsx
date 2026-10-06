@@ -239,7 +239,7 @@ function DrawingFileRows({
           key={att.id}
           className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-[#e5e7eb] bg-white px-3 py-2.5 first:border-t-0 hover:bg-[#faf7f0]"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f3f1ea] text-[10px] font-bold tracking-wide text-[#5a5340]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f3f1ea] text-[10px] font-bold tracking-wide text-[#333333]">
             {fileKindLabel(att)}
           </div>
           <div className="min-w-0">
@@ -340,14 +340,14 @@ function DrawingsPanel({
               onClick={() => onPhaseChange(o.value)}
               className={`inline-flex h-[30px] cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-semibold transition-colors ${
                 active
-                  ? "border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340]"
+                  ? "border-[#d9d4c8] bg-[#f3f1ea] text-[#333333]"
                   : "border-[#d5dbe3] bg-white text-[#4b5563] hover:border-[#94a3b8] hover:bg-[#fafafa]"
               }`}
             >
               <span>{o.label}</span>
               <span
                 className={`inline-flex min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-[18px] ${
-                  active ? "bg-[#ebe6da] text-[#5a5340]" : "bg-[#eef1f4] text-[#6b7280]"
+                  active ? "bg-[#ebe6da] text-[#333333]" : "bg-[#eef1f4] text-[#6b7280]"
                 }`}
               >
                 {count}
@@ -359,7 +359,7 @@ function DrawingsPanel({
 
       <section className="intake-section">
         <div className="intake-section-head flex items-center justify-between gap-3">
-          <h3 className="m-0 text-[13px] font-semibold tracking-[0.02em] text-[#5a5340]">
+          <h3 className="m-0 text-[13px] font-semibold tracking-[0.02em] text-[#333333]">
             {phaseTitle}
           </h3>
           <span className="shrink-0 text-[12px] font-normal text-[#7a7360]">{fileMeta}</span>
@@ -411,7 +411,7 @@ function DrawingsPanel({
               <button
                 type="button"
                 disabled={busy || atLimit}
-                className="intake-head-btn shrink-0 cursor-pointer border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340] hover:bg-[#ebe6da] disabled:cursor-default disabled:opacity-50"
+                className="intake-head-btn shrink-0 cursor-pointer border-[#d9d4c8] bg-[#f3f1ea] text-[#333333] hover:bg-[#ebe6da] disabled:cursor-default disabled:opacity-50"
                 onClick={(e) => {
                   e.stopPropagation();
                   onBrowse();
@@ -802,9 +802,9 @@ function MarkupSlot({
   const countLabel = files.length === 1 ? "1 file" : `${files.length} files`;
 
   return (
-    <div className="rounded-xl border border-white/70 bg-white/40 p-3 shadow-[0_4px_12px_rgba(255,123,17,0.06)]">
+    <div className="rounded-xl border border-white/70 bg-white/40 p-3 shadow-[0_4px_12px_rgba(91,173,232,0.06)]">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-[#5a5340]">{option.label}</p>
+        <p className="text-[12px] font-semibold uppercase tracking-wide text-[#333333]">{option.label}</p>
         <span className="text-[11px] text-ink/45">{countLabel}</span>
       </div>
       {isEditable ? (
@@ -835,7 +835,7 @@ function MarkupSlot({
             if (!locked) onUploadFiles(e.dataTransfer.files);
           }}
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e5e7eb] bg-white text-[11px] font-bold tracking-wide text-[#5a5340]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e5e7eb] bg-white text-[11px] font-bold tracking-wide text-[#333333]">
             {zipOnly ? "ZIP" : "FILE"}
           </div>
           <p className="text-[13px] font-semibold text-[#374151]">{uploadingHere ? "Uploading…" : copy.hint}</p>
@@ -899,7 +899,7 @@ function MarkupFileRows({
           key={att.id}
           className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-[#e5e7eb] bg-white px-3 py-2.5 first:border-t-0"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f3f1ea] text-[10px] font-bold tracking-wide text-[#5a5340]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f3f1ea] text-[10px] font-bold tracking-wide text-[#333333]">
             {fileKindLabel(att)}
           </div>
           <div className="min-w-0">

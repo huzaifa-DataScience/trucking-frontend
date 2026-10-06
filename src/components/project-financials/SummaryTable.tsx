@@ -7,9 +7,9 @@ import { queryToSearch } from "@/components/project-financials/FinancialsChrome"
 import { useFinancialsQuery } from "@/components/project-financials/useFinancialsQuery";
 
 const panel =
-  "overflow-hidden rounded-xl border border-white/70 bg-white/55 shadow-[0_6px_16px_rgba(255,123,17,0.08)] backdrop-blur-md";
+  "overflow-hidden rounded-xl border border-white/70 bg-white/55 shadow-[0_6px_16px_rgba(91,173,232,0.08)] backdrop-blur-md";
 const head =
-  "whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-[#5a5340]";
+  "whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-[#333333]";
 const cell = "whitespace-nowrap px-3 py-2.5 text-right text-sm tabular-nums text-ink/80";
 
 export function SummaryTable({ rows, totals }: { rows: SummaryRow[]; totals: SummaryRow }) {
@@ -67,7 +67,7 @@ export function SummaryTable({ rows, totals }: { rows: SummaryRow[]; totals: Sum
                   <span>Backlog {money(row.backlog)}</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-ink/[0.06]">
-                  <div className="h-full rounded-full bg-[#5a5340]" style={{ width: `${billedShare}%` }} />
+                  <div className="h-full rounded-full bg-[#333333]" style={{ width: `${billedShare}%` }} />
                 </div>
               </div>
             </Link>
@@ -76,7 +76,7 @@ export function SummaryTable({ rows, totals }: { rows: SummaryRow[]; totals: Sum
       </div>
 
       <div className={panel}>
-        <h2 className="border-b border-[rgba(255,123,17,0.22)] bg-[rgba(255,123,17,0.18)] px-4 py-3 text-center text-[13px] font-semibold text-[#5a5340]">
+        <h2 className="border-b border-[rgba(91,173,232,0.22)] bg-[rgba(91,173,232,0.18)] px-4 py-3 text-center text-[13px] font-semibold text-[#333333]">
           Full sheet
         </h2>
         <div className="overflow-x-auto">

@@ -6,7 +6,7 @@ export interface Breadcrumb {
   href?: string;
 }
 
-/** Executive-style page title block (hero row under the top bar). */
+/** Compact page title block under the top bar. */
 export function PageHeader({
   title,
   subtitle,
@@ -16,45 +16,40 @@ export function PageHeader({
   title: string;
   subtitle?: string;
   action?: ReactNode;
-  /** For pages ≥ 2 levels deep (UX doc §3.2), e.g. Bidding / IDC6098. */
   breadcrumbs?: Breadcrumb[];
 }) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0">
         {breadcrumbs && breadcrumbs.length > 0 ? (
-          <nav aria-label="Breadcrumb" className="mb-1.5">
-            <ol className="flex flex-wrap items-center gap-1.5 text-xs text-ink/45">
+          <nav aria-label="Breadcrumb" className="mb-1">
+            <ol className="flex flex-wrap items-center gap-1 text-[12px] text-ink-muted">
               {breadcrumbs.map((crumb, i) => (
-                <li key={`${crumb.label}-${i}`} className="flex items-center gap-1.5">
+                <li key={`${crumb.label}-${i}`} className="flex items-center gap-1">
                   {i > 0 ? (
-                    <span aria-hidden className="text-ink/25">
+                    <span aria-hidden className="text-ink-soft">
                       /
                     </span>
                   ) : null}
                   {crumb.href ? (
                     <Link
                       href={crumb.href}
-                      className="font-medium transition-colors hover:text-ink"
+                      className="font-medium text-ink-muted transition-colors hover:text-ink hover:underline"
                     >
                       {crumb.label}
                     </Link>
                   ) : (
-                    <span className="font-medium text-ink/60">{crumb.label}</span>
+                    <span className="font-medium text-ink">{crumb.label}</span>
                   )}
                 </li>
               ))}
             </ol>
           </nav>
         ) : null}
-        <h1 className="text-xl font-bold tracking-tight text-ink sm:text-[1.75rem] sm:leading-tight">
-          {title}
-        </h1>
-        {subtitle ? (
-          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink/50 sm:mt-1.5">{subtitle}</p>
-        ) : null}
+        <h1 className="cs-page-title">{title}</h1>
+        {subtitle ? <p className="cs-helper mt-1 max-w-2xl">{subtitle}</p> : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div> : null}
     </div>
   );
 }

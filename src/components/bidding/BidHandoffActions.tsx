@@ -27,8 +27,8 @@ function breadcrumbsOf(
   return Array.isArray(raw) ? raw.filter((b) => b?.text?.trim()) : [];
 }
 
-/** Simple Save for estimate sheet header — always visible. */
-export function BidSaveButton() {
+/** Simple Save for estimate sheet — compact by default; fullWidth for the side rail. */
+export function BidSaveButton({ fullWidth = false }: { fullWidth?: boolean }) {
   const {
     bid,
     canWrite,
@@ -57,12 +57,18 @@ export function BidSaveButton() {
   };
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div
+      className={`flex flex-col gap-1 ${
+        fullWidth ? "w-full items-stretch" : "w-auto shrink-0 items-end"
+      }`}
+    >
       <button
         type="button"
         disabled={!editable || busy || saving}
         onClick={() => void runSave()}
-        className="rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-3 py-1.5 text-[12px] font-semibold text-[#5a5340] transition hover:bg-[#ebe8df] disabled:opacity-40"
+        className={`rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-3 py-1.5 text-[12px] font-semibold text-[#333333] transition hover:bg-[#ebe8df] disabled:opacity-40 ${
+          fullWidth ? "w-full" : "w-auto"
+        }`}
       >
         {busy || saving ? "Saving…" : "Save"}
       </button>
@@ -72,7 +78,7 @@ export function BidSaveButton() {
         </span>
       ) : null}
       {error ? (
-        <p className="max-w-sm text-right text-sm text-danger" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
@@ -185,7 +191,7 @@ export function BidHandoffActions() {
           type="button"
           disabled={!editable || busy !== null}
           onClick={() => void runSave()}
-          className="rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-3 py-1.5 text-[12px] font-semibold text-[#5a5340] transition hover:bg-[#ebe8df] disabled:opacity-40"
+          className="rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-3 py-1.5 text-[12px] font-semibold text-[#333333] transition hover:bg-[#ebe8df] disabled:opacity-40"
         >
           {busy === "save" || saving ? "Saving…" : "Save"}
         </button>

@@ -14,13 +14,14 @@ import {
   YAxis,
 } from "recharts";
 import { formatMoney } from "@/lib/bidding/format";
+import { ENTITY_BRAND_HEX } from "@/lib/branding/entity-colors";
 import type { WfsCharts } from "@/lib/wfs/types";
 
 const EQUITY = "#0f172a";
-const CASH = "#ff7b11";
-const GOEL = "#0f172a";
-const DCB = "#ff7b11";
-const GOEL_DC = "#059669";
+const CASH = ENTITY_BRAND_HEX.dcb;
+const GOEL = ENTITY_BRAND_HEX.goel;
+const DCB = ENTITY_BRAND_HEX.dcb;
+const GOEL_DC = ENTITY_BRAND_HEX.goelDc;
 const OTHER = "#94a3b8";
 const AR = "#059669";
 const AP = "#dc2626";

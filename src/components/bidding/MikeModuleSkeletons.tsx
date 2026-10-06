@@ -117,6 +117,21 @@ export function SpecsPageSkeleton() {
   );
 }
 
+/** Compact block for Specs embedded under the Takeoff stage (no fake page header/tabs). */
+export function SpecsEmbeddedSkeleton() {
+  return (
+    <div
+      className="flex flex-col gap-3 rounded-xl border border-[var(--border-subtle)] bg-surface p-3"
+      role="status"
+      aria-label="Loading specs"
+    >
+      <Skeleton className="h-9 w-full rounded-lg" />
+      <Skeleton className="h-9 w-2/3 max-w-sm rounded-lg" />
+      <SkeletonTableRows rows={5} />
+    </div>
+  );
+}
+
 /** Estimation library table (page header stays mounted) */
 export function EstimationLibrarySkeleton() {
   return (

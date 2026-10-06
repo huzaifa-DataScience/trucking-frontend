@@ -451,7 +451,7 @@ export function BidSheetForm() {
                 </BidFormField>
                 {burdenedRate ? (
                   <div className="col-span-full rounded-lg border border-[#d9d4c8] bg-[#f3f1ea] p-4">
-                    <p className="text-[13px] font-semibold text-[#5a5340]">
+                    <p className="text-[13px] font-semibold text-[#333333]">
                       Burdened: {formatMoneyPrecise(burdenedRate.burdenedRate)}/hr
                     </p>
                     <div className="mt-3 grid gap-2 grid-cols-[repeat(auto-fit,minmax(120px,1fr))]">
@@ -722,7 +722,7 @@ export function BidSheetForm() {
                   <button
                     type="button"
                     onClick={() => setActiveTab("sheet")}
-                    className="font-semibold text-[#5a5340] hover:underline"
+                    className="font-semibold text-[#333333] hover:underline"
                   >
                     Bidding sheet
                   </button>{" "}

@@ -63,7 +63,7 @@ export function SpecsSetupStrip({
         </div>
         <Link
           href="/estimation-files"
-          className="text-[12px] font-semibold text-[#5a5340] hover:underline"
+          className="text-[12px] font-semibold text-[#333333] hover:underline"
         >
           Library
         </Link>
