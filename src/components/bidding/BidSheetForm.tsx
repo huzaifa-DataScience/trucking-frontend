@@ -211,7 +211,7 @@ export function BidSheetForm() {
 
   return (
     <>
-      <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3">
+      <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6">
       <header>
         <h2 className="intake-title">Proposal</h2>
       </header>
@@ -266,7 +266,7 @@ export function BidSheetForm() {
         <div className="bid-workspace-form space-y-5 pb-4">
           {activeTab === "sheet" ? (
             <>
-          <div className="grid grid-cols-2 items-start gap-3 max-[1000px]:grid-cols-1">
+          <div className="grid grid-cols-2 items-start gap-6 max-[1000px]:grid-cols-1">
             <div className="min-w-0">
               <BidSheetHeaderSection
                 bid={bid}
@@ -566,7 +566,7 @@ export function BidSheetForm() {
               </p>
             </Card>
 
-          <div className="grid grid-cols-2 items-stretch gap-3 max-[900px]:grid-cols-1">
+          <div className="grid grid-cols-2 items-stretch gap-6 max-[900px]:grid-cols-1">
             <section className="intake-section min-w-0">
               <div className="intake-section-head">Schedule & margin</div>
               <div className="intake-section-body">

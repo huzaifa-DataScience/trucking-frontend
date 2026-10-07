@@ -1,6 +1,7 @@
 "use client";
 
 import type { MikeFileInfo } from "@/lib/bidding/specs-types";
+import { INTAKE_REMOVE_BTN, TrashIcon } from "@/components/bidding/intakeIcons";
 
 /**
  * One physical Mike takeoff per bid — show user-chosen fileName.
@@ -56,9 +57,11 @@ export function MikeFilesList({
                 onDelete(primary.id);
               }
             }}
-            className="text-xs font-semibold text-danger hover:underline disabled:opacity-45"
+            className={`${INTAKE_REMOVE_BTN} disabled:opacity-45`}
+            aria-label="Delete takeoff"
+            title="Delete takeoff"
           >
-            {busy ? "…" : "Delete takeoff"}
+            {busy ? <span className="text-[10px] font-semibold">…</span> : <TrashIcon />}
           </button>
         ) : null}
       </div>

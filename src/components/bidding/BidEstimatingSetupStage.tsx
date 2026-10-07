@@ -54,7 +54,7 @@ export function BidEstimatingSetupStage() {
   };
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="intake-title">Handoff</h2>
         <p className="intake-sub mt-0.5">
@@ -84,7 +84,7 @@ export function BidEstimatingSetupStage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
+      <div className="grid grid-cols-3 items-start gap-6 max-[1000px]:grid-cols-1">
         <section className="intake-section min-w-0">
           <h3 className={sectionHead}>Preferences</h3>
           <div className={`${sectionBody} intake-stack`}>
@@ -431,7 +431,7 @@ export function BidEstimatingSetupStage() {
                 onChange={(e) => setReview({ comments: e.target.value || null })}
               />
             </label>
-            <div className="col-span-full flex flex-wrap items-center justify-between gap-2 rounded border border-[#e5e7eb] bg-[#f8fafc] px-2.5 py-2">
+            <div className="col-span-full flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-2.5 py-2">
               <div className="min-w-0">
                 <p className="text-[12.5px] font-semibold text-[#1f2937]">
                   {review.approvedForTakeoff

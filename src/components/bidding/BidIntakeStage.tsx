@@ -28,18 +28,12 @@ import {
 } from "@/lib/bidding/process-types";
 import type { BidListItem, LookupNameItem } from "@/lib/bidding/types";
 import { newId } from "@/lib/bidding/newId";
-
-function TrashIcon() {
-  return (
-    <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path
-        d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+import {
+  INTAKE_ADD_BTN,
+  INTAKE_REMOVE_BTN,
+  PlusIcon,
+  TrashIcon,
+} from "@/components/bidding/intakeIcons";
 
 function SelectChevron() {
   return (
@@ -221,8 +215,8 @@ export function BidIntakeStage() {
   const selectClass = `${inputClass} appearance-none pr-8`;
   const sectionHead = "intake-section-head";
   const sectionBody = "intake-section-body";
-  const addBtnClass =
-    "intake-head-btn";
+  const addBtnClass = INTAKE_ADD_BTN;
+  const removeBtnClass = INTAKE_REMOVE_BTN
   const [meta, setMeta] = useState<ProcessMeta | null>(null);
   const [dupHits, setDupHits] = useState<BidListItem[]>([]);
   const [dupSearching, setDupSearching] = useState(false);
@@ -652,7 +646,7 @@ export function BidIntakeStage() {
   }
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="intake-title">Intake</h2>
         <p className="intake-sub">
@@ -718,7 +712,7 @@ export function BidIntakeStage() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-3 items-stretch gap-3 max-[1000px]:grid-cols-1">
+      <div className="grid grid-cols-3 items-stretch gap-6 max-[1000px]:grid-cols-1">
       <section className="intake-section flex h-full min-w-0 flex-col row-span-2 max-[1000px]:row-span-1">
         <h3 className={sectionHead}>Bid identity</h3>
         <div className={`${sectionBody} intake-stack flex-1`}>
@@ -1135,7 +1129,7 @@ export function BidIntakeStage() {
         </div>
       </div>
 
-      <div className="intake-trio-row grid grid-cols-3 items-stretch gap-3 max-[1000px]:grid-cols-1 max-[1000px]:items-start">
+      <div className="intake-trio-row grid grid-cols-3 items-stretch gap-6 max-[1000px]:grid-cols-1 max-[1000px]:items-start">
       <section className="intake-section flex h-full max-h-full min-h-0 min-w-0 flex-col overflow-hidden">
         <div className={`${sectionHead} shrink-0`}>
           GCs / mechanical contractors
@@ -1167,10 +1161,12 @@ export function BidIntakeStage() {
                 {editable ? (
                   <button
                     type="button"
-                    className="text-[11px] font-semibold text-[#4b5563] hover:underline"
+                    className={addBtnClass}
+                    aria-label={`Add ${title.toLowerCase().replace(/s$/, "")}`}
+                    title={`Add ${title.toLowerCase().replace(/s$/, "")}`}
                     onClick={() => setList([...list, emptyGcOrMech()])}
                   >
-                    + Add
+                    <PlusIcon />
                   </button>
                 ) : null}
                 <span className="intake-head-count">{list.length}</span>
@@ -1184,7 +1180,7 @@ export function BidIntakeStage() {
                 {list.map((row, index) => (
                   <li
                     key={`${key}-${index}`}
-                    className="flex flex-wrap items-center gap-2 rounded border border-[#e5e7eb] bg-[#f8fafc] px-2.5 py-1.5"
+                    className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-2.5 py-1.5"
                   >
                     <input
                       className={`${inputClass} min-w-[10rem] flex-1`}
@@ -1309,7 +1305,17 @@ export function BidIntakeStage() {
                     {editable ? (
                       <button
                         type="button"
-                        className="text-xs font-medium text-danger/80 hover:text-danger"
+                        className={removeBtnClass}
+                        aria-label={
+                          key === "gc"
+                            ? "Remove GC"
+                            : "Remove mechanical contractor"
+                        }
+                        title={
+                          key === "gc"
+                            ? "Remove GC"
+                            : "Remove mechanical contractor"
+                        }
                         onClick={() => {
                           void (async () => {
                             const ok = await confirmDialog({
@@ -1326,7 +1332,7 @@ export function BidIntakeStage() {
                           })();
                         }}
                       >
-                        Remove
+                        <TrashIcon />
                       </button>
                     ) : null}
                   </li>
@@ -1349,11 +1355,13 @@ export function BidIntakeStage() {
             <button
               type="button"
               className={addBtnClass}
+              aria-label="Add invitation"
+              title="Add invitation"
               onClick={() =>
                 setInvitations([...invitations, emptyInvitation()])
               }
             >
-              + Add
+              <PlusIcon />
             </button>
           ) : null}
         </div>
@@ -1588,7 +1596,7 @@ export function BidIntakeStage() {
                   />
                 </label>
 
-                <div className="col-span-full flex flex-col gap-2 rounded border border-[#e5e7eb] bg-[#fff] p-2">
+                <div className="col-span-full flex flex-col gap-2 rounded-xl border border-[#e8ecf1] bg-[#fff] p-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-[11px] font-semibold text-[#6b7280]">
                       Addenda from this inviter
@@ -1597,14 +1605,16 @@ export function BidIntakeStage() {
                       {editable ? (
                         <button
                           type="button"
-                          className="text-[11px] font-semibold text-[#4b5563] hover:underline"
+                          className={addBtnClass}
+                          aria-label="Add addendum"
+                          title="Add addendum"
                           onClick={() =>
                             patchInvitation(index, {
                               addenda: [...addenda, emptyAddendum()],
                             })
                           }
                         >
-                          + Add addendum
+                          <PlusIcon />
                         </button>
                       ) : null}
                       <span className="intake-head-count">{addenda.length}</span>
@@ -1683,7 +1693,7 @@ export function BidIntakeStage() {
                             type="button"
                             aria-label="Remove addendum"
                             title="Remove addendum"
-                            className="ml-auto flex shrink-0 items-center self-end rounded-md p-1.5 pb-2 text-danger/70 hover:text-danger"
+                            className={`${removeBtnClass} ml-auto self-end`}
                             onClick={() => {
                               void (async () => {
                                 const ok = await confirmDialog({
@@ -1716,7 +1726,7 @@ export function BidIntakeStage() {
                     type="button"
                     aria-label="Remove invitation"
                     title="Remove invitation"
-                    className="flex shrink-0 items-center justify-self-end rounded-md p-1.5 text-danger/70 hover:text-danger col-span-full"
+                    className={`${removeBtnClass} col-span-full justify-self-end`}
                     onClick={() => {
                       void (async () => {
                         const ok = await confirmDialog({
@@ -1742,7 +1752,7 @@ export function BidIntakeStage() {
         </div>
       </section>
 
-      <div className="flex h-full max-h-full min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
+      <div className="flex h-full max-h-full min-h-0 min-w-0 flex-col gap-6 overflow-hidden">
       <section className="intake-section min-w-0 shrink-0">
         <div className={sectionHead}>
           Who else is bidding?
@@ -1795,7 +1805,7 @@ export function BidIntakeStage() {
       </div>
       </div>
 
-      <div className="grid grid-cols-2 items-start gap-3 max-[1000px]:grid-cols-1">
+      <div className="grid grid-cols-2 items-start gap-6 max-[1000px]:grid-cols-1">
       <section className="intake-section min-w-0">
         <div className="intake-section-head-bar">
           <div>
@@ -1806,6 +1816,8 @@ export function BidIntakeStage() {
             <button
               type="button"
               className={addBtnClass}
+              aria-label="Add document link"
+              title="Add document link"
               onClick={() =>
                 setField("documentLinks", [
                   ...documentLinks,
@@ -1813,7 +1825,7 @@ export function BidIntakeStage() {
                 ])
               }
             >
-              + Add link
+              <PlusIcon />
             </button>
           ) : null}
         </div>
@@ -1870,7 +1882,7 @@ export function BidIntakeStage() {
                   type="button"
                   aria-label="Remove link"
                   title="Remove link"
-                  className="ml-auto flex shrink-0 items-center justify-self-end rounded-md p-1.5 text-danger/70 hover:text-danger"
+                  className={`${removeBtnClass} ml-auto justify-self-end`}
                   onClick={() => {
                     void (async () => {
                       const ok = await confirmDialog({
@@ -1906,9 +1918,11 @@ export function BidIntakeStage() {
             <button
               type="button"
               className={addBtnClass}
+              aria-label="Add contract layer"
+              title="Add contract layer"
               onClick={() => setTiers([...tiers, emptyTier()])}
             >
-              + Add layer
+              <PlusIcon />
             </button>
           ) : null}
         </div>
@@ -2017,7 +2031,7 @@ export function BidIntakeStage() {
                           type="button"
                           aria-label="Remove row"
                           title="Remove row"
-                          className="inline-flex shrink-0 items-center rounded-md p-1.5 text-danger/70 hover:text-danger"
+                          className={removeBtnClass}
                           onClick={() => {
                             void (async () => {
                               const ok = await confirmDialog({

@@ -3,7 +3,11 @@
 import { Suspense, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Header } from "./Header";
-import { Sidebar, dashboardMainOffsetClass } from "./Sidebar";
+import {
+  SECONDARY_COLLAPSED_KEY,
+  Sidebar,
+  dashboardMainOffsetClass,
+} from "./Sidebar";
 
 const SIDEBAR_COLLAPSED_KEY = "construction-logistics-sidebar-collapsed";
 
@@ -11,31 +15,56 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [secondaryCollapsed, setSecondaryCollapsed] = useState(false);
 
   useEffect(() => {
-    try {
-      setCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const toggleCollapsed = () => {
-    setCollapsed((v) => {
-      const next = !v;
+    const sync = () => {
       try {
-        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+        setCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
+        setSecondaryCollapsed(localStorage.getItem(SECONDARY_COLLAPSED_KEY) === "1");
       } catch {
         /* ignore */
       }
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("sidebar-collapsed-change"));
-      }
-      return next;
-    });
+    };
+    sync();
+    window.addEventListener("sidebar-collapsed-change", sync);
+    window.addEventListener("secondary-collapsed-change", sync);
+    return () => {
+      window.removeEventListener("sidebar-collapsed-change", sync);
+      window.removeEventListener("secondary-collapsed-change", sync);
+    };
+  }, []);
+
+  const toggleCollapsed = () => {
+    // Keep side effects out of setState updaters (Strict Mode may invoke them twice).
+    let next = !collapsed;
+    try {
+      next = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) !== "1";
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    setCollapsed(next);
+    window.dispatchEvent(new Event("sidebar-collapsed-change"));
   };
 
-  const mainOffset = dashboardMainOffsetClass(pathname, collapsed);
+  const toggleSecondaryCollapsed = () => {
+    let next = !secondaryCollapsed;
+    try {
+      next = localStorage.getItem(SECONDARY_COLLAPSED_KEY) !== "1";
+      localStorage.setItem(SECONDARY_COLLAPSED_KEY, next ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    setSecondaryCollapsed(next);
+    window.dispatchEvent(new Event("secondary-collapsed-change"));
+  };
+
+  const mainOffset = dashboardMainOffsetClass(
+    pathname,
+    collapsed,
+    secondaryCollapsed
+  );
 
   return (
     <div className="glass-app min-h-dvh w-full overflow-x-hidden">
@@ -45,6 +74,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           onMobileClose={() => setMobileNavOpen(false)}
           collapsed={collapsed}
           onToggleCollapsed={toggleCollapsed}
+          secondaryCollapsed={secondaryCollapsed}
+          onToggleSecondaryCollapsed={toggleSecondaryCollapsed}
         />
       </Suspense>
       <div

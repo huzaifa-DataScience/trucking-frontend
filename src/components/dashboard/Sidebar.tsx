@@ -32,6 +32,7 @@ import type { AuthUser } from "@/lib/auth/types";
 import { useChatUnreadTotal } from "@/hooks/useChatUnreadTotal";
 import { ChatUnreadBadge } from "@/components/workforce/chat/ChatUnreadBadge";
 import { BID_HANDOFF_STAGES } from "@/lib/bidding/process-types";
+import { BID_STAGE_ICONS } from "@/components/bidding/BidStageIcons";
 
 type ViewMode =
   | "operations"
@@ -48,6 +49,10 @@ const WORKSPACE_STORAGE_KEY = "construction-logistics-workspace";
 /** Secondary rail width on xl+ (compact enterprise child nav). */
 export const SIDEBAR_SECONDARY_PX = 232;
 export const SIDEBAR_SECONDARY_W = "w-[232px]";
+export const SIDEBAR_SECONDARY_COLLAPSED_PX = 48;
+export const SIDEBAR_SECONDARY_COLLAPSED_W = "w-12";
+export const SECONDARY_COLLAPSED_KEY =
+  "construction-logistics-secondary-collapsed";
 
 /** Primary rail widths — documented for secondary offset math (w-64 / w-16). */
 // SIDEBAR_PRIMARY_EXPANDED_PX = 256; SIDEBAR_PRIMARY_COLLAPSED_PX = 64;
@@ -120,11 +125,12 @@ function workspaceShowsSecondaryRail(view: ViewMode, pathname: string, canSeeBil
 
 /**
  * Content offset for primary (+ optional secondary on xl+).
- * Keep in sync with Sidebar widths (w-64 / w-16 + 232px secondary).
+ * Keep in sync with Sidebar widths (w-64 / w-16 + 232 / 48 secondary).
  */
 export function dashboardMainOffsetClass(
   pathname: string,
-  collapsed: boolean
+  collapsed: boolean,
+  secondaryCollapsed = false
 ): string {
   const view = viewFromPathname(pathname);
   // Optimistic: assume secondary when path implies a workspace that uses one.
@@ -133,13 +139,21 @@ export function dashboardMainOffsetClass(
 
   // Mobile: overlay drawer — no permanent padding
   // sm–md: primary only (accordion hosts children)
-  // xl+: primary + secondary (secondary stays full width; primary may collapse)
+  // xl+: primary + secondary (either rail may collapse)
   if (!hasSecondary) {
     return collapsed ? "sm:pl-16" : "sm:pl-64";
   }
   const primary = collapsed ? "sm:pl-16" : "sm:pl-64";
-  // Primary (256 / 64) + secondary (232) → 488 / 296
-  const withSecondary = collapsed ? "xl:pl-[296px]" : "xl:pl-[488px]";
+  const secCollapsed = secondaryCollapsed;
+  // Primary (256 / 64) + secondary (232 / 48)
+  // expanded+expanded 488 · collapsed+expanded 296 · expanded+collapsed 304 · both 112
+  const withSecondary = secCollapsed
+    ? collapsed
+      ? "xl:pl-[112px]"
+      : "xl:pl-[304px]"
+    : collapsed
+      ? "xl:pl-[296px]"
+      : "xl:pl-[488px]";
   return `${primary} ${withSecondary}`;
 }
 
@@ -348,16 +362,27 @@ const settingsNavItems: SidebarNavItem[] = [
 
 const SETTINGS_RAIL_SECTIONS: {
   title: string;
-  links: { href: string; label: string }[];
+  links: { href: string; label: string; Icon: ComponentType<{ className?: string }> }[];
 }[] = [
   {
     title: "General",
-    links: [{ href: "/settings/profile", label: "My Profile" }],
+    links: [{ href: "/settings/profile", label: "My Profile", Icon: NavIconUsers }],
   },
   {
     title: "Account",
-    links: [{ href: "/settings/my-team", label: "My team" }],
+    links: [{ href: "/settings/my-team", label: "My team", Icon: NavIconUsers }],
   },
+];
+
+const BID_STATUS_FILTERS: {
+  value: "all" | "draft" | "submitted" | "archived";
+  label: string;
+  Icon: ComponentType<{ className?: string }>;
+}[] = [
+  { value: "all", label: "All", Icon: NavIconLayers },
+  { value: "draft", label: "Draft", Icon: NavIconProposal },
+  { value: "submitted", label: "Submitted", Icon: NavIconTable },
+  { value: "archived", label: "Archived", Icon: NavIconClock },
 ];
 
 /**
@@ -407,12 +432,17 @@ export function Sidebar({
   onMobileClose,
   collapsed = false,
   onToggleCollapsed,
+  secondaryCollapsed = false,
+  onToggleSecondaryCollapsed,
 }: {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
   /** Desktop-only (lg+) manual collapse to an icon-only rail; unrelated to the mobile drawer. */
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
+  /** xl+ workspace sub-menu (Bids / Record status / …) collapse. */
+  secondaryCollapsed?: boolean;
+  onToggleSecondaryCollapsed?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -449,7 +479,7 @@ export function Sidebar({
     can(user, PERMISSIONS.clearstoryRead) ||
     can(user, PERMISSIONS.sitelineRead);
 
-  /** Primary collapse is independent of the secondary rail (secondary never collapses). */
+  /** Primary collapse is independent of the secondary rail. */
   const iconOnly = collapsed && !mobileOpen;
   const lgLabel = collapsed ? "sm:hidden" : "";
   const lgLabelInline = collapsed ? "sm:hidden" : "";
@@ -553,11 +583,17 @@ export function Sidebar({
 
   /** Secondary rail — neutral type; brand reserved for active indicator. */
   const secondaryLinkClass = (active: boolean, child = false) =>
-    `flex min-h-10 items-center rounded-md px-3 py-2.5 font-[family-name:var(--font-geist-sans)] text-[var(--text-nav-sm)] font-normal leading-snug transition-colors duration-150 ${
-      child ? "pl-5" : ""
+    `flex min-h-10 cursor-pointer items-center gap-2.5 rounded-md font-[family-name:var(--font-geist-sans)] text-[var(--text-nav-sm)] font-normal leading-snug transition-colors duration-150 ${
+      secondaryCollapsed
+        ? "h-9 w-9 min-h-9 justify-center px-0 py-0"
+        : child
+          ? "px-3 py-2.5 pl-5"
+          : "px-3 py-2.5"
     } ${
       active
-        ? "bg-brand-tint font-medium text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
+        ? secondaryCollapsed
+          ? "bg-brand-tint font-medium text-ink"
+          : "bg-brand-tint font-medium text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
         : "text-ink hover:bg-canvas hover:text-ink"
     }`;
 
@@ -797,34 +833,76 @@ export function Sidebar({
         </div>
       </aside>
 
-      {/* Workspace secondary rail — xl+ only; never collapsible (always full width) */}
+      {/* Workspace secondary rail — xl+; collapsible to a thin strip */}
       {showSecondaryChrome ? (
         <aside
-          className={`workspace-secondary-rail fixed top-0 z-30 hidden h-dvh max-xl:!hidden ${SIDEBAR_SECONDARY_W} min-w-[232px] max-w-[232px] shrink-0 flex-col border-r border-[var(--border-subtle)] bg-white transition-[left] duration-200 xl:flex ${secondaryLeft}`}
+          className={`workspace-secondary-rail fixed top-0 z-30 hidden h-dvh max-xl:!hidden shrink-0 flex-col border-r border-[var(--border-subtle)] bg-white transition-[left,width,min-width,max-width] duration-200 xl:flex ${secondaryLeft} ${
+            secondaryCollapsed
+              ? `${SIDEBAR_SECONDARY_COLLAPSED_W} min-w-12 max-w-12`
+              : `${SIDEBAR_SECONDARY_W} min-w-[232px] max-w-[232px]`
+          }`}
           aria-label={`${WORKSPACE_FULL_LABELS[currentView]} sections`}
-          data-collapsible="false"
+          data-collapsible="true"
+          data-collapsed={secondaryCollapsed ? "true" : "false"}
         >
           {/* Align with primary logo row; avoid repeating “Estimates” */}
-          <div className="flex h-16 shrink-0 items-center border-b border-[var(--border-subtle)] px-5">
-            {currentView === "bidding" ? (
-              <span className="sr-only">Estimates navigation</span>
-            ) : (
-              <p className="min-w-0 truncate text-[15px] font-semibold text-ink">
-                {WORKSPACE_FULL_LABELS[currentView]}
-              </p>
-            )}
+          <div
+            className={`flex h-16 shrink-0 items-center border-b border-[var(--border-subtle)] ${
+              secondaryCollapsed ? "justify-center px-1" : "justify-between gap-2 px-3"
+            }`}
+          >
+            {!secondaryCollapsed ? (
+              currentView === "bidding" ? (
+                <span className="sr-only">Estimates navigation</span>
+              ) : (
+                <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink">
+                  {WORKSPACE_FULL_LABELS[currentView]}
+                </p>
+              )
+            ) : null}
+            <button
+              type="button"
+              onClick={onToggleSecondaryCollapsed}
+              title={secondaryCollapsed ? "Expand sub menu" : "Collapse sub menu"}
+              aria-label={secondaryCollapsed ? "Expand sub menu" : "Collapse sub menu"}
+              aria-expanded={!secondaryCollapsed}
+              className={`inline-flex cursor-pointer shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-canvas text-ink transition hover:border-ink/20 hover:bg-[#eef1f5] ${
+                secondaryCollapsed ? "h-9 w-9 shadow-sm" : "h-8 w-8 text-ink-muted"
+              }`}
+            >
+              <svg
+                className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${
+                  secondaryCollapsed ? "rotate-180" : ""
+                }`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.25}
+                aria-hidden
+              >
+                <path d="M14 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
 
-          <nav className="flex-1 space-y-7 overflow-y-auto px-4 pb-6 pt-5">
+          <nav
+            className={`flex-1 overflow-y-auto ${
+              secondaryCollapsed
+                ? "flex flex-col items-center gap-0.5 px-1 pb-4 pt-3"
+                : "space-y-7 px-4 pb-6 pt-5"
+            }`}
+          >
             {currentView === "settings" ? (
               SETTINGS_RAIL_SECTIONS.map((section, sectionIdx) => (
-                <div key={section.title}>
-                  {sectionIdx > 0 ? (
+                <div key={section.title} className={secondaryCollapsed ? "w-full space-y-0.5" : ""}>
+                  {!secondaryCollapsed && sectionIdx > 0 ? (
                     <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />
                   ) : null}
-                  <p className="cs-rail-section">{section.title}</p>
-                  <div className="space-y-1">
-                    {section.links.map(({ href, label }) => {
+                  {!secondaryCollapsed ? (
+                    <p className="cs-rail-section">{section.title}</p>
+                  ) : null}
+                  <div className={secondaryCollapsed ? "flex flex-col items-center gap-0.5" : "space-y-1"}>
+                    {section.links.map(({ href, label, Icon }) => {
                       const active = pathname === href || pathname.startsWith(`${href}/`);
                       return (
                         <Link
@@ -832,8 +910,12 @@ export function Sidebar({
                           href={href}
                           className={secondaryLinkClass(active, true)}
                           title={label}
+                          aria-label={label}
                         >
-                          <span className="min-w-0 flex-1 truncate">{label}</span>
+                          <Icon className="h-4 w-4 shrink-0" />
+                          {!secondaryCollapsed ? (
+                            <span className="min-w-0 flex-1 truncate">{label}</span>
+                          ) : null}
                         </Link>
                       );
                     })}
@@ -842,22 +924,30 @@ export function Sidebar({
               ))
             ) : (currentView === "billings" || inClearstory) && canSeeBillings ? (
               <>
-                <div className="space-y-1">
+                <div className={secondaryCollapsed ? "flex flex-col items-center gap-0.5" : "space-y-1"}>
                   <Link
                     href="/billings"
                     className={secondaryLinkClass(
                       pathname === "/billings" || pathname.startsWith("/billings/")
                     )}
                     title="Billing"
+                    aria-label="Billing"
                   >
-                    <span className="min-w-0 flex-1 truncate">Billing</span>
+                    <NavIconInvoice className="h-4 w-4 shrink-0" />
+                    {!secondaryCollapsed ? (
+                      <span className="min-w-0 flex-1 truncate">Billing</span>
+                    ) : null}
                   </Link>
                 </div>
-                <div>
-                  <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />
-                  <p className="cs-rail-section">Clearstory</p>
-                  <div className="space-y-1">
-                    {clearstorySubItems.map(({ href, label }) => {
+                <div className={secondaryCollapsed ? "mt-1 flex w-full flex-col items-center gap-0.5" : ""}>
+                  {!secondaryCollapsed ? (
+                    <>
+                      <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />
+                      <p className="cs-rail-section">Clearstory</p>
+                    </>
+                  ) : null}
+                  <div className={secondaryCollapsed ? "flex flex-col items-center gap-0.5" : "space-y-1"}>
+                    {clearstorySubItems.map(({ href, label, Icon }) => {
                       const active = pathname === href || pathname.startsWith(`${href}/`);
                       return (
                         <Link
@@ -865,8 +955,12 @@ export function Sidebar({
                           href={href}
                           className={secondaryLinkClass(active, true)}
                           title={label}
+                          aria-label={label}
                         >
-                          <span className="min-w-0 flex-1 truncate">{label}</span>
+                          <Icon className="h-4 w-4 shrink-0" />
+                          {!secondaryCollapsed ? (
+                            <span className="min-w-0 flex-1 truncate">{label}</span>
+                          ) : null}
                         </Link>
                       );
                     })}
@@ -875,7 +969,7 @@ export function Sidebar({
               </>
             ) : currentView === "bidding" ? (
               <>
-                <div className="space-y-1">
+                <div className={secondaryCollapsed ? "flex flex-col items-center gap-0.5" : "space-y-1"}>
                   {secondaryItems.map((item) => {
                     const isNewBid = item.href === "/bidding/new";
                     const active =
@@ -885,43 +979,50 @@ export function Sidebar({
                     const showAsActive = Boolean(
                       active && !(item.href === "/bidding" && activeBidId)
                     );
+                    const Icon = item.Icon;
                     return (
                       <Link
                         key={item.href}
                         href={item.href}
                         className={secondaryLinkClass(showAsActive, isNewBid)}
                         title={item.label}
+                        aria-label={item.label}
                       >
-                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {!secondaryCollapsed ? (
+                          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                        ) : null}
                       </Link>
                     );
                   })}
                 </div>
 
                 {isEstimatesList ? (
-                  <div>
-                    <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />
-                    <p className="cs-rail-section">Record status</p>
-                    <div className="space-y-1">
-                      {(
-                        [
-                          { value: "all", label: "All" },
-                          { value: "draft", label: "Draft" },
-                          { value: "submitted", label: "Submitted" },
-                          { value: "archived", label: "Archived" },
-                        ] as const
-                      ).map((f) => {
+                  <div className={secondaryCollapsed ? "mt-1 flex w-full flex-col items-center gap-0.5" : ""}>
+                    {!secondaryCollapsed ? (
+                      <>
+                        <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />
+                        <p className="cs-rail-section">Record status</p>
+                      </>
+                    ) : null}
+                    <div className={secondaryCollapsed ? "flex flex-col items-center gap-0.5" : "space-y-1"}>
+                      {BID_STATUS_FILTERS.map((f) => {
                         const active = bidListStatus === f.value;
                         const href =
                           f.value === "all" ? "/bidding" : `/bidding?status=${f.value}`;
+                        const Icon = f.Icon;
                         return (
                           <Link
                             key={f.value}
                             href={href}
                             className={secondaryLinkClass(active, true)}
                             title={f.label}
+                            aria-label={f.label}
                           >
-                            <span className="min-w-0 flex-1 truncate">{f.label}</span>
+                            <Icon className="h-4 w-4 shrink-0" />
+                            {!secondaryCollapsed ? (
+                              <span className="min-w-0 flex-1 truncate">{f.label}</span>
+                            ) : null}
                           </Link>
                         );
                       })}
@@ -930,18 +1031,25 @@ export function Sidebar({
                 ) : null}
               </>
             ) : (
-              <div className="space-y-1">
+              <div className={secondaryCollapsed ? "flex flex-col items-center gap-0.5" : "space-y-1"}>
                 {secondaryItems.map((item) => {
                   const active = itemIsActive(pathname, item);
+                  const Icon = item.Icon;
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       className={secondaryLinkClass(active)}
                       title={item.label}
+                      aria-label={item.label}
                     >
-                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                      {item.href === "/workforce/chat" && chatUnreadTotal > 0 ? (
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {!secondaryCollapsed ? (
+                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                      ) : null}
+                      {!secondaryCollapsed &&
+                      item.href === "/workforce/chat" &&
+                      chatUnreadTotal > 0 ? (
                         <ChatUnreadBadge count={chatUnreadTotal} />
                       ) : null}
                     </Link>
@@ -952,24 +1060,33 @@ export function Sidebar({
 
             {/* Bid stages — only when workspace secondary shows an open bid (rare; sheet usually owns this) */}
             {currentView === "bidding" && activeBidId ? (
-              <div>
-                <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />
-                <p className="cs-rail-section">Bid stages</p>
-                <div className="space-y-1">
+              <div className={secondaryCollapsed ? "mt-1 flex w-full flex-col items-center gap-0.5" : ""}>
+                {!secondaryCollapsed ? (
+                  <>
+                    <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />
+                    <p className="cs-rail-section">Bid stages</p>
+                  </>
+                ) : null}
+                <div className={secondaryCollapsed ? "flex flex-col items-center gap-0.5" : "space-y-1"}>
                   {BID_HANDOFF_STAGES.map((s) => {
                     const active = activeBidStage === s.id;
                     const statusQs =
                       bidListStatus && bidListStatus !== "all"
                         ? `&status=${encodeURIComponent(bidListStatus)}`
                         : "";
+                    const Icon = BID_STAGE_ICONS[s.id];
                     return (
                       <Link
                         key={s.id}
                         href={`/bidding/${activeBidId}?stage=${s.id}${statusQs}`}
                         className={secondaryLinkClass(active, true)}
                         title={s.label}
+                        aria-label={s.label}
                       >
-                        <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {!secondaryCollapsed ? (
+                          <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                        ) : null}
                       </Link>
                     );
                   })}

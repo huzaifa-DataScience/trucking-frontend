@@ -97,7 +97,7 @@ export function BidOutcomeStage() {
   };
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="intake-title">Outcome</h2>
         <p className="mt-1.5 text-[12.5px] text-[#4b5563]">

@@ -4,6 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import type { BidAttachment } from "@/lib/bidding/types";
+import {
+  INTAKE_ADD_BTN,
+  INTAKE_REMOVE_BTN,
+  PlusIcon,
+  TrashIcon,
+} from "@/components/bidding/intakeIcons";
 
 const MAX_FILES = 200;
 const ACCEPT =
@@ -202,9 +208,11 @@ function AttachmentGrid({
                       void onDelete(att.id);
                     })();
                   }}
-                  className="text-[11px] font-semibold text-[#9ca3af] hover:text-danger"
+                  className={INTAKE_REMOVE_BTN}
+                  aria-label="Remove attachment"
+                  title="Remove attachment"
                 >
-                  Remove
+                  <TrashIcon />
                 </button>
               ) : null}
             </div>
@@ -273,9 +281,11 @@ function DrawingFileRows({
                       void onDelete(att.id);
                     })();
                   }}
-                  className="cursor-pointer text-[11px] font-semibold text-[#9ca3af] hover:text-danger"
+                  className={INTAKE_REMOVE_BTN}
+                  aria-label="Remove drawing"
+                  title="Remove drawing"
                 >
-                  Remove
+                  <TrashIcon />
                 </button>
             ) : null}
           </div>
@@ -676,9 +686,23 @@ export function BidAttachmentsSection({
                     type="button"
                     disabled={busy || atLimit}
                     onClick={() => browseForLabel(o.value)}
-                    className="intake-head-btn disabled:opacity-50"
+                    className={`${INTAKE_ADD_BTN} disabled:opacity-50`}
+                    aria-label={
+                      busy && pendingLabel === o.value
+                        ? "Uploading"
+                        : `Add ${o.label}`
+                    }
+                    title={
+                      busy && pendingLabel === o.value
+                        ? "Uploading…"
+                        : `Add ${o.label}`
+                    }
                   >
-                    {busy && pendingLabel === o.value ? "Uploading…" : "+ Add"}
+                    {busy && pendingLabel === o.value ? (
+                      <span className="text-[10px] font-semibold">…</span>
+                    ) : (
+                      <PlusIcon />
+                    )}
                   </button>
                 ) : null}
               </div>
@@ -728,9 +752,13 @@ function MarkupPanel({
 
   return (
     <section className="intake-section">
-      <div className="intake-section-head-bar flex items-center justify-between gap-2">
-        <div className="intake-section-head">{title}</div>
-        {countLabel ? <span className="intake-head-count pr-3 text-[12px] font-semibold text-ink/45">{countLabel}</span> : null}
+      <div className="intake-section-head-bar">
+        <div>
+          <h3>{title}</h3>
+        </div>
+        {countLabel ? (
+          <span className="intake-head-count">{countLabel}</span>
+        ) : null}
       </div>
       <div className="intake-section-body flex flex-col gap-2">
         {localError ? <p className="text-[12.5px] text-danger">{localError}</p> : null}
@@ -840,9 +868,11 @@ function MarkupPanel({
                           void onDelete(att.id);
                         })();
                       }}
-                      className="cursor-pointer text-[11px] font-semibold text-[#9ca3af] hover:text-danger"
+                      className={INTAKE_REMOVE_BTN}
+                      aria-label="Remove file"
+                      title="Remove file"
                     >
-                      Remove
+                      <TrashIcon />
                     </button>
                   ) : null}
                 </div>
