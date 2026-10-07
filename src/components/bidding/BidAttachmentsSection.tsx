@@ -4,6 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import type { BidAttachment } from "@/lib/bidding/types";
+import {
+  INTAKE_ADD_BTN,
+  INTAKE_REMOVE_BTN,
+  PlusIcon,
+  TrashIcon,
+} from "@/components/bidding/intakeIcons";
 
 const MAX_FILES = 200;
 const ACCEPT =
@@ -202,9 +208,11 @@ function AttachmentGrid({
                       void onDelete(att.id);
                     })();
                   }}
-                  className="text-[11px] font-semibold text-[#9ca3af] hover:text-danger"
+                  className={INTAKE_REMOVE_BTN}
+                  aria-label="Remove attachment"
+                  title="Remove attachment"
                 >
-                  Remove
+                  <TrashIcon />
                 </button>
               ) : null}
             </div>
@@ -273,9 +281,11 @@ function DrawingFileRows({
                       void onDelete(att.id);
                     })();
                   }}
-                  className="cursor-pointer text-[11px] font-semibold text-[#9ca3af] hover:text-danger"
+                  className={INTAKE_REMOVE_BTN}
+                  aria-label="Remove drawing"
+                  title="Remove drawing"
                 >
-                  Remove
+                  <TrashIcon />
                 </button>
             ) : null}
           </div>
@@ -475,6 +485,9 @@ export function BidAttachmentsSection({
   title?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingLabelRef = useRef(
+    labels?.[0] ?? (mode === "markup" ? "takeoff" : "drawings")
+  );
   const [localError, setLocalError] = useState<string | null>(null);
   const [localUploading, setLocalUploading] = useState(false);
   const [pendingLabel, setPendingLabel] = useState(
@@ -579,38 +592,48 @@ export function BidAttachmentsSection({
   const labelOptions = HUB_LABEL_OPTIONS.filter((o) => !labels || labels.includes(o.value));
   const shown = attachments.filter((a) => a.category !== "takeoff_markup");
   const bucketed = groupBy(shown, (a) => a.label || "drawings");
+  const busy = Boolean(uploading || localUploading);
+  const atLimit = attachments.length >= MAX_FILES;
+  /** When hub labels are provided, each bucket gets its own Add — no shared type dropdown. */
+  const perLabelAdd = Boolean(labels?.length);
+  pendingLabelRef.current = pendingLabel;
+
+  const browseForLabel = (label: string) => {
+    setPendingLabel(label);
+    pendingLabelRef.current = label;
+    inputRef.current?.click();
+  };
 
   return (
     <section className="intake-section">
       <div className="intake-section-head">{title ?? "Bid documents"}</div>
       <div className="intake-section-body flex flex-col gap-2">
-        {isEditable ? (
+        <input
+          ref={inputRef}
+          type="file"
+          accept={ACCEPT}
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void handleFiles(e.target.files, pendingLabelRef.current);
+            e.target.value = "";
+          }}
+        />
+
+        {isEditable && !perLabelAdd ? (
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              ref={inputRef}
-              type="file"
-              accept={ACCEPT}
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                void handleFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-            {!labels ? (
-              <select
-                className="intake-field appearance-none"
-                value={pendingCategory}
-                onChange={(e) => setPendingCategory(e.target.value)}
-                aria-label="Attachment category"
-              >
-                {ATTACHMENT_CATEGORY_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            ) : null}
+            <select
+              className="intake-field appearance-none"
+              value={pendingCategory}
+              onChange={(e) => setPendingCategory(e.target.value)}
+              aria-label="Attachment category"
+            >
+              {ATTACHMENT_CATEGORY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
             <select
               className="intake-field appearance-none"
               value={pendingLabel}
@@ -625,11 +648,11 @@ export function BidAttachmentsSection({
             </select>
             <button
               type="button"
-              disabled={uploading || localUploading || attachments.length >= MAX_FILES}
+              disabled={busy || atLimit}
               onClick={() => inputRef.current?.click()}
               className="intake-head-btn disabled:opacity-50"
             >
-              {uploading || localUploading ? "Uploading…" : "Add file"}
+              {busy ? "Uploading…" : "Add file"}
             </button>
           </div>
         ) : null}
@@ -654,9 +677,35 @@ export function BidAttachmentsSection({
             : null}
           {labelOptions.map((o) => (
             <div key={o.value}>
-              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
-                {o.label}
-              </p>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                  {o.label}
+                </p>
+                {isEditable && perLabelAdd ? (
+                  <button
+                    type="button"
+                    disabled={busy || atLimit}
+                    onClick={() => browseForLabel(o.value)}
+                    className={`${INTAKE_ADD_BTN} disabled:opacity-50`}
+                    aria-label={
+                      busy && pendingLabel === o.value
+                        ? "Uploading"
+                        : `Add ${o.label}`
+                    }
+                    title={
+                      busy && pendingLabel === o.value
+                        ? "Uploading…"
+                        : `Add ${o.label}`
+                    }
+                  >
+                    {busy && pendingLabel === o.value ? (
+                      <span className="text-[10px] font-semibold">…</span>
+                    ) : (
+                      <PlusIcon />
+                    )}
+                  </button>
+                ) : null}
+              </div>
               <AttachmentGrid
                 attachments={bucketed[o.value] ?? []}
                 isEditable={isEditable}
@@ -703,9 +752,13 @@ function MarkupPanel({
 
   return (
     <section className="intake-section">
-      <div className="intake-section-head-bar flex items-center justify-between gap-2">
-        <div className="intake-section-head">{title}</div>
-        {countLabel ? <span className="intake-head-count pr-3 text-[12px] font-semibold text-ink/45">{countLabel}</span> : null}
+      <div className="intake-section-head-bar">
+        <div>
+          <h3>{title}</h3>
+        </div>
+        {countLabel ? (
+          <span className="intake-head-count">{countLabel}</span>
+        ) : null}
       </div>
       <div className="intake-section-body flex flex-col gap-2">
         {localError ? <p className="text-[12.5px] text-danger">{localError}</p> : null}
@@ -815,9 +868,11 @@ function MarkupPanel({
                           void onDelete(att.id);
                         })();
                       }}
-                      className="cursor-pointer text-[11px] font-semibold text-[#9ca3af] hover:text-danger"
+                      className={INTAKE_REMOVE_BTN}
+                      aria-label="Remove file"
+                      title="Remove file"
                     >
-                      Remove
+                      <TrashIcon />
                     </button>
                   ) : null}
                 </div>

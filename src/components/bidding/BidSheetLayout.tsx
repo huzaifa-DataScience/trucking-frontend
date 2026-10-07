@@ -21,8 +21,14 @@ import {
   formatProcessStage,
   formatWorkType,
   parseChromeStage,
+  type BidChromeStage,
 } from "@/lib/bidding/process-types";
-import { SIDEBAR_SECONDARY_W } from "@/components/dashboard/Sidebar";
+import { BID_STAGE_ICONS } from "@/components/bidding/BidStageIcons";
+import {
+  SECONDARY_COLLAPSED_KEY,
+  SIDEBAR_SECONDARY_COLLAPSED_W,
+  SIDEBAR_SECONDARY_W,
+} from "@/components/dashboard/Sidebar";
 
 const SIDEBAR_COLLAPSED_KEY = "construction-logistics-sidebar-collapsed";
 
@@ -60,6 +66,47 @@ function HandoffIcon() {
   );
 }
 
+function stageRailLinkClass(active: boolean, collapsed: boolean) {
+  return `flex cursor-pointer items-center rounded-[var(--radius)] text-[13px] font-medium transition-colors ${
+    collapsed
+      ? "h-9 w-9 justify-center"
+      : "h-9 gap-2.5 px-2.5"
+  } ${
+    active
+      ? collapsed
+        ? "bg-brand-tint text-ink"
+        : "bg-brand-tint text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
+      : "text-ink-muted hover:bg-canvas hover:text-ink"
+  }`;
+}
+
+function StageRailLink({
+  href,
+  label,
+  stageId,
+  active,
+  collapsed,
+}: {
+  href: string;
+  label: string;
+  stageId: BidChromeStage;
+  active: boolean;
+  collapsed: boolean;
+}) {
+  const Icon = BID_STAGE_ICONS[stageId];
+  return (
+    <Link
+      href={href}
+      title={label}
+      aria-label={label}
+      className={stageRailLinkClass(active, collapsed)}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {!collapsed ? <span className="min-w-0 truncate">{label}</span> : null}
+    </Link>
+  );
+}
+
 /** Shared bid chrome — BIDDING_FRONTEND_API.md §0 (PDF stages + handoff) */
 export function BidSheetLayout({ children }: { children: ReactNode }) {
   const { bid, initialLoading, unsavedChanges, confirmLeaveUnsaved } =
@@ -71,6 +118,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
   const [handoffOpen, setHandoffOpen] = useState(false);
   const [notesManualOpen, setNotesManualOpen] = useState(false);
   const [primaryCollapsed, setPrimaryCollapsed] = useState(false);
+  const [secondaryCollapsed, setSecondaryCollapsed] = useState(false);
   const [isWide, setIsWide] = useState(false);
   const notesFromQuery =
     searchParams.get("notes") === "1" ||
@@ -88,14 +136,32 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
     const readCollapsed = () => {
       try {
         setPrimaryCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
+        setSecondaryCollapsed(localStorage.getItem(SECONDARY_COLLAPSED_KEY) === "1");
       } catch {
         /* ignore */
       }
     };
     readCollapsed();
     window.addEventListener("sidebar-collapsed-change", readCollapsed);
-    return () => window.removeEventListener("sidebar-collapsed-change", readCollapsed);
+    window.addEventListener("secondary-collapsed-change", readCollapsed);
+    return () => {
+      window.removeEventListener("sidebar-collapsed-change", readCollapsed);
+      window.removeEventListener("secondary-collapsed-change", readCollapsed);
+    };
   }, []);
+
+  const toggleSecondaryCollapsed = () => {
+    // Keep side effects out of setState updaters (Strict Mode may invoke them twice).
+    let next = !secondaryCollapsed;
+    try {
+      next = localStorage.getItem(SECONDARY_COLLAPSED_KEY) !== "1";
+      localStorage.setItem(SECONDARY_COLLAPSED_KEY, next ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    setSecondaryCollapsed(next);
+    window.dispatchEvent(new Event("secondary-collapsed-change"));
+  };
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1280px)");
@@ -152,85 +218,165 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
     })();
   };
 
-  /** Secondary stays full width; only its left offset follows primary collapse. */
+  /** Left offset follows primary collapse; width follows secondary collapse. */
   const secondaryLeft = primaryCollapsed ? "left-16" : "left-64";
 
   return (
-    <>
-      {/* Fixed second sidebar — xl+ only; never collapsible itself */}
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* Fixed second sidebar — xl+; collapsible like Estimates sub-menu */}
       {isWide ? (
         <aside
-          className={`workspace-secondary-rail fixed top-0 z-30 flex h-dvh ${SIDEBAR_SECONDARY_W} min-w-[232px] max-w-[232px] shrink-0 flex-col border-r border-[var(--border-subtle)] bg-white transition-[left] duration-200 ${secondaryLeft}`}
+          className={`workspace-secondary-rail fixed top-0 z-30 flex h-dvh shrink-0 flex-col border-r border-[var(--border-subtle)] bg-white transition-[left,width] duration-200 ${secondaryLeft} ${
+            secondaryCollapsed
+              ? `${SIDEBAR_SECONDARY_COLLAPSED_W} min-w-12 max-w-12`
+              : `${SIDEBAR_SECONDARY_W} min-w-[232px] max-w-[232px]`
+          }`}
           aria-label="Estimate and stages"
-          data-collapsible="false"
+          data-collapsible="true"
+          data-collapsed={secondaryCollapsed ? "true" : "false"}
         >
-          <div className="flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] px-4">
+          <div
+            className={`flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] ${
+              secondaryCollapsed ? "justify-center px-1" : "justify-between gap-2 px-3"
+            }`}
+          >
+            {!secondaryCollapsed ? (
+              <span className="text-[12px] font-semibold text-ink-muted">Estimate</span>
+            ) : null}
             <button
               type="button"
-              onClick={goBackToBids}
-              className="inline-flex h-8 w-fit items-center gap-2.5 text-[13px] font-medium text-ink-muted transition hover:text-ink"
+              onClick={toggleSecondaryCollapsed}
+              title={secondaryCollapsed ? "Expand stages menu" : "Collapse stages menu"}
+              aria-label={secondaryCollapsed ? "Expand stages menu" : "Collapse stages menu"}
+              aria-expanded={!secondaryCollapsed}
+              className={`inline-flex cursor-pointer shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-canvas text-ink transition hover:border-ink/20 hover:bg-[#eef1f5] ${
+                secondaryCollapsed ? "h-9 w-9 shadow-sm" : "h-8 w-8 text-ink-muted"
+              }`}
             >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-                <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              <svg
+                className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${
+                  secondaryCollapsed ? "rotate-180" : ""
+                }`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.25}
+                aria-hidden
+              >
+                <path d="M14 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Bids
-              {unsavedChanges ? (
-                <span className="text-[10px] font-semibold text-[#7a7360]">· unsaved</span>
-              ) : null}
             </button>
           </div>
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-3">
-            <div className="mb-3 space-y-1.5 border-b border-[var(--border-subtle)] px-2.5 pb-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-[15px] font-semibold tracking-tight text-ink">
-                  {bid.estimateNumber}
-                </h1>
-                <BidStatusBadge status={bid.status} size="sm" />
-              </div>
-              <p className="text-[13px] font-medium leading-snug text-ink">
-                {bid.bidName || "Untitled estimate"}
-              </p>
-              <p className="text-[12px] leading-relaxed text-ink-muted">
-                {formatWorkType(work ?? undefined)}
-                {" · "}
-                {formatProcessStage(processStage ?? undefined)}
-                {" · "}
-                {formatOutcome(outcome ?? undefined)}
-              </p>
-              {bid.companyName ? (
-                <p className="text-[12px] text-ink-muted">{bid.companyName}</p>
-              ) : null}
-              {bid.canEdit === false ? (
-                <span className="inline-flex rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2 py-0.5 text-[11px] font-medium text-ink-muted">
-                  View only
-                </span>
-              ) : null}
-            </div>
 
-            <div className="mb-3">
-              <BidSaveButton fullWidth />
-            </div>
+          <div
+            className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${
+              secondaryCollapsed ? "items-center px-1 py-2" : "px-2 py-3"
+            }`}
+          >
+            {!secondaryCollapsed ? (
+              <>
+                <div className="mb-3 space-y-1.5 border-b border-[var(--border-subtle)] px-2.5 pb-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={goBackToBids}
+                      className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2 text-[12.5px] font-semibold text-ink transition hover:border-ink/20 hover:bg-[#eef1f5]"
+                    >
+                      <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+                        <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Bids
+                    </button>
+                    <h1 className="text-[15px] font-semibold tracking-tight text-ink">
+                      {bid.estimateNumber}
+                    </h1>
+                    <BidStatusBadge status={bid.status} size="sm" />
+                  </div>
+                  <p className="text-[13px] font-medium leading-snug text-ink">
+                    {bid.bidName || "Untitled estimate"}
+                  </p>
+                  <p className="text-[12px] leading-relaxed text-ink-muted">
+                    {formatWorkType(work ?? undefined)}
+                    {" · "}
+                    {formatProcessStage(processStage ?? undefined)}
+                    {" · "}
+                    {formatOutcome(outcome ?? undefined)}
+                  </p>
+                  {bid.companyName ? (
+                    <p className="text-[12px] text-ink-muted">{bid.companyName}</p>
+                  ) : null}
+                  {bid.canEdit === false ? (
+                    <span className="inline-flex rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2 py-0.5 text-[11px] font-medium text-ink-muted">
+                      View only
+                    </span>
+                  ) : null}
+                </div>
 
-            <p className="cs-rail-section mb-1 px-2.5">
-              Bid stages
-            </p>
-            <nav className="space-y-0.5">
+                <div className="mb-3">
+                  <BidSaveButton fullWidth />
+                </div>
+
+                <p className="cs-rail-section mb-1 px-2.5">Bid stages</p>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={goBackToBids}
+                title="Back to Bids"
+                aria-label="Back to Bids"
+                className="mb-1 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-[var(--radius)] text-ink-muted transition hover:bg-canvas hover:text-ink"
+              >
+                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+                  <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            )}
+
+            <nav className={`space-y-0.5 ${secondaryCollapsed ? "flex w-full flex-col items-center" : ""}`}>
               {BID_HANDOFF_STAGES.map((s) => {
                 const active = stage === s.id;
+                const Icon = BID_STAGE_ICONS[s.id];
                 return (
                   <Link
                     key={s.id}
                     href={stageHref(s.id)}
-                    className={`flex h-9 items-center rounded-[var(--radius)] px-2.5 text-[13px] font-medium transition-colors ${
-                      active
-                        ? "bg-brand-tint text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
-                        : "text-ink-muted hover:bg-canvas hover:text-ink"
-                    }`}
+                    title={s.label}
+                    aria-label={s.label}
+                    className={stageRailLinkClass(active, secondaryCollapsed)}
                   >
-                    {s.label}
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {!secondaryCollapsed ? <span className="min-w-0 truncate">{s.label}</span> : null}
                   </Link>
                 );
               })}
+              {/* Post screens — Friday model: Lost = 1 tab; Awarded = Awarded + Production */}
+              {bid.workflow?.showAward && !bid.workflow?.showLost ? (
+                <>
+                  <StageRailLink
+                    href={stageHref("award")}
+                    label="Awarded"
+                    stageId="award"
+                    active={stage === "award"}
+                    collapsed={secondaryCollapsed}
+                  />
+                  <StageRailLink
+                    href={stageHref("production")}
+                    label="Production"
+                    stageId="production"
+                    active={stage === "production"}
+                    collapsed={secondaryCollapsed}
+                  />
+                </>
+              ) : null}
+              {bid.workflow?.showLost && !bid.workflow?.showAward ? (
+                <StageRailLink
+                  href={stageHref("lost")}
+                  label="Lost"
+                  stageId="lost"
+                  active={stage === "lost"}
+                  collapsed={secondaryCollapsed}
+                />
+              ) : null}
             </nav>
           </div>
         </aside>
@@ -239,22 +385,19 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-0 flex-1 flex-col gap-4">
         {/* Compact chrome on small screens only */}
         <div className="flex flex-col gap-3 border-b border-[var(--border-subtle)] pb-3 xl:hidden">
-          <button
-            type="button"
-            onClick={goBackToBids}
-            className="inline-flex h-8 w-fit items-center gap-1.5 text-[13px] font-medium text-ink-muted transition hover:text-ink"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-              <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Bids
-            {unsavedChanges ? (
-              <span className="text-[10px] font-semibold text-[#7a7360]">· unsaved</span>
-            ) : null}
-          </button>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={goBackToBids}
+                  className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2.5 text-[13px] font-semibold text-ink transition hover:border-ink/20 hover:bg-[#eef1f5]"
+                >
+                  <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+                    <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Bids
+                </button>
                 <h1 className="text-[18px] font-semibold tracking-tight text-ink">
                   {bid.estimateNumber}
                 </h1>
@@ -329,6 +472,6 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
       >
         <BidActivityPanel open={activityOpen} />
       </BidSidebarDrawer>
-    </>
+    </div>
   );
 }

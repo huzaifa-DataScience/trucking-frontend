@@ -9,6 +9,12 @@ import { newId } from "@/lib/bidding/newId";
 import { seedFollowUpFromCompanyInfo } from "@/lib/bidding/bid-crm-snapshot";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { BidPostBidSummary } from "@/components/bidding/BidPostBidSummary";
+import {
+  INTAKE_ADD_BTN,
+  INTAKE_REMOVE_BTN,
+  PlusIcon,
+  TrashIcon,
+} from "@/components/bidding/intakeIcons";
 import type {
   BidProcess,
   ProcessCompetitor,
@@ -176,7 +182,7 @@ export function BidIntelTab() {
   if (!bid) return null;
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="intake-title">Post-Bid</h2>
@@ -210,7 +216,7 @@ export function BidIntelTab() {
 
       <BidPostBidSummary bid={bid} teamName={teamName} />
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-6">
         <section className="intake-section min-w-0">
           <div className="intake-section-head-bar">
             <div>
@@ -219,10 +225,12 @@ export function BidIntelTab() {
             {editable && followUpCalls.length < MAX_FOLLOWUP_COMPANIES ? (
               <button
                 type="button"
-                className="text-[11px] font-semibold text-[#4b5563] hover:underline"
+                className={INTAKE_ADD_BTN}
+                aria-label="Add company"
+                title="Add company"
                 onClick={() => setCompanies([...followUpCalls, emptyFollowUpCompany()])}
               >
-                + Add company
+                <PlusIcon />
               </button>
             ) : null}
           </div>
@@ -230,13 +238,13 @@ export function BidIntelTab() {
             {followUpCalls.length === 0 ? (
               <p className="text-[12.5px] text-[#9ca3af]">No follow-up calls logged yet.</p>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {followUpCalls.map((company, index) => {
                   const attempts = company.callAttempts ?? [];
                   return (
                     <div
                       key={company.id}
-                      className="rounded border border-[#e5e7eb] bg-[#f8fafc] px-2.5 py-1.5"
+                      className="rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-2.5 py-1.5"
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <input
@@ -271,7 +279,7 @@ export function BidIntelTab() {
                             type="button"
                             aria-label="Remove company"
                             title="Remove company"
-                            className="text-[11px] font-medium text-danger/80 hover:text-danger"
+                            className={INTAKE_REMOVE_BTN}
                             onClick={() => {
                               void (async () => {
                                 const ok = await confirmDialog({
@@ -285,12 +293,12 @@ export function BidIntelTab() {
                               })();
                             }}
                           >
-                            Remove
+                            <TrashIcon />
                           </button>
                         ) : null}
                       </div>
 
-                      <div className="mt-2 flex flex-col gap-1.5 rounded border border-[#e5e7eb] bg-white px-2 py-1.5">
+                      <div className="mt-2 flex flex-col gap-1.5 rounded-xl border border-[#e8ecf1] bg-white px-2 py-1.5">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
                             Call attempts
@@ -298,7 +306,9 @@ export function BidIntelTab() {
                           {editable && attempts.length < MAX_FOLLOWUP_CALL_ATTEMPTS ? (
                             <button
                               type="button"
-                              className="text-[11px] font-semibold text-[#4b5563] hover:underline"
+                              className={INTAKE_ADD_BTN}
+                              aria-label="Add call"
+                              title="Add call"
                               onClick={() =>
                                 patchCompany(index, {
                                   callAttempts: [
@@ -308,7 +318,7 @@ export function BidIntelTab() {
                                 })
                               }
                             >
-                              + Add call
+                              <PlusIcon />
                             </button>
                           ) : null}
                         </div>
@@ -354,7 +364,7 @@ export function BidIntelTab() {
                                   type="button"
                                   aria-label="Remove call"
                                   title="Remove call"
-                                  className="text-[11px] font-medium text-danger/70 hover:text-danger"
+                                  className={INTAKE_REMOVE_BTN}
                                   onClick={() => {
                                     const next = attempts
                                       .filter((_, i) => i !== attemptIndex)
@@ -362,7 +372,7 @@ export function BidIntelTab() {
                                     patchCompany(index, { callAttempts: next });
                                   }}
                                 >
-                                  Remove
+                                  <TrashIcon />
                                 </button>
                               ) : null}
                             </div>
@@ -386,10 +396,12 @@ export function BidIntelTab() {
             {editable && competitors.length < MAX_COMPETITORS ? (
               <button
                 type="button"
-                className="text-[11px] font-semibold text-[#4b5563] hover:underline"
+                className={INTAKE_ADD_BTN}
+                aria-label="Add competitor"
+                title="Add competitor"
                 onClick={() => setCompetitorList([...competitors, emptyCompetitor()])}
               >
-                + Add competitor
+                <PlusIcon />
               </button>
             ) : null}
           </div>
@@ -477,14 +489,16 @@ export function BidIntelTab() {
                           {editable ? (
                             <button
                               type="button"
-                              className="text-[11px] font-medium text-danger/80 hover:text-danger"
+                              className={INTAKE_REMOVE_BTN}
+                              aria-label="Remove competitor"
+                              title="Remove competitor"
                               onClick={() =>
                                 setCompetitorList(
                                   competitors.filter((_, i) => i !== index)
                                 )
                               }
                             >
-                              Remove
+                              <TrashIcon />
                             </button>
                           ) : null}
                         </td>

@@ -63,7 +63,7 @@ export function BidSheetResultsRail({
 
   return (
     <aside
-      className={`bid-results-rail bid-rail-enter flex min-h-0 flex-col gap-3 ${
+      className={`bid-results-rail bid-rail-enter flex min-h-0 flex-col ${
         insights.isRecalculating ? "bid-recalc-pulse" : ""
       }`}
       aria-label="Bid calculation results"
@@ -77,8 +77,9 @@ export function BidSheetResultsRail({
       ) : null}
 
       {canViewSummary ? (
-      <div className="overflow-hidden rounded-lg border border-[#d5dbe3] bg-gradient-to-br from-ink via-ink to-ink/95">
-        <div className="border-b border-white/10 px-4 py-3">
+      <div className="bid-results-card flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+      <div className="shrink-0 overflow-hidden rounded-xl bg-[#1f2937]">
+        <div className="px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-white/45">
               Live totals
@@ -95,7 +96,7 @@ export function BidSheetResultsRail({
           </div>
         </div>
 
-        <div className="space-y-3 p-4">
+        <div className="space-y-3 px-4 pb-4">
           <div className="flex gap-2">
             <HeroEstimate
               label="MIKE"
@@ -153,16 +154,14 @@ export function BidSheetResultsRail({
           </div>
         </div>
       </div>
-      ) : null}
 
-      {canViewSummary ? (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#d5dbe3] bg-white">
-        <div className="border-b border-[#e5e7eb] bg-[#f3f1ea] px-3 py-2">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#e5e7eb] bg-white">
+        <div className="shrink-0 bg-[#f3f1ea] px-3 py-2">
           <h2 className="text-[13px] font-semibold text-[#333333]">Calculation detail</h2>
           <p className="mt-0.5 text-[11px] text-[#7a7360]">Excel rows 37–49 · D10–D13</p>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
+        <div className="bid-results-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-2 py-2">
           {!hasComputed ? (
             <p className="px-2 py-8 text-center text-sm text-ink/45">
               Run Preview or Save & calculate to populate results.
@@ -282,6 +281,7 @@ export function BidSheetResultsRail({
             </div>
           )}
         </div>
+      </div>
       </div>
       ) : null}
     </aside>

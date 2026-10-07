@@ -5,6 +5,7 @@ import { SpecsJobSelect } from "./SpecsJobSelect";
 import { TrimbleStatusBanner } from "./TrimbleStatusBanner";
 import { MikeFilesList } from "./MikeFilesList";
 import { MikeUploadButton } from "./MikeUploadButton";
+import { INTAKE_ADD_BTN, PlusIcon } from "@/components/bidding/intakeIcons";
 import type {
   JobLinkInfo,
   MikeFileInfo,
@@ -113,9 +114,15 @@ export function SpecsSetupStrip({
               type="button"
               disabled={addingLine}
               onClick={onAddLine}
-              className="intake-head-btn disabled:opacity-50"
+              className={`${INTAKE_ADD_BTN} disabled:opacity-50`}
+              aria-label={addingLine ? "Adding line" : "Add line"}
+              title={addingLine ? "Adding…" : "Add line"}
             >
-              {addingLine ? "Adding…" : "+ Add line"}
+              {addingLine ? (
+                <span className="text-[10px] font-semibold">…</span>
+              ) : (
+                <PlusIcon />
+              )}
             </button>
           </div>
         ) : null}
