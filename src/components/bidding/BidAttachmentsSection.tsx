@@ -475,6 +475,9 @@ export function BidAttachmentsSection({
   title?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingLabelRef = useRef(
+    labels?.[0] ?? (mode === "markup" ? "takeoff" : "drawings")
+  );
   const [localError, setLocalError] = useState<string | null>(null);
   const [localUploading, setLocalUploading] = useState(false);
   const [pendingLabel, setPendingLabel] = useState(
@@ -579,38 +582,48 @@ export function BidAttachmentsSection({
   const labelOptions = HUB_LABEL_OPTIONS.filter((o) => !labels || labels.includes(o.value));
   const shown = attachments.filter((a) => a.category !== "takeoff_markup");
   const bucketed = groupBy(shown, (a) => a.label || "drawings");
+  const busy = Boolean(uploading || localUploading);
+  const atLimit = attachments.length >= MAX_FILES;
+  /** When hub labels are provided, each bucket gets its own Add — no shared type dropdown. */
+  const perLabelAdd = Boolean(labels?.length);
+  pendingLabelRef.current = pendingLabel;
+
+  const browseForLabel = (label: string) => {
+    setPendingLabel(label);
+    pendingLabelRef.current = label;
+    inputRef.current?.click();
+  };
 
   return (
     <section className="intake-section">
       <div className="intake-section-head">{title ?? "Bid documents"}</div>
       <div className="intake-section-body flex flex-col gap-2">
-        {isEditable ? (
+        <input
+          ref={inputRef}
+          type="file"
+          accept={ACCEPT}
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void handleFiles(e.target.files, pendingLabelRef.current);
+            e.target.value = "";
+          }}
+        />
+
+        {isEditable && !perLabelAdd ? (
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              ref={inputRef}
-              type="file"
-              accept={ACCEPT}
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                void handleFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-            {!labels ? (
-              <select
-                className="intake-field appearance-none"
-                value={pendingCategory}
-                onChange={(e) => setPendingCategory(e.target.value)}
-                aria-label="Attachment category"
-              >
-                {ATTACHMENT_CATEGORY_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            ) : null}
+            <select
+              className="intake-field appearance-none"
+              value={pendingCategory}
+              onChange={(e) => setPendingCategory(e.target.value)}
+              aria-label="Attachment category"
+            >
+              {ATTACHMENT_CATEGORY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
             <select
               className="intake-field appearance-none"
               value={pendingLabel}
@@ -625,11 +638,11 @@ export function BidAttachmentsSection({
             </select>
             <button
               type="button"
-              disabled={uploading || localUploading || attachments.length >= MAX_FILES}
+              disabled={busy || atLimit}
               onClick={() => inputRef.current?.click()}
               className="intake-head-btn disabled:opacity-50"
             >
-              {uploading || localUploading ? "Uploading…" : "Add file"}
+              {busy ? "Uploading…" : "Add file"}
             </button>
           </div>
         ) : null}
@@ -654,9 +667,21 @@ export function BidAttachmentsSection({
             : null}
           {labelOptions.map((o) => (
             <div key={o.value}>
-              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
-                {o.label}
-              </p>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                  {o.label}
+                </p>
+                {isEditable && perLabelAdd ? (
+                  <button
+                    type="button"
+                    disabled={busy || atLimit}
+                    onClick={() => browseForLabel(o.value)}
+                    className="intake-head-btn disabled:opacity-50"
+                  >
+                    {busy && pendingLabel === o.value ? "Uploading…" : "+ Add"}
+                  </button>
+                ) : null}
+              </div>
               <AttachmentGrid
                 attachments={bucketed[o.value] ?? []}
                 isEditable={isEditable}

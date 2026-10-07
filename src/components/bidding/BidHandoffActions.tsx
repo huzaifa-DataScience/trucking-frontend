@@ -33,8 +33,11 @@ export function BidSaveButton({ fullWidth = false }: { fullWidth?: boolean }) {
     bid,
     canWrite,
     saving,
+    dirty,
+    processDirty,
     unsavedChanges,
     saveProcess,
+    saveNow,
   } = useBidSheet();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,19 +45,36 @@ export function BidSaveButton({ fullWidth = false }: { fullWidth?: boolean }) {
   if (!bid) return null;
 
   const editable = canWrite && bid.status !== "archived";
+  const isSaving = busy || saving;
 
   const runSave = async () => {
     if (!editable) return;
     setBusy(true);
     setError(null);
     try {
-      await saveProcess();
+      // Flush both process draft (Intake/Assignment/Setup) and sheet calc (Proposal).
+      // Save used to call saveProcess only — sheet dirty stayed true → stayed Unsaved.
+      await flushBidSaves({
+        processDirty,
+        dirty,
+        saveProcess,
+        saveNow,
+        forceProcess: true,
+      });
     } catch (e) {
       setError(getApiErrorMessage(e, "Failed to save"));
     } finally {
       setBusy(false);
     }
   };
+
+  const statusLabel = !editable
+    ? "Read only"
+    : isSaving
+      ? "Saving…"
+      : unsavedChanges
+        ? "Unsaved"
+        : "Saved";
 
   return (
     <div
@@ -64,19 +84,23 @@ export function BidSaveButton({ fullWidth = false }: { fullWidth?: boolean }) {
     >
       <button
         type="button"
-        disabled={!editable || busy || saving}
+        disabled={!editable || isSaving}
         onClick={() => void runSave()}
         className={`rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-3 py-1.5 text-[12px] font-semibold text-[#333333] transition hover:bg-[#ebe8df] disabled:opacity-40 ${
           fullWidth ? "w-full" : "w-auto"
         }`}
       >
-        {busy || saving ? "Saving…" : "Save"}
+        Save
       </button>
-      {unsavedChanges ? (
-        <span className="text-[10px] font-semibold text-[#7a7360]">
-          Unsaved changes
-        </span>
-      ) : null}
+      {/* Fixed-height status — Saving only here, not on the button */}
+      <span
+        className={`block min-h-[1.125rem] text-[10px] font-semibold leading-[1.125rem] ${
+          isSaving || unsavedChanges ? "text-[#b45309]" : "text-[#6b7280]"
+        } ${fullWidth ? "text-left" : "text-right"}`}
+        aria-live="polite"
+      >
+        {statusLabel}
+      </span>
       {error ? (
         <p className="text-sm text-danger" role="alert">
           {error}
@@ -214,7 +238,12 @@ export function BidHandoffActions() {
             busy !== null ||
             (wf != null && wf.canComplete === false)
           }
-          title={wf?.completeBlockedReason || undefined}
+          title={
+            wf?.completeBlockedReason &&
+            !wf.completeBlockedReason.startsWith("On Outcome tab")
+              ? wf.completeBlockedReason
+              : undefined
+          }
           onClick={() => void runHandoff("complete")}
           className="rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-40"
         >
@@ -222,7 +251,9 @@ export function BidHandoffActions() {
         </button>
       </div>
 
-      {wf?.completeBlockedReason && !wf.canComplete ? (
+      {wf?.completeBlockedReason &&
+      !wf.canComplete &&
+      !wf.completeBlockedReason.startsWith("On Outcome tab") ? (
         <p className="text-xs text-ink/50">{wf.completeBlockedReason}</p>
       ) : null}
 

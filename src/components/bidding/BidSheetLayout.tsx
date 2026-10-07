@@ -156,7 +156,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
   const secondaryLeft = primaryCollapsed ? "left-16" : "left-64";
 
   return (
-    <>
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       {/* Fixed second sidebar — xl+ only; never collapsible itself */}
       {isWide ? (
         <aside
@@ -174,9 +174,14 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
                 <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               Bids
-              {unsavedChanges ? (
-                <span className="text-[10px] font-semibold text-[#7a7360]">· unsaved</span>
-              ) : null}
+              <span
+                className={`min-w-[3.25rem] text-[10px] font-semibold ${
+                  unsavedChanges ? "text-[#b45309]" : "text-[#9ca3af]"
+                }`}
+                aria-live="polite"
+              >
+                {unsavedChanges ? "Unsaved" : "Saved"}
+              </span>
             </button>
           </div>
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-3">
@@ -231,6 +236,43 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
                   </Link>
                 );
               })}
+              {/* Post screens — Friday model: Lost = 1 tab; Awarded = Awarded + Production */}
+              {bid.workflow?.showAward && !bid.workflow?.showLost ? (
+                <>
+                  <Link
+                    href={stageHref("award")}
+                    className={`flex h-9 items-center rounded-[var(--radius)] px-2.5 text-[13px] font-medium transition-colors ${
+                      stage === "award"
+                        ? "bg-brand-tint text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
+                        : "text-ink-muted hover:bg-canvas hover:text-ink"
+                    }`}
+                  >
+                    Awarded
+                  </Link>
+                  <Link
+                    href={stageHref("production")}
+                    className={`flex h-9 items-center rounded-[var(--radius)] px-2.5 text-[13px] font-medium transition-colors ${
+                      stage === "production"
+                        ? "bg-brand-tint text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
+                        : "text-ink-muted hover:bg-canvas hover:text-ink"
+                    }`}
+                  >
+                    Production
+                  </Link>
+                </>
+              ) : null}
+              {bid.workflow?.showLost && !bid.workflow?.showAward ? (
+                <Link
+                  href={stageHref("lost")}
+                  className={`flex h-9 items-center rounded-[var(--radius)] px-2.5 text-[13px] font-medium transition-colors ${
+                    stage === "lost"
+                      ? "bg-brand-tint text-ink shadow-[inset_3px_0_0_0_var(--brand)]"
+                      : "text-ink-muted hover:bg-canvas hover:text-ink"
+                  }`}
+                >
+                  Lost
+                </Link>
+              ) : null}
             </nav>
           </div>
         </aside>
@@ -248,9 +290,14 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
               <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Bids
-            {unsavedChanges ? (
-              <span className="text-[10px] font-semibold text-[#7a7360]">· unsaved</span>
-            ) : null}
+            <span
+              className={`min-w-[3.25rem] text-[10px] font-semibold ${
+                unsavedChanges ? "text-[#b45309]" : "text-[#9ca3af]"
+              }`}
+              aria-live="polite"
+            >
+              {unsavedChanges ? "Unsaved" : "Saved"}
+            </span>
           </button>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
@@ -329,6 +376,6 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
       >
         <BidActivityPanel open={activityOpen} />
       </BidSidebarDrawer>
-    </>
+    </div>
   );
 }

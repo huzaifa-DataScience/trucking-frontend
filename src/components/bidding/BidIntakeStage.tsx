@@ -438,13 +438,17 @@ export function BidIntakeStage() {
   };
 
   const gcs: ProcessGcOrMech[] = draft.generalContractors ?? [];
-  const mechs: ProcessGcOrMech[] = draft.mechanicals ?? [];
+  /** Always show at least one mechanical-contractor row (default empty shell). */
+  const mechs: ProcessGcOrMech[] =
+    draft.mechanicals && draft.mechanicals.length > 0
+      ? draft.mechanicals
+      : [emptyGcOrMech()];
 
   const setGcs = (next: ProcessGcOrMech[]) => {
     setField("generalContractors", next);
   };
   const setMechs = (next: ProcessGcOrMech[]) => {
-    setField("mechanicals", next);
+    setField("mechanicals", next.length > 0 ? next : [emptyGcOrMech()]);
   };
 
   const linkIntoKeeper = async (keep: BidListItem) => {
@@ -481,9 +485,9 @@ export function BidIntakeStage() {
     const p = party(draft[key] as ProcessParty);
     const isMechanical = key === "mechanicalEngineer";
     return (
-      <section className="intake-section min-w-0">
+      <section className="intake-section flex h-full min-h-0 min-w-0 flex-col">
         <h3 className={sectionHead}>{title}</h3>
-        <div className={`${sectionBody} intake-stack`}>
+        <div className={`${sectionBody} intake-stack min-h-0 flex-1 overflow-auto`}>
         <PartyNameCombobox
           label="Name"
           value={p.name ?? ""}
@@ -698,10 +702,10 @@ export function BidIntakeStage() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
-      <section className="intake-section min-w-0 row-span-2 max-[1000px]:row-span-1">
+      <div className="grid grid-cols-3 items-stretch gap-3 max-[1000px]:grid-cols-1">
+      <section className="intake-section flex h-full min-w-0 flex-col row-span-2 max-[1000px]:row-span-1">
         <h3 className={sectionHead}>Bid identity</h3>
-        <div className={`${sectionBody} intake-stack`}>
+        <div className={`${sectionBody} intake-stack flex-1`}>
         <label className="intake-row">
           <span className={labelClass}>Bid / estimate #</span>
           <input
@@ -1055,9 +1059,9 @@ export function BidIntakeStage() {
         </div>
       </section>
 
-        <section className="intake-section min-w-0">
+        <section className="intake-section flex h-full min-w-0 flex-col">
           <h3 className={sectionHead}>Project address</h3>
-          <div className={`${sectionBody} intake-stack`}>
+          <div className={`${sectionBody} intake-stack flex-1`}>
           {(
             [
               ["line1", "Address line 1 (paste full)"],
@@ -1115,15 +1119,13 @@ export function BidIntakeStage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
-      <div className="flex min-w-0 flex-col gap-3">
-        {renderPartySection("mechanicalEngineer", "Mechanical", "mechanical")}
-      <section className="intake-section min-w-0">
+      <div className="intake-trio-row grid grid-cols-3 items-stretch gap-3 max-[1000px]:grid-cols-1 max-[1000px]:items-start">
+      <section className="intake-section flex h-full min-h-0 min-w-0 flex-col">
         <div className={sectionHead}>
-          GCs / mechanicals
+          GCs / mechanical contractors
           <span className="intake-head-count">{gcs.length + mechs.length}</span>
         </div>
-        <div className={`${sectionBody} intake-gc-layers flex flex-col gap-3`}>
+        <div className={`${sectionBody} intake-trio-scroll flex flex-col gap-3`}>
         {(
           [
             {
@@ -1134,7 +1136,7 @@ export function BidIntakeStage() {
             },
             {
               key: "mech" as const,
-              title: "Mechanicals",
+              title: "Mechanical contractors",
               list: mechs,
               setList: setMechs,
             },
@@ -1298,8 +1300,8 @@ export function BidIntakeStage() {
                               title:
                                 key === "gc"
                                   ? "Remove GC?"
-                                  : "Remove mechanical?",
-                              message: `Remove this ${key === "gc" ? "GC" : "mechanical"}?`,
+                                  : "Remove mechanical contractor?",
+                              message: `Remove this ${key === "gc" ? "GC" : "mechanical contractor"}?`,
                               confirmLabel: "Remove",
                               variant: "danger",
                             });
@@ -1320,9 +1322,8 @@ export function BidIntakeStage() {
         ))}
         </div>
       </section>
-      </div>
 
-      <section className="intake-section min-w-0">
+      <section className="intake-section flex h-full min-h-0 min-w-0 flex-col">
         <div className="intake-section-head-bar">
           <div>
             <h3>Invitations</h3>
@@ -1340,7 +1341,7 @@ export function BidIntakeStage() {
             </button>
           ) : null}
         </div>
-        <div className={`${sectionBody} flex flex-col gap-2`}>
+        <div className={`${sectionBody} intake-trio-scroll flex flex-col gap-2`}>
         {invitations.length === 0 ? (
           <p className="text-[12.5px] text-[#6b7280]">No invitations yet.</p>
         ) : (
@@ -1725,7 +1726,8 @@ export function BidIntakeStage() {
         </div>
       </section>
 
-      <section className="intake-section min-w-0">
+      <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
+      <section className="intake-section min-w-0 shrink-0">
         <div className={sectionHead}>
           Who else is bidding?
         </div>
@@ -1770,6 +1772,11 @@ export function BidIntakeStage() {
         </label>
         </div>
       </section>
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {renderPartySection("mechanicalEngineer", "Mechanical", "mechanical")}
+      </div>
+      </div>
       </div>
 
       <div className="grid grid-cols-2 items-start gap-3 max-[1000px]:grid-cols-1">
