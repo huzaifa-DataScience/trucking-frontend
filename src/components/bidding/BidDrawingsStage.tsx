@@ -42,7 +42,7 @@ export function BidDrawingsStage() {
   const drawings = (bid.attachments ?? []).filter((a) => a.label === "drawings");
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="intake-title">Drawings</h2>
       </header>

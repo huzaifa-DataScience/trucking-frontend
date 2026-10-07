@@ -232,14 +232,14 @@ export function MikeUploadDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-[#cfd5dd] bg-[#f8fafc] px-4 py-2 text-sm font-semibold text-[#4b5563] hover:bg-[#f1f5f9]"
+            className="rounded-lg border border-[var(--border-subtle)] bg-white px-4 py-2 text-sm font-semibold text-ink-muted hover:bg-canvas hover:text-ink"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={submit}
-            className="rounded-lg border border-[#cfd5dd] bg-[#f3f1ea] px-4 py-2 text-sm font-semibold text-[#333333] hover:bg-[#ebe8df]"
+            className="rounded-lg border border-brand bg-brand px-4 py-2 text-sm font-semibold text-white hover:border-brand-secondary hover:bg-brand-secondary"
           >
             Upload
           </button>

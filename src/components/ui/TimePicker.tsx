@@ -4,19 +4,16 @@ import { useState } from "react";
 import { Button, ComboBox, Input, ListBox, ListBoxItem, Popover } from "react-aria-components";
 
 /**
- * Styled replacement for `<input type="time">`. Native time inputs render
- * inconsistent, unstylable browser chrome; this composes react-aria-components'
- * headless ComboBox (editable text + a real click-to-open dropdown of times)
- * so it matches the app's own input tokens and actually opens, unlike a plain
- * segmented field.
+ * Styled replacement for `<input type="time">`.
+ * Value/onChange use "HH:mm" 24-hour strings (same as native time inputs).
  *
- * Value/onChange use the same "HH:mm" 24-hour string format the native input
- * produced, so this drops in wherever `dueTime`-style fields already live.
+ * Visual chrome lives only on the outer `intake-field` surface (same as DatePicker).
+ * The inner input is borderless — global glass-app input rules are overridden in CSS.
  */
 
 interface TimeOption {
-  id: string; // "HH:mm", 24-hour
-  label: string; // "2:30 PM"
+  id: string;
+  label: string;
 }
 
 const TIME_OPTIONS: TimeOption[] = buildTimeOptions();
@@ -37,7 +34,6 @@ function formatTimeLabel(hhmm: string): string {
   return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-/** Loosely parse typed time text ("2:30 pm", "14:30", "230pm", "2") into "HH:mm", or null. */
 function parseTimeText(text: string): string | null {
   const trimmed = text.trim().toLowerCase();
   if (!trimmed) return null;
@@ -57,16 +53,14 @@ function parseTimeText(text: string): string | null {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-const groupClass =
-  "flex h-8 items-center gap-1 rounded-md border border-[#cfd5dd] bg-white px-2 text-[13.5px] text-[#374151] transition focus-within:border-[#94a3b8] focus-within:shadow-[0_0_0_2px_rgba(148,163,184,0.28)]";
-const inputFieldClass =
-  "min-w-0 flex-1 bg-transparent py-1 outline-none placeholder:text-[#9ca3af]";
+const fallbackFieldClass =
+  "h-8 rounded-md border border-[#cfd5dd] bg-white px-2 text-[13.5px]";
 const buttonClass =
-  "flex h-6 w-6 shrink-0 items-center justify-center rounded text-[#6b7280] outline-none transition hover:bg-[#f3f4f6] hover:text-[#1f2937] focus-visible:ring-2 focus-visible:ring-[#94a3b8]/40";
+  "flex h-6 w-6 shrink-0 items-center justify-center rounded text-[#6b7280] outline-none transition hover:bg-[#f3f4f6] hover:text-[#1f2937]";
 const popoverClass =
   "max-h-64 w-[--trigger-width] min-w-40 overflow-auto rounded-md border border-[#d5dbe3] bg-white p-1 shadow-lg outline-none";
 const optionClass =
-  "cursor-pointer rounded px-2.5 py-1.5 text-[12.5px] text-[#374151] outline-none data-[focused]:bg-[#f3f1ea] data-[selected]:bg-[#f3f1ea] data-[selected]:font-medium data-[selected]:text-[#333333]";
+  "cursor-pointer rounded px-2.5 py-1.5 text-[12.5px] text-[#374151] outline-none data-[focused]:bg-brand-tint data-[selected]:bg-brand-tint data-[selected]:font-medium data-[selected]:text-ink";
 
 function ClockIcon() {
   return (
@@ -90,9 +84,6 @@ export function TimePicker({
   className?: string;
   ariaLabel?: string;
 }) {
-  // `draft` holds in-progress typed text; null means "not editing", so the
-  // displayed text derives from `value` during render instead of mirroring
-  // props into state via an effect.
   const [draft, setDraft] = useState<string | null>(null);
   const inputValue = draft ?? (value ? formatTimeLabel(value) : "");
 
@@ -100,6 +91,17 @@ export function TimePicker({
     onChange(parseTimeText(text));
     setDraft(null);
   };
+
+  // Same surface pattern as DatePicker: one bordered control, no nested input chrome.
+  const fieldClass = [
+    "intake-time-field",
+    "flex w-full min-w-0 items-center gap-1 text-[#374151] outline-none transition",
+    "focus-within:border-[#94a3b8] focus-within:shadow-[0_0_0_2px_rgba(148,163,184,0.28)]",
+    className || fallbackFieldClass,
+    disabled ? "cursor-not-allowed opacity-50" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <ComboBox
@@ -116,11 +118,11 @@ export function TimePicker({
       }}
       menuTrigger="focus"
       allowsCustomValue
-      className={className}
+      className="intake-time-picker w-full min-w-0"
     >
-      <div className={`${groupClass} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
+      <div className={fieldClass}>
         <Input
-          className={inputFieldClass}
+          className="intake-time-input min-w-0 flex-1"
           placeholder="--:-- --"
           onBlur={(e) => commit(e.target.value)}
           onKeyDown={(e) => {

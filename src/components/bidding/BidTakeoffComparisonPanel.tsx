@@ -47,36 +47,59 @@ export function BidTakeoffComparisonPanel() {
         </span>
       </div>
       <div className="intake-section-body overflow-x-auto">
-        <table className="w-full min-w-[32rem] text-left text-[12.5px] text-[#374151]">
-          <thead className="border-b border-[#e5e7eb] bg-[#f3f4f6] text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
-            <tr>
-              <th className="px-2 py-1.5">Scope</th>
-              <th className="px-2 py-1.5">Takeoff A</th>
-              <th className="px-2 py-1.5">Takeoff B</th>
-              <th className="px-2 py-1.5">Diff</th>
-              <th className="px-2 py-1.5">Var</th>
-              <th className="px-2 py-1.5">Final</th>
-              <th className="px-2 py-1.5">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#e5e7eb]">
-            {rows.map((row) => (
-              <tr key={`${row.scope}-${row.roleA}-${row.roleB}`}>
-                <td className="px-2 py-2 font-semibold text-[#1f2937]">{label(row.scope)}</td>
-                <td className="px-2 py-2 text-[#4b5563]">{label(row.roleA)}: {quantity(row.quantityA)}</td>
-                <td className="px-2 py-2 text-[#4b5563]">{label(row.roleB)}: {quantity(row.quantityB)}</td>
-                <td className="px-2 py-2 text-[#4b5563]">{quantity(row.difference)}</td>
-                <td className="px-2 py-2 text-[#4b5563]">{percent(row.differencePct)}</td>
-                <td className="px-2 py-2 font-semibold text-[#1f2937]">{quantity(row.finalQuantity)}</td>
-                <td className="px-2 py-2">
-                  <span className={row.reconciliationRequired ? "font-semibold text-danger" : "text-success"}>
-                    {row.reconciliationRequired ? "Review required" : "Matched"}
-                  </span>
-                </td>
+        <div className="overflow-hidden rounded-xl border border-[#e8ecf1] shadow-sm">
+          <table className="w-full min-w-[32rem] text-left text-[12.5px] text-[#374151]">
+            <thead className="bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+              <tr>
+                <th className="px-3 py-2.5">Scope</th>
+                <th className="px-3 py-2.5">Takeoff A</th>
+                <th className="px-3 py-2.5">Takeoff B</th>
+                <th className="px-3 py-2.5">Diff</th>
+                <th className="px-3 py-2.5">Var</th>
+                <th className="px-3 py-2.5">Final</th>
+                <th className="px-3 py-2.5">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr
+                  key={`${row.scope}-${row.roleA}-${row.roleB}`}
+                  className="border-t border-[#eef2f6]"
+                >
+                  <td className="px-3 py-2.5 font-semibold text-[#1f2937]">
+                    {label(row.scope)}
+                  </td>
+                  <td className="px-3 py-2.5 text-[#4b5563]">
+                    {label(row.roleA)}: {quantity(row.quantityA)}
+                  </td>
+                  <td className="px-3 py-2.5 text-[#4b5563]">
+                    {label(row.roleB)}: {quantity(row.quantityB)}
+                  </td>
+                  <td className="px-3 py-2.5 text-[#4b5563]">
+                    {quantity(row.difference)}
+                  </td>
+                  <td className="px-3 py-2.5 text-[#4b5563]">
+                    {percent(row.differencePct)}
+                  </td>
+                  <td className="px-3 py-2.5 font-semibold text-[#1f2937]">
+                    {quantity(row.finalQuantity)}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <span
+                      className={
+                        row.reconciliationRequired
+                          ? "font-semibold text-danger"
+                          : "text-success"
+                      }
+                    >
+                      {row.reconciliationRequired ? "Review required" : "Matched"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   );

@@ -8,6 +8,7 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import {
   clearanceOptionsFromMeta,
   type ProcessMeta,
+  type ProcessTechnicalReview,
   type WageDecision,
 } from "@/lib/bidding/process-types";
 
@@ -46,9 +47,14 @@ export function BidEstimatingSetupStage() {
   const num = (value: unknown) => (typeof value === "number" ? value : "");
 
   const clearances = clearanceOptionsFromMeta(meta);
+  const review: ProcessTechnicalReview = { ...(draft.technicalReview ?? {}) };
+
+  const setReview = (patch: Partial<ProcessTechnicalReview>) => {
+    setField("technicalReview", { ...review, ...patch });
+  };
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="intake-title">Handoff</h2>
         <p className="intake-sub mt-0.5">
@@ -78,7 +84,7 @@ export function BidEstimatingSetupStage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-3 items-start gap-3 max-[1000px]:grid-cols-1">
+      <div className="grid grid-cols-3 items-start gap-6 max-[1000px]:grid-cols-1">
         <section className="intake-section min-w-0">
           <h3 className={sectionHead}>Preferences</h3>
           <div className={`${sectionBody} intake-stack`}>
@@ -135,61 +141,78 @@ export function BidEstimatingSetupStage() {
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={Boolean(draft.pla)}
-                onChange={(e) => setField("pla", e.target.checked)}
-              />
-              <span className="font-medium">PLA project</span>
-            </label>
-            <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={draft.buyAmerican === true}
-                onChange={(e) => setField("buyAmerican", e.target.checked ? true : null)}
-              />
-              <span className="font-medium">Buy American</span>
-            </label>
-            <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={draft.aPlus === true}
-                onChange={(e) => setField("aPlus", e.target.checked ? true : null)}
-              />
-              <span className="font-medium">A+</span>
-            </label>
-            <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={Boolean(draft.ocipCcip?.coversWc)}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    ocipCcip: { ...(draft.ocipCcip ?? {}), coversWc: e.target.checked },
-                  })
-                }
-              />
-              <span className="font-medium">OCIP covers WC</span>
-            </label>
-            <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={Boolean(draft.ocipCcip?.coversGl)}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    ocipCcip: { ...(draft.ocipCcip ?? {}), coversGl: e.target.checked },
-                  })
-                }
-              />
-              <span className="font-medium">OCIP covers GL</span>
-            </label>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-1 sm:grid-cols-3">
+              <label className="flex items-center gap-2.5 text-[13.5px] text-[#374151]">
+                <input
+                  type="checkbox"
+                  className="intake-check-lg"
+                  disabled={!editable}
+                  checked={Boolean(draft.pla)}
+                  onChange={(e) => setField("pla", e.target.checked)}
+                />
+                <span className="font-medium">PLA project</span>
+              </label>
+              <label className="flex items-center gap-2.5 text-[13.5px] text-[#374151]">
+                <input
+                  type="checkbox"
+                  className="intake-check-lg"
+                  disabled={!editable}
+                  checked={draft.buyAmerican === true}
+                  onChange={(e) =>
+                    setField("buyAmerican", e.target.checked ? true : null)
+                  }
+                />
+                <span className="font-medium">Buy American</span>
+              </label>
+              <label className="flex items-center gap-2.5 text-[13.5px] text-[#374151]">
+                <input
+                  type="checkbox"
+                  className="intake-check-lg"
+                  disabled={!editable}
+                  checked={draft.aPlus === true}
+                  onChange={(e) =>
+                    setField("aPlus", e.target.checked ? true : null)
+                  }
+                />
+                <span className="font-medium">A+</span>
+              </label>
+              <label className="flex items-center gap-2.5 text-[13.5px] text-[#374151]">
+                <input
+                  type="checkbox"
+                  className="intake-check-lg"
+                  disabled={!editable}
+                  checked={Boolean(draft.ocipCcip?.coversWc)}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      ocipCcip: {
+                        ...(draft.ocipCcip ?? {}),
+                        coversWc: e.target.checked,
+                      },
+                    })
+                  }
+                />
+                <span className="font-medium">OCIP covers WC</span>
+              </label>
+              <label className="flex items-center gap-2.5 text-[13.5px] text-[#374151]">
+                <input
+                  type="checkbox"
+                  className="intake-check-lg"
+                  disabled={!editable}
+                  checked={Boolean(draft.ocipCcip?.coversGl)}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      ocipCcip: {
+                        ...(draft.ocipCcip ?? {}),
+                        coversGl: e.target.checked,
+                      },
+                    })
+                  }
+                />
+                <span className="font-medium">OCIP covers GL</span>
+              </label>
+            </div>
           </div>
         </section>
 
@@ -308,24 +331,32 @@ export function BidEstimatingSetupStage() {
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={Boolean(b.citizenProject)}
-                onChange={(e) => setBaseBidField("citizenProject", e.target.checked)}
-              />
-              <span className="font-medium">Citizen project</span>
-            </label>
-            <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={Boolean(b.apprenticeable)}
-                onChange={(e) => setBaseBidField("apprenticeable", e.target.checked)}
-              />
-              <span className="font-medium">Apprenticeable</span>
-            </label>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <label className="flex items-center gap-2.5 text-[13.5px] text-[#374151]">
+                <input
+                  type="checkbox"
+                  className="intake-check-lg"
+                  disabled={!editable}
+                  checked={Boolean(b.citizenProject)}
+                  onChange={(e) =>
+                    setBaseBidField("citizenProject", e.target.checked)
+                  }
+                />
+                <span className="font-medium">Citizen project</span>
+              </label>
+              <label className="flex items-center gap-2.5 text-[13.5px] text-[#374151]">
+                <input
+                  type="checkbox"
+                  className="intake-check-lg"
+                  disabled={!editable}
+                  checked={Boolean(b.apprenticeable)}
+                  onChange={(e) =>
+                    setBaseBidField("apprenticeable", e.target.checked)
+                  }
+                />
+                <span className="font-medium">Apprenticeable</span>
+              </label>
+            </div>
             {(
               [
                 ["marginPercent", "Margin"],
@@ -352,6 +383,101 @@ export function BidEstimatingSetupStage() {
                 />
               </label>
             ))}
+          </div>
+        </section>
+
+        <section className="intake-section min-w-0 col-span-2 max-[1000px]:col-span-1">
+          <h3 className={sectionHead}>Technical review</h3>
+          <div className={`${sectionBody} intake-grid`}>
+            {bid.workflow?.completeBlockedReason ? (
+              <p className="col-span-full text-[12.5px] text-[#9a3412]">
+                {bid.workflow.completeBlockedReason}
+              </p>
+            ) : null}
+            <label className="intake-row">
+              <span className={labelClass}>Prepared by</span>
+              <input
+                className={inputClass}
+                disabled={!editable}
+                value={review.preparedBy ?? ""}
+                onChange={(e) => setReview({ preparedBy: e.target.value || null })}
+              />
+            </label>
+            <label className="intake-row">
+              <span className={labelClass}>Reviewed by</span>
+              <input
+                className={inputClass}
+                disabled={!editable}
+                value={review.reviewedBy ?? ""}
+                onChange={(e) => setReview({ reviewedBy: e.target.value || null })}
+              />
+            </label>
+            <label className="intake-row">
+              <span className={labelClass}>Review date</span>
+              <DatePicker
+                ariaLabel="Review date"
+                className={inputClass}
+                disabled={!editable}
+                value={review.reviewDate?.slice(0, 10) ?? ""}
+                onChange={(v) => setReview({ reviewDate: v || null })}
+              />
+            </label>
+            <label className="intake-row col-span-full">
+              <span className={labelClass}>Comments</span>
+              <textarea
+                className={`${inputClass} min-h-[4.5rem] resize-y`}
+                disabled={!editable}
+                value={review.comments ?? ""}
+                onChange={(e) => setReview({ comments: e.target.value || null })}
+              />
+            </label>
+            <div className="col-span-full flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-2.5 py-2">
+              <div className="min-w-0">
+                <p className="text-[12.5px] font-semibold text-[#1f2937]">
+                  {review.approvedForTakeoff
+                    ? "Approved for takeoff"
+                    : "Takeoff approval required"}
+                </p>
+                <p className="text-[11px] text-[#6b7280]">
+                  {review.approvedForTakeoff
+                    ? "Setup can hand off to Takeoff. You can revoke if review needs another pass."
+                    : "Complete & Hand Off to Takeoff stays blocked until you approve."}
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                {review.approvedForTakeoff ? (
+                  <>
+                    <span className="text-[11px] font-semibold text-[#047857]">
+                      Approved
+                    </span>
+                    <button
+                      type="button"
+                      disabled={!editable}
+                      onClick={() => setReview({ approvedForTakeoff: false })}
+                      className="intake-head-btn disabled:opacity-40"
+                    >
+                      Revoke approval
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!editable}
+                    onClick={() =>
+                      setReview({
+                        approvedForTakeoff: true,
+                        reviewDate:
+                          review.reviewDate ||
+                          new Date().toISOString().slice(0, 10),
+                      })
+                    }
+                    className="intake-head-btn disabled:opacity-40"
+                  >
+                    Approve for takeoff
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </section>
       </div>

@@ -244,14 +244,14 @@ function AddressBookModal({
         style={{ maxHeight: "min(88dvh, 900px)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-[#e5e7eb] bg-[#f3f1ea] px-4 py-2.5">
-          <h3 className="text-[13px] font-semibold tracking-wide text-[#333333]">
+        <div className="border-b border-[var(--border-subtle)] bg-brand-tint px-4 py-2.5">
+          <h3 className="text-[13px] font-semibold tracking-wide text-ink">
             {title}
           </h3>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e5e7eb] bg-[#f8fafc] px-4 py-2.5">
-          <span className="inline-flex items-center rounded-md border border-[#d9d4c8] bg-[#f3f1ea] px-2.5 py-1 text-[11px] font-semibold text-[#333333]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-canvas px-4 py-2.5">
+          <span className="inline-flex items-center rounded-md border border-brand/25 bg-brand-tint px-2.5 py-1 text-[11px] font-semibold text-ink">
             Email Address Book
           </span>
           <div className="relative min-w-[14rem] flex-1 sm:max-w-sm">
@@ -316,21 +316,21 @@ function AddressBookModal({
                   return (
                     <tr
                       key={String(o.id)}
-                      className="border-b border-[#e5e7eb] transition hover:bg-[#faf7f0]"
+                      className="border-b border-[var(--border-subtle)] transition hover:bg-brand-tint/50"
                     >
                       <td className="px-3 py-2 align-middle">
                         {tags.length > 0 ? (
                           <span className="text-[#9ca3af]">({tags.join(", ")}) </span>
                         ) : null}
-                        <span className="font-medium text-[#1f2937]">{label}</span>
+                        <span className="font-medium text-ink">{label}</span>
                       </td>
-                      <td className="px-3 py-2 align-middle text-[#4b5563]">
+                      <td className="px-3 py-2 align-middle text-ink-muted">
                         {o.company || "—"}
                       </td>
-                      <td className="px-3 py-2 align-middle text-[#4b5563]">
+                      <td className="px-3 py-2 align-middle text-ink-muted">
                         {o.email || "—"}
                       </td>
-                      <td className="px-3 py-2 align-middle text-[#4b5563]">
+                      <td className="px-3 py-2 align-middle text-ink-muted">
                         {o.phone || "—"}
                       </td>
                       <td className="px-2 py-1.5 text-center align-middle">
@@ -339,7 +339,7 @@ function AddressBookModal({
                           title="Add this contact"
                           aria-label={`Add ${label}`}
                           onClick={() => onPick(o)}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#d9d4c8] bg-[#f3f1ea] text-[#333333] transition hover:bg-[#ebe8df]"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-brand/30 bg-brand-tint text-brand transition hover:bg-brand hover:text-white"
                         >
                           <svg
                             className="h-3.5 w-3.5"
@@ -397,7 +397,7 @@ function AddressBookModal({
               onClick={() => setPage(n)}
               className={`min-w-7 rounded-md px-2 py-1 text-[11px] font-semibold transition ${
                 n === safePage
-                  ? "border border-[#d9d4c8] bg-[#f3f1ea] text-[#333333]"
+                  ? "border border-brand/30 bg-brand-tint text-ink"
                   : "border border-transparent text-[#6b7280] hover:border-[#cfd5dd] hover:bg-white"
               }`}
             >
@@ -602,14 +602,14 @@ export function PartyNameCombobox({
               }}
               title="Open address book"
               aria-label={`Open address book for ${label}`}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#cfd5dd] bg-[#f3f4f6] text-[#4b5563] transition hover:border-[#94a3b8] hover:bg-[#eef2f7]"
+              className="intake-icon-btn shrink-0"
             >
               <svg
-                className="h-3.5 w-3.5"
+                className="h-4 w-4"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth={2.5}
+                strokeWidth={2.25}
                 aria-hidden
               >
                 <path d="M12 5v14M5 12h14" strokeLinecap="round" />

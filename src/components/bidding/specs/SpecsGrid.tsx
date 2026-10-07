@@ -15,6 +15,7 @@ import {
   normalizeFacingValue,
   resolveFacingSelectValue,
 } from "@/lib/bidding/specs-types";
+import { INTAKE_REMOVE_BTN, TrashIcon } from "@/components/bidding/intakeIcons";
 
 function fmtQty(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return "—";
@@ -448,9 +449,11 @@ function SpecsLineRow({
             onClick={() => {
               if (confirm("Delete this Spec line?")) onDelete(line.id);
             }}
-            className="text-[10px] font-semibold text-danger/80 hover:text-danger"
+            className={INTAKE_REMOVE_BTN}
+            aria-label="Delete line"
+            title="Delete line"
           >
-            Del
+            <TrashIcon />
           </button>
         </td>
       ) : null}
