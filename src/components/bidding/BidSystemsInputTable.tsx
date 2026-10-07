@@ -23,36 +23,48 @@ export function BidSystemsInputTable({
     <section className="intake-section min-w-0">
       <div className="intake-section-head">Systems — inputs</div>
       <div className="intake-section-body">
-        <div className="overflow-x-auto rounded border border-[#e5e7eb]">
-          <table className="w-full min-w-[40rem] text-left text-[12.5px] text-[#374151]">
+        <div className="overflow-x-auto rounded-xl border border-[#e8ecf1] shadow-sm">
+          <table className="w-full min-w-[48rem] border-separate border-spacing-0 text-left text-[12.5px] text-[#374151]">
             <thead>
-              <tr className="border-b border-[#e5e7eb] bg-[#f3f4f6] text-left text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
-                <th className="px-2 py-1.5">Include</th>
-                <th className="px-2 py-1.5">System</th>
-                <th className="px-2 py-1.5 text-right" title="Excel row 17">
+              <tr className="bg-[#f8fafc] text-left text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                <th className="whitespace-nowrap px-3 py-2.5 first:rounded-tl-xl">Include</th>
+                <th className="min-w-[7rem] whitespace-nowrap px-3 py-2.5">System</th>
+                <th className="whitespace-nowrap px-3 py-2.5 text-right" title="Excel row 17">
                   R17 MIKE #
                 </th>
-                <th className="px-2 py-1.5 text-right" title="Excel row 18">
+                <th className="whitespace-nowrap px-3 py-2.5 text-right" title="Excel row 18">
                   R18 Materials
                 </th>
-                <th className="px-2 py-1.5 text-right" title="Excel row 19 — hours, not dollars">
+                <th
+                  className="whitespace-nowrap px-3 py-2.5 text-right"
+                  title="Excel row 19 — hours, not dollars"
+                >
                   R19 Labor hrs
                 </th>
-                <th className="px-2 py-1.5 text-right" title="Excel row 20 — MIKE $ total">
+                <th
+                  className="whitespace-nowrap px-3 py-2.5 text-right"
+                  title="Excel row 20 — MIKE $ total"
+                >
                   R20 MIKE $
                 </th>
-                <th className="px-2 py-1.5 text-right" title="Excel row 21">
+                <th className="whitespace-nowrap px-3 py-2.5 text-right" title="Excel row 21">
                   R21 Qty
                 </th>
-                <th className="px-2 py-1.5 text-right" title="Calculated row 41">
+                <th
+                  className="whitespace-nowrap px-3 py-2.5 text-right"
+                  title="Calculated row 41"
+                >
                   Labor $
                 </th>
-                <th className="px-2 py-1.5 text-right" title="Calculated row 45">
+                <th
+                  className="whitespace-nowrap px-3 py-2.5 text-right last:rounded-tr-xl"
+                  title="Calculated row 45"
+                >
                   Subtotal
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e5e7eb]">
+            <tbody>
               {BID_SYSTEM_KEYS.map((key) => {
                 const row = systems.find((s) => s.key === key)!;
                 const active = Boolean(row.used);
@@ -60,21 +72,24 @@ export function BidSystemsInputTable({
                 return (
                   <tr
                     key={key}
-                    className={active ? "hover:bg-[#faf7f0]" : "text-[#9ca3af]"}
+                    className={`border-t border-[#eef2f6] ${
+                      active ? "hover:bg-[#faf7f0]/40" : "text-[#9ca3af]"
+                    }`}
                   >
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2.5 align-middle">
                       <input
                         type="checkbox"
                         checked={active}
                         disabled={!isEditable}
                         onChange={(e) => onUpdateRow(key, { used: e.target.checked })}
-                        className="cursor-pointer disabled:opacity-50"
+                        className="intake-check-lg cursor-pointer disabled:opacity-50"
+                        aria-label={`Include ${BID_SYSTEM_LABELS[key]}`}
                       />
                     </td>
-                    <td className="px-3 py-2 font-medium text-[#1f2937]">
+                    <td className="whitespace-nowrap px-3 py-2.5 font-medium text-[#1f2937]">
                       {BID_SYSTEM_LABELS[key]}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2.5">
                       <BidNumberInput
                         id={`${key}-mike-num`}
                         variant="table"
@@ -84,7 +99,7 @@ export function BidSystemsInputTable({
                         disabled={!isEditable || !active}
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2.5">
                       <BidNumberInput
                         id={`${key}-materials`}
                         variant="table"
@@ -94,7 +109,7 @@ export function BidSystemsInputTable({
                         disabled={!isEditable || !active}
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2.5">
                       <BidNumberInput
                         id={`${key}-labor`}
                         variant="table"
@@ -104,7 +119,7 @@ export function BidSystemsInputTable({
                         disabled={!isEditable || !active}
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2.5">
                       <BidNumberInput
                         id={`${key}-mike`}
                         variant="table"
@@ -114,7 +129,7 @@ export function BidSystemsInputTable({
                         disabled={!isEditable || !active}
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2.5">
                       <BidNumberInput
                         id={`${key}-qty`}
                         variant="table"
@@ -124,12 +139,12 @@ export function BidSystemsInputTable({
                         disabled={!isEditable || !active}
                       />
                     </td>
-                    <td className="px-3 py-2 text-right text-[#4b5563]">
+                    <td className="px-3 py-2.5 text-right text-[#4b5563]">
                       {active && calc?.used
                         ? formatMoneyPrecise(calc.laborTotal)
                         : "—"}
                     </td>
-                    <td className="px-3 py-2 text-right font-semibold text-[#1f2937]">
+                    <td className="px-3 py-2.5 text-right font-semibold text-[#1f2937]">
                       {active && calc?.used ? formatMoneyPrecise(calc.subtotal) : "—"}
                     </td>
                   </tr>

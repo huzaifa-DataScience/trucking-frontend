@@ -571,10 +571,10 @@ body {
 
 .intake-compact .intake-section {
   overflow: hidden;
-  border: 1px solid #d5dbe3;
-  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
   background: #fff;
-  box-shadow: none;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .intake-compact .intake-section-head {
@@ -584,7 +584,7 @@ body {
   flex-wrap: wrap;
   gap: 0.5rem 8px;
   margin: 0;
-  padding: 8px 12px;
+  padding: 10px 14px;
   position: relative;
   background: #f3f1ea;
   color: #333333;
@@ -596,7 +596,7 @@ body {
 }
 
 .intake-compact .intake-section-body {
-  padding: 10px 12px 12px;
+  padding: 14px 16px 16px;
 }
 
 /* Add-row lists open at about three rows, even when empty. More rows scroll inside. */
@@ -678,8 +678,8 @@ body {
   box-sizing: border-box;
   height: 2rem;
   min-height: 2rem;
-  border-radius: 6px;
-  border: 1px solid #cfd5dd;
+  border-radius: 10px;
+  border: 1px solid #dbe2ea;
   background: #fff;
   padding: 0 0.55rem;
   font-size: 13.5px;
@@ -753,9 +753,9 @@ body {
 
 .intake-compact .intake-row {
   display: grid;
-  grid-template-columns: 7.25rem minmax(0, 1fr);
+  grid-template-columns: 5.5rem minmax(0, 1fr);
   align-items: center;
-  column-gap: 0.45rem;
+  column-gap: 0.35rem;
   row-gap: 0.15rem;
   min-width: 0;
   width: 100%;
@@ -802,7 +802,7 @@ body {
 .intake-compact .intake-stack {
   display: flex !important;
   flex-direction: column !important;
-  gap: 0.35rem;
+  gap: 0.7rem;
 }
 
 .intake-compact .intake-stack > .intake-row {
@@ -848,7 +848,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem 8px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   position: relative;
   background: #f3f1ea;
   text-align: center;
@@ -878,30 +878,71 @@ body {
 }
 
 .intake-compact .intake-head-btn {
-  border-radius: 6px;
-  border: 1px solid #cfd5dd;
-  background: #f8fafc;
-  padding: 0.25rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 0.3rem 0.7rem;
   font-size: 11px;
   font-weight: 600;
-  color: #4b5563;
+  color: #64748b;
   cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
 }
 
 .intake-compact .intake-head-btn:disabled {
   cursor: default;
+  opacity: 0.45;
 }
 
 .intake-compact .intake-head-btn:hover {
-  border-color: #94a3b8;
-  background: #f1f5f9;
-  color: #1f2937;
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+}
+
+/* Icon-only add/remove — no bubble, no label (estimate-wide) */
+.intake-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.intake-icon-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.intake-icon-btn:hover {
+  background: rgba(15, 23, 42, 0.06);
+  color: #334155;
+}
+
+.intake-icon-btn-danger {
+  color: #e11d48;
+}
+
+.intake-icon-btn-danger:hover {
+  color: #be123c;
+  background: rgba(225, 29, 72, 0.08);
 }
 
 .intake-compact .ui-shadow-card {
-  border: 1px solid #d5dbe3;
-  border-radius: 8px;
-  box-shadow: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
   padding: 0;
   overflow: hidden;
   background: #fff;
@@ -978,8 +1019,8 @@ body {
 .intake-compact input[class*="rounded-xl"],
 .intake-compact select[class*="rounded-xl"],
 .intake-compact textarea[class*="rounded-xl"] {
-  border-radius: 6px;
-  border-color: #cfd5dd;
+  border-radius: 10px;
+  border-color: #dbe2ea;
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   font-size: 13.5px;
   color: #374151;
@@ -1001,8 +1042,8 @@ body {
   height: 14px;
   margin: 0;
   flex-shrink: 0;
-  border: 1px solid #cfd5dd;
-  border-radius: 3px;
+  border: 1px solid #dbe2ea;
+  border-radius: 5px;
   background-color: #fff;
   background-position: center;
   background-repeat: no-repeat;
@@ -1052,7 +1093,7 @@ body {
   isolation: isolate;
   color: var(--ink);
   background: var(--canvas);
-  padding: 14px 14px 20px;
+  padding: 16px 16px 24px;
 }
 
 .intake-compact > * {
@@ -1071,10 +1112,10 @@ body {
 }
 
 .intake-compact .intake-section {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.03);
 }
 
 /* Stage title row — compact on small screens; on xl+ it lives in the left second sidebar */
@@ -1111,7 +1152,7 @@ body {
 .intake-compact .intake-section-head,
 .intake-compact .intake-section-head-bar {
   background: var(--brand-tint);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.05);
   color: var(--ink);
 }
 
@@ -1135,7 +1176,7 @@ body {
 /* Count + Add stay on the right; title stays centered (parent is position: relative). */
 .intake-compact .intake-section-head-bar > button {
   position: absolute;
-  right: 48px;
+  right: 44px;
   top: 50%;
   transform: translateY(-50%);
   flex-shrink: 0;
@@ -1228,11 +1269,17 @@ body {
   -webkit-backdrop-filter: none;
   box-shadow: none;
   color: var(--ink);
-  /* Secondary rail is never collapsible — lock full width */
+  /* Full secondary by default; thin strip when data-collapsed="true" */
   width: 232px !important;
   min-width: 232px !important;
   max-width: 232px !important;
   flex-shrink: 0 !important;
+}
+
+.glass-app aside.workspace-secondary-rail[data-collapsed="true"] {
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
 }
 
 /* Never overlay forms on small screens — dual-rail is xl+ (1280px) only */

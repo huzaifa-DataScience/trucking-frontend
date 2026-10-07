@@ -16,6 +16,12 @@ import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { BidAttachment } from "@/lib/bidding/types";
+import {
+  INTAKE_ADD_BTN,
+  INTAKE_REMOVE_BTN,
+  PlusIcon,
+  TrashIcon,
+} from "@/components/bidding/intakeIcons";
 import type {
   ProcessMeta,
   SpecSheet,
@@ -437,7 +443,7 @@ function SpecImageLightbox({
 }
 
 function selectClass(disabled: boolean) {
-  return `w-full min-w-[6rem] rounded border border-[#cfd5dd] bg-white px-1.5 py-1 text-[12.5px] text-[#374151] outline-none focus:border-[#94a3b8] ${
+  return `w-full min-w-[6rem] rounded-[10px] border border-[#dbe2ea] bg-white px-2 py-1.5 text-[12.5px] text-[#374151] outline-none transition focus:border-[#94a3b8] focus:shadow-[0_0_0_2px_rgba(148,163,184,0.28)] ${
     disabled ? "cursor-default opacity-60" : "cursor-pointer"
   }`;
 }
@@ -1458,7 +1464,7 @@ export function BidSpecSheetsSection({
             <h3>Spec sheets</h3>
           </div>
           {editable ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="absolute right-3 top-1/2 flex max-w-[min(100%,28rem)] -translate-y-1/2 flex-wrap items-center justify-end gap-1">
               {ADD_KINDS.map((kind) => (
                 <button
                   key={kind}
@@ -1466,8 +1472,11 @@ export function BidSpecSheetsSection({
                   disabled={sheets.length >= MAX_SPEC_SHEETS}
                   onClick={() => addSheet(kind)}
                   className="intake-head-btn disabled:opacity-40"
+                  aria-label={`Add ${kindLabel(kind)}`}
+                  title={`Add ${kindLabel(kind)}`}
                 >
-                  + {kindLabel(kind)}
+                  <PlusIcon className="h-3.5 w-3.5 shrink-0" />
+                  {kindLabel(kind)}
                 </button>
               ))}
             </div>
@@ -1476,7 +1485,7 @@ export function BidSpecSheetsSection({
         <div className="intake-section-body">
 
         {sheets.length === 0 ? (
-          <p className="rounded border border-dashed border-[#d5dbe3] bg-[#f8fafc] px-3 py-6 text-center text-[12.5px] text-[#6b7280]">
+          <p className="rounded-xl border border-dashed border-[#e2e8f0] bg-[#f8fafc] px-3 py-6 text-center text-[12.5px] text-[#6b7280]">
             No rules yet — add Duct, HVAC pipe, Plumbing, or Equipment.
           </p>
         ) : (
@@ -1486,9 +1495,9 @@ export function BidSpecSheetsSection({
                 <button
                   type="button"
                   onClick={() => setStackAll((v) => !v)}
-                  className={`rounded px-3 py-1.5 text-[12.5px] font-medium transition ${
+                  className={`rounded-xl px-3 py-1.5 text-[12.5px] font-medium transition ${
                     stackAll
-                      ? "bg-[#f3f1ea] text-[#5a5340] ring-1 ring-[#d9d4c8]"
+                      ? "bg-[#f3f1ea] text-[#5a5340] ring-1 ring-[#e2e8f0]"
                       : "bg-[#f3f4f6] text-[#4b5563] hover:bg-[#f3f1ea]"
                   }`}
                 >
@@ -1506,9 +1515,9 @@ export function BidSpecSheetsSection({
                           setStackAll(false);
                           setActiveId(s.id);
                         }}
-                        className={`rounded px-3 py-1.5 text-[12.5px] font-medium transition ${
+                        className={`rounded-xl px-3 py-1.5 text-[12.5px] font-medium transition ${
                           on
-                            ? "bg-[#f3f1ea] text-[#5a5340] ring-1 ring-[#d9d4c8]"
+                            ? "bg-[#f3f1ea] text-[#5a5340] ring-1 ring-[#e2e8f0]"
                             : "bg-[#f3f4f6] text-[#4b5563] hover:bg-[#f3f1ea]"
                         }`}
                       >
@@ -1524,7 +1533,7 @@ export function BidSpecSheetsSection({
                 {sheets.map((s) => (
                   <div
                     key={s.id}
-                    className="rounded border border-[#e5e7eb] bg-[#fafafa] p-3"
+                    className="rounded-xl border border-[#e8ecf1] bg-[#fafafa] p-3 shadow-sm"
                   >
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                       <h4 className="text-[13px] font-semibold text-[#1f2937]">
@@ -1615,9 +1624,9 @@ export function BidSpecSheetsSection({
                 onFocus={(e) => fillValueTooltip(e.target)}
                 onChange={(e) => fillValueTooltip(e.target)}
               >
-                <div className="flex flex-wrap items-end gap-3">
-                  <label className="intake-row min-w-[12rem] flex-1">
-                    <span className="intake-label">Title</span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex min-w-[14rem] flex-1 items-center gap-2">
+                    <span className="intake-label shrink-0">Title</span>
                     <input
                       disabled={!editable}
                       className={selectClass(!editable)}
@@ -1630,8 +1639,8 @@ export function BidSpecSheetsSection({
                       }
                     />
                   </label>
-                  <label className="intake-row w-44">
-                    <span className="intake-label">Spec #</span>
+                  <label className="flex w-48 items-center gap-2">
+                    <span className="intake-label shrink-0">Spec #</span>
                     <input
                       disabled={!editable}
                       className={selectClass(!editable)}
@@ -1649,15 +1658,17 @@ export function BidSpecSheetsSection({
                     <button
                       type="button"
                       onClick={() => removeSheet(active.id)}
-                      className="rounded border border-danger/25 px-2.5 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger-tint/30"
+                      className={INTAKE_REMOVE_BTN}
+                      aria-label="Remove sheet"
+                      title="Remove sheet"
                     >
-                      Remove sheet
+                      <TrashIcon />
                     </button>
                   ) : null}
                 </div>
 
                 <div
-                  className="overflow-x-auto rounded border border-[#e5e7eb]"
+                  className="overflow-x-auto rounded-xl border border-[#e8ecf1] shadow-sm"
                   onMouseOver={(e) => fillValueTooltip(e.target)}
                   onFocus={(e) => fillValueTooltip(e.target)}
                   onChange={(e) => fillValueTooltip(e.target)}
@@ -1999,7 +2010,7 @@ export function BidSpecSheetsSection({
                                   onClick={() =>
                                     void runMikeCode(active.id, row)
                                   }
-                                  className="inline-flex min-w-[2rem] items-center justify-center rounded border border-[#cfd5dd] bg-[#f3f1ea] px-1.5 text-[11px] font-semibold text-[#5a5340] hover:bg-[#ebe8df] disabled:opacity-40"
+                                  className="inline-flex min-w-[2rem] items-center justify-center rounded-lg border border-[#dbe2ea] bg-[#f3f1ea] px-1.5 text-[11px] font-semibold text-[#5a5340] hover:bg-[#ebe8df] disabled:opacity-40"
                                   aria-label={mikeBusy ? "Loading" : "Apply Mike code"}
                                 >
                                   {mikeBusy ? (
@@ -2469,8 +2480,11 @@ export function BidSpecSheetsSection({
                     disabled={active.rows.length >= MAX_SPEC_ROWS}
                     onClick={addRow}
                     className="intake-head-btn self-start disabled:opacity-40"
+                    aria-label="Add row"
+                    title="Add row"
                   >
-                    + Add row
+                    <PlusIcon className="h-3.5 w-3.5 shrink-0" />
+                    Add row
                   </button>
                 ) : null}
 
@@ -2596,9 +2610,11 @@ export function BidSpecSheetsSection({
                                   e.stopPropagation();
                                   void detachImage(id);
                                 }}
-                                className="absolute right-1.5 top-1.5 rounded-md bg-ink/70 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-ink"
+                                className={`${INTAKE_REMOVE_BTN} absolute right-1.5 top-1.5 bg-white/90`}
+                                aria-label="Remove photo"
+                                title="Remove photo"
                               >
-                                Remove
+                                <TrashIcon />
                               </button>
                             ) : null}
                           </div>

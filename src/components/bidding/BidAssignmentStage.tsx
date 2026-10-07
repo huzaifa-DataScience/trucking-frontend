@@ -193,7 +193,7 @@ export function BidAssignmentStage() {
   const rowFor = (role: TakeoffRole) => rows.find((r) => r.role === role);
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="intake-title">Assignment</h2>
         <p className="intake-sub mt-0.5">
@@ -390,7 +390,7 @@ export function BidAssignmentStage() {
           <p className="text-[11px] text-[#6b7280]">
             Team/captain pick prefills blank roles. Assignees see due dates on their calendar.
           </p>
-          <div className="grid grid-cols-3 items-start gap-3 max-[900px]:grid-cols-1">
+          <div className="grid grid-cols-3 items-start gap-6 max-[900px]:grid-cols-1">
             {(
               [
                 ["Duct", ["duct1", "duct2"]],
@@ -398,13 +398,15 @@ export function BidAssignmentStage() {
                 ["Plumbing", ["plumbing1", "plumbing2"]],
               ] as const
             ).map(([title, roles]) => (
-              <div key={title} className="intake-stack min-w-0">
-                <p className="text-center text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">{title}</p>
+              <div key={title} className="flex min-w-0 flex-col gap-3">
+                <p className="mb-0.5 text-center text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                  {title}
+                </p>
                 {roles.map((role) => {
                   const row = rowFor(role);
                   return (
-                    <div key={role} className="intake-stack min-w-0 gap-1">
-                      <label className="intake-row">
+                    <div key={role} className="flex min-w-0 flex-col gap-1.5">
+                      <label className="flex min-w-0 flex-col gap-0.5">
                         <span className={labelClass}>{role}</span>
                         <input
                           className={inputClass}
@@ -417,11 +419,11 @@ export function BidAssignmentStage() {
                           }
                         />
                       </label>
-                      <label className="intake-row">
+                      <label className="flex min-w-0 flex-col gap-0.5">
                         <span className={labelClass}>Due</span>
                         <DatePicker
                           ariaLabel={`${role} takeoff due`}
-                          className={inputClass}
+                          className={`${inputClass} w-full`}
                           disabled={!editable}
                           value={row?.dueAt?.slice(0, 10) ?? ""}
                           onChange={(v) => upsertRole(role, { dueAt: v || null })}
@@ -433,12 +435,12 @@ export function BidAssignmentStage() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-3 items-start gap-3 border-t border-[#e5e7eb] pt-4 max-[900px]:grid-cols-1">
+          <div className="grid grid-cols-3 items-start gap-6 border-t border-[#e8ecf1] pt-5 max-[900px]:grid-cols-1">
             {(["vrf", "equipment", "other"] as const).map((role) => {
               const row = rowFor(role);
               return (
-                <div key={role} className="intake-stack min-w-0 gap-1">
-                  <label className="intake-row">
+                <div key={role} className="flex min-w-0 flex-col gap-1.5">
+                  <label className="flex min-w-0 flex-col gap-0.5">
                     <span className={labelClass}>{role}</span>
                     <input
                       className={inputClass}
@@ -451,11 +453,11 @@ export function BidAssignmentStage() {
                       }
                     />
                   </label>
-                  <label className="intake-row">
+                  <label className="flex min-w-0 flex-col gap-0.5">
                     <span className={labelClass}>Due</span>
                     <DatePicker
                       ariaLabel={`${role} takeoff due`}
-                      className={inputClass}
+                      className={`${inputClass} w-full`}
                       disabled={!editable}
                       value={row?.dueAt?.slice(0, 10) ?? ""}
                       onChange={(v) => upsertRole(role, { dueAt: v || null })}

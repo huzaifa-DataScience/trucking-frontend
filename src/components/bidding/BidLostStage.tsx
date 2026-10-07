@@ -11,7 +11,7 @@ export function BidLostStage() {
 
   if (!bid.workflow?.showLost) {
     return (
-      <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+      <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
         <div className="intake-section">
           <div className="intake-section-body text-[12.5px] text-[#4b5563]">
             Lost form appears after Outcome is lost / no_bid / cancelled / postponed. Open the
@@ -28,7 +28,7 @@ export function BidLostStage() {
   };
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="intake-title">Lost / no-bid</h2>
         <p className="mt-1 text-[11px] text-[#9ca3af]">

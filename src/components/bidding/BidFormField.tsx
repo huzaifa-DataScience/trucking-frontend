@@ -5,7 +5,7 @@ const inputClass =
 const selectClass = `${inputClass} pr-9`;
 
 const tableNumberClass =
-  "w-full rounded border border-[#cfd5dd] bg-white px-1.5 py-1 text-right text-[12.5px] text-[#374151] outline-none transition hover:border-[#94a3b8] focus:border-[#94a3b8] focus:ring-1 focus:ring-[rgba(148,163,184,0.28)]";
+  "w-full min-w-[4.5rem] rounded-[10px] border border-[#dbe2ea] bg-white px-2 py-1.5 text-right text-[12.5px] text-[#374151] outline-none transition hover:border-[#94a3b8] focus:border-[#94a3b8] focus:shadow-[0_0_0_2px_rgba(148,163,184,0.28)]";
 
 function SelectChevron() {
   return (

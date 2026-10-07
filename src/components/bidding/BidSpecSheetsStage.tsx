@@ -31,7 +31,7 @@ export function BidSpecSheetsStage() {
   const sheets = (draft.specSheets as SpecSheet[] | undefined) ?? EMPTY_SPEC_SHEETS;
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header>
         <h2 className="intake-title">Spec sheets</h2>
       </header>

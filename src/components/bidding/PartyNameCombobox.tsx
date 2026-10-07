@@ -602,14 +602,14 @@ export function PartyNameCombobox({
               }}
               title="Open address book"
               aria-label={`Open address book for ${label}`}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#cfd5dd] bg-[#f3f4f6] text-[#4b5563] transition hover:border-[#94a3b8] hover:bg-[#eef2f7]"
+              className="intake-icon-btn shrink-0"
             >
               <svg
-                className="h-3.5 w-3.5"
+                className="h-4 w-4"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth={2.5}
+                strokeWidth={2.25}
                 aria-hidden
               >
                 <path d="M12 5v14M5 12h14" strokeLinecap="round" />

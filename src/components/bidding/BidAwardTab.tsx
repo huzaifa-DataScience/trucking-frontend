@@ -79,7 +79,7 @@ export function BidAwardTab() {
 
   if (!bid.workflow?.showAward) {
     return (
-      <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+      <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
         <div className="intake-section">
           <div className="intake-section-body text-[12.5px] text-[#4b5563]">
             Awarded / startup appears only after you pick{" "}
@@ -105,7 +105,7 @@ export function BidAwardTab() {
   }
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="intake-title">Awarded / startup</h2>
@@ -137,7 +137,7 @@ export function BidAwardTab() {
         </p>
       ) : null}
 
-      <div className="grid grid-cols-2 items-start gap-3 max-[1000px]:grid-cols-1">
+      <div className="grid grid-cols-2 items-start gap-6 max-[1000px]:grid-cols-1">
         <section className="intake-section min-w-0">
           <div className="intake-section-head">Award details</div>
           <div className="intake-section-body">
