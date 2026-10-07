@@ -465,6 +465,44 @@ body {
 
 .bid-results-rail {
   min-width: 0;
+  /* Scroll only inside .bid-results-scroll — outer overflow caused a dark edge beside the scrollbar */
+  overflow: hidden;
+}
+
+.bid-results-card {
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  background-clip: padding-box;
+  isolation: isolate;
+}
+
+/* White track + white thumb border — kills the dark hairline beside the scrollbar */
+.bid-results-scroll {
+  background-color: #ffffff;
+  scrollbar-width: thin;
+  scrollbar-color: #c5cad3 #ffffff;
+}
+.bid-results-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.bid-results-scroll::-webkit-scrollbar-track {
+  background: #ffffff;
+  border: 0;
+}
+.bid-results-scroll::-webkit-scrollbar-thumb {
+  background: #c5cad3;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+.bid-results-scroll::-webkit-scrollbar-thumb:hover {
+  background: #9aa3b2;
+  border: 3px solid #ffffff;
+  background-clip: padding-box;
+}
+.bid-results-scroll::-webkit-scrollbar-corner {
+  background: #ffffff;
 }
 
 @media (min-width: 1280px) {
@@ -473,13 +511,13 @@ body {
     top: 0.5rem;
     max-height: calc(100vh - 10rem);
     align-self: start;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
   }
 
-  .bid-results-rail > :last-child {
+  .bid-results-rail > .bid-results-card {
     flex: 1;
-    min-height: 12rem;
+    min-height: 0;
   }
 }
 
@@ -540,14 +578,21 @@ body {
 }
 
 .intake-compact .intake-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 8px;
   margin: 0;
   padding: 8px 12px;
+  position: relative;
   background: #f3f1ea;
   color: #333333;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1.25;
+  text-align: center;
 }
 
 .intake-compact .intake-section-body {
@@ -580,6 +625,20 @@ body {
   overscroll-behavior: contain;
 }
 
+/* GCs / Invitations / Who-else+Mechanical row — equal column heights */
+.intake-compact .intake-trio-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+@media (min-width: 1001px) {
+  .intake-compact .intake-trio-row {
+    min-height: 32rem;
+  }
+}
+
 .intake-compact .intake-layer-scroll thead th {
   position: sticky;
   top: 0;
@@ -596,7 +655,9 @@ body {
 }
 
 .intake-compact .intake-field {
+  box-sizing: border-box;
   height: 2rem;
+  min-height: 2rem;
   border-radius: 6px;
   border: 1px solid #cfd5dd;
   background: #fff;
@@ -617,6 +678,49 @@ body {
 .intake-compact .intake-field:disabled {
   opacity: 0.55;
   background: #f3f4f6;
+}
+
+/* TimePicker: one flat field like Bid date — kill nested glass-app input chrome. */
+.intake-compact .intake-time-picker {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.intake-compact .intake-time-field.intake-field,
+.intake-compact .intake-time-field {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 2rem;
+  min-height: 2rem;
+  max-height: 2rem;
+}
+
+.intake-compact .intake-time-field input,
+.glass-app main .intake-time-field input,
+.glass-app main .intake-time-field input:focus {
+  box-sizing: border-box !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+  color: inherit !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
 }
 
 .intake-compact .intake-label {
@@ -721,11 +825,19 @@ body {
 .intake-compact .intake-section-head-bar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 8px;
   padding: 8px 12px;
+  position: relative;
   background: #f3f1ea;
+  text-align: center;
+}
+
+.intake-compact .intake-section-head-bar > div:first-child {
+  flex: 0 1 auto;
+  min-width: 0;
+  text-align: center;
 }
 
 .intake-compact .intake-section-head-bar h3 {
@@ -735,6 +847,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1.25;
+  text-align: center;
 }
 
 .intake-compact .intake-section-head-bar p {
@@ -878,6 +991,15 @@ body {
   vertical-align: middle;
 }
 
+/* Larger checkboxes for preference / flag groups */
+.intake-compact input[type="checkbox"].intake-check-lg,
+.intake-check-lg {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background-size: 12px 12px;
+}
+
 .intake-compact input[type="checkbox"]:hover:not(:disabled):not(:checked),
 .intake-check:hover:not(:disabled):not(:checked) {
   border-color: #94a3b8;
@@ -990,28 +1112,39 @@ body {
   line-height: 1;
 }
 
-.intake-compact .intake-section-head > .intake-head-count,
+/* Count + Add stay on the right; title stays centered (parent is position: relative). */
+.intake-compact .intake-section-head-bar > button {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-shrink: 0;
+}
+
 .intake-compact .intake-section-head-bar > .intake-head-count {
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
+  flex-shrink: 0;
 }
 
-.intake-compact .intake-section-head-bar > button {
+.intake-compact .intake-section-head-bar:not(:has(.intake-head-count)) > button {
+  right: 12px;
+}
+
+.intake-compact .intake-section-head > .intake-head-count {
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
-}
-
-.intake-compact .intake-section-head-bar:has(.intake-head-count) > button {
-  right: 48px;
+  flex-shrink: 0;
 }
 
 .intake-compact .intake-section-head-bar h3,
 .intake-compact .intake-section-head h3 {
   color: var(--ink);
+  text-align: center;
 }
 
 .intake-compact .intake-section-head-bar p,
@@ -1032,13 +1165,37 @@ body {
   -webkit-backdrop-filter: none;
 }
 
-.glass-app aside:not(.workspace-secondary-rail):not(.estimates-status-rail) {
+/* Primary nav aside only — never paint bid results / drawers as the dark sidebar */
+.glass-app
+  aside:not(.workspace-secondary-rail):not(.estimates-status-rail):not(
+    .bid-sheet-drawer
+  ):not(.bid-results-rail) {
   background: var(--sidebar);
   color: #f5f5f5;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   font-family: var(--font-geist-sans), "Roboto", system-ui, sans-serif;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+.glass-app aside.bid-results-rail {
+  background: transparent;
+  color: inherit;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.glass-app aside.bid-sheet-drawer {
+  background: #ffffff;
+  color: var(--ink);
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  border-right: none;
+  font-family: var(--font-geist-sans), "Roboto", system-ui, sans-serif;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: -12px 0 40px -12px rgba(1, 1, 1, 0.18);
 }
 
 .glass-app aside.workspace-secondary-rail,

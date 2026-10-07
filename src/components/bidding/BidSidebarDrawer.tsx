@@ -40,7 +40,7 @@ export function BidSidebarDrawer({
         aria-modal="true"
         aria-label={title}
         aria-hidden={!open}
-        className={`fixed inset-y-0 right-0 z-50 flex w-[24rem] max-w-[92vw] flex-col border-l border-ink/[0.08] bg-surface shadow-[-12px_0_40px_-12px_rgba(1,1,1,0.3)] transition-transform duration-200 ease-out ${
+        className={`bid-sheet-drawer fixed inset-y-0 right-0 z-50 flex w-[24rem] max-w-[92vw] flex-col border-l border-ink/[0.08] bg-white text-ink shadow-[-12px_0_40px_-12px_rgba(1,1,1,0.18)] transition-transform duration-200 ease-out ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -53,14 +53,14 @@ export function BidSidebarDrawer({
             type="button"
             onClick={onClose}
             aria-label={`Close ${title}`}
-            className="rounded-lg p-1.5 text-ink/40 transition hover:bg-ink/[0.06] hover:text-ink"
+            className="rounded-lg p-1.5 text-ink/50 transition hover:bg-ink/[0.06] hover:text-ink"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
             </svg>
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto bg-white px-5 py-4 text-ink">{children}</div>
       </aside>
     </>
   );

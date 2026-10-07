@@ -132,7 +132,7 @@ export function BidStageStrip({
             </TabButton>
           );
         })}
-        {takeoffOnly ? null : workflow?.showAward ? (
+        {takeoffOnly ? null : workflow?.showAward && !workflow?.showLost ? (
           <>
             <TabButton
               active={active === "award"}
@@ -143,13 +143,13 @@ export function BidStageStrip({
             </TabButton>
             <TabButton
               active={active === "production"}
-              onClick={() => go(`/production/${bidId}`)}
+              onClick={() => go(`/bidding/${bidId}?stage=production`)}
             >
               Production
             </TabButton>
           </>
         ) : null}
-        {takeoffOnly ? null : workflow?.showLost ? (
+        {takeoffOnly ? null : workflow?.showLost && !workflow?.showAward ? (
           <TabButton
             active={active === "lost"}
             onClick={() => go(`/bidding/${bidId}?stage=lost`)}

@@ -53,7 +53,8 @@ function BidWorkspaceInner() {
     router.replace(`/bidding/${bidId}?stage=takeoff`);
   }, [bidId, router, stage, takeoffOnly]);
 
-  // Post screens only when workflow allows — else send to Outcome tab
+  // Post screens only when workflow allows — else send to Outcome tab.
+  // Awarded / Lost / Production stay in bid chrome so the stage rail opens real content.
   useEffect(() => {
     if (!bidId || !bid?.workflow) return;
     if (stage === "award" && !bid.workflow.showAward) {
@@ -62,9 +63,8 @@ function BidWorkspaceInner() {
     if (stage === "lost" && !bid.workflow.showLost) {
       router.replace(`/bidding/${bidId}?stage=result`);
     }
-    // Production detail lives at /production/[id]; don't dump users into Outcome.
-    if (stage === "production") {
-      router.replace(`/production/${bidId}`);
+    if (stage === "production" && !bid.workflow.showAward) {
+      router.replace(`/bidding/${bidId}?stage=result`);
     }
   }, [bid, bidId, router, stage]);
 
