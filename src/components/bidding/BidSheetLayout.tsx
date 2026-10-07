@@ -164,24 +164,16 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
           aria-label="Estimate and stages"
           data-collapsible="false"
         >
-          <div className="flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] px-4">
+          <div className="flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] px-3">
             <button
               type="button"
               onClick={goBackToBids}
-              className="inline-flex h-8 w-fit items-center gap-2.5 text-[13px] font-medium text-ink-muted transition hover:text-ink"
+              className="inline-flex h-9 w-full items-center gap-2 rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2.5 text-[13px] font-semibold text-ink transition hover:border-ink/20 hover:bg-[#eef1f5]"
             >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
                 <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Bids
-              <span
-                className={`min-w-[3.25rem] text-[10px] font-semibold ${
-                  unsavedChanges ? "text-[#b45309]" : "text-[#9ca3af]"
-                }`}
-                aria-live="polite"
-              >
-                {unsavedChanges ? "Unsaved" : "Saved"}
-              </span>
+              Back to Bids
             </button>
           </div>
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-3">
@@ -284,20 +276,12 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
           <button
             type="button"
             onClick={goBackToBids}
-            className="inline-flex h-8 w-fit items-center gap-1.5 text-[13px] font-medium text-ink-muted transition hover:text-ink"
+            className="inline-flex h-9 w-fit items-center gap-2 rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2.5 text-[13px] font-semibold text-ink transition hover:border-ink/20 hover:bg-[#eef1f5]"
           >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+            <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
               <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Bids
-            <span
-              className={`min-w-[3.25rem] text-[10px] font-semibold ${
-                unsavedChanges ? "text-[#b45309]" : "text-[#9ca3af]"
-              }`}
-              aria-live="polite"
-            >
-              {unsavedChanges ? "Unsaved" : "Saved"}
-            </span>
+            Back to Bids
           </button>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
