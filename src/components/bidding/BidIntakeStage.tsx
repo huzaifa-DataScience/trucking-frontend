@@ -731,10 +731,10 @@ export function BidIntakeStage() {
             onChange={(e) => setBidHeader({ estimateNumber: e.target.value })}
           />
         </label>
-        <label className="intake-row">
+        <label className="intake-row !items-start">
           <span className={labelClass}>Company bidding (us)</span>
-          <div className="min-w-0">
-            <div className="relative">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="relative min-w-0">
               <select
                 className={selectClass}
                 disabled={!editable}
@@ -760,7 +760,7 @@ export function BidIntakeStage() {
               </select>
               <SelectChevron />
             </div>
-            <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
+            <span className="text-[10px] leading-tight text-[#9ca3af]">
               {draft.entityRule?.suggestedOurEntity
                 ? `Rule suggests ${draft.entityRule.suggestedOurEntity.replace(/_/g, " ")} — change anytime on Intake`
                 : "GOEL / GOEL DC / DCB — change anytime on Intake"}

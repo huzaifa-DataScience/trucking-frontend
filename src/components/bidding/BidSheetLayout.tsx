@@ -164,21 +164,19 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
           aria-label="Estimate and stages"
           data-collapsible="false"
         >
-          <div className="flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] px-3">
-            <button
-              type="button"
-              onClick={goBackToBids}
-              className="inline-flex h-9 w-full items-center gap-2 rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2.5 text-[13px] font-semibold text-ink transition hover:border-ink/20 hover:bg-[#eef1f5]"
-            >
-              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
-                <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Back to Bids
-            </button>
-          </div>
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-3">
             <div className="mb-3 space-y-1.5 border-b border-[var(--border-subtle)] px-2.5 pb-3">
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={goBackToBids}
+                  className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2 text-[12.5px] font-semibold text-ink transition hover:border-ink/20 hover:bg-[#eef1f5]"
+                >
+                  <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+                    <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Bids
+                </button>
                 <h1 className="text-[15px] font-semibold tracking-tight text-ink">
                   {bid.estimateNumber}
                 </h1>
@@ -273,19 +271,19 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-0 flex-1 flex-col gap-4">
         {/* Compact chrome on small screens only */}
         <div className="flex flex-col gap-3 border-b border-[var(--border-subtle)] pb-3 xl:hidden">
-          <button
-            type="button"
-            onClick={goBackToBids}
-            className="inline-flex h-9 w-fit items-center gap-2 rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2.5 text-[13px] font-semibold text-ink transition hover:border-ink/20 hover:bg-[#eef1f5]"
-          >
-            <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
-              <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Back to Bids
-          </button>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={goBackToBids}
+                  className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2.5 text-[13px] font-semibold text-ink transition hover:border-ink/20 hover:bg-[#eef1f5]"
+                >
+                  <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+                    <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Bids
+                </button>
                 <h1 className="text-[18px] font-semibold tracking-tight text-ink">
                   {bid.estimateNumber}
                 </h1>
