@@ -109,6 +109,17 @@ function emptyDocLink(): ProcessDocumentLink {
   return { url: "", label: null, source: "owner", checkAddenda: false };
 }
 
+function defaultOwnerTier(): ProcessContractTier {
+  return {
+    sortOrder: 0,
+    role: "owner",
+    company: null,
+    hasTheJob: null,
+    invitedUs: false,
+    isPaying: true,
+  };
+}
+
 function emptyGcOrMech(): ProcessGcOrMech {
   return {
     name: null,
@@ -283,9 +294,14 @@ export function BidIntakeStage() {
           ]
         : [];
 
-  const documentLinks: ProcessDocumentLink[] = draft.documentLinks ?? [];
-  /** Optional — start empty; user adds layers as needed (not mandatory). */
-  const tiers: ProcessContractTier[] = draft.contractTiers ?? [];
+  /** Always show at least one row so the section is never an empty shell. */
+  const documentLinks: ProcessDocumentLink[] = draft.documentLinks?.length
+    ? draft.documentLinks
+    : [emptyDocLink()];
+  /** Always show at least one contract-chain layer (default Owner / paying). */
+  const tiers: ProcessContractTier[] = draft.contractTiers?.length
+    ? draft.contractTiers
+    : [defaultOwnerTier()];
   const inviteCompanyOptions = companyOptionsFromParties(
     partiesByRole.invite_contact
   );
@@ -294,11 +310,11 @@ export function BidIntakeStage() {
 
   const emptyTier = (): ProcessContractTier => ({
     sortOrder: tiers.length,
-    role: tiers.length === 0 ? "owner" : null,
+    role: null,
     company: null,
     hasTheJob: null,
     invitedUs: false,
-    isPaying: tiers.length === 0,
+    isPaying: false,
   });
 
   const setParty = (
@@ -430,7 +446,7 @@ export function BidIntakeStage() {
   };
 
   const setTiers = (next: ProcessContractTier[]) => {
-    setField("contractTiers", next);
+    setField("contractTiers", next.length > 0 ? next : [defaultOwnerTier()]);
   };
 
   const patchTier = (index: number, patch: Partial<ProcessContractTier>) => {
@@ -1120,12 +1136,12 @@ export function BidIntakeStage() {
       </div>
 
       <div className="intake-trio-row grid grid-cols-3 items-stretch gap-3 max-[1000px]:grid-cols-1 max-[1000px]:items-start">
-      <section className="intake-section flex h-full min-h-0 min-w-0 flex-col">
-        <div className={sectionHead}>
+      <section className="intake-section flex h-full max-h-full min-h-0 min-w-0 flex-col overflow-hidden">
+        <div className={`${sectionHead} shrink-0`}>
           GCs / mechanical contractors
           <span className="intake-head-count">{gcs.length + mechs.length}</span>
         </div>
-        <div className={`${sectionBody} intake-trio-scroll flex flex-col gap-3`}>
+        <div className={`${sectionBody} intake-trio-scroll flex min-h-0 flex-1 flex-col gap-3`}>
         {(
           [
             {
@@ -1323,8 +1339,8 @@ export function BidIntakeStage() {
         </div>
       </section>
 
-      <section className="intake-section flex h-full min-h-0 min-w-0 flex-col">
-        <div className="intake-section-head-bar">
+      <section className="intake-section flex h-full max-h-full min-h-0 min-w-0 flex-col overflow-hidden">
+        <div className="intake-section-head-bar shrink-0">
           <div>
             <h3>Invitations</h3>
           </div>
@@ -1341,7 +1357,7 @@ export function BidIntakeStage() {
             </button>
           ) : null}
         </div>
-        <div className={`${sectionBody} intake-trio-scroll flex flex-col gap-2`}>
+        <div className={`${sectionBody} intake-trio-scroll flex min-h-0 flex-1 flex-col gap-2`}>
         {invitations.length === 0 ? (
           <p className="text-[12.5px] text-[#6b7280]">No invitations yet.</p>
         ) : (
@@ -1355,7 +1371,7 @@ export function BidIntakeStage() {
             return (
               <div
                 key={inv.id ?? index}
-                className="intake-stack rounded border border-[#e5e7eb] bg-[#f8fafc] p-2.5"
+                className="intake-stack shrink-0 rounded border border-[#e5e7eb] bg-[#f8fafc] p-2.5"
               >
                 <PartyNameCombobox
                   label="Company"
@@ -1726,7 +1742,7 @@ export function BidIntakeStage() {
         </div>
       </section>
 
-      <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
+      <div className="flex h-full max-h-full min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
       <section className="intake-section min-w-0 shrink-0">
         <div className={sectionHead}>
           Who else is bidding?
@@ -1802,10 +1818,7 @@ export function BidIntakeStage() {
           ) : null}
         </div>
         <div className={`${sectionBody} intake-layer-scroll flex flex-col gap-2`}>
-        {documentLinks.length === 0 ? (
-          <p className="text-[12.5px] text-[#6b7280]">No owner links yet.</p>
-        ) : (
-          documentLinks.map((link, index) => (
+          {documentLinks.map((link, index) => (
             <div
               key={index}
               className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]"
@@ -1852,7 +1865,7 @@ export function BidIntakeStage() {
                 />
                 Check addenda
               </label>
-              {editable ? (
+              {editable && documentLinks.length > 1 ? (
                 <button
                   type="button"
                   aria-label="Remove link"
@@ -1867,9 +1880,10 @@ export function BidIntakeStage() {
                         variant: "danger",
                       });
                       if (!ok) return;
+                      const next = documentLinks.filter((_, i) => i !== index);
                       setField(
                         "documentLinks",
-                        documentLinks.filter((_, i) => i !== index)
+                        next.length > 0 ? next : [emptyDocLink()]
                       );
                     })();
                   }}
@@ -1878,8 +1892,7 @@ export function BidIntakeStage() {
                 </button>
               ) : null}
             </div>
-          ))
-        )}
+          ))}
         </div>
       </section>
 
@@ -1900,11 +1913,6 @@ export function BidIntakeStage() {
           ) : null}
         </div>
         <div className={`${sectionBody} intake-layer-scroll flex flex-col gap-2`}>
-        {tiers.length === 0 ? (
-          <p className="text-[12.5px] text-[#6b7280]">
-            No layers yet — not required to hand off.
-          </p>
-        ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
@@ -2003,7 +2011,7 @@ export function BidIntakeStage() {
                         }
                       />
                     </td>
-                    {editable ? (
+                    {editable && tiers.length > 1 ? (
                       <td className="px-1.5 py-1.5 text-right">
                         <button
                           type="button"
@@ -2030,13 +2038,14 @@ export function BidIntakeStage() {
                           <TrashIcon />
                         </button>
                       </td>
+                    ) : editable ? (
+                      <td className="px-1.5 py-1.5" />
                     ) : null}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
         </div>
       </section>
 

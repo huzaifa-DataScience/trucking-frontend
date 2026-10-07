@@ -617,6 +617,14 @@ body {
   overflow: auto;
   overscroll-behavior: contain;
 }
+
+/* Addenda inside invitation cards — size to rows, scroll if many */
+.intake-compact .intake-trio-scroll .intake-rows-scroll {
+  height: auto;
+  min-height: 0;
+  max-height: 9.25rem;
+  flex-shrink: 1;
+}
 .intake-compact .intake-layer-scroll {
   height: 13rem;
   min-height: 13rem;
@@ -625,17 +633,29 @@ body {
   overscroll-behavior: contain;
 }
 
-/* GCs / Invitations / Who-else+Mechanical row — equal column heights */
+/* GCs / Invitations / Who-else+Mechanical — fill column; scroll inside */
 .intake-compact .intake-trio-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: contain;
 }
 
+/* Lock trio height so Invitations cannot stretch the row — extras scroll */
 @media (min-width: 1001px) {
   .intake-compact .intake-trio-row {
+    height: 32rem;
     min-height: 32rem;
+    max-height: 32rem;
+    align-items: stretch;
+  }
+
+  .intake-compact .intake-trio-row > .intake-section,
+  .intake-compact .intake-trio-row > .flex {
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
   }
 }
 
