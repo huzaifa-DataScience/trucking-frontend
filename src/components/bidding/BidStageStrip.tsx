@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBidSheet } from "@/contexts/BidSheetContext";
@@ -16,67 +17,113 @@ function tabQueryStage(tab: { id: string; stage?: string | null }): BidChromeSta
   return normalizeProcessStage(tab.stage || tab.id);
 }
 
-function pillLabel(pill: string | null | undefined): string | null {
-  if (pill === "complete") return "Done";
-  if (pill === "in_progress") return "In progress";
-  if (pill === "todo") return "To do";
-  return null;
-}
+const COMPACT_LABEL: Partial<Record<BidChromeStage, string>> = {
+  intake: "Intake",
+  assignment: "Assign",
+  drawings: "Drawings",
+  spec_sheets: "Spec sheets",
+  estimating_setup: "Handoff",
+  takeoff: "Takeoff",
+  proposal: "Proposal",
+  post_bid: "Post-Bid",
+  result: "Outcome",
+  award: "Awarded",
+  lost: "Lost",
+  production: "Production",
+};
+
+/** Soft shell — faint border, page bg, no harsh frame. */
+const SHELL_STYLE: CSSProperties = {
+  boxSizing: "border-box",
+  display: "flex",
+  alignItems: "center",
+  width: "100%",
+  maxWidth: "100%",
+  minHeight: 52,
+  height: 52,
+  padding: "0 6px",
+  margin: 0,
+  backgroundColor: "transparent",
+  border: "1px solid #E5E7EB",
+  borderRadius: 14,
+  boxShadow: "0 1px 2px rgba(33, 33, 33, 0.04)",
+  overflow: "hidden",
+};
+
+const SCROLL_STYLE: CSSProperties = {
+  display: "flex",
+  flexWrap: "nowrap",
+  alignItems: "center",
+  gap: 2,
+  flex: "1 1 auto",
+  minWidth: 0,
+  overflowX: "auto",
+  overflowY: "hidden",
+  msOverflowStyle: "none",
+  scrollbarWidth: "none",
+};
 
 function TabButton({
   active,
-  colorClass,
+  tone = "default",
   onClick,
   children,
-  pill,
+  tabRef,
 }: {
   active: boolean;
-  colorClass?: string;
+  tone?: "default" | "award";
   onClick: () => void;
   children: React.ReactNode;
-  pill?: string | null;
+  tabRef?: (el: HTMLButtonElement | null) => void;
 }) {
-  const pillText = pillLabel(pill);
+  const style: CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 40,
+    padding: "0 14px",
+    border: "none",
+    borderRadius: 8,
+    cursor: "pointer",
+    fontSize: 13,
+    lineHeight: 1,
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    boxShadow: "none",
+    transition: "background-color 180ms ease, color 180ms ease",
+    ...(active
+      ? tone === "award"
+        ? { backgroundColor: "#D1FAE5", color: "#047857", fontWeight: 600 }
+        : { backgroundColor: "#DBEAFE", color: "#1D4ED8", fontWeight: 600 }
+      : { backgroundColor: "transparent", color: "#616161", fontWeight: 500 }),
+  };
+
   return (
     <button
+      ref={tabRef}
       type="button"
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`relative pb-2.5 text-sm transition focus-visible:outline-none ${
-        active
-          ? `font-semibold ${colorClass ?? "text-ink"}`
-          : "font-medium text-ink/55 hover:text-ink"
-      }`}
+      style={style}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.backgroundColor = "rgba(33, 33, 33, 0.05)";
+          e.currentTarget.style.color = "#212121";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.backgroundColor = "transparent";
+          e.currentTarget.style.color = "#616161";
+        }
+      }}
     >
-      <span className="inline-flex items-center gap-1.5">
-        {children}
-        {pillText ? (
-          <span
-            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-              pill === "complete"
-                ? "bg-emerald-50 text-emerald-800"
-                : pill === "in_progress"
-                  ? "bg-brand/10 text-brand"
-                  : "bg-ink/[0.06] text-ink/45"
-            }`}
-          >
-            {pillText}
-          </span>
-        ) : null}
-      </span>
-      {active ? (
-        <span
-          className={`absolute inset-x-0 -bottom-px h-0.5 rounded-full ${
-            colorClass ? "bg-current" : "bg-brand"
-          }`}
-        />
-      ) : null}
+      {children}
     </button>
   );
 }
 
-/** Stage strip — order from workflow.tabs when the server sends it. */
 export function BidStageStrip({
   bidId,
   active,
@@ -91,10 +138,12 @@ export function BidStageStrip({
   const router = useRouter();
   const { user } = useAuth();
   const { confirmLeaveUnsaved } = useBidSheet();
+  const activeRef = useRef<HTMLButtonElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
   const showOutcome = workflow?.showOutcomeTab !== false;
   const takeoffOnly = user?.role === "assistant_estimator" || user?.role === "user";
 
-  const pillById = new Map((workflow?.tabs ?? []).map((t) => [t.id, t.pill ?? null]));
   const source = takeoffOnly
     ? BID_HANDOFF_STAGES.filter((s) => s.id === "takeoff")
     : BID_HANDOFF_STAGES.filter((s) => s.id !== "result" || showOutcome);
@@ -102,7 +151,7 @@ export function BidStageStrip({
     id: s.id,
     stage: s.id,
     label: s.label,
-    pill: pillById.get(s.id) ?? pillById.get(s.id === "spec_sheets" ? "specs" : s.id) ?? null,
+    compact: COMPACT_LABEL[s.id] ?? s.label,
   }));
 
   const go = (href: string) => {
@@ -112,51 +161,95 @@ export function BidStageStrip({
     })();
   };
 
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({
+      behavior: "smooth",
+      inline: "nearest",
+      block: "nearest",
+    });
+  }, [active]);
+
+  // Extra belt-and-suspenders: kill webkit scrollbar on the scroll node.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const style = document.createElement("style");
+    style.setAttribute("data-bid-stage-tabs", "1");
+    style.textContent = `
+      [data-bid-stage-scroll]::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      style.remove();
+    };
+  }, []);
+
   return (
-    <nav aria-label="Bid workflow stages" className="flex flex-col gap-3">
-      <div
-        role="tablist"
-        aria-label="Bid stage"
-        className="flex flex-wrap items-center gap-5 border-b border-ink/[0.08]"
-      >
-        {tabs.map((t) => {
-          const stage = tabQueryStage(t);
-          return (
+    <nav aria-label="Bid workflow stages" style={{ minWidth: 0, maxWidth: "100%" }}>
+      <div style={SHELL_STYLE} className="bid-stage-tabs-shell" data-bid-stage-shell="1">
+        <div
+          ref={scrollRef}
+          role="tablist"
+          aria-label="Bid stage"
+          data-bid-stage-scroll="1"
+          style={SCROLL_STYLE}
+          className="bid-stage-tabs-scroll"
+        >
+          {tabs.map((t) => {
+            const stage = tabQueryStage(t);
+            const isActive = active === stage;
+            return (
+              <TabButton
+                key={t.id}
+                active={isActive}
+                tabRef={isActive ? (el) => { activeRef.current = el; } : undefined}
+                onClick={() => go(`/bidding/${bidId}?stage=${stage}`)}
+              >
+                <span className="sm:hidden">{t.compact}</span>
+                <span className="hidden sm:inline">{t.label}</span>
+              </TabButton>
+            );
+          })}
+          {takeoffOnly ? null : workflow?.showAward && !workflow?.showLost ? (
+            <>
+              <TabButton
+                active={active === "award"}
+                tone="award"
+                tabRef={
+                  active === "award"
+                    ? (el) => { activeRef.current = el; }
+                    : undefined
+                }
+                onClick={() => go(`/bidding/${bidId}?stage=award`)}
+              >
+                Awarded
+              </TabButton>
+              <TabButton
+                active={active === "production"}
+                tabRef={
+                  active === "production"
+                    ? (el) => { activeRef.current = el; }
+                    : undefined
+                }
+                onClick={() => go(`/bidding/${bidId}?stage=production`)}
+              >
+                <span className="sm:hidden">Prod</span>
+                <span className="hidden sm:inline">Production</span>
+              </TabButton>
+            </>
+          ) : null}
+          {takeoffOnly ? null : workflow?.showLost && !workflow?.showAward ? (
             <TabButton
-              key={t.id}
-              active={active === stage}
-              pill={t.pill}
-              onClick={() => go(`/bidding/${bidId}?stage=${stage}`)}
+              active={active === "lost"}
+              tabRef={
+                active === "lost" ? (el) => { activeRef.current = el; } : undefined
+              }
+              onClick={() => go(`/bidding/${bidId}?stage=lost`)}
             >
-              {t.label}
+              Lost
             </TabButton>
-          );
-        })}
-        {takeoffOnly ? null : workflow?.showAward && !workflow?.showLost ? (
-          <>
-            <TabButton
-              active={active === "award"}
-              colorClass="text-emerald-700"
-              onClick={() => go(`/bidding/${bidId}?stage=award`)}
-            >
-              Awarded
-            </TabButton>
-            <TabButton
-              active={active === "production"}
-              onClick={() => go(`/bidding/${bidId}?stage=production`)}
-            >
-              Production
-            </TabButton>
-          </>
-        ) : null}
-        {takeoffOnly ? null : workflow?.showLost && !workflow?.showAward ? (
-          <TabButton
-            active={active === "lost"}
-            onClick={() => go(`/bidding/${bidId}?stage=lost`)}
-          >
-            Lost
-          </TabButton>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </nav>
   );

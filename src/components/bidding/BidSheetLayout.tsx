@@ -382,32 +382,34 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
         </aside>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4">
-        {/* Compact chrome on small screens only */}
-        <div className="flex flex-col gap-3 border-b border-[var(--border-subtle)] pb-3 xl:hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2.5">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 sm:gap-4">
+        {/* Compact chrome on small screens / tablet — xl+ uses the secondary rail */}
+        <div className="flex flex-col gap-2 border-0 pb-0 xl:hidden sm:gap-2.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={goBackToBids}
-                  className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2.5 text-[13px] font-semibold text-ink transition hover:border-ink/20 hover:bg-[#eef1f5]"
+                  className="inline-flex h-8 shrink-0 items-center gap-1 rounded-[var(--radius)] border border-[var(--border-subtle)] bg-canvas px-2 text-[12.5px] font-semibold text-ink transition hover:border-ink/20 hover:bg-[#eef1f5] sm:gap-1.5 sm:px-2.5 sm:text-[13px]"
                 >
                   <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
                     <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  Bids
+                  <span>Bids</span>
                 </button>
-                <h1 className="text-[18px] font-semibold tracking-tight text-ink">
+                <h1 className="truncate text-[16px] font-semibold tracking-tight text-ink sm:text-[18px]">
                   {bid.estimateNumber}
                 </h1>
-                <BidStatusBadge status={bid.status} />
+                <BidStatusBadge status={bid.status} size="sm" />
               </div>
-              <p className="mt-1 text-[13px] font-medium text-ink">
+              <p className="mt-0.5 truncate text-[12.5px] font-medium text-ink sm:mt-1 sm:text-[13px]">
                 {bid.bidName || "Untitled estimate"}
               </p>
             </div>
-            <BidSaveButton />
+            <div className="shrink-0 pt-0.5">
+              <BidSaveButton />
+            </div>
           </div>
           <BidStageStrip
             bidId={bid.id}
@@ -417,12 +419,13 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
           />
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col pb-28">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col pb-20 sm:pb-24 xl:pb-28">
           {children}
         </div>
       </div>
 
-      <div className="fixed bottom-5 right-4 z-50 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
+      {/* Phone: bottom dock. sm+: corner stack */}
+      <div className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-center gap-2 border-t border-[var(--border-subtle)] bg-white/95 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:inset-x-auto sm:bottom-6 sm:right-6 sm:flex-col sm:items-end sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
         <BidFloatingButton
           label="Notes"
           icon={<NotesIcon />}

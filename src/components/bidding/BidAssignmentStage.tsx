@@ -193,7 +193,7 @@ export function BidAssignmentStage() {
   const rowFor = (role: TakeoffRole) => rows.find((r) => r.role === role);
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-4 overflow-auto sm:gap-6">
       <header>
         <h2 className="intake-title">Assignment</h2>
         <p className="intake-sub mt-0.5">
@@ -361,7 +361,8 @@ export function BidAssignmentStage() {
                 }
               />
             </label>
-            <label className="intake-row">
+            {/* div not label — native <label> prevents react-aria DatePicker popover from staying open */}
+            <div className="intake-row">
               <span className={labelClass}>Internal estimate due</span>
               <DatePicker
                 ariaLabel="Internal estimate due"
@@ -370,8 +371,8 @@ export function BidAssignmentStage() {
                 value={a.internalEstimateDue?.slice(0, 10) ?? ""}
                 onChange={(v) => setAssignment({ internalEstimateDue: v || null })}
               />
-            </label>
-            <label className="intake-row">
+            </div>
+            <div className="intake-row">
               <span className={labelClass}>Internal review due</span>
               <DatePicker
                 ariaLabel="Internal review due"
@@ -380,7 +381,7 @@ export function BidAssignmentStage() {
                 value={a.internalReviewDue?.slice(0, 10) ?? ""}
                 onChange={(v) => setAssignment({ internalReviewDue: v || null })}
               />
-            </label>
+            </div>
           </div>
         </section>
 
@@ -390,7 +391,7 @@ export function BidAssignmentStage() {
           <p className="text-[11px] text-[#6b7280]">
             Team/captain pick prefills blank roles. Assignees see due dates on their calendar.
           </p>
-          <div className="grid grid-cols-3 items-start gap-6 max-[900px]:grid-cols-1">
+          <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
             {(
               [
                 ["Duct", ["duct1", "duct2"]],
@@ -419,7 +420,7 @@ export function BidAssignmentStage() {
                           }
                         />
                       </label>
-                      <label className="flex min-w-0 flex-col gap-0.5">
+                      <div className="flex min-w-0 flex-col gap-0.5">
                         <span className={labelClass}>Due</span>
                         <DatePicker
                           ariaLabel={`${role} takeoff due`}
@@ -428,14 +429,14 @@ export function BidAssignmentStage() {
                           value={row?.dueAt?.slice(0, 10) ?? ""}
                           onChange={(v) => upsertRole(role, { dueAt: v || null })}
                         />
-                      </label>
+                      </div>
                     </div>
                   );
                 })}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-3 items-start gap-6 border-t border-[#e8ecf1] pt-5 max-[900px]:grid-cols-1">
+          <div className="grid grid-cols-1 items-start gap-5 border-t border-[#e8ecf1] pt-4 sm:grid-cols-2 sm:gap-5 sm:pt-5 lg:grid-cols-3 lg:gap-6">
             {(["vrf", "equipment", "other"] as const).map((role) => {
               const row = rowFor(role);
               return (
@@ -453,7 +454,7 @@ export function BidAssignmentStage() {
                       }
                     />
                   </label>
-                  <label className="flex min-w-0 flex-col gap-0.5">
+                  <div className="flex min-w-0 flex-col gap-0.5">
                     <span className={labelClass}>Due</span>
                     <DatePicker
                       ariaLabel={`${role} takeoff due`}
@@ -462,7 +463,7 @@ export function BidAssignmentStage() {
                       value={row?.dueAt?.slice(0, 10) ?? ""}
                       onChange={(v) => upsertRole(role, { dueAt: v || null })}
                     />
-                  </label>
+                  </div>
                 </div>
               );
             })}

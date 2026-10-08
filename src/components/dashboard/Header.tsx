@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { roleLabel } from "@/lib/auth/roles";
+import { userFullName } from "@/lib/auth/user-name";
 import { getJobTickets } from "@/lib/api/endpoints/job-dashboard";
 import type { ApiTicketRow } from "@/lib/api/types";
 import { useLookups } from "@/hooks/useLookups";
@@ -22,6 +23,11 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const profileName = userFullName(user);
+  const profileEmail = user?.email?.trim() ?? "";
+  const showProfileEmail =
+    Boolean(profileEmail) &&
+    profileName.toLowerCase() !== profileEmail.toLowerCase();
 
   // Search bar only ever reads jobs/materials — skip haulers/truckTypes/ourEntities,
   // which every other page load was fetching unused (competing with real requests
@@ -335,7 +341,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
                 aria-label="Account menu"
-                title={user.displayName || user.email}
+                title={profileName}
               >
                 <AvatarCircle user={user} />
                 <svg
@@ -358,12 +364,10 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                   <div className="flex items-center gap-3 border-b border-ink/[0.06] p-4">
                     <AvatarCircle user={user} size="lg" />
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-ink">
-                        {user.displayName ||
-                          [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-                          user.email}
-                      </p>
-                      <p className="truncate text-xs text-ink-muted">{user.email}</p>
+                      <p className="truncate text-sm font-semibold text-ink">{profileName}</p>
+                      {showProfileEmail ? (
+                        <p className="truncate text-xs text-ink-muted">{profileEmail}</p>
+                      ) : null}
                       <p className="mt-0.5 text-xs font-medium text-ink">{roleLabel(user.role)}</p>
                     </div>
                   </div>

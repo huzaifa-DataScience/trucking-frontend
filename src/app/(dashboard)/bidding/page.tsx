@@ -1082,32 +1082,32 @@ export default function BiddingListPage() {
         </p>
       ) : null}
 
-      <div className="w-fit rounded-2xl border border-white/70 bg-white/45 px-5 py-4 shadow-[0_6px_16px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl">
+      <div className="flex w-full items-baseline gap-2 rounded-xl border border-[var(--border-subtle)] bg-surface px-3.5 py-3 sm:w-fit sm:rounded-2xl sm:border-white/70 sm:bg-white/45 sm:px-5 sm:py-4 sm:shadow-[0_6px_16px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] sm:backdrop-blur-xl">
         {loading && bids.length === 0 ? (
           <Skeleton className="h-9 w-24" />
         ) : (
-          <div>
-            <p className="text-2xl font-semibold leading-none text-ink">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 sm:block">
+            <p className="text-xl font-semibold leading-none text-ink sm:text-2xl">
               {filteredTotal.toLocaleString()}
               {!serverPaged && filteredTotal !== counts.total ? (
-                <span className="text-base font-normal text-ink/40"> of {counts.total}</span>
+                <span className="text-sm font-normal text-ink/40 sm:text-base"> of {counts.total}</span>
               ) : null}
             </p>
-            <p className="mt-1.5 text-xs font-medium uppercase tracking-wide text-ink/40">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-ink/40 sm:mt-1.5 sm:text-xs">
               {status === "all" ? "Estimates shown" : `${STATUS_FILTERS.find((f) => f.value === status)?.label} estimates shown`}
             </p>
           </div>
         )}
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4">
         {/* Record status — below xl only; xl+ uses secondary sidebar */}
         <div
-          className="sticky top-14 z-20 -mx-4 border-b border-[var(--border-subtle)] bg-canvas px-4 sm:top-[3.75rem] sm:-mx-6 sm:px-6 xl:hidden"
+          className="sticky top-14 z-20 -mx-4 border-b border-[var(--border-subtle)] bg-canvas px-4 sm:top-[3.75rem] sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6 xl:hidden"
           role="tablist"
           aria-label="Estimate record status"
         >
-          <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-nowrap items-center gap-0.5 overflow-x-auto pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-1">
             {STATUS_FILTERS.map((f) => {
               const active = status === f.value;
               const count = tabCount(f.value);
@@ -1117,7 +1117,7 @@ export default function BiddingListPage() {
                   type="button"
                   onClick={() => (f.value === "all" ? applyStatus("all") : toggleStatus(f.value))}
                   aria-pressed={active}
-                  className={`relative shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-[13px] transition focus-visible:outline-none ${
+                  className={`relative shrink-0 whitespace-nowrap rounded-md px-2.5 py-2 text-[12.5px] transition focus-visible:outline-none sm:px-3 sm:text-[13px] ${
                     active
                       ? "bg-brand-tint font-semibold text-ink"
                       : "font-medium text-ink-muted hover:bg-canvas hover:text-ink"
@@ -1136,8 +1136,8 @@ export default function BiddingListPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          {showFilter("search") ? <div className="w-full sm:mr-auto sm:w-[320px]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-6 sm:gap-y-3">
+          {showFilter("search") ? <div className="w-full min-w-0 sm:mr-auto sm:w-[320px]">
             <div className="relative">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" aria-hidden>
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
