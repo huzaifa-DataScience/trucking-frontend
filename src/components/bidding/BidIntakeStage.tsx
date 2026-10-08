@@ -646,7 +646,7 @@ export function BidIntakeStage() {
   }
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-4 overflow-auto sm:gap-6">
       <header>
         <h2 className="intake-title">Intake</h2>
         <p className="intake-sub">
@@ -712,8 +712,9 @@ export function BidIntakeStage() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-3 items-stretch gap-6 max-[1000px]:grid-cols-1">
-      <section className="intake-section flex h-full min-w-0 flex-col row-span-2 max-[1000px]:row-span-1">
+      {/* 1 col until 2xl — with dual sidebars, lg 3-col crushes fields */}
+      <div className="grid grid-cols-1 items-stretch gap-4 sm:gap-5 2xl:grid-cols-3 2xl:gap-6">
+      <section className="intake-section flex h-full min-w-0 flex-col 2xl:row-span-2">
         <h3 className={sectionHead}>Bid identity</h3>
         <div className={`${sectionBody} intake-stack flex-1`}>
         <label className="intake-row">
@@ -912,7 +913,7 @@ export function BidIntakeStage() {
             </div>
           </label>
         ) : null}
-        <label className="intake-row">
+        <div className="intake-row">
           <span className={labelClass}>Bid date</span>
           <DatePicker
             ariaLabel="Bid date"
@@ -931,7 +932,7 @@ export function BidIntakeStage() {
               }
             }}
           />
-        </label>
+        </div>
         <label className="intake-row">
           <span className={labelClass}>Bid time</span>
           <TimePicker
@@ -1124,12 +1125,12 @@ export function BidIntakeStage() {
           </div>
         </section>
         {renderPartySection("owner", "Owner", "owner")}
-        <div className="col-span-2 min-w-0 max-[1000px]:col-span-1">
+        <div className="min-w-0 2xl:col-span-2">
           {renderPartySection("architect", "Architect", "architect")}
         </div>
       </div>
 
-      <div className="intake-trio-row grid grid-cols-3 items-stretch gap-6 max-[1000px]:grid-cols-1 max-[1000px]:items-start">
+      <div className="intake-trio-row grid grid-cols-1 items-start gap-4 sm:gap-5 2xl:grid-cols-3 2xl:items-stretch 2xl:gap-6">
       <section className="intake-section flex h-full max-h-full min-h-0 min-w-0 flex-col overflow-hidden">
         <div className={`${sectionHead} shrink-0`}>
           GCs / mechanical contractors
@@ -1418,7 +1419,7 @@ export function BidIntakeStage() {
                     })
                   }
                 />
-                <label className="intake-row">
+                <div className="intake-row">
                   <span className={labelClass}>Received</span>
                   <DatePicker
                     ariaLabel="Received"
@@ -1431,7 +1432,7 @@ export function BidIntakeStage() {
                       })
                     }
                   />
-                </label>
+                </div>
                 <PartyNameCombobox
                   label="Contact name"
                   value={inv.contact?.name ?? ""}
@@ -1649,7 +1650,7 @@ export function BidIntakeStage() {
                             }}
                           />
                         </label>
-                        <label className="intake-row">
+                        <div className="intake-row">
                           <span className={labelClass}>Received</span>
                           <DatePicker
                             ariaLabel="Received"
@@ -1668,7 +1669,7 @@ export function BidIntakeStage() {
                               patchInvitation(index, { addenda: next });
                             }}
                           />
-                        </label>
+                        </div>
                         <label className="intake-row">
                           <span className={labelClass}>Notes</span>
                           <input
@@ -1805,7 +1806,7 @@ export function BidIntakeStage() {
       </div>
       </div>
 
-      <div className="grid grid-cols-2 items-start gap-6 max-[1000px]:grid-cols-1">
+      <div className="grid grid-cols-1 items-start gap-4 sm:gap-5 xl:grid-cols-2 xl:gap-6">
       <section className="intake-section min-w-0">
         <div className="intake-section-head-bar">
           <div>

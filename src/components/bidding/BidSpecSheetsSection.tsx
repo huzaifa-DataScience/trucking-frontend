@@ -1459,12 +1459,13 @@ export function BidSpecSheetsSection({
   return (
     <div className="flex flex-col gap-3">
       <section className="intake-section">
-        <div className="intake-section-head-bar">
-          <div>
+        {/* Normal flow (not absolute) so +Duct / +HVAC wrap cleanly on phone */}
+        <div className="intake-section-head-bar !flex-col !items-stretch !justify-start gap-2.5 sm:!flex-row sm:!flex-wrap sm:!items-center sm:!justify-between">
+          <div className="min-w-0 text-center sm:flex-1 sm:text-left">
             <h3>Spec sheets</h3>
           </div>
           {editable ? (
-            <div className="absolute right-3 top-1/2 flex max-w-[min(100%,28rem)] -translate-y-1/2 flex-wrap items-center justify-end gap-1">
+            <div className="flex flex-wrap items-center justify-center gap-1.5 sm:max-w-[min(100%,28rem)] sm:justify-end">
               {ADD_KINDS.map((kind) => (
                 <button
                   key={kind}
@@ -1476,7 +1477,10 @@ export function BidSpecSheetsSection({
                   title={`Add ${kindLabel(kind)}`}
                 >
                   <PlusIcon className="h-3.5 w-3.5 shrink-0" />
-                  {kindLabel(kind)}
+                  <span className="max-[380px]:hidden">{kindLabel(kind)}</span>
+                  <span className="hidden max-[380px]:inline">
+                    {kindLabel(kind).split(" ")[0]}
+                  </span>
                 </button>
               ))}
             </div>

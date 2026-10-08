@@ -29,6 +29,7 @@ import {
   NavIconBell,
 } from "@/components/dashboard/DashboardNavIcons";
 import type { AuthUser } from "@/lib/auth/types";
+import { userFullName } from "@/lib/auth/user-name";
 import { useChatUnreadTotal } from "@/hooks/useChatUnreadTotal";
 import { ChatUnreadBadge } from "@/components/workforce/chat/ChatUnreadBadge";
 import { BID_HANDOFF_STAGES } from "@/lib/bidding/process-types";
@@ -169,12 +170,7 @@ function userInitials(user: AuthUser | null): string {
 }
 
 function displayName(user: AuthUser | null): string {
-  if (!user) return "User";
-  return (
-    user.displayName ||
-    [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-    user.email
-  );
+  return userFullName(user);
 }
 
 function itemIsActive(
