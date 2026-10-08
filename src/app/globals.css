@@ -272,6 +272,76 @@ body {
   background-clip: padding-box;
 }
 
+/*
+ * Bid stage strip — MUST come after the global * scrollbar rules above,
+ * otherwise *::-webkit-scrollbar { height: 8px } wins and the bottom
+ * scrollbar reappears (looking like a fake border / no real border).
+ */
+.bid-stage-tabs-shell {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 52px !important;
+  padding: 0 6px !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 1px 2px rgba(33, 33, 33, 0.04) !important;
+  outline: none !important;
+  overflow: hidden !important;
+}
+.bid-stage-tabs-shell [role="tab"] {
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 8px !important;
+}
+.bid-stage-tabs-shell [role="tab"][aria-selected="false"] {
+  background: transparent !important;
+  color: var(--ink-muted) !important;
+  font-weight: 500 !important;
+}
+.bid-stage-tabs-shell [role="tab"][aria-selected="false"]:hover {
+  background: rgba(33, 33, 33, 0.05) !important;
+  color: var(--ink) !important;
+}
+.bid-stage-tabs-shell [role="tab"][aria-selected="true"] {
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+  font-weight: 600 !important;
+}
+
+.bid-stage-tabs-scroll {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-x: contain;
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}
+.bid-stage-tabs-scroll::-webkit-scrollbar,
+.bid-stage-tabs-scroll::-webkit-scrollbar-track,
+.bid-stage-tabs-scroll::-webkit-scrollbar-thumb,
+[data-bid-stage-scroll]::-webkit-scrollbar,
+[data-bid-stage-scroll]::-webkit-scrollbar-track,
+[data-bid-stage-scroll]::-webkit-scrollbar-thumb {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
 /* Layered "expensive" card shadow (soft key + tight contact) */
 .ui-shadow-card {
   box-shadow:
@@ -642,8 +712,8 @@ body {
   overscroll-behavior: contain;
 }
 
-/* Lock trio height so Invitations cannot stretch the row — extras scroll */
-@media (min-width: 1001px) {
+/* Lock trio height only when 3-col is actually active (2xl+) */
+@media (min-width: 1536px) {
   .intake-compact .intake-trio-row {
     height: 32rem;
     min-height: 32rem;
@@ -751,6 +821,16 @@ body {
   line-height: 1.2;
 }
 
+.intake-compact {
+  container-type: inline-size;
+  container-name: intake;
+}
+
+.intake-compact .intake-section {
+  container-type: inline-size;
+  container-name: intake-panel;
+}
+
 .intake-compact .intake-row {
   display: grid;
   grid-template-columns: 5.5rem minmax(0, 1fr);
@@ -759,6 +839,118 @@ body {
   row-gap: 0.15rem;
   min-width: 0;
   width: 100%;
+}
+
+/* When a panel is narrow (3-col / dual sidebar squeeze), stack label above field */
+@container intake-panel (max-width: 420px) {
+  .intake-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    row-gap: 0.3rem;
+  }
+
+  .intake-row > .intake-label {
+    padding-top: 0;
+  }
+}
+
+/* Whole intake column tight — prefer stacked rows over crushed side-by-side */
+@container intake (max-width: 720px) {
+  .intake-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    row-gap: 0.3rem;
+  }
+
+  .intake-row > .intake-label {
+    padding-top: 0;
+  }
+
+  .intake-section-body {
+    padding: 12px 12px 14px;
+  }
+}
+
+/* Phone / narrow tablet */
+@media (max-width: 767px) {
+  .intake-compact {
+    padding: 8px 0 20px;
+    gap: 0.85rem !important;
+  }
+
+  .intake-compact .intake-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    row-gap: 0.3rem;
+  }
+
+  .intake-compact .intake-row > .intake-label {
+    padding-top: 0;
+  }
+
+  .intake-compact .intake-section-body {
+    padding: 12px 12px 14px;
+  }
+
+  .intake-compact .intake-section-head,
+  .intake-compact .intake-section-head-bar {
+    padding: 8px 12px;
+  }
+
+  .intake-compact .intake-section {
+    border-radius: 12px;
+  }
+
+  /* Spec sheets etc. — never pin head actions absolute on phone (causes overlap) */
+  .intake-compact .intake-section-head-bar > button,
+  .intake-compact .intake-section-head-bar:not(:has(.intake-head-count)) > button {
+    position: static;
+    right: auto;
+    top: auto;
+    transform: none;
+  }
+
+  .intake-compact .intake-section-head-bar > .intake-head-count,
+  .intake-compact .intake-section-head > .intake-head-count {
+    position: static;
+    right: auto;
+    top: auto;
+    transform: none;
+  }
+
+  /* Don’t reserve tall empty boxes — + / content stay near the section head */
+  .intake-compact .intake-rows-scroll {
+    height: auto;
+    min-height: 0;
+    max-height: 14rem;
+  }
+
+  .intake-compact .intake-layer-scroll {
+    height: auto;
+    min-height: 0;
+    max-height: 16rem;
+  }
+
+  .intake-compact .intake-gc-layers {
+    height: auto;
+    min-height: 0;
+    max-height: 18rem;
+  }
+
+  .intake-compact .intake-trio-scroll .intake-rows-scroll {
+    max-height: 12rem;
+  }
+}
+
+/* Tablet: slightly wider label column when side-by-side still fits */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .intake-compact {
+    padding: 12px 8px 20px;
+  }
+
+  .intake-compact .intake-section-body {
+    padding: 12px 14px 14px;
+  }
 }
 
 .intake-compact .intake-row > .intake-label {

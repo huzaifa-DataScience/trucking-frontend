@@ -82,8 +82,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         className={`flex min-h-dvh min-w-0 flex-col pl-0 transition-[padding] duration-200 ${mainOffset}`}
       >
         <Header onMenuClick={() => setMobileNavOpen(true)} />
-        <main className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-4 bg-transparent px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-5">
-          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-4">{children}</div>
+        <main className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3 bg-transparent px-3 py-3 sm:gap-4 sm:px-5 sm:py-5 lg:px-6 lg:py-5">
+          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3 sm:gap-4">{children}</div>
         </main>
       </div>
     </div>

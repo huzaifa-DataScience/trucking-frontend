@@ -47,7 +47,9 @@ export function PageHeader({
           </nav>
         ) : null}
         <h1 className="cs-page-title">{title}</h1>
-        {subtitle ? <p className="cs-helper mt-1 max-w-2xl">{subtitle}</p> : null}
+        {subtitle ? (
+          <p className="cs-helper mt-1 hidden max-w-2xl sm:block">{subtitle}</p>
+        ) : null}
       </div>
       {action ? <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div> : null}
     </div>

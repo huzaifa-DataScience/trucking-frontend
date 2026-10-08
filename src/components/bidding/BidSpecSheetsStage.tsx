@@ -31,23 +31,30 @@ export function BidSpecSheetsStage() {
   const sheets = (draft.specSheets as SpecSheet[] | undefined) ?? EMPTY_SPEC_SHEETS;
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-4 overflow-auto sm:gap-6">
       <header>
         <h2 className="intake-title">Spec sheets</h2>
+        <p className="intake-sub">
+          {saving
+            ? "Saving…"
+            : dirty
+              ? "Unsaved changes"
+              : editable
+                ? "Save to keep changes"
+                : "Read only"}
+        </p>
       </header>
-      <BidHubFiles
-        title="Specifications"
-        attachments={(bid.attachments ?? []).filter((a) => a.label === "specifications")}
-      />
-      <p className="intake-sub">
-        {saving ? "Saving…" : dirty ? "Unsaved changes" : editable ? "Save to keep changes" : "Read only"}
-      </p>
 
       {error ? (
         <p className="rounded border border-danger/25 bg-danger-tint/40 px-3 py-1.5 text-[12.5px] text-danger">
           {error}
         </p>
       ) : null}
+
+      <BidHubFiles
+        title="Specifications"
+        attachments={(bid.attachments ?? []).filter((a) => a.label === "specifications")}
+      />
 
       <BidSpecSheetsSection
         sheets={sheets}
