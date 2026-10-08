@@ -241,20 +241,20 @@ function AddressBookModal({
     >
       <div
         className="flex w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-[#d5dbe3] bg-white shadow-xl"
-        style={{ maxHeight: "min(88dvh, 900px)" }}
+        style={{ maxHeight: "min(92dvh, 900px)", height: "min(92dvh, 900px)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-[var(--border-subtle)] bg-brand-tint px-4 py-2.5">
+        <div className="shrink-0 border-b border-[var(--border-subtle)] bg-brand-tint px-3 py-2.5 sm:px-4">
           <h3 className="text-[13px] font-semibold tracking-wide text-ink">
             {title}
           </h3>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-canvas px-4 py-2.5">
-          <span className="inline-flex items-center rounded-md border border-brand/25 bg-brand-tint px-2.5 py-1 text-[11px] font-semibold text-ink">
+        <div className="flex shrink-0 flex-col gap-2 border-b border-[var(--border-subtle)] bg-canvas px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-4">
+          <span className="inline-flex w-fit items-center rounded-md border border-brand/25 bg-brand-tint px-2.5 py-1 text-[11px] font-semibold text-ink">
             Email Address Book
           </span>
-          <div className="relative min-w-[14rem] flex-1 sm:max-w-sm">
+          <div className="relative w-full min-w-0 flex-1 sm:max-w-sm">
             <span
               className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9ca3af]"
               aria-hidden
@@ -275,13 +275,76 @@ function AddressBookModal({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name or email…"
-              className="h-8 w-full rounded-md border border-[#cfd5dd] bg-white pl-8 pr-2.5 text-[13.5px] text-[#374151] outline-none transition focus:border-[#94a3b8] focus:shadow-[0_0_0_2px_rgba(148,163,184,0.28)]"
+              className="h-9 w-full rounded-md border border-[#cfd5dd] bg-white pl-8 pr-2.5 text-[13.5px] text-[#374151] outline-none transition focus:border-[#94a3b8] focus:shadow-[0_0_0_2px_rgba(148,163,184,0.28)] sm:h-8"
             />
           </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto">
-          <table className="w-full min-w-[40rem] border-collapse text-left text-[12.5px] text-[#374151]">
+          {/* Phone / tablet: cards with + always visible — no sideways scroll */}
+          <ul className="divide-y divide-[var(--border-subtle)] md:hidden">
+            {loading && pageRows.length === 0 ? (
+              <li className="px-3 py-8 text-center text-[12.5px] text-[#9ca3af]">
+                Loading contacts…
+              </li>
+            ) : pageRows.length === 0 ? (
+              <li className="px-3 py-8 text-center text-[12.5px] text-[#9ca3af]">
+                No contacts match.
+              </li>
+            ) : (
+              pageRows.map((o) => {
+                const { label, tags } = nameWithStatus(o);
+                return (
+                  <li
+                    key={String(o.id)}
+                    className="flex items-start gap-3 px-3 py-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-medium leading-snug text-ink">
+                        {tags.length > 0 ? (
+                          <span className="text-[#9ca3af]">
+                            ({tags.join(", ")}){" "}
+                          </span>
+                        ) : null}
+                        {label}
+                      </p>
+                      {o.company ? (
+                        <p className="mt-0.5 truncate text-[12px] text-ink-muted">
+                          {o.company}
+                        </p>
+                      ) : null}
+                      {(o.email || o.phone) ? (
+                        <p className="mt-0.5 truncate text-[11.5px] text-[#9ca3af]">
+                          {[o.email, o.phone].filter(Boolean).join(" · ")}
+                        </p>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      title="Add this contact"
+                      aria-label={`Add ${label}`}
+                      onClick={() => onPick(o)}
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-brand/30 bg-brand-tint text-brand transition hover:bg-brand hover:text-white"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                        aria-hidden
+                      >
+                        <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+
+          {/* Desktop table */}
+          <table className="hidden w-full border-collapse text-left text-[12.5px] text-[#374151] md:table">
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-[#e5e7eb] bg-[#f3f4f6] text-left text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
                 <th className="px-3 py-2">Name</th>
@@ -373,7 +436,7 @@ function AddressBookModal({
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-center gap-1 border-t border-[#e5e7eb] bg-[#f8fafc] px-4 py-2.5">
+        <div className="flex shrink-0 flex-wrap items-center justify-center gap-1 border-t border-[#e5e7eb] bg-[#f8fafc] px-3 py-2 sm:px-4 sm:py-2.5">
           {(
             [
               ["First", 1],
@@ -422,11 +485,11 @@ function AddressBookModal({
           ))}
         </div>
 
-        <div className="flex justify-end border-t border-[#e5e7eb] px-4 py-2.5">
+        <div className="flex shrink-0 justify-end border-t border-[#e5e7eb] px-3 py-2.5 sm:px-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-[#cfd5dd] bg-[#f8fafc] px-3 py-1 text-[11px] font-semibold text-[#4b5563] transition hover:border-[#94a3b8] hover:bg-[#f1f5f9]"
+            className="rounded-md border border-[#cfd5dd] bg-[#f8fafc] px-3 py-1.5 text-[12px] font-semibold text-[#4b5563] transition hover:border-[#94a3b8] hover:bg-[#f1f5f9]"
           >
             Close
           </button>

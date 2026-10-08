@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { parseDate, type CalendarDate } from "@internationalized/date";
 import {
   Button,
@@ -28,6 +29,9 @@ import {
  * Value/onChange use the same "YYYY-MM-DD" string format the native input
  * produced (parses/serializes via @internationalized/date), so it drops in
  * wherever startDate/endDate-style fields already live.
+ *
+ * On small screens, tapping anywhere in the field opens the calendar (native
+ * date inputs do this). The icon alone was too easy to miss / miss-hit.
  */
 
 function parseDateValue(value: string | null | undefined): CalendarDate | null {
@@ -40,9 +44,9 @@ function parseDateValue(value: string | null | undefined): CalendarDate | null {
 }
 
 const popoverClass =
-  "w-auto overflow-auto rounded-xl border border-ink/10 bg-surface p-3 shadow-lg outline-none";
+  "z-[400] w-auto overflow-auto rounded-xl border border-ink/10 bg-surface p-3 shadow-lg outline-none";
 const navButtonClass =
-  "flex h-7 w-7 items-center justify-center rounded-lg text-ink/50 outline-none transition hover:bg-ink/5 hover:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-30";
+  "flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-ink/50 outline-none transition hover:bg-ink/5 hover:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-30";
 const cellClass =
   "flex h-8 w-8 cursor-pointer items-center justify-center rounded text-[12.5px] text-[#374151] outline-none data-[outside-month]:text-[#d1d5db] data-[hovered]:bg-[#f3f1ea] data-[selected]:bg-[#333333] data-[selected]:text-white data-[unavailable]:pointer-events-none data-[unavailable]:text-[#d1d5db] data-[today]:font-semibold";
 
@@ -84,29 +88,59 @@ export function DatePicker({
   className: string;
   ariaLabel?: string;
 }) {
+  const [open, setOpen] = useState(false);
+
+  const openCalendar = () => {
+    if (disabled) return;
+    setOpen(true);
+  };
+
   return (
     <AriaDatePicker
       value={parseDateValue(value)}
       onChange={(date) => onChange(date ? date.toString() : "")}
       isDisabled={disabled}
+      isOpen={open}
+      onOpenChange={setOpen}
       aria-label={ariaLabel ?? "Date"}
     >
       <Group
-        className={`flex items-center gap-1 text-[#374151] outline-none transition focus-within:border-[#94a3b8] focus-within:shadow-[0_0_0_2px_rgba(148,163,184,0.28)] data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${className}`}
+        className={`relative flex min-w-0 max-w-full cursor-pointer items-center gap-0.5 overflow-hidden text-[#374151] outline-none transition focus-within:border-[#94a3b8] focus-within:shadow-[0_0_0_2px_rgba(148,163,184,0.28)] data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${className}`}
+        onClick={(e) => {
+          // Whole-field tap opens the calendar (critical on touch / small screens).
+          // Use click (not pointerdown) so the open isn't immediately treated as
+          // an outside-interact that closes the popover on the same gesture.
+          if (disabled) return;
+          const t = e.target as HTMLElement | null;
+          if (t?.closest("button")) return;
+          openCalendar();
+        }}
       >
-        <DateInput className="flex flex-1 items-center gap-0.5 font-[inherit] text-[13.5px]">
+        <DateInput className="flex min-w-0 flex-1 items-center gap-px overflow-hidden font-[inherit] text-[12px] leading-none sm:gap-0.5 sm:text-[13.5px]">
           {(segment) => (
             <DateSegment
               segment={segment}
-              className="rounded px-0.5 tabular-nums outline-none focus:bg-[#e5e7eb] focus:text-[#1f2937] data-[placeholder]:text-[#9ca3af]"
+              className="max-w-full shrink rounded px-px tabular-nums outline-none focus:bg-[#e5e7eb] focus:text-[#1f2937] data-[placeholder]:text-[#9ca3af] data-[type=literal]:px-0 data-[type=literal]:text-[#c0c5ce] sm:px-0.5"
             />
           )}
         </DateInput>
-        <Button className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[#6b7280] outline-none transition hover:bg-[#f3f4f6] hover:text-[#1f2937] focus-visible:ring-2 focus-visible:ring-[#94a3b8]/40">
+        <Button
+          // Native <label> wrappers re-activate this control and close the popover
+          // on the same click — stop that bubble without blocking Aria press.
+          className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded text-[#6b7280] outline-none transition hover:bg-[#f3f4f6] hover:text-[#1f2937] focus-visible:ring-2 focus-visible:ring-[#94a3b8]/40 sm:h-7 sm:w-7"
+          onClick={(e) => e.stopPropagation()}
+        >
           <CalendarIcon />
         </Button>
       </Group>
-      <Popover className={popoverClass}>
+      <Popover
+        className={popoverClass}
+        placement="bottom start"
+        offset={8}
+        shouldFlip
+        // Portaled above intake overflow / bottom dock so the calendar is visible on phones.
+        style={{ zIndex: 400 }}
+      >
         <Dialog className="outline-none">
           <Calendar>
             <header className="mb-2 flex items-center justify-between">
