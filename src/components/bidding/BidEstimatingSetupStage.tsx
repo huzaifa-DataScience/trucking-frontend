@@ -6,6 +6,7 @@ import { useProcessDraft } from "@/hooks/useProcessDraft";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { TogalScriptPanel } from "@/components/bidding/TogalPanels";
+import { TogalConnectRail } from "@/components/bidding/TogalConnectRail";
 import {
   clearanceOptionsFromMeta,
   type ProcessMeta,
@@ -69,6 +70,8 @@ export function BidEstimatingSetupStage() {
         </p>
       ) : null}
 
+      {/* Connect lives on Handoff only — not the global sidebar / every bid stage. */}
+      <TogalConnectRail />
       <TogalScriptPanel />
 
       <div className="grid grid-cols-3 items-start gap-6 max-[1000px]:grid-cols-1">
