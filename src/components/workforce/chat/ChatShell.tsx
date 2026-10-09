@@ -11,9 +11,11 @@ import { ChatCreateChannelModal } from "@/components/workforce/chat/ChatCreateCh
 import { ChatInboxPanel } from "@/components/workforce/chat/ChatInboxPanel";
 import { ChatThreadPanel } from "@/components/workforce/chat/ChatThreadPanel";
 import { getApiErrorMessage } from "@/lib/api/client";
-import { chatConversationIdFromPath } from "@/lib/workforce/chat-utils";
-
-const BASE_HREF = "/workforce/chat";
+import {
+  chatBaseHrefFromPath,
+  chatConversationIdFromPath,
+  MESSAGES_BASE_HREF,
+} from "@/lib/workforce/chat-utils";
 
 /** Mounted once in chat layout — survives thread navigation without remounting. */
 export function ChatShell() {
@@ -23,6 +25,7 @@ export function ChatShell() {
   const { me } = useWorkforce();
   const { showToast } = useToast();
 
+  const baseHref = chatBaseHrefFromPath(pathname) || MESSAGES_BASE_HREF;
   const conversationId = chatConversationIdFromPath(pathname);
   const connecteamUserId = me?.connecteamUser?.userId ?? null;
   const chat = useWorkforceChat(conversationId, {
@@ -40,14 +43,14 @@ export function ChatShell() {
 
   const selectConversation = useCallback(
     (id: string) => {
-      router.push(`${BASE_HREF}/${encodeURIComponent(id)}`, { scroll: false });
+      router.push(`${baseHref}/${encodeURIComponent(id)}`, { scroll: false });
     },
-    [router]
+    [baseHref, router]
   );
 
   const clearConversation = useCallback(() => {
-    router.push(BASE_HREF, { scroll: false });
-  }, [router]);
+    router.push(baseHref, { scroll: false });
+  }, [baseHref, router]);
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -76,12 +79,12 @@ export function ChatShell() {
           "info"
         );
       }
-      router.push(`${BASE_HREF}/${encodeURIComponent(res.conversation.conversationId)}`, {
+      router.push(`${baseHref}/${encodeURIComponent(res.conversation.conversationId)}`, {
         scroll: false,
       });
       return res.conversation;
     },
-    [chat, router, showToast]
+    [baseHref, chat, router, showToast]
   );
 
   const showInboxOnMobile = !conversationId;

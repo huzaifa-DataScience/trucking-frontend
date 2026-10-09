@@ -406,7 +406,11 @@ export async function uploadAvatar(file: File): Promise<AuthUser> {
     const msg = Array.isArray(data.message) ? data.message.join(" ") : data.message;
     throw new Error(msg || "Couldn't upload photo. Please try again.");
   }
-  return normalizeUser(data);
+  const raw =
+    data.user && typeof data.user === "object"
+      ? (data.user as Record<string, unknown>)
+      : data;
+  return normalizeUser(raw);
 }
 
 /** Removes the current user's profile photo (reverts to initials). */
@@ -425,7 +429,11 @@ export async function deleteAvatar(): Promise<AuthUser> {
     const msg = Array.isArray(data.message) ? data.message.join(" ") : data.message;
     throw new Error(msg || "Couldn't remove photo. Please try again.");
   }
-  return normalizeUser(data);
+  const raw =
+    data.user && typeof data.user === "object"
+      ? (data.user as Record<string, unknown>)
+      : data;
+  return { ...normalizeUser(raw), avatarUrl: null };
 }
 
 /** Changes the current user's password. Throws with a user-facing message on failure. */

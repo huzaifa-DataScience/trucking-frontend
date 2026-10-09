@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { TableSkeleton } from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/ToastProvider";
 import { CalendarEventModal } from "@/components/calendar/CalendarEventModal";
 import { CalendarItemPanel } from "@/components/calendar/CalendarItemPanel";
@@ -36,8 +35,8 @@ const VIEWS: Array<{ id: CalendarView; label: string }> = [
 ];
 
 /**
- * Personal calendar: every bid deadline, takeoff assignment, tracked time, shift,
- * task, time off and custom event for one person. Own calendar only; admins can pick anyone.
+ * Personal calendar — bid dues, takeoff, workforce time, and custom events.
+ * Own calendar by default; admins can pick anyone.
  */
 export default function CalendarPage() {
   const { user, isAdmin } = useAuth();
@@ -63,7 +62,12 @@ export default function CalendarPage() {
     setLoading(true);
     setError(null);
     try {
-      setData(await getCalendar({ ...range, userId: viewingSelf ? undefined : personId ?? undefined }));
+      setData(
+        await getCalendar({
+          ...range,
+          userId: viewingSelf ? undefined : (personId ?? undefined),
+        })
+      );
     } catch (e) {
       setError(getApiErrorMessage(e, "Could not load the calendar."));
     } finally {
@@ -84,7 +88,7 @@ export default function CalendarPage() {
 
   const visibleItems = useMemo(
     () => (data?.items ?? []).filter((i) => !hidden.has(i.source)),
-    [data, hidden],
+    [data, hidden]
   );
   const byDay = useMemo(() => groupByDay(visibleItems), [visibleItems]);
   const counts = useMemo(() => {
@@ -122,44 +126,70 @@ export default function CalendarPage() {
 
   const agendaDays = useMemo(
     () => Array.from({ length: 30 }, (_, i) => addDays(range.from, i)),
-    [range.from],
+    [range.from]
   );
 
+  const title = viewingSelf
+    ? "Calendar"
+    : data?.person.name
+      ? `${data.person.name}'s calendar`
+      : "Calendar";
+
   return (
-    <div className="space-y-5">
+    <div className="flex min-h-0 flex-1 flex-col gap-5 ui-animate-in">
       <PageHeader
-        title={viewingSelf ? "My calendar" : `${data?.person.name ?? "Calendar"}`}
-        subtitle="Bid deadlines, takeoff work, tracked time, shifts, tasks, time off and your own events."
+        title={title}
+        subtitle="Bid due dates, takeoff, shifts, clocked time, and your own events."
         action={
           viewingSelf ? (
-            <Button variant="primary" onClick={() => setEditor({ editing: null, day: anchor })}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setEditor({ editing: null, day: anchor })}
+            >
               New event
             </Button>
           ) : null
         }
       />
 
-      <Card className="!p-0">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/[0.06] px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => setAnchor(today)}>
+      <div className="flex flex-col gap-0 border-y border-[var(--border-subtle)] bg-surface sm:rounded-[var(--radius)] sm:border">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-3 py-3 sm:px-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAnchor(today)}
+              className={buttonClasses("outline", "sm")}
+            >
               Today
-            </Button>
-            <div className="flex">
-              <Button size="sm" variant="ghost" onClick={() => step(-1)} aria-label="Previous">
+            </button>
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => step(-1)}
+                aria-label="Previous"
+                className="flex h-8 w-8 items-center justify-center rounded-[var(--radius)] text-ink/60 transition hover:bg-canvas hover:text-ink"
+              >
                 ‹
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => step(1)} aria-label="Next">
+              </button>
+              <button
+                type="button"
+                onClick={() => step(1)}
+                aria-label="Next"
+                className="flex h-8 w-8 items-center justify-center rounded-[var(--radius)] text-ink/60 transition hover:bg-canvas hover:text-ink"
+              >
                 ›
-              </Button>
+              </button>
             </div>
-            <h2 className="text-base font-semibold text-ink">{rangeTitle(view, anchor)}</h2>
+            <h2 className="text-sm font-semibold text-ink sm:text-base">
+              {rangeTitle(view, anchor)}
+            </h2>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {isAdmin && people.length ? (
               <select
-                className="rounded-xl border border-ink/10 bg-surface px-3 py-1.5 text-sm text-ink outline-none focus:border-brand"
+                className="h-8 rounded-[var(--radius)] border border-[var(--border-subtle)] bg-white px-2.5 text-sm text-ink outline-none focus:border-brand"
                 value={personId ?? user?.id ?? ""}
                 onChange={(e) => setPersonId(Number(e.target.value))}
                 aria-label="Whose calendar"
@@ -171,26 +201,38 @@ export default function CalendarPage() {
                 ))}
               </select>
             ) : null}
-            <div className="flex rounded-xl border border-ink/10 p-0.5" role="tablist" aria-label="Calendar view">
-              {VIEWS.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={view === v.id}
-                  onClick={() => setView(v.id)}
-                  className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${
-                    view === v.id ? "bg-ink text-white" : "text-ink/60 hover:text-ink"
-                  }`}
-                >
-                  {v.label}
-                </button>
-              ))}
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="tablist"
+              aria-label="Calendar view"
+            >
+              {VIEWS.map((v) => {
+                const selected = view === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => setView(v.id)}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                      selected
+                        ? "bg-ink text-white"
+                        : "border border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md hover:border-brand/30 hover:text-brand"
+                    }`}
+                  >
+                    {v.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5 border-b border-ink/[0.06] px-4 py-2.5" aria-label="Show on calendar">
+        <div
+          className="flex flex-wrap gap-1.5 border-b border-[var(--border-subtle)] px-3 py-2.5 sm:px-4"
+          aria-label="Show on calendar"
+        >
           {SOURCES.map((s) => {
             const meta = SOURCE_META[s];
             const off = hidden.has(s);
@@ -200,34 +242,50 @@ export default function CalendarPage() {
                 type="button"
                 aria-pressed={!off}
                 onClick={() => toggle(s)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
-                  off ? "border-ink/10 text-ink/35 line-through" : meta.chip
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
+                  off
+                    ? "border-[var(--border-subtle)] text-ink/35 line-through"
+                    : meta.chip
                 }`}
               >
-                <span className={`h-1.5 w-1.5 rounded-full ${off ? "bg-ink/20" : meta.dot}`} aria-hidden />
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${off ? "bg-ink/20" : meta.dot}`}
+                  aria-hidden
+                />
                 {meta.label}
-                <span className="text-ink/40">{counts.get(s) ?? 0}</span>
+                <span className="tabular-nums text-ink/40">{counts.get(s) ?? 0}</span>
               </button>
             );
           })}
         </div>
 
         {data?.warnings.length ? (
-          <p className="border-b border-ink/[0.06] bg-warning/10 px-4 py-2 text-xs text-ink/70" role="status">
-            Some items couldn&apos;t be loaded ({data.warnings.join(", ")}). Everything else is shown.
+          <p
+            className="border-b border-[var(--border-subtle)] bg-amber-50 px-4 py-2 text-xs text-amber-900"
+            role="status"
+          >
+            Some items couldn&apos;t be loaded ({data.warnings.join(", ")}).
+            Everything else is shown.
           </p>
         ) : null}
 
         <div className="p-2 sm:p-3">
           {error ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-ink/[0.03] px-4 py-3 text-sm text-ink/60">
+            <div className="flex flex-wrap items-center justify-between gap-3 border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <span>{error}</span>
-              <Button size="sm" variant="outline" onClick={load}>
+              <button
+                type="button"
+                onClick={() => void load()}
+                className="text-sm font-semibold text-brand hover:underline"
+              >
                 Try again
-              </Button>
+              </button>
             </div>
           ) : loading && !data ? (
-            <TableSkeleton rows={6} />
+            <div className="flex flex-col gap-3 p-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-64 w-full" />
+            </div>
           ) : view === "month" ? (
             <MonthView
               anchor={anchor}
@@ -240,12 +298,22 @@ export default function CalendarPage() {
               }}
             />
           ) : view === "week" ? (
-            <WeekView anchor={anchor} today={today} byDay={byDay} onOpen={setOpen} />
+            <WeekView
+              anchor={anchor}
+              today={today}
+              byDay={byDay}
+              onOpen={setOpen}
+            />
           ) : (
-            <AgendaView days={agendaDays} today={today} byDay={byDay} onOpen={setOpen} />
+            <AgendaView
+              days={agendaDays}
+              today={today}
+              byDay={byDay}
+              onOpen={setOpen}
+            />
           )}
         </div>
-      </Card>
+      </div>
 
       <CalendarItemPanel
         item={open}

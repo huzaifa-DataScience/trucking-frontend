@@ -1,4 +1,6 @@
-/** Route placeholder — UI is rendered by ChatShell in chat/layout.tsx. */
-export default function WorkforceChatPage() {
-  return null;
+import { redirect } from "next/navigation";
+
+/** Legacy path — Messages is a standalone module at `/messages`. */
+export default function WorkforceChatRedirect() {
+  redirect("/messages");
 }

@@ -1,0 +1,33 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "feat/auth",
+    "feat/billing",
+    "feat/estimates-messages-calendar",
+    "feat/truckingGUI",
+    "feat/user-management",
+    "fix/assigment",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "feat/auth": "main",
+    "feat/billing": "main",
+    "feat/estimates-messages-calendar": "main",
+    "feat/truckingGUI": "main",
+    "feat/user-management": "main",
+    "fix/assigment": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "feat/auth",
+    "feat/billing",
+    "feat/estimates-messages-calendar",
+    "feat/truckingGUI",
+    "feat/user-management",
+    "fix/assigment",
+    "origin"
+  ]
+}
