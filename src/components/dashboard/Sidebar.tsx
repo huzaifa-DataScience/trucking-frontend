@@ -35,8 +35,6 @@ import { useChatUnreadTotal } from "@/hooks/useChatUnreadTotal";
 import { ChatUnreadBadge } from "@/components/workforce/chat/ChatUnreadBadge";
 import { BID_HANDOFF_STAGES } from "@/lib/bidding/process-types";
 import { BID_STAGE_ICONS } from "@/components/bidding/BidStageIcons";
-import { TogalConnectRail } from "@/components/bidding/TogalConnectRail";
-
 type ViewMode =
   | "operations"
   | "billings"
@@ -1143,11 +1141,6 @@ export function Sidebar({
               </div>
             ) : null}
 
-            {currentView === "bidding" ? (
-              <div className={`mt-auto w-full ${secondaryCollapsed ? "" : "-mx-2"}`}>
-                <TogalConnectRail collapsed={secondaryCollapsed} />
-              </div>
-            ) : null}
           </nav>
         </aside>
       ) : null}

@@ -56,8 +56,8 @@ function IconExternal({ className = "h-4 w-4" }: { className?: string }) {
 }
 
 /**
- * Company Togal session — lives on the Estimates / bid secondary rail.
- * Enabled when a captain needs to connect; disabled while connected.
+ * Company Togal session — Handoff (estimating setup) only.
+ * Do not mount in the global sidebar or on every bid stage.
  */
 export function TogalConnectRail({ collapsed = false }: { collapsed?: boolean }) {
   const { showToast } = useToast();
@@ -138,9 +138,9 @@ export function TogalConnectRail({ collapsed = false }: { collapsed?: boolean })
         setCanConnect(s.canConnect);
         setPending(s.pending);
         setLoaded(true);
+        // Resume poll quietly if a login is already waiting — never auto-open the modal on every page.
         if (s.pending && !s.connected) {
           setConnecting(true);
-          setModalOpen(true);
           startPoll(5);
         }
       })
@@ -214,18 +214,28 @@ export function TogalConnectRail({ collapsed = false }: { collapsed?: boolean })
   return (
     <>
       <div
-        className={`shrink-0 border-t border-[var(--border-subtle)] ${
-          collapsed ? "flex flex-col items-center px-1 py-2" : "px-2 py-3"
+        className={`shrink-0 ${
+          collapsed
+            ? "flex flex-col items-center border-t border-[var(--border-subtle)] px-1 py-2"
+            : "rounded-[var(--radius)] border border-[var(--border-subtle)] bg-surface px-3 py-3 sm:px-4"
         }`}
       >
+        {!collapsed ? (
+          <div className="mb-2.5 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-ink">Togal connection</h3>
+              <p className="mt-0.5 text-xs text-ink/50">{statusTitle}</p>
+            </div>
+          </div>
+        ) : null}
         <button
           type="button"
           disabled={railDisabled}
           title={statusTitle}
           aria-label={statusTitle}
           onClick={onRailClick}
-          className={`inline-flex cursor-pointer items-center justify-center rounded-md border transition disabled:cursor-not-allowed disabled:opacity-50 ${
-            collapsed ? "h-9 w-9" : "h-9 w-full"
+          className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border transition disabled:cursor-not-allowed disabled:opacity-50 ${
+            collapsed ? "h-9 w-9" : "h-9 w-full px-3 text-sm font-semibold"
           } border-[var(--border-subtle)] bg-canvas text-ink hover:border-ink/20 hover:bg-[#eef1f5] disabled:hover:border-[var(--border-subtle)] disabled:hover:bg-canvas ${
             connected ? "border-success/30 bg-success/10 text-success" : ""
           } ${needsConnect && canConnect && !waiting ? "border-brand/40 text-brand" : ""} ${
@@ -233,6 +243,17 @@ export function TogalConnectRail({ collapsed = false }: { collapsed?: boolean })
           }`}
         >
           <RailIcon className="h-4 w-4 shrink-0" />
+          {!collapsed ? (
+            <span>
+              {connected
+                ? "Connected"
+                : waiting
+                  ? "Waiting for approval…"
+                  : canConnect
+                    ? "Connect Togal"
+                    : "Not connected"}
+            </span>
+          ) : null}
         </button>
       </div>
 
