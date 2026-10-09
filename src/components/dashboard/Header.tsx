@@ -12,6 +12,7 @@ import type { ApiTicketRow } from "@/lib/api/types";
 import { useLookups } from "@/hooks/useLookups";
 import { AvatarCircle } from "@/components/ui/AvatarCircle";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
+import { MessagesBell } from "@/components/dashboard/MessagesBell";
 import { entityBrandForName } from "@/lib/branding/entity-colors";
 
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
@@ -331,6 +332,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         <div className="order-2 flex shrink-0 items-center justify-end gap-2 sm:order-3 sm:flex-1 sm:gap-3">
           {user ? (
             <>
+              <MessagesBell />
               <NotificationBell />
               <div className="hidden h-9 w-px bg-ink/10 sm:block" aria-hidden />
               <div className="relative flex items-center" ref={menuRef}>
@@ -343,7 +345,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                 aria-label="Account menu"
                 title={profileName}
               >
-                <AvatarCircle user={user} />
+                <AvatarCircle user={user} previewable={false} />
                 <svg
                   className={`h-3.5 w-3.5 shrink-0 text-ink/35 transition-transform ${menuOpen ? "rotate-180" : ""}`}
                   viewBox="0 0 24 24"

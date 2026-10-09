@@ -18,6 +18,7 @@ import { BidSheetTabNav, type BidSheetTab } from "@/components/bidding/BidSheetT
 import { BidSheetResultsRail } from "@/components/bidding/BidSheetResultsRail";
 import { BidSheetToolbar } from "@/components/bidding/BidSheetToolbar";
 import { BidSystemsInputTable } from "@/components/bidding/BidSystemsInputTable";
+import { BidProposalSheet } from "@/components/bidding/BidProposalSheet";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { formatMoneyPrecise, formatPercentDecimal } from "@/lib/bidding/format";
 import { parseSystemsComputed, parseWarnings } from "@/lib/bidding/parse-computed";
@@ -85,10 +86,11 @@ export function BidSheetForm() {
     markSubmitted,
     reopenAsDraft,
     uploadAttachment,
+    uploadAttachments,
     deleteAttachment,
   } = useBidSheet();
   const [prefillLoading, setPrefillLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<BidSheetTab>("sheet");
+  const [activeTab, setActiveTab] = useState<BidSheetTab>("letter");
   const [processMeta, setProcessMeta] = useState<ProcessMeta | null>(null);
   const { canSummary } = useBiddingAccess();
   const canViewSummary = canSummary;
@@ -208,6 +210,7 @@ export function BidSheetForm() {
   const hasComputed = Object.keys(c).length > 0;
   const attachmentCount = bid.attachments?.length ?? 0;
   const showResultsRail = canViewSummary && activeTab === "sheet";
+  const showCalcToolbar = activeTab === "sheet";
 
   return (
     <>
@@ -250,7 +253,7 @@ export function BidSheetForm() {
         attachmentCount={attachmentCount}
       />
 
-      {!canViewSummary ? (
+      {!canViewSummary && activeTab === "sheet" ? (
         <RestrictedState
           title="Totals restricted"
           message="You can edit this bid, but MIKE/PJ totals and calculation detail require additional access."
@@ -264,6 +267,9 @@ export function BidSheetForm() {
         }
       >
         <div className="bid-workspace-form space-y-5 pb-4">
+          <div className={activeTab === "letter" ? "contents" : "hidden"}>
+            <BidProposalSheet />
+          </div>
           {activeTab === "sheet" ? (
             <>
           <div className="grid grid-cols-2 items-start gap-6 max-[1000px]:grid-cols-1">
@@ -757,6 +763,7 @@ export function BidSheetForm() {
               isEditable={isEditable}
               uploading={saving}
               onUpload={async (file, opts) => uploadAttachment(file, opts)}
+              onUploadMany={async (files, opts) => uploadAttachments(files, opts)}
               onDelete={async (id) => deleteAttachment(id)}
             />
           ) : null}
@@ -772,22 +779,24 @@ export function BidSheetForm() {
       </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d5dbe3] bg-[#f3f4f6] px-4 py-2.5 shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.12)] sm:px-6 lg:px-8">
-        <div className="ml-auto w-fit max-w-full pr-24 sm:pr-28">
-          <BidSheetToolbar
-            isEditable={isEditable}
-            saving={saving}
-            dirty={dirty}
-            lastSavedAt={lastSavedAt}
-            status={bid.status}
-            serverVerifyWarnings={serverVerifyWarnings}
-            onPreview={previewCalculate}
-            onSave={() => void saveNow()}
-            onSubmit={() => void markSubmitted()}
-            onVerifyServer={() => void verifyServerCalc()}
-          />
+      {showCalcToolbar ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d5dbe3] bg-[#f3f4f6] px-4 py-2.5 shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.12)] sm:px-6 lg:px-8">
+          <div className="ml-auto w-fit max-w-full pr-24 sm:pr-28">
+            <BidSheetToolbar
+              isEditable={isEditable}
+              saving={saving}
+              dirty={dirty}
+              lastSavedAt={lastSavedAt}
+              status={bid.status}
+              serverVerifyWarnings={serverVerifyWarnings}
+              onPreview={previewCalculate}
+              onSave={() => void saveNow()}
+              onSubmit={() => void markSubmitted()}
+              onVerifyServer={() => void verifyServerCalc()}
+            />
+          </div>
         </div>
-      </div>
+      ) : null}
     </>
   );
 }

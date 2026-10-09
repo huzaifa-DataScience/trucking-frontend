@@ -9,6 +9,7 @@ import { BidEstimatingSetupStage } from "@/components/bidding/BidEstimatingSetup
 import { BidDrawingsStage } from "@/components/bidding/BidDrawingsStage";
 import { BidTakeoffComparisonPanel } from "@/components/bidding/BidTakeoffComparisonPanel";
 import { BidAttachmentsSection } from "@/components/bidding/BidAttachmentsSection";
+import { TogalProjectBar } from "@/components/bidding/TogalPanels";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
@@ -28,7 +29,7 @@ import { parseChromeStage } from "@/lib/bidding/process-types";
 function BidWorkspaceInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { bid, isEditable, updateSystemRow, uploadAttachment, deleteAttachment, saving } = useBidSheet();
+  const { bid, isEditable, updateSystemRow, uploadAttachment, uploadAttachments, deleteAttachment, saving } = useBidSheet();
   const { user } = useAuth();
   const { draft, setField, editable: processEditable } = useProcessDraft();
   const bidId = bid?.id ?? "";
@@ -92,25 +93,79 @@ function BidWorkspaceInner() {
         Array.isArray(bid.workflow?.takeoffComparisons) &&
         (bid.workflow?.takeoffComparisons?.length ?? 0) > 0;
       return (
-        <div className="intake-compact flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+        <div className="intake-compact flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-auto">
           <header>
             <h2 className="intake-title">Takeoff</h2>
           </header>
-          <section className="intake-section min-w-0 max-w-md">
-            <h3 className="intake-section-head">Internal bid date</h3>
-            <div className="intake-section-body">
-              <label className="intake-row">
-                <span className="intake-label">Turn-in date</span>
-                <DatePicker
-                  ariaLabel="Internal bid date"
-                  className="intake-field"
-                  disabled={!processEditable}
-                  value={draft.internalBidDate?.slice(0, 10) ?? ""}
-                  onChange={(v) => setField("internalBidDate", v || null)}
-                />
-              </label>
-            </div>
-          </section>
+          <TogalProjectBar pull />
+          <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-2">
+            <section className="intake-section min-w-0">
+              <h3 className="intake-section-head">Internal bid date</h3>
+              <div className="intake-section-body">
+                <label className="intake-row">
+                  <span className="intake-label">Turn-in date</span>
+                  <DatePicker
+                    ariaLabel="Internal bid date"
+                    className="intake-field"
+                    disabled={!processEditable}
+                    value={draft.internalBidDate?.slice(0, 10) ?? ""}
+                    onChange={(v) => setField("internalBidDate", v || null)}
+                  />
+                </label>
+              </div>
+            </section>
+            <section className="intake-section min-w-0">
+              <h3 className="intake-section-head">Scope status</h3>
+              <div className="intake-section-body flex flex-col gap-2">
+                <p className="text-[11px] text-[#6b7280]">
+                  Mark each scope done or none — replaces a separate turn-in email sheet.
+                </p>
+                {(draft.takeoffAssignments ?? []).length === 0 ? (
+                  <p className="text-[12.5px] text-[#9ca3af]">No takeoff assignments yet.</p>
+                ) : (
+                  (draft.takeoffAssignments ?? []).map((row, index) => {
+                    const role = String(row.role ?? `scope-${index}`);
+                    const status =
+                      row.status === "done" || row.status === "none" ? row.status : "";
+                    return (
+                      <div
+                        key={`${role}-${index}`}
+                        className="grid grid-cols-[minmax(0,1fr)_8.5rem] items-center gap-2"
+                      >
+                        <span className="truncate text-[12.5px] font-medium text-[#1f2937]">
+                          {role}
+                          {row.assigneeName ? (
+                            <span className="font-normal text-[#6b7280]">
+                              {" "}
+                              · {row.assigneeName}
+                            </span>
+                          ) : null}
+                        </span>
+                        <select
+                          className="intake-field appearance-none"
+                          disabled={!processEditable}
+                          value={status}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            const next = [...(draft.takeoffAssignments ?? [])];
+                            next[index] = {
+                              ...row,
+                              status: v === "done" || v === "none" ? v : null,
+                            };
+                            setField("takeoffAssignments", next);
+                          }}
+                        >
+                          <option value="">—</option>
+                          <option value="done">Done</option>
+                          <option value="none">None</option>
+                        </select>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+          </div>
           <BidAttachmentsSection
             title="Takeoff files"
             attachments={(bid.attachments ?? []).filter(
@@ -126,6 +181,7 @@ function BidWorkspaceInner() {
             uploading={saving}
             mode="markup"
             onUpload={async (file, opts) => uploadAttachment(file, opts)}
+            onUploadMany={async (files, opts) => uploadAttachments(files, opts)}
             onDelete={async (id) => deleteAttachment(id)}
           />
           <div

@@ -21,7 +21,7 @@ function ItemChip({ item, onOpen, compact }: { item: CalendarItem; onOpen: (i: C
       type="button"
       onClick={() => onOpen(item)}
       title={item.title}
-      className={`flex w-full min-w-0 items-center gap-1.5 rounded-md border px-1.5 text-left transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand ${meta.chip} ${
+      className={`flex w-full min-w-0 items-center gap-1.5 rounded border px-1.5 text-left transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand ${meta.chip} ${
         compact ? "py-0.5 text-[11px]" : "py-1 text-xs"
       }`}
     >

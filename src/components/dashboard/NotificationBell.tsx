@@ -7,46 +7,66 @@ import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { MyPlateNotification } from "@/lib/bidding/process-types";
 import {
+  formatNotificationWhen,
   notificationHref,
   notificationKey,
   notificationKindLabel,
+  withoutChatNotifications,
 } from "@/lib/bidding/notifications";
+import {
+  countUnseenNotifications,
+  markNotificationsSeen,
+  NOTIFICATIONS_SEEN_EVENT,
+} from "@/lib/bidding/notification-seen";
 import { NavIconBell } from "@/components/dashboard/DashboardNavIcons";
 
-function formatWhen(at: string | null | undefined): string {
-  if (!at) return "";
-  const d = new Date(at);
-  if (Number.isNaN(d.getTime())) return at;
-  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-}
-
-/** Header bell: badge = notification count, click opens the full list from GET /dashboard. */
+/** Header bell: badge = unseen count; opening the panel marks the list as seen. */
 export function NotificationBell() {
   const { canRead } = useBiddingAccess();
   const boxRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<MyPlateNotification[] | null>(null);
+  const [unseen, setUnseen] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const syncUnseen = useCallback((list: MyPlateNotification[]) => {
+    setUnseen(countUnseenNotifications(list));
+  }, []);
+
+  const load = useCallback(async (opts?: { markSeen?: boolean }) => {
     setLoading(true);
     setError(null);
     try {
       const data = await biddingApi.getDashboard();
-      setItems(data.notifications ?? []);
+      const list = withoutChatNotifications(data.notifications ?? []);
+      setItems(list);
+      if (opts?.markSeen) {
+        markNotificationsSeen(list);
+        setUnseen(0);
+      } else {
+        syncUnseen(list);
+      }
     } catch (e) {
       setError(getApiErrorMessage(e, "Failed to load notifications"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [syncUnseen]);
 
   // One fetch per page load; opening the panel refreshes it. No polling — the
   // dashboard call walks the bid list and competes for DB connections.
   useEffect(() => {
     if (canRead) void load();
   }, [canRead, load]);
+
+  useEffect(() => {
+    const onSeen = () => {
+      if (items) syncUnseen(items);
+    };
+    window.addEventListener(NOTIFICATIONS_SEEN_EVENT, onSeen);
+    return () => window.removeEventListener(NOTIFICATIONS_SEEN_EVENT, onSeen);
+  }, [items, syncUnseen]);
 
   useEffect(() => {
     if (!open) return;
@@ -66,7 +86,7 @@ export function NotificationBell() {
 
   if (!canRead) return null;
 
-  const count = items?.length ?? 0;
+  const count = unseen;
 
   return (
     <div className="relative flex items-center" ref={boxRef}>
@@ -75,12 +95,17 @@ export function NotificationBell() {
         onClick={() => {
           const next = !open;
           setOpen(next);
-          if (next) void load();
+          if (next) {
+            // Opening the panel = seen — clear badge immediately, then refresh + persist.
+            setUnseen(0);
+            if (items) markNotificationsSeen(items);
+            void load({ markSeen: true });
+          }
         }}
         className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink/55 transition hover:bg-ink/[0.05] hover:text-ink"
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label={count > 0 ? `Notifications (${count})` : "Notifications"}
+        aria-label={count > 0 ? `Notifications (${count} new)` : "Notifications"}
         title="Notifications"
       >
         <NavIconBell className="h-5 w-5" />
@@ -100,7 +125,9 @@ export function NotificationBell() {
           <div className="flex items-baseline justify-between gap-2 border-b border-ink/[0.06] px-4 py-3">
             <p className="text-sm font-semibold text-ink">Notifications</p>
             <span className="text-xs text-ink/40">
-              {loading ? "Refreshing…" : `${count} item${count === 1 ? "" : "s"}`}
+              {loading
+                ? "Refreshing…"
+                : `${items?.length ?? 0} item${(items?.length ?? 0) === 1 ? "" : "s"}`}
             </span>
           </div>
 
@@ -122,9 +149,9 @@ export function NotificationBell() {
               <p className="px-2.5 py-3 text-sm text-ink/45">You&apos;re all caught up.</p>
             ) : (
               <ul className="flex flex-col gap-0.5">
-                {items.map((n, i) => {
+                {items.slice(0, 8).map((n, i) => {
                   const href = notificationHref(n);
-                  const when = formatWhen(n.at);
+                  const when = formatNotificationWhen(n.at);
                   const body = (
                     <>
                       <div className="flex items-baseline justify-between gap-2">
@@ -159,11 +186,11 @@ export function NotificationBell() {
 
           <div className="border-t border-ink/[0.06] p-2">
             <Link
-              href="/dashboard"
+              href="/notifications"
               onClick={() => setOpen(false)}
               className="block rounded-xl px-3 py-2 text-center text-sm font-medium text-brand transition hover:bg-ink/[0.04]"
             >
-              Open dashboard
+              See all notifications
             </Link>
           </div>
         </div>

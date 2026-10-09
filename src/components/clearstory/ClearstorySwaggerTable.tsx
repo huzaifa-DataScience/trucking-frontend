@@ -188,6 +188,7 @@ export function ColumnPickerButton({
   columns,
   hidden,
   lockedKey,
+  lockedKeys,
   onToggle,
   pinned,
   onTogglePin,
@@ -195,6 +196,8 @@ export function ColumnPickerButton({
   columns: { key: string; label: string }[];
   hidden: Set<string>;
   lockedKey?: string;
+  /** Prefer over single `lockedKey` when more than one column must stay visible. */
+  lockedKeys?: string[];
   onToggle: (key: string) => void;
   /** When provided, each row gets a pin toggle (unlimited columns can be pinned). */
   pinned?: Set<string>;
@@ -202,6 +205,10 @@ export function ColumnPickerButton({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const lockedSet = useMemo(
+    () => new Set<string>([...(lockedKeys ?? []), ...(lockedKey ? [lockedKey] : [])]),
+    [lockedKey, lockedKeys]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -219,10 +226,10 @@ export function ColumnPickerButton({
     };
   }, [open]);
 
-  const hiddenCount = columns.filter((c) => hidden.has(c.key) && c.key !== lockedKey).length;
-  const pinnedCount = columns.filter((c) => c.key !== lockedKey && (pinned?.has(c.key) ?? false)).length;
-  const hiddenNames = columns.filter((c) => hidden.has(c.key) && c.key !== lockedKey).map((c) => c.label);
-  const pinnedNames = columns.filter((c) => c.key !== lockedKey && (pinned?.has(c.key) ?? false)).map((c) => c.label);
+  const hiddenCount = columns.filter((c) => hidden.has(c.key) && !lockedSet.has(c.key)).length;
+  const pinnedCount = columns.filter((c) => !lockedSet.has(c.key) && (pinned?.has(c.key) ?? false)).length;
+  const hiddenNames = columns.filter((c) => hidden.has(c.key) && !lockedSet.has(c.key)).map((c) => c.label);
+  const pinnedNames = columns.filter((c) => !lockedSet.has(c.key) && (pinned?.has(c.key) ?? false)).map((c) => c.label);
 
   return (
     <div className="relative shrink-0" ref={ref}>
@@ -269,7 +276,7 @@ export function ColumnPickerButton({
             <span className="w-16 shrink-0 text-right">Pin left</span>
           </div>
           {columns.map(({ key, label }) => {
-            const locked = key === lockedKey;
+            const locked = lockedSet.has(key);
             const checked = locked || !hidden.has(key);
             const isPinned = locked || (pinned?.has(key) ?? false);
             return (

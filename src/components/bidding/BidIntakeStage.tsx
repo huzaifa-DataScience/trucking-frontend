@@ -195,6 +195,7 @@ export function BidIntakeStage() {
     setBaseBidField,
     lookups,
     uploadAttachment,
+    uploadAttachments,
     deleteAttachment,
   } = useBidSheet();
   const confirmDialog = useConfirmDialog();
@@ -1220,6 +1221,19 @@ export function BidIntakeStage() {
                       }}
                     />
                     <input
+                      className={`${inputClass} min-w-[7rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Bid price"
+                      inputMode="decimal"
+                      value={row.bidPrice ?? ""}
+                      onChange={(e) => {
+                        const raw = e.target.value.trim().replace(/[$,\s]/g, "");
+                        const bidPrice =
+                          raw === "" ? null : Number.isFinite(Number(raw)) ? Number(raw) : row.bidPrice;
+                        setList(list.map((r, i) => (i === index ? { ...r, bidPrice } : r)));
+                      }}
+                    />
+                    <input
                       className={`${inputClass} min-w-[8rem] flex-1`}
                       disabled={!editable}
                       placeholder="Phone"
@@ -2077,6 +2091,7 @@ export function BidIntakeStage() {
         isEditable={editable}
         uploading={saving}
         onUpload={async (file, opts) => uploadAttachment(file, opts)}
+        onUploadMany={async (files, opts) => uploadAttachments(files, opts)}
         onDelete={async (id) => deleteAttachment(id)}
       />
       <BidAttachmentsSection
@@ -2086,6 +2101,7 @@ export function BidIntakeStage() {
         isEditable={editable}
         uploading={saving}
         onUpload={async (file, opts) => uploadAttachment(file, opts)}
+        onUploadMany={async (files, opts) => uploadAttachments(files, opts)}
         onDelete={async (id) => deleteAttachment(id)}
       />
     </div>
