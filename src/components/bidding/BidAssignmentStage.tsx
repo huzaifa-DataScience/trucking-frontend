@@ -7,6 +7,7 @@ import { useProcessDraft } from "@/hooks/useProcessDraft";
 import type {
   ProcessAssignment,
   ProcessTakeoffAssignment,
+  ProcessTechnicalReview,
   TakeoffRole,
 } from "@/lib/bidding/process-types";
 import type { BidCaptainLookup, BidContactLookup, BidTeam } from "@/lib/bidding/types";
@@ -191,6 +192,66 @@ export function BidAssignmentStage() {
   };
 
   const rowFor = (role: TakeoffRole) => rows.find((r) => r.role === role);
+
+  const review: ProcessTechnicalReview = { ...(draft.technicalReview ?? {}) };
+  const setReview = (patch: Partial<ProcessTechnicalReview>) => {
+    setField("technicalReview", { ...review, ...patch });
+  };
+
+  const renderRoleFields = (role: TakeoffRole, optional = false) => {
+    const row = rowFor(role);
+    const status =
+      row?.status === "done" || row?.status === "none" ? row.status : "";
+    return (
+      <div key={role} className="flex min-w-0 flex-col gap-1.5">
+        <label className="flex min-w-0 flex-col gap-0.5">
+          <span className={labelClass}>
+            {role}
+            {optional ? " (optional)" : ""}
+          </span>
+          <input
+            className={inputClass}
+            disabled={!editable}
+            aria-label={`${role} assignee`}
+            placeholder={optional ? "Leave blank if no scope" : "Assignee"}
+            value={row?.assigneeName ?? ""}
+            onChange={(e) =>
+              upsertRole(role, { assigneeName: e.target.value || null })
+            }
+          />
+        </label>
+        <label className="flex min-w-0 flex-col gap-0.5">
+          <span className={labelClass}>Due</span>
+          <DatePicker
+            ariaLabel={`${role} takeoff due`}
+            className={`${inputClass} w-full`}
+            disabled={!editable}
+            value={row?.dueAt?.slice(0, 10) ?? ""}
+            onChange={(v) => upsertRole(role, { dueAt: v || null })}
+          />
+        </label>
+        <label className="flex min-w-0 flex-col gap-0.5">
+          <span className={labelClass}>Status</span>
+          <select
+            className={inputClass}
+            disabled={!editable}
+            aria-label={`${role} takeoff status`}
+            value={status}
+            onChange={(e) => {
+              const v = e.target.value;
+              upsertRole(role, {
+                status: v === "done" || v === "none" ? v : null,
+              });
+            }}
+          >
+            <option value="">—</option>
+            <option value="done">Done</option>
+            <option value="none">None (no scope)</option>
+          </select>
+        </label>
+      </div>
+    );
+  };
 
   return (
     <div className="intake-compact flex min-h-0 flex-1 flex-col gap-4 overflow-auto sm:gap-6">
@@ -386,10 +447,101 @@ export function BidAssignmentStage() {
         </section>
 
       <section className="intake-section min-w-0">
+        <h3 className={sectionHead}>Technical review</h3>
+        <div className={`${sectionBody} intake-grid`}>
+          <p className="col-span-full text-[11px] text-[#6b7280]">
+            Nick or PJ reviews before assign — same fields as Handoff.
+          </p>
+          <label className="intake-row">
+            <span className={labelClass}>Prepared by</span>
+            <input
+              className={inputClass}
+              disabled={!editable}
+              value={review.preparedBy ?? ""}
+              onChange={(e) => setReview({ preparedBy: e.target.value || null })}
+            />
+          </label>
+          <label className="intake-row">
+            <span className={labelClass}>Reviewed by</span>
+            <input
+              className={inputClass}
+              disabled={!editable}
+              value={review.reviewedBy ?? ""}
+              onChange={(e) => setReview({ reviewedBy: e.target.value || null })}
+            />
+          </label>
+          <label className="intake-row">
+            <span className={labelClass}>Review date</span>
+            <DatePicker
+              ariaLabel="Review date"
+              className={inputClass}
+              disabled={!editable}
+              value={review.reviewDate?.slice(0, 10) ?? ""}
+              onChange={(v) => setReview({ reviewDate: v || null })}
+            />
+          </label>
+          <label className="intake-row col-span-full">
+            <span className={labelClass}>Comments</span>
+            <textarea
+              className={`${inputClass} min-h-[4.5rem] resize-y`}
+              disabled={!editable}
+              value={review.comments ?? ""}
+              onChange={(e) => setReview({ comments: e.target.value || null })}
+            />
+          </label>
+          <div className="col-span-full flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-2.5 py-2">
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-semibold text-[#1f2937]">
+                {review.approvedForTakeoff
+                  ? "Approved for takeoff"
+                  : "Takeoff approval"}
+              </p>
+              <p className="text-[11px] text-[#6b7280]">
+                {review.approvedForTakeoff
+                  ? "Approved — revoke if review needs another pass."
+                  : "Optional here; Handoff can still require approval before Complete."}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {review.approvedForTakeoff ? (
+                <>
+                  <span className="text-[11px] font-semibold text-[#047857]">Approved</span>
+                  <button
+                    type="button"
+                    disabled={!editable}
+                    onClick={() => setReview({ approvedForTakeoff: false })}
+                    className="intake-head-btn disabled:opacity-40"
+                  >
+                    Revoke approval
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!editable}
+                  onClick={() =>
+                    setReview({
+                      approvedForTakeoff: true,
+                      reviewDate:
+                        review.reviewDate || new Date().toISOString().slice(0, 10),
+                    })
+                  }
+                  className="intake-head-btn disabled:opacity-40"
+                >
+                  Approve for takeoff
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="intake-section min-w-0">
         <h3 className={sectionHead}>Takeoff assignments</h3>
         <div className={`${sectionBody} flex flex-col gap-4`}>
           <p className="text-[11px] text-[#6b7280]">
-            Team/captain pick prefills blank roles. Assignees see due dates on their calendar.
+            Team/captain pick prefills blank roles. Status: done or none (no scope). VRF /
+            equipment stay optional.
           </p>
           <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
             {(
@@ -403,70 +555,14 @@ export function BidAssignmentStage() {
                 <p className="mb-0.5 text-center text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
                   {title}
                 </p>
-                {roles.map((role) => {
-                  const row = rowFor(role);
-                  return (
-                    <div key={role} className="flex min-w-0 flex-col gap-1.5">
-                      <label className="flex min-w-0 flex-col gap-0.5">
-                        <span className={labelClass}>{role}</span>
-                        <input
-                          className={inputClass}
-                          disabled={!editable}
-                          aria-label={`${role} assignee`}
-                          placeholder="Assignee"
-                          value={row?.assigneeName ?? ""}
-                          onChange={(e) =>
-                            upsertRole(role, { assigneeName: e.target.value || null })
-                          }
-                        />
-                      </label>
-                      <div className="flex min-w-0 flex-col gap-0.5">
-                        <span className={labelClass}>Due</span>
-                        <DatePicker
-                          ariaLabel={`${role} takeoff due`}
-                          className={`${inputClass} w-full`}
-                          disabled={!editable}
-                          value={row?.dueAt?.slice(0, 10) ?? ""}
-                          onChange={(v) => upsertRole(role, { dueAt: v || null })}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+                {roles.map((role) => renderRoleFields(role))}
               </div>
             ))}
           </div>
           <div className="grid grid-cols-1 items-start gap-5 border-t border-[#e8ecf1] pt-4 sm:grid-cols-2 sm:gap-5 sm:pt-5 lg:grid-cols-3 lg:gap-6">
-            {(["vrf", "equipment", "other"] as const).map((role) => {
-              const row = rowFor(role);
-              return (
-                <div key={role} className="flex min-w-0 flex-col gap-1.5">
-                  <label className="flex min-w-0 flex-col gap-0.5">
-                    <span className={labelClass}>{role}</span>
-                    <input
-                      className={inputClass}
-                      disabled={!editable}
-                      aria-label={`${role} assignee`}
-                      placeholder="Assignee"
-                      value={row?.assigneeName ?? ""}
-                      onChange={(e) =>
-                        upsertRole(role, { assigneeName: e.target.value || null })
-                      }
-                    />
-                  </label>
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className={labelClass}>Due</span>
-                    <DatePicker
-                      ariaLabel={`${role} takeoff due`}
-                      className={`${inputClass} w-full`}
-                      disabled={!editable}
-                      value={row?.dueAt?.slice(0, 10) ?? ""}
-                      onChange={(v) => upsertRole(role, { dueAt: v || null })}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+            {(["vrf", "equipment", "other"] as const).map((role) =>
+              renderRoleFields(role, role === "vrf" || role === "equipment")
+            )}
           </div>
         </div>
       </section>

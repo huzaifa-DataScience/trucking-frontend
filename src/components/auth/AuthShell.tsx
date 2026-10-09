@@ -58,13 +58,13 @@ export function AuthShell({ children }: { children: ReactNode }) {
           </ul>
         </div>
 
-        <p className="relative text-xs text-white/35">Construction Logistics</p>
+        <p className="relative text-xs text-white/35">Goel App</p>
       </aside>
 
       <main className="flex flex-col items-center justify-center bg-canvas px-4 py-10">
         <div className="mb-8 flex flex-col items-center gap-2 lg:hidden">
           <AppLogo height={48} />
-          <p className="text-center text-sm font-medium text-ink/60">Construction Logistics</p>
+          <p className="text-center text-sm font-medium text-ink/60">Goel App</p>
         </div>
         {children}
       </main>

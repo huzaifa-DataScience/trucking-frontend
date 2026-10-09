@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { formatDate } from "@/lib/bidding/format";
-import { itemWhenLabel, SOURCE_META, stageLabel, type CalendarItem } from "@/lib/calendar/calendar";
+import { formatOutcome, formatProcessStage } from "@/lib/bidding/process-types";
+import {
+  calendarBidHref,
+  itemWhenLabel,
+  SOURCE_META,
+  type CalendarItem,
+} from "@/lib/calendar/calendar";
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
@@ -62,26 +68,45 @@ export function CalendarItemPanel({
           </dl>
 
           {bid ? (
-            <section className="mt-4 rounded-xl bg-ink/[0.03] px-4 py-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-ink/45">Project</h4>
+            <section className="mt-4 border border-[var(--border-subtle)] bg-canvas/60 px-4 py-3">
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-ink/45">
+                Estimate
+              </h4>
               <p className="mt-1 text-sm font-semibold text-ink">
                 {bid.estimateNumber}
                 {bid.bidName ? ` · ${bid.bidName}` : ""}
               </p>
               <dl className="mt-1">
-                <Row label="Client" value={bid.clientCompanyName} />
-                <Row label="Stage" value={stageLabel(bid.processStage)} />
-                <Row label="Outcome" value={bid.outcomeStatus && bid.outcomeStatus !== "open" ? stageLabel(bid.outcomeStatus) : null} />
+                <Row label="Contractor" value={bid.clientCompanyName} />
+                <Row label="Stage" value={formatProcessStage(bid.processStage)} />
+                <Row
+                  label="Outcome"
+                  value={
+                    bid.outcomeStatus && bid.outcomeStatus !== "open"
+                      ? formatOutcome(bid.outcomeStatus)
+                      : null
+                  }
+                />
                 <Row
                   label="Bid due"
-                  value={bid.dueDate ? `${formatDate(bid.dueDate)}${bid.dueTime ? ` at ${bid.dueTime}` : ""}` : null}
+                  value={
+                    bid.dueDate
+                      ? `${formatDate(bid.dueDate)}${bid.dueTime ? ` at ${bid.dueTime}` : ""}`
+                      : null
+                  }
                 />
                 <Row label="Team" value={bid.teamName} />
                 <Row label="Captain" value={bid.captain} />
-                <Row label="Your role" value={bid.roles.length ? bid.roles.join(", ") : null} />
+                <Row
+                  label="Your role"
+                  value={bid.roles.length ? bid.roles.join(", ") : null}
+                />
               </dl>
-              <Link href={`/bidding/${bid.id}`} className={`${buttonClasses("outline", "sm")} mt-3`}>
-                Open bid
+              <Link
+                href={calendarBidHref(bid)}
+                className={`${buttonClasses("outline", "sm")} mt-3`}
+              >
+                Open estimate
               </Link>
             </section>
           ) : null}

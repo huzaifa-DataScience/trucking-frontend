@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Sign up - Construction Logistics",
-  description: "Create a new Construction Logistics account",
+  title: "Sign up - Goel App",
+  description: "Create a new Goel App account",
 };
 
 export default function RegisterLayout({

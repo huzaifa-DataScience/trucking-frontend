@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { BidAttachmentsSection } from "@/components/bidding/BidAttachmentsSection";
+import { TogalProjectBar } from "@/components/bidding/TogalPanels";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
 import type { ProcessMeta } from "@/lib/bidding/process-types";
@@ -22,7 +23,7 @@ const PHASE_SHORT: Record<string, string> = {
 /** Drawing phases with upload, download, and delete. */
 export function BidDrawingsStage() {
   const { bid, editable, saving } = useProcessDraft();
-  const { uploadAttachment, deleteAttachment } = useBidSheet();
+  const { uploadAttachment, uploadAttachments, deleteAttachment } = useBidSheet();
   const [meta, setMeta] = useState<ProcessMeta | null>(null);
 
   useEffect(() => {
@@ -47,11 +48,14 @@ export function BidDrawingsStage() {
         <h2 className="intake-title">Drawings</h2>
       </header>
 
+      <TogalProjectBar />
+
       <BidAttachmentsSection
         attachments={drawings}
         isEditable={editable}
         uploading={saving}
         onUpload={async (file, opts) => uploadAttachment(file, opts)}
+        onUploadMany={async (files, opts) => uploadAttachments(files, opts)}
         onDelete={async (id) => deleteAttachment(id)}
         mode="drawings"
         drawingCategoryOptions={drawingCategoryOptions}
