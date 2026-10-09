@@ -30,10 +30,12 @@ import {
 } from "@/components/dashboard/DashboardNavIcons";
 import type { AuthUser } from "@/lib/auth/types";
 import { userFullName } from "@/lib/auth/user-name";
+import { AvatarCircle } from "@/components/ui/AvatarCircle";
 import { useChatUnreadTotal } from "@/hooks/useChatUnreadTotal";
 import { ChatUnreadBadge } from "@/components/workforce/chat/ChatUnreadBadge";
 import { BID_HANDOFF_STAGES } from "@/lib/bidding/process-types";
 import { BID_STAGE_ICONS } from "@/components/bidding/BidStageIcons";
+import { TogalConnectRail } from "@/components/bidding/TogalConnectRail";
 
 type ViewMode =
   | "operations"
@@ -41,9 +43,13 @@ type ViewMode =
   | "dashboard"
   | "bidding"
   | "mike"
+  | "messages"
+  | "calendar"
   | "workforce"
   | "wfs"
-  | "settings";
+  | "settings"
+  /** System /admin — primary nav only, no workspace secondary rail. */
+  | "admin";
 
 const WORKSPACE_STORAGE_KEY = "construction-logistics-workspace";
 
@@ -59,7 +65,11 @@ export const SECONDARY_COLLAPSED_KEY =
 // SIDEBAR_PRIMARY_EXPANDED_PX = 256; SIDEBAR_PRIMARY_COLLAPSED_PX = 64;
 
 function viewFromPathname(pathname: string): ViewMode {
-  if (pathname.startsWith("/settings")) return "settings";
+  if (pathname.startsWith("/admin")) return "admin";
+  // Account (photo/password) lives with personal Settings, not Ops.
+  if (pathname.startsWith("/settings") || pathname.startsWith("/account")) return "settings";
+  if (pathname.startsWith("/messages")) return "messages";
+  if (pathname.startsWith("/calendar")) return "calendar";
   if (pathname.startsWith("/workforce")) return "workforce";
   if (pathname.startsWith("/wfs")) return "wfs";
   if (
@@ -70,7 +80,9 @@ function viewFromPathname(pathname: string): ViewMode {
   ) {
     return "mike";
   }
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/calendar")) return "dashboard";
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/notifications")) {
+    return "dashboard";
+  }
   if (pathname.startsWith("/bidding")) return "bidding";
   if (pathname.startsWith("/billings") || pathname.startsWith("/clearstory")) return "billings";
   return "operations";
@@ -81,9 +93,12 @@ function defaultHrefForView(view: ViewMode): string {
   if (view === "dashboard") return "/dashboard";
   if (view === "bidding") return "/bidding";
   if (view === "mike") return "/estimation-files";
+  if (view === "messages") return "/messages";
+  if (view === "calendar") return "/calendar";
   if (view === "workforce") return "/workforce";
   if (view === "wfs") return "/wfs";
   if (view === "settings") return "/settings/profile";
+  if (view === "admin") return "/admin/users";
   return "/job";
 }
 
@@ -110,6 +125,8 @@ type SidebarNavItem = {
 };
 
 function workspaceShowsSecondaryRail(view: ViewMode, pathname: string, canSeeBillings: boolean): boolean {
+  // System admin pages use the primary System links only — no Ops sub-rail.
+  if (view === "admin" || pathname.startsWith("/admin")) return false;
   // Open bid uses a fixed sheet secondary rail (same width) — still reserve space.
   if (bidDetailIdFromPath(pathname)) return true;
   if (pathname.startsWith("/clearstory")) return canSeeBillings;
@@ -117,6 +134,8 @@ function workspaceShowsSecondaryRail(view: ViewMode, pathname: string, canSeeBil
   if (view === "operations") return true;
   if (view === "bidding") return true;
   if (view === "mike") return true;
+  if (view === "messages") return true;
+  if (view === "calendar") return true;
   if (view === "workforce") return true;
   if (view === "dashboard") return true;
   if (view === "wfs") return true;
@@ -156,17 +175,6 @@ export function dashboardMainOffsetClass(
       ? "xl:pl-[296px]"
       : "xl:pl-[488px]";
   return `${primary} ${withSecondary}`;
-}
-
-function userInitials(user: AuthUser | null): string {
-  if (!user) return "?";
-  const f = user.firstName?.[0];
-  const l = user.lastName?.[0];
-  if (f && l) return `${f}${l}`.toUpperCase();
-  const parts = user.displayName?.split(/\s+/).filter(Boolean) ?? [];
-  if (parts.length >= 2) return `${parts[0]![0]}${parts[1]![0]}`.toUpperCase();
-  if (parts[0]) return parts[0].slice(0, 2).toUpperCase();
-  return user.email.slice(0, 2).toUpperCase();
 }
 
 function displayName(user: AuthUser | null): string {
@@ -230,10 +238,20 @@ const dashboardNavItems: SidebarNavItem[] = [
     biddingPermission: "bidding:read",
   },
   {
+    href: "/notifications",
+    label: "Notifications",
+    Icon: NavIconBell,
+    exact: true,
+    biddingPermission: "bidding:read",
+  },
+];
+
+const calendarNavItems: SidebarNavItem[] = [
+  {
     href: "/calendar",
-    label: "My calendar",
+    label: "Calendar",
     Icon: NavIconCalendar,
-    // Everyone has a personal calendar — no permission gate.
+    exact: true,
   },
 ];
 
@@ -290,6 +308,16 @@ const clearstorySubItems: { href: string; label: string; Icon: ComponentType<{ c
   { href: "/clearstory/settings", label: "Settings", Icon: NavIconCog },
 ];
 
+const messagesNavItems: SidebarNavItem[] = [
+  {
+    href: "/messages",
+    label: "Inbox",
+    Icon: NavIconChat,
+    activePathPrefix: "/messages",
+    permission: PERMISSIONS.connecteamRead,
+  },
+];
+
 const workforceNavItems: SidebarNavItem[] = [
   {
     href: "/workforce",
@@ -302,13 +330,6 @@ const workforceNavItems: SidebarNavItem[] = [
     href: "/workforce/my-day",
     label: "My day",
     Icon: NavIconSun,
-    permission: PERMISSIONS.connecteamRead,
-  },
-  {
-    href: "/workforce/chat",
-    label: "Team chat",
-    Icon: NavIconChat,
-    activePathPrefix: "/workforce/chat",
     permission: PERMISSIONS.connecteamRead,
   },
   {
@@ -355,6 +376,12 @@ const settingsNavItems: SidebarNavItem[] = [
     exact: true,
   },
   {
+    href: "/account",
+    label: "Account",
+    Icon: NavIconCog,
+    exact: true,
+  },
+  {
     href: "/settings/my-team",
     label: "My team",
     Icon: NavIconUsers,
@@ -368,10 +395,13 @@ const SETTINGS_RAIL_SECTIONS: {
 }[] = [
   {
     title: "General",
-    links: [{ href: "/settings/profile", label: "My Profile", Icon: NavIconUsers }],
+    links: [
+      { href: "/settings/profile", label: "My Profile", Icon: NavIconUsers },
+      { href: "/account", label: "Account", Icon: NavIconCog },
+    ],
   },
   {
-    title: "Account",
+    title: "Team",
     links: [{ href: "/settings/my-team", label: "My team", Icon: NavIconUsers }],
   },
 ];
@@ -414,6 +444,8 @@ const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ classN
   { value: "billings", label: "Billing", Icon: NavIconInvoice },
   { value: "bidding", label: "Estimates", Icon: NavIconProposal },
   { value: "mike", label: "Mike", Icon: NavIconTable },
+  { value: "messages", label: "Messages", Icon: NavIconChat },
+  { value: "calendar", label: "Calendar", Icon: NavIconCalendar },
   { value: "workforce", label: "Workforce", Icon: NavIconClock },
   { value: "settings", label: "Settings", Icon: NavIconCog },
 ];
@@ -425,8 +457,11 @@ const WORKSPACE_FULL_LABELS: Record<ViewMode, string> = {
   wfs: "WFS",
   bidding: "Estimates",
   mike: "Mike",
+  messages: "Messages",
+  calendar: "Calendar",
   workforce: "Workforce",
   settings: "Settings",
+  admin: "System",
 };
 
 export function Sidebar({
@@ -496,8 +531,9 @@ export function Sidebar({
       return operationsNavItems.some((i) => navItemVisible(user, i));
     }
     if (value === "billings") return !hideOpsReportingBilling && canSeeBillings;
-    // Dashboard holds "My calendar", which everyone has.
-    if (value === "dashboard") return true;
+    if (value === "dashboard") {
+      return dashboardNavItems.some((i) => navItemVisible(user, i));
+    }
     if (value === "bidding" || value === "mike") {
       return canBidding(user, "bidding:read");
     }
@@ -511,6 +547,10 @@ export function Sidebar({
           isAdminPanelRole(user?.role))
       );
     }
+    if (value === "messages") {
+      return messagesNavItems.some((i) => navItemVisible(user, i));
+    }
+    if (value === "calendar") return true;
     if (value === "workforce") {
       return workforceNavItems.some((i) => navItemVisible(user, i));
     }
@@ -530,13 +570,13 @@ export function Sidebar({
     } catch {
       /* ignore */
     }
-    // Without Estimates access the Dashboard home is hidden, so land on the calendar instead.
-    router.push(
-      value === "dashboard" && !canBidding(user, "bidding:read") ? "/calendar" : defaultHrefForView(value)
-    );
+    router.push(defaultHrefForView(value));
   };
 
   function itemsForView(view: ViewMode): SidebarNavItem[] {
+    if (view === "admin") return [];
+    if (view === "messages") return messagesNavItems;
+    if (view === "calendar") return calendarNavItems;
     if (view === "workforce") return workforceNavItems;
     if (view === "mike") return mikeNavItems;
     if (view === "dashboard") return dashboardNavItems;
@@ -637,7 +677,7 @@ export function Sidebar({
             </span>
             <span className={`min-w-0 flex-col ${lgLabelFlex}`}>
               <span className="truncate text-[18px] font-semibold leading-tight text-white">
-                Construction Logistics
+                Goel App
               </span>
               <span className="mt-0.5 text-[13px] leading-tight text-white/70">GOEL Services</span>
             </span>
@@ -694,7 +734,7 @@ export function Sidebar({
                       title={WORKSPACE_FULL_LABELS[value]}
                       aria-expanded={isExpanded}
                       aria-current={isActiveWorkspace ? "page" : undefined}
-                      className={`flex h-12 w-full items-center gap-3 rounded-md px-2.5 font-[family-name:var(--font-geist-sans)] text-[var(--text-nav)] font-medium leading-none transition-colors ${
+                      className={`relative flex h-12 w-full items-center gap-3 rounded-md px-2.5 font-[family-name:var(--font-geist-sans)] text-[var(--text-nav)] font-medium leading-none transition-colors ${
                         iconOnly ? "justify-center" : "justify-start px-3"
                       } ${
                         isActiveWorkspace
@@ -706,6 +746,12 @@ export function Sidebar({
                       <span className={`flex-1 truncate text-left ${lgLabelInline}`}>
                         {WORKSPACE_FULL_LABELS[value]}
                       </span>
+                      {value === "messages" && chatUnreadTotal > 0 && !iconOnly ? (
+                        <ChatUnreadBadge count={chatUnreadTotal} />
+                      ) : null}
+                      {value === "messages" && chatUnreadTotal > 0 && iconOnly ? (
+                        <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-brand" aria-hidden />
+                      ) : null}
                     </button>
 
                     {/* Below xl: nest children under the active workspace (accordion) — same as before. */}
@@ -723,7 +769,7 @@ export function Sidebar({
                                 className={`h-4 w-4 shrink-0 text-white`}
                               />
                               <span className={`flex-1 ${lgLabelInline}`}>{label}</span>
-                              {href === "/workforce/chat" && chatUnreadTotal > 0 ? (
+                              {href === "/messages" && chatUnreadTotal > 0 ? (
                                 <ChatUnreadBadge count={chatUnreadTotal} />
                               ) : null}
                             </Link>
@@ -806,14 +852,10 @@ export function Sidebar({
             }`}
           >
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,0,0,0.28)] ${
-                collapsed ? "" : "sm:h-10 sm:w-10"
-              }`}
-              style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%)" }}
+              className="shrink-0 shadow-[0_2px_8px_rgba(0,0,0,0.28)]"
               title={displayName(user)}
-              aria-hidden
             >
-              {userInitials(user)}
+              <AvatarCircle user={user} />
             </div>
             <div className={`min-w-0 flex-1 ${lgLabel}`}>
               <p className="truncate text-[13px] font-semibold text-white/95">{displayName(user)}</p>
@@ -893,10 +935,10 @@ export function Sidebar({
           </div>
 
           <nav
-            className={`flex-1 overflow-y-auto ${
+            className={`flex flex-1 flex-col overflow-y-auto ${
               secondaryCollapsed
-                ? "flex flex-col items-center gap-0.5 px-1 pb-4 pt-3"
-                : "space-y-7 px-4 pb-6 pt-5"
+                ? "items-center gap-0.5 px-1 pb-4 pt-3"
+                : "gap-7 px-4 pb-6 pt-5"
             }`}
           >
             {currentView === "settings" ? (
@@ -1055,7 +1097,7 @@ export function Sidebar({
                         <span className="min-w-0 flex-1 truncate">{item.label}</span>
                       ) : null}
                       {!secondaryCollapsed &&
-                      item.href === "/workforce/chat" &&
+                      item.href === "/messages" &&
                       chatUnreadTotal > 0 ? (
                         <ChatUnreadBadge count={chatUnreadTotal} />
                       ) : null}
@@ -1098,6 +1140,12 @@ export function Sidebar({
                     );
                   })}
                 </div>
+              </div>
+            ) : null}
+
+            {currentView === "bidding" ? (
+              <div className={`mt-auto w-full ${secondaryCollapsed ? "" : "-mx-2"}`}>
+                <TogalConnectRail collapsed={secondaryCollapsed} />
               </div>
             ) : null}
           </nav>

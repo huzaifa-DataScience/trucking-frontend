@@ -1,7 +1,7 @@
 /**
  * Bidding API — docs/BIDDING_FRONTEND_API.md
  */
-import { del, get, getBlob, patch, post } from "../client";
+import { del, get, getBlob, patch, post, put } from "../client";
 import type {
   BidAttachment,
   BidCaptainLookup,
@@ -514,25 +514,108 @@ export async function getCompanyInfoPrefillFromJob(
   return get<BidCompanyInfo>(`/bids/prefill/company-from-job/${jobId}`);
 }
 
+export interface JobBidFile extends BidAttachment {
+  bidId: number;
+  bidName: string | null;
+  estimateNumber: string | null;
+}
+
+/** Files on bids linked to this job. View and download use `downloadPath`. */
+export async function listJobBidFiles(jobId: string): Promise<JobBidFile[]> {
+  return get<JobBidFile[]>(`/bids/job/${jobId}/files`);
+}
+
+/** Togal — FRONTEND_TOGAL.md */
+export async function getTogalStatus(): Promise<{
+  connected: boolean;
+  expiresAt: string | null;
+  canConnect: boolean;
+  pending: { verificationUrl: string; userCode: string; expiresAt: string } | null;
+}> {
+  return get("/bids/togal/status");
+}
+
+export async function connectTogal(): Promise<{
+  verificationUrl: string;
+  userCode: string;
+  expiresAt: string;
+  intervalSeconds: number;
+}> {
+  return post("/bids/togal/connect", {});
+}
+
+export async function pollTogalConnect(): Promise<{
+  connected: boolean;
+  expiresAt: string | null;
+}> {
+  return post("/bids/togal/connect/poll", {});
+}
+
+/** Abort an in-progress Togal login (clears `status.pending`). Optional until backend ships it. */
+export async function cancelTogalConnect(): Promise<void> {
+  await post("/bids/togal/connect/cancel", {});
+}
+
+export async function loadBidInTogal(id: string): Promise<BidDetail> {
+  return post<BidDetail>(`/bids/${id}/togal/load`, {});
+}
+
+export async function runTogalScript(id: string): Promise<{ ok: true }> {
+  return post(`/bids/${id}/togal/run-script`, {});
+}
+
+export async function pullTogalExport(id: string): Promise<BidDetail> {
+  return post<BidDetail>(`/bids/${id}/togal/pull`, {});
+}
+
+export async function getTogalScript(): Promise<{
+  body: string;
+  updatedAt: string | null;
+  canEdit: boolean;
+}> {
+  return get("/bids/togal/script");
+}
+
+export async function saveTogalScript(body: string): Promise<{
+  body: string;
+  updatedAt: string;
+  canEdit: boolean;
+}> {
+  return put("/bids/togal/script", { body });
+}
+
 /** Fetch attachment bytes for preview (JWT required — cannot use raw img src). */
 export async function fetchBidAttachmentBlob(downloadPath: string): Promise<Blob> {
   return getBlob(downloadPath);
 }
 
-/** Upload image/PDF/Word doc — draft bids only. Field name must be `file`. */
-export async function uploadBidAttachment(
+export type BidAttachmentUploadOpts = {
+  label?: string;
+  category?: string;
+  drawingCategory?: string;
+  /** Relative path for folder uploads — becomes the saved `fileName`. */
+  relativePath?: string;
+};
+
+export type BidAttachmentUploadResult = {
+  attachments: BidAttachment[];
+  togal?: { sent: boolean; message: string | null } | null;
+};
+
+function attachmentUploadName(file: File, relativePath?: string): string {
+  const raw =
+    relativePath?.trim() ||
+    (file as File & { webkitRelativePath?: string }).webkitRelativePath?.trim() ||
+    file.name;
+  return raw.replace(/\\/g, "/").replace(/^\/+/, "") || file.name;
+}
+
+async function postBidAttachmentsForm(
   bidId: string,
-  file: File,
-  opts?: { label?: string; category?: string; drawingCategory?: string }
-): Promise<BidAttachment> {
+  form: FormData
+): Promise<BidAttachmentUploadResult> {
   const url = getApiUrl(`/bids/${bidId}/attachments`);
   const token = getAccessToken();
-  const form = new FormData();
-  form.append("file", file);
-  if (opts?.label?.trim()) form.append("label", opts.label.trim());
-  if (opts?.category) form.append("category", opts.category);
-  if (opts?.drawingCategory) form.append("drawingCategory", opts.drawingCategory);
-
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -553,7 +636,54 @@ export async function uploadBidAttachment(
     throw new Error(message);
   }
 
-  return response.json() as Promise<BidAttachment>;
+  const raw = (await response.json()) as
+    | (BidAttachment & { togal?: { sent: boolean; message: string | null } | null })
+    | BidAttachmentUploadResult;
+
+  if (raw && typeof raw === "object" && Array.isArray((raw as BidAttachmentUploadResult).attachments)) {
+    return raw as BidAttachmentUploadResult;
+  }
+  const single = raw as BidAttachment & {
+    togal?: { sent: boolean; message: string | null } | null;
+  };
+  return { attachments: [single], togal: single.togal ?? null };
+}
+
+/**
+ * Upload one file (`file`) or many (`files`) — FRONTEND_EST.md.
+ * Folder uploads: pass relativePath / webkitRelativePath so `fileName` keeps the folder path.
+ */
+export async function uploadBidAttachment(
+  bidId: string,
+  file: File,
+  opts?: BidAttachmentUploadOpts
+): Promise<BidAttachment & { togal?: { sent: boolean; message: string | null } | null }> {
+  const result = await uploadBidAttachments(bidId, [file], opts);
+  const first = result.attachments[0];
+  if (!first) throw new Error("Upload returned no attachment");
+  return { ...first, togal: result.togal ?? null };
+}
+
+/** One POST for a folder or multi-select. Uses `files` when more than one. */
+export async function uploadBidAttachments(
+  bidId: string,
+  files: File[],
+  opts?: BidAttachmentUploadOpts
+): Promise<BidAttachmentUploadResult> {
+  if (files.length === 0) return { attachments: [], togal: null };
+  const form = new FormData();
+  if (files.length === 1) {
+    const file = files[0]!;
+    form.append("file", file, attachmentUploadName(file, opts?.relativePath));
+  } else {
+    for (const file of files) {
+      form.append("files", file, attachmentUploadName(file));
+    }
+  }
+  if (opts?.label?.trim()) form.append("label", opts.label.trim());
+  if (opts?.category) form.append("category", opts.category);
+  if (opts?.drawingCategory) form.append("drawingCategory", opts.drawingCategory);
+  return postBidAttachmentsForm(bidId, form);
 }
 
 export async function patchBidAttachment(

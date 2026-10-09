@@ -5,6 +5,7 @@ import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { TogalScriptPanel } from "@/components/bidding/TogalPanels";
 import {
   clearanceOptionsFromMeta,
   type ProcessMeta,
@@ -68,21 +69,7 @@ export function BidEstimatingSetupStage() {
         </p>
       ) : null}
 
-      <section className="intake-section min-w-0 max-w-md">
-        <h3 className={sectionHead}>Internal bid date</h3>
-        <div className={`${sectionBody} intake-stack`}>
-          <label className="intake-row">
-            <span className={labelClass}>Turn-in date</span>
-            <DatePicker
-              ariaLabel="Internal bid date"
-              className={inputClass}
-              disabled={!editable}
-              value={draft.internalBidDate?.slice(0, 10) ?? ""}
-              onChange={(v) => setField("internalBidDate", v || null)}
-            />
-          </label>
-        </div>
-      </section>
+      <TogalScriptPanel />
 
       <div className="grid grid-cols-3 items-start gap-6 max-[1000px]:grid-cols-1">
         <section className="intake-section min-w-0">

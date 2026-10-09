@@ -27,10 +27,33 @@ const ATTACHMENT_CATEGORY_OPTIONS: { value: string; label: string }[] = [
 
 const HUB_LABEL_OPTIONS: { value: string; label: string }[] = [
   { value: "drawings", label: "Drawings" },
-  { value: "specifications", label: "Specifications" },
+  { value: "specifications", label: "Specs / manuals" },
   { value: "invitation", label: "Invitation" },
   { value: "addenda", label: "Addenda" },
 ];
+
+/** Folder prefix from `fileName` paths like `Mechanical/M-101.pdf` (FRONTEND_EST.md). */
+function folderFromFileName(fileName: string): string {
+  const norm = fileName.replace(/\\/g, "/");
+  const i = norm.lastIndexOf("/");
+  return i > 0 ? norm.slice(0, i) : "";
+}
+
+function groupAttachmentsByFolder(attachments: BidAttachment[]): {
+  folder: string;
+  items: BidAttachment[];
+}[] {
+  const map = new Map<string, BidAttachment[]>();
+  for (const att of attachments) {
+    const folder = folderFromFileName(att.fileName);
+    const list = map.get(folder) ?? [];
+    list.push(att);
+    map.set(folder, list);
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([folder, items]) => ({ folder, items }));
+}
 
 const DRAWING_PHASE_TITLES: Record<string, string> = {
   sd: "SD — Schematic Design",
@@ -65,12 +88,45 @@ function fileKindLabel(att: BidAttachment): string {
   ) {
     return "ZIP";
   }
-  if (mime.startsWith("image/")) return "IMG";
+  if (mime.startsWith("image/") || /\.(jpe?g|png|webp|gif|bmp|svg)$/i.test(name)) return "IMG";
   return "FILE";
 }
 
+/** Prefer attachment mime / extension so browsers can preview (API often returns octet-stream). */
+function typedAttachmentBlob(att: BidAttachment, blob: Blob): Blob {
+  const name = att.fileName.toLowerCase();
+  let type = att.mimeType?.trim() || blob.type || "";
+  if (!type || type === "application/octet-stream") {
+    if (name.endsWith(".pdf")) type = "application/pdf";
+    else if (name.endsWith(".png")) type = "image/png";
+    else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) type = "image/jpeg";
+    else if (name.endsWith(".webp")) type = "image/webp";
+    else if (name.endsWith(".gif")) type = "image/gif";
+    else if (name.endsWith(".csv")) type = "text/csv";
+    else if (name.endsWith(".doc")) type = "application/msword";
+    else if (name.endsWith(".docx")) {
+      type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    } else if (name.endsWith(".zip")) type = "application/zip";
+  }
+  if (type && type !== blob.type) return new Blob([blob], { type });
+  return blob;
+}
+
+function isImageAttachment(att: BidAttachment): boolean {
+  if (att.mimeType?.startsWith("image/")) return true;
+  return /\.(jpe?g|png|webp|gif|bmp|svg)$/i.test(att.fileName);
+}
+
+function isPdfAttachment(att: BidAttachment): boolean {
+  return att.mimeType === "application/pdf" || att.fileName.toLowerCase().endsWith(".pdf");
+}
+
+function isCsvAttachment(att: BidAttachment): boolean {
+  return att.mimeType === "text/csv" || att.fileName.toLowerCase().endsWith(".csv");
+}
+
 async function downloadAttachment(att: BidAttachment) {
-  const blob = await biddingApi.fetchBidAttachmentBlob(att.downloadPath);
+  const blob = typedAttachmentBlob(att, await biddingApi.fetchBidAttachmentBlob(att.downloadPath));
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -80,22 +136,27 @@ async function downloadAttachment(att: BidAttachment) {
 }
 
 async function viewAttachment(att: BidAttachment) {
-  const blob = await biddingApi.fetchBidAttachmentBlob(att.downloadPath);
+  const blob = typedAttachmentBlob(att, await biddingApi.fetchBidAttachmentBlob(att.downloadPath));
   const url = URL.createObjectURL(blob);
   const opened = window.open(url, "_blank", "noopener,noreferrer");
   if (!opened) {
-    // Popup blocked — fall back to download.
     const a = document.createElement("a");
     a.href = url;
     a.download = att.fileName;
     a.click();
   }
-  // Revoke after the tab has a chance to load the blob.
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-function AttachmentPreview({ attachment }: { attachment: BidAttachment }) {
+function AttachmentPreview({
+  attachment,
+  compact = false,
+}: {
+  attachment: BidAttachment;
+  compact?: boolean;
+}) {
   const [url, setUrl] = useState<string | null>(null);
+  const [textPreview, setTextPreview] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -104,8 +165,15 @@ function AttachmentPreview({ attachment }: { attachment: BidAttachment }) {
 
     void biddingApi
       .fetchBidAttachmentBlob(attachment.downloadPath)
-      .then((blob) => {
+      .then(async (raw) => {
         if (cancelled) return;
+        const blob = typedAttachmentBlob(attachment, raw);
+        if (isCsvAttachment(attachment)) {
+          const text = await blob.text();
+          if (cancelled) return;
+          setTextPreview(text.slice(0, 400));
+          return;
+        }
         objectUrl = URL.createObjectURL(blob);
         setUrl(objectUrl);
       })
@@ -117,47 +185,63 @@ function AttachmentPreview({ attachment }: { attachment: BidAttachment }) {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [attachment.downloadPath]);
+  }, [attachment.downloadPath, attachment.fileName, attachment.mimeType]);
 
-  if (attachment.mimeType === "application/pdf") {
+  const shell = compact
+    ? "flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#e5e7eb] bg-[#f8f9fb]"
+    : "flex h-28 w-full items-center justify-center overflow-hidden rounded-lg bg-ink/[0.04]";
+
+  if (error) {
     return (
-      <div className="flex h-24 items-center justify-center rounded-lg bg-ink/[0.04] text-xs font-medium text-ink/50">
-        PDF
+      <div className={`${shell} text-[10px] text-ink/40`}>
+        {fileKindLabel(attachment)}
       </div>
     );
   }
 
-  if (attachment.mimeType === "text/csv" || attachment.fileName.toLowerCase().endsWith(".csv")) {
+  if (isCsvAttachment(attachment)) {
+    if (!textPreview) {
+      return <div className={`${shell} text-[10px] text-ink/40`}>…</div>;
+    }
     return (
-      <div className="flex h-24 items-center justify-center rounded-lg bg-ink/[0.04] text-xs font-medium text-ink/50">
-        CSV
-      </div>
+      <pre
+        className={`${shell} overflow-hidden p-1 text-left text-[7px] leading-tight text-ink/60 whitespace-pre-wrap`}
+        title={attachment.fileName}
+      >
+        {textPreview}
+      </pre>
     );
   }
 
-  if (isWordDoc(attachment.mimeType)) {
+  if (!url) {
+    return <div className={`${shell} text-[10px] text-ink/40`}>…</div>;
+  }
+
+  if (isPdfAttachment(attachment)) {
     return (
-      <div className="flex h-24 items-center justify-center rounded-lg bg-ink/[0.04] text-xs font-medium text-ink/50">
-        DOC
-      </div>
+      <iframe
+        title={attachment.fileName}
+        src={`${url}#toolbar=0&navpanes=0&scrollbar=0`}
+        className={compact ? "h-12 w-12 border-0 bg-white pointer-events-none" : "h-28 w-full border-0 bg-white"}
+      />
     );
   }
 
-  if (error || !url) {
+  if (isImageAttachment(attachment)) {
     return (
-      <div className="flex h-24 items-center justify-center rounded-lg bg-ink/[0.04] text-xs text-ink/40">
-        Preview unavailable
-      </div>
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={url}
+        alt={attachment.fileName}
+        className={compact ? "h-12 w-12 object-cover" : "h-28 w-full object-cover"}
+      />
     );
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={url}
-      alt={attachment.label ?? attachment.fileName}
-      className="h-24 w-full rounded-lg object-cover"
-    />
+    <div className={`${shell} text-[10px] font-bold tracking-wide text-[#5a5340]`}>
+      {fileKindLabel(attachment)}
+    </div>
   );
 }
 
@@ -175,51 +259,78 @@ function AttachmentGrid({
   if (attachments.length === 0) {
     return <p className="text-[12.5px] text-[#6b7280]">No attachments yet.</p>;
   }
+  const groups = groupAttachmentsByFolder(attachments);
   return (
-    <ul className="grid gap-2 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
-      {attachments.map((att) => (
-        <li key={att.id} className="overflow-hidden rounded border border-[#e5e7eb] bg-white">
-          <AttachmentPreview attachment={att} />
-          <div className="space-y-0.5 p-2">
-            <p className="truncate text-[12.5px] font-medium text-[#1f2937]" title={att.fileName}>
-              {att.label ?? att.fileName}
-            </p>
-            <p className="text-[11px] text-[#9ca3af]">{formatBytes(att.sizeBytes)}</p>
-            <div className="flex gap-2 pt-0.5">
-              <button
-                type="button"
-                onClick={() => void downloadAttachment(att)}
-                className="text-[11px] font-semibold text-[#4b5563] hover:underline"
-              >
-                Download
-              </button>
-              {isEditable ? (
+    <div className="flex flex-col gap-3">
+      {groups.map(({ folder, items }) => (
+        <div key={folder || "__root"}>
+          {folder ? (
+            <p className="mb-1.5 text-[11px] font-semibold text-[#4b5563]">{folder}/</p>
+          ) : null}
+          <ul className="grid gap-2 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
+            {items.map((att) => (
+              <li key={att.id} className="overflow-hidden rounded border border-[#e5e7eb] bg-white">
                 <button
                   type="button"
-                  onClick={() => {
-                    void (async () => {
-                      const ok = await confirmDialog({
-                        title: "Remove attachment?",
-                        message: `Remove attachment "${att.fileName}"?`,
-                        confirmLabel: "Remove",
-                        variant: "danger",
-                      });
-                      if (!ok) return;
-                      void onDelete(att.id);
-                    })();
-                  }}
-                  className={INTAKE_REMOVE_BTN}
-                  aria-label="Remove attachment"
-                  title="Remove attachment"
+                  className="block w-full cursor-pointer text-left"
+                  title={`Preview ${att.fileName}`}
+                  onClick={() => void viewAttachment(att)}
                 >
-                  <TrashIcon />
+                  <AttachmentPreview attachment={att} />
                 </button>
-              ) : null}
-            </div>
-          </div>
-        </li>
+                <div className="space-y-0.5 p-2">
+                  <p
+                    className="truncate text-[12.5px] font-medium text-[#1f2937]"
+                    title={att.fileName}
+                  >
+                    {att.fileName}
+                  </p>
+                  <p className="text-[11px] text-[#9ca3af]">{formatBytes(att.sizeBytes)}</p>
+                  <div className="flex gap-2 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => void viewAttachment(att)}
+                      className="text-[11px] font-semibold text-brand hover:underline"
+                    >
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void downloadAttachment(att)}
+                      className="text-[11px] font-semibold text-[#4b5563] hover:underline"
+                    >
+                      Download
+                    </button>
+                    {isEditable ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void (async () => {
+                            const ok = await confirmDialog({
+                              title: "Remove attachment?",
+                              message: `Remove attachment "${att.fileName}"?`,
+                              confirmLabel: "Remove",
+                              variant: "danger",
+                            });
+                            if (!ok) return;
+                            void onDelete(att.id);
+                          })();
+                        }}
+                        className={INTAKE_REMOVE_BTN}
+                        aria-label="Remove attachment"
+                        title="Remove attachment"
+                      >
+                        <TrashIcon />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }
 
@@ -242,56 +353,84 @@ function DrawingFileRows({
     );
   }
 
+  const groups = groupAttachmentsByFolder(attachments);
+
   return (
-    <ul className="mt-3 overflow-hidden rounded-lg border border-[#e5e7eb]">
-      {attachments.map((att) => (
-        <li
-          key={att.id}
-          className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-[#e5e7eb] bg-white px-3 py-2.5 first:border-t-0 hover:bg-[#faf7f0]"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f3f1ea] text-[10px] font-bold tracking-wide text-[#5a5340]">
-            {fileKindLabel(att)}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[12.5px] font-semibold text-[#1f2937]" title={att.fileName}>
-              {att.fileName}
-            </p>
-            <p className="mt-0.5 text-[11px] text-[#9ca3af]">{formatBytes(att.sizeBytes)}</p>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => void downloadAttachment(att)}
-                className="cursor-pointer text-[11px] font-semibold text-[#4b5563] hover:underline"
+    <div className="mt-3 flex flex-col gap-2">
+      {groups.map(({ folder, items }) => (
+        <div key={folder || "__root"}>
+          {folder ? (
+            <p className="mb-1 px-0.5 text-[11px] font-semibold text-[#4b5563]">{folder}/</p>
+          ) : null}
+          <ul className="overflow-hidden rounded-lg border border-[#e5e7eb]">
+            {items.map((att) => (
+              <li
+                key={att.id}
+                className="grid grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-[#e5e7eb] bg-white px-3 py-2.5 first:border-t-0 hover:bg-[#faf7f0]"
               >
-                Download
-              </button>
-              {isEditable ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    void (async () => {
-                      const ok = await confirmDialog({
-                        title: "Remove drawing?",
-                        message: `Remove "${att.fileName}"?`,
-                        confirmLabel: "Remove",
-                        variant: "danger",
-                      });
-                      if (!ok) return;
-                      void onDelete(att.id);
-                    })();
-                  }}
-                  className={INTAKE_REMOVE_BTN}
-                  aria-label="Remove drawing"
-                  title="Remove drawing"
+                  className="cursor-pointer overflow-hidden rounded-md"
+                  title={`Preview ${att.fileName}`}
+                  onClick={() => void viewAttachment(att)}
                 >
-                  <TrashIcon />
+                  <AttachmentPreview attachment={att} compact />
                 </button>
-            ) : null}
-          </div>
-        </li>
+                <div className="min-w-0">
+                  <p
+                    className="truncate text-[12.5px] font-semibold text-[#1f2937]"
+                    title={att.fileName}
+                  >
+                    {att.fileName}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[#9ca3af]">
+                    {formatBytes(att.sizeBytes)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => void viewAttachment(att)}
+                    className="cursor-pointer text-[11px] font-semibold text-brand hover:underline"
+                  >
+                    View
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void downloadAttachment(att)}
+                    className="cursor-pointer text-[11px] font-semibold text-[#4b5563] hover:underline"
+                  >
+                    Download
+                  </button>
+                  {isEditable ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void (async () => {
+                          const ok = await confirmDialog({
+                            title: "Remove drawing?",
+                            message: `Remove "${att.fileName}"?`,
+                            confirmLabel: "Remove",
+                            variant: "danger",
+                          });
+                          if (!ok) return;
+                          void onDelete(att.id);
+                        })();
+                      }}
+                      className={INTAKE_REMOVE_BTN}
+                      aria-label="Remove drawing"
+                      title="Remove drawing"
+                    >
+                      <TrashIcon />
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }
 
@@ -305,6 +444,7 @@ function DrawingsPanel({
   activePhase,
   onPhaseChange,
   onBrowse,
+  onBrowseFolder,
   onDropFiles,
   inputRef,
   confirmDialog,
@@ -319,6 +459,7 @@ function DrawingsPanel({
   activePhase: string;
   onPhaseChange: (phase: string) => void;
   onBrowse: () => void;
+  onBrowseFolder: () => void;
   onDropFiles: (files: FileList | null) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
   confirmDialog: ReturnType<typeof useConfirmDialog>;
@@ -416,21 +557,34 @@ function DrawingsPanel({
                     {busy ? "Uploading…" : "Drop PDF or image here"}
                   </p>
                   <p className="mt-0.5 text-[12px] text-[#6b7280]">
-                    or browse — max {MAX_FILES} files · ZIP ok
+                    or browse — max {MAX_FILES} files · ZIP / folder ok
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                disabled={busy || atLimit}
-                className="intake-head-btn shrink-0 cursor-pointer border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340] hover:bg-[#ebe6da] disabled:cursor-default disabled:opacity-50"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onBrowse();
-                }}
-              >
-                Browse files
-              </button>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy || atLimit}
+                  className="intake-head-btn cursor-pointer border-[#d9d4c8] bg-[#f3f1ea] text-[#5a5340] hover:bg-[#ebe6da] disabled:cursor-default disabled:opacity-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onBrowse();
+                  }}
+                >
+                  Browse files
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || atLimit}
+                  className="intake-head-btn cursor-pointer border-[#d9d4c8] bg-white text-[#5a5340] hover:bg-[#f3f1ea] disabled:cursor-default disabled:opacity-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onBrowseFolder();
+                  }}
+                >
+                  Add folder
+                </button>
+              </div>
               <input
                 ref={inputRef}
                 type="file"
@@ -465,6 +619,7 @@ export function BidAttachmentsSection({
   isEditable,
   uploading,
   onUpload,
+  onUploadMany,
   onDelete,
   mode = "general",
   drawingCategoryOptions,
@@ -474,7 +629,15 @@ export function BidAttachmentsSection({
   attachments: BidAttachment[];
   isEditable: boolean;
   uploading?: boolean;
-  onUpload: (file: File, opts?: { label?: string; category?: string; drawingCategory?: string }) => Promise<void>;
+  onUpload: (
+    file: File,
+    opts?: { label?: string; category?: string; drawingCategory?: string; relativePath?: string }
+  ) => Promise<void>;
+  /** Prefer for folder / multi-file — one POST with `files` (FRONTEND_EST.md). */
+  onUploadMany?: (
+    files: File[],
+    opts?: { label?: string; category?: string; drawingCategory?: string }
+  ) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   /** drawings = phase tabs. markup = Takeoff — one open file drop + list. */
   mode?: "general" | "drawings" | "markup";
@@ -485,6 +648,7 @@ export function BidAttachmentsSection({
   title?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const pendingLabelRef = useRef(
     labels?.[0] ?? (mode === "markup" ? "takeoff" : "drawings")
   );
@@ -509,6 +673,29 @@ export function BidAttachmentsSection({
     }
   }, [mode, phaseOptions, pendingDrawingCategory]);
 
+  useEffect(() => {
+    const el = folderInputRef.current;
+    if (!el) return;
+    el.setAttribute("webkitdirectory", "");
+    el.setAttribute("directory", "");
+  }, []);
+
+  const uploadOptsFor = useCallback(
+    (label: string) => {
+      if (mode === "drawings") {
+        return {
+          label: "drawings",
+          drawingCategory: pendingDrawingCategory || undefined,
+        };
+      }
+      if (mode === "markup") {
+        return { label: label || "takeoff", category: "takeoff_markup" as const };
+      }
+      return { label, category: pendingCategory };
+    },
+    [mode, pendingCategory, pendingDrawingCategory]
+  );
+
   const handleFiles = useCallback(
     async (files: FileList | null, labelOverride?: string) => {
       if (!files?.length) return;
@@ -522,47 +709,58 @@ export function BidAttachmentsSection({
         return;
       }
 
-      for (const file of batch) {
-        setLocalUploading(true);
-        try {
-          if (mode === "drawings") {
-            await onUpload(file, {
-              label: "drawings",
-              drawingCategory: pendingDrawingCategory || undefined,
-            });
-          } else if (mode === "markup") {
-            await onUpload(file, {
-              label: label || "takeoff",
-              category: "takeoff_markup",
-            });
-          } else {
-            await onUpload(file, { label, category: pendingCategory });
+      const opts = uploadOptsFor(label);
+      setLocalUploading(true);
+      try {
+        if (onUploadMany && batch.length > 1) {
+          await onUploadMany(batch, opts);
+        } else if (onUploadMany) {
+          await onUploadMany(batch, opts);
+        } else {
+          for (const file of batch) {
+            const relativePath =
+              (file as File & { webkitRelativePath?: string }).webkitRelativePath ||
+              undefined;
+            await onUpload(file, { ...opts, relativePath });
           }
-        } finally {
-          setLocalUploading(false);
         }
+      } finally {
+        setLocalUploading(false);
       }
     },
-    [attachments.length, onUpload, mode, pendingLabel, pendingCategory, pendingDrawingCategory]
+    [attachments.length, onUpload, onUploadMany, pendingLabel, uploadOptsFor]
   );
 
   if (mode === "drawings") {
     return (
-      <DrawingsPanel
-        attachments={attachments}
-        isEditable={isEditable}
-        uploading={uploading}
-        localUploading={localUploading}
-        localError={localError}
-        drawingCategoryOptions={phaseOptions}
-        activePhase={pendingDrawingCategory}
-        onPhaseChange={setPendingDrawingCategory}
-        onBrowse={() => inputRef.current?.click()}
-        onDropFiles={(files) => void handleFiles(files)}
-        inputRef={inputRef}
-        confirmDialog={confirmDialog}
-        onDelete={onDelete}
-      />
+      <>
+        <input
+          ref={folderInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void handleFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <DrawingsPanel
+          attachments={attachments}
+          isEditable={isEditable}
+          uploading={uploading}
+          localUploading={localUploading}
+          localError={localError}
+          drawingCategoryOptions={phaseOptions}
+          activePhase={pendingDrawingCategory}
+          onPhaseChange={setPendingDrawingCategory}
+          onBrowse={() => inputRef.current?.click()}
+          onBrowseFolder={() => folderInputRef.current?.click()}
+          onDropFiles={(files) => void handleFiles(files)}
+          inputRef={inputRef}
+          confirmDialog={confirmDialog}
+          onDelete={onDelete}
+        />
+      </>
     );
   }
 
@@ -598,10 +796,11 @@ export function BidAttachmentsSection({
   const perLabelAdd = Boolean(labels?.length);
   pendingLabelRef.current = pendingLabel;
 
-  const browseForLabel = (label: string) => {
+  const browseForLabel = (label: string, folder = false) => {
     setPendingLabel(label);
     pendingLabelRef.current = label;
-    inputRef.current?.click();
+    if (folder) folderInputRef.current?.click();
+    else inputRef.current?.click();
   };
 
   return (
@@ -612,6 +811,16 @@ export function BidAttachmentsSection({
           ref={inputRef}
           type="file"
           accept={ACCEPT}
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void handleFiles(e.target.files, pendingLabelRef.current);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={folderInputRef}
+          type="file"
           multiple
           className="hidden"
           onChange={(e) => {
@@ -654,6 +863,14 @@ export function BidAttachmentsSection({
             >
               {busy ? "Uploading…" : "Add file"}
             </button>
+            <button
+              type="button"
+              disabled={busy || atLimit}
+              onClick={() => folderInputRef.current?.click()}
+              className="intake-head-btn disabled:opacity-50"
+            >
+              Add folder
+            </button>
           </div>
         ) : null}
 
@@ -682,28 +899,39 @@ export function BidAttachmentsSection({
                   {o.label}
                 </p>
                 {isEditable && perLabelAdd ? (
-                  <button
-                    type="button"
-                    disabled={busy || atLimit}
-                    onClick={() => browseForLabel(o.value)}
-                    className={`${INTAKE_ADD_BTN} disabled:opacity-50`}
-                    aria-label={
-                      busy && pendingLabel === o.value
-                        ? "Uploading"
-                        : `Add ${o.label}`
-                    }
-                    title={
-                      busy && pendingLabel === o.value
-                        ? "Uploading…"
-                        : `Add ${o.label}`
-                    }
-                  >
-                    {busy && pendingLabel === o.value ? (
-                      <span className="text-[10px] font-semibold">…</span>
-                    ) : (
-                      <PlusIcon />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={busy || atLimit}
+                      onClick={() => browseForLabel(o.value, false)}
+                      className={`${INTAKE_ADD_BTN} disabled:opacity-50`}
+                      aria-label={
+                        busy && pendingLabel === o.value
+                          ? "Uploading"
+                          : `Add ${o.label}`
+                      }
+                      title={
+                        busy && pendingLabel === o.value
+                          ? "Uploading…"
+                          : `Add ${o.label}`
+                      }
+                    >
+                      {busy && pendingLabel === o.value ? (
+                        <span className="text-[10px] font-semibold">…</span>
+                      ) : (
+                        <PlusIcon />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy || atLimit}
+                      onClick={() => browseForLabel(o.value, true)}
+                      className="text-[11px] font-semibold text-brand hover:underline disabled:opacity-50"
+                      title={`Add folder to ${o.label}`}
+                    >
+                      Folder
+                    </button>
+                  </div>
                 ) : null}
               </div>
               <AttachmentGrid
@@ -827,11 +1055,16 @@ function MarkupPanel({
             {attachments.map((att) => (
               <li
                 key={att.id}
-                className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-[#e5e7eb] bg-white px-3 py-2 first:border-t-0"
+                className="grid grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-[#e5e7eb] bg-white px-3 py-2 first:border-t-0"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f3f1ea] text-[10px] font-bold tracking-wide text-[#5a5340]">
-                  {fileKindLabel(att)}
-                </div>
+                <button
+                  type="button"
+                  className="cursor-pointer overflow-hidden rounded-md"
+                  title={`Preview ${att.fileName}`}
+                  onClick={() => void viewAttachment(att)}
+                >
+                  <AttachmentPreview attachment={att} compact />
+                </button>
                 <div className="min-w-0">
                   <p className="truncate text-[12.5px] font-semibold text-[#1f2937]" title={att.fileName}>
                     {att.fileName}

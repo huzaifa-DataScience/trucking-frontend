@@ -14,13 +14,10 @@ import {
   EMAIL_PURPOSE_OVERDUE_LEAD_PM,
 } from "@/lib/admin/types";
 import { EmailTemplateEditor } from "@/components/admin/EmailTemplateEditor";
-import { AccessControlSettings } from "@/components/admin/AccessControlSettings";
 import { BiddingLookupsAdmin } from "@/components/admin/BiddingLookupsAdmin";
+import { AccountSettingsPanel } from "@/components/settings/AccountSettingsPanel";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatusPill } from "@/components/ui/StatusPill";
-import { useAuth } from "@/contexts/AuthContext";
-import { can } from "@/lib/auth/permissions";
-import { PERMISSIONS } from "@/lib/auth/permissions";
 
 function StatusPills({
   envOn,
@@ -46,23 +43,20 @@ function StatusPills({
   );
 }
 
-type SettingsTab = "access" | "email" | "templates" | "diagnostics";
+type SettingsTab = "profile" | "email" | "templates" | "diagnostics" | "bidding";
 
 const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
-  { id: "access", label: "Access control" },
+  { id: "profile", label: "Profile" },
   { id: "email", label: "Email & jobs" },
   { id: "templates", label: "Templates" },
   { id: "diagnostics", label: "Diagnostics" },
+  { id: "bidding", label: "Bidding" },
 ];
 
 export default function AdminSettingsPage() {
   const { showToast } = useToast();
-  const { user } = useAuth();
-  const canSeeAccess =
-    can(user, PERMISSIONS.adminRbac) || user?.role === "super_admin";
-  const [tab, setTab] = useState<SettingsTab>("access");
-  const activeTab: SettingsTab =
-    tab === "access" && !canSeeAccess ? "email" : tab;
+  const [tab, setTab] = useState<SettingsTab>("profile");
+  const activeTab = tab;
 
   const [overdueSending, setOverdueSending] = useState<OverdueEmailSendingSettings | null>(null);
   const [overdueSendingLoading, setOverdueSendingLoading] = useState(false);
@@ -192,8 +186,7 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold text-stone-900 dark:text-stone-100">Settings</h1>
         <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-          Bidding access, Siteline PM overdue mail, Siteline ↔ Clearstory gap alerts, and SMTP
-          diagnostics.
+          Your profile, email jobs, templates, SMTP diagnostics, and bidding lookups.
         </p>
       </div>
 
@@ -202,8 +195,7 @@ export default function AdminSettingsPage() {
         aria-label="Settings sections"
         className="flex flex-wrap gap-1 rounded-xl border border-ink/[0.08] bg-surface p-1"
       >
-        {SETTINGS_TABS.filter((t) => t.id !== "access" || canSeeAccess).map(
-          (t) => (
+        {SETTINGS_TABS.map((t) => (
           <button
             key={t.id}
             type="button"
@@ -221,12 +213,7 @@ export default function AdminSettingsPage() {
         ))}
       </div>
 
-      {activeTab === "access" && canSeeAccess && (
-        <>
-          <AccessControlSettings />
-          <BiddingLookupsAdmin />
-        </>
-      )}
+      {activeTab === "profile" ? <AccountSettingsPanel /> : null}
 
       {activeTab === "email" && (
       <Card>
@@ -391,6 +378,8 @@ export default function AdminSettingsPage() {
         </div>
       </Card>
       )}
+
+      {activeTab === "bidding" ? <BiddingLookupsAdmin /> : null}
     </div>
   );
 }

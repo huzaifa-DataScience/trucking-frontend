@@ -80,7 +80,7 @@ export function ChatInboxPanel({
 
   return (
     <aside
-      className={`flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden border-ink/[0.06] bg-surface lg:w-[340px] lg:border-r ${
+      className={`chat-inbox-rail flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden border-ink/[0.06] bg-surface lg:w-[340px] lg:border-r ${
         showOnMobile ? "flex" : "hidden lg:flex"
       }`}
     >
