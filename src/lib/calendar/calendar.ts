@@ -71,13 +71,13 @@ export interface CalendarEventBody {
 export type CalendarView = "month" | "week" | "agenda";
 
 export const SOURCE_META: Record<CalendarSource, { label: string; dot: string; chip: string }> = {
-  bid: { label: "Bid deadlines", dot: "bg-brand", chip: "bg-brand/10 text-ink border-brand/30" },
+  bid: { label: "Bid due", dot: "bg-brand", chip: "bg-brand/10 text-ink border-brand/30" },
   takeoff: { label: "Takeoff", dot: "bg-amber-500", chip: "bg-amber-50 text-amber-900 border-amber-200" },
   shift: { label: "Shifts", dot: "bg-sky-500", chip: "bg-sky-50 text-sky-900 border-sky-200" },
   clocked: { label: "Clocked time", dot: "bg-teal-500", chip: "bg-teal-50 text-teal-900 border-teal-200" },
-  task: { label: "Tasks", dot: "bg-violet-500", chip: "bg-violet-50 text-violet-900 border-violet-200" },
+  task: { label: "Tasks", dot: "bg-emerald-600", chip: "bg-emerald-50 text-emerald-900 border-emerald-200" },
   time_off: { label: "Time off", dot: "bg-rose-500", chip: "bg-rose-50 text-rose-900 border-rose-200" },
-  custom: { label: "My events", dot: "bg-ink/60", chip: "bg-ink/[0.05] text-ink border-ink/15" },
+  custom: { label: "My events", dot: "bg-ink/55", chip: "bg-ink/[0.05] text-ink border-ink/15" },
 };
 
 export const SOURCES = Object.keys(SOURCE_META) as CalendarSource[];
@@ -210,8 +210,14 @@ export function rangeTitle(view: CalendarView, anchor: string): string {
   return `${f.toLocaleDateString("en-US", fmt)} – ${t.toLocaleDateString("en-US", { ...fmt, year: "numeric" })}`;
 }
 
-/** Bid process stage → readable label (`estimating_setup` → "Estimating setup"). */
+/** @deprecated Prefer formatProcessStage / formatOutcome from process-types. */
 export function stageLabel(stage: string): string {
   const s = stage.replace(/_/g, " ").trim();
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+}
+
+/** Deep link into an estimate at its current process stage. */
+export function calendarBidHref(bid: Pick<CalendarBidInfo, "id" | "processStage">): string {
+  const stage = String(bid.processStage || "intake").trim() || "intake";
+  return `/bidding/${bid.id}?stage=${encodeURIComponent(stage)}`;
 }

@@ -277,8 +277,17 @@ function SpecImageThumb({
     let objectUrl: string | null = null;
     void biddingApi
       .fetchBidAttachmentBlob(attachment.downloadPath)
-      .then((blob) => {
+      .then((raw) => {
         if (cancelled) return;
+        const name = attachment.fileName.toLowerCase();
+        let type = attachment.mimeType?.trim() || raw.type || "";
+        if (!type || type === "application/octet-stream") {
+          if (name.endsWith(".pdf")) type = "application/pdf";
+          else if (name.endsWith(".png")) type = "image/png";
+          else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) type = "image/jpeg";
+          else if (name.endsWith(".webp")) type = "image/webp";
+        }
+        const blob = type && type !== raw.type ? new Blob([raw], { type }) : raw;
         objectUrl = URL.createObjectURL(blob);
         setUrl(objectUrl);
       })
@@ -287,7 +296,7 @@ function SpecImageThumb({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [attachment.downloadPath]);
+  }, [attachment.downloadPath, attachment.fileName, attachment.mimeType]);
 
   if (!url) {
     return (
@@ -297,7 +306,9 @@ function SpecImageThumb({
     );
   }
 
-  const isPdf = attachment.mimeType === "application/pdf";
+  const isPdf =
+    attachment.mimeType === "application/pdf" ||
+    attachment.fileName.toLowerCase().endsWith(".pdf");
   const isDoc = isWordDoc(attachment.mimeType);
 
   return (
@@ -306,9 +317,15 @@ function SpecImageThumb({
       onClick={() => onOpen(url, attachment)}
       className="group relative block overflow-hidden rounded-xl border border-ink/[0.08] text-left transition hover:border-brand/40"
     >
-      {isPdf || isDoc ? (
+      {isPdf ? (
+        <iframe
+          title={attachment.fileName}
+          src={`${url}#toolbar=0&navpanes=0&scrollbar=0`}
+          className="pointer-events-none h-28 w-36 border-0 bg-white"
+        />
+      ) : isDoc ? (
         <div className="flex h-28 w-36 flex-col items-center justify-center gap-1 bg-ink/[0.04] text-xs font-medium text-ink/55">
-          {isPdf ? "PDF" : "DOC"}
+          DOC
           <span className="max-w-[8rem] truncate px-2 text-[10px] text-ink/40">
             {attachment.fileName}
           </span>

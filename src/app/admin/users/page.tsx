@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ui/ToastProvider";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { UserDetailModal } from "@/components/admin/UserDetailModal";
+import { AccessControlSettings } from "@/components/admin/AccessControlSettings";
 import * as adminApi from "@/lib/api/endpoints/admin";
 import type { AdminUser, UserFilters, UserStatus, UserRole } from "@/lib/admin/types";
 import { APP_ROLE_IDS, APP_ROLE_LABELS } from "@/lib/auth/roles";
 import { useAuth } from "@/contexts/AuthContext";
+import { can, PERMISSIONS } from "@/lib/auth/permissions";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { StatusPill, type StatusTone } from "@/components/ui/StatusPill";
 import { PageHeader } from "@/components/dashboard/PageHeader";
@@ -69,8 +71,15 @@ function SelectChevron() {
   );
 }
 
+type UsersPageTab = "users" | "access";
+
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
+  const canSeeAccess =
+    can(currentUser, PERMISSIONS.adminRbac) || currentUser?.role === "super_admin";
+  const [pageTab, setPageTab] = useState<UsersPageTab>("users");
+  const activePageTab: UsersPageTab =
+    pageTab === "access" && !canSeeAccess ? "users" : pageTab;
   const [filters, setFilters] = useUrlFilters();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
@@ -297,8 +306,47 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="User Management" subtitle="Manage users, approve signups, and control access." />
+      <PageHeader
+        title="User Management"
+        subtitle="Manage users, approve signups, and roles & permissions."
+      />
 
+      <div
+        role="tablist"
+        aria-label="User management sections"
+        className="flex flex-wrap gap-1 rounded-xl border border-ink/[0.08] bg-surface p-1"
+      >
+        {(
+          [
+            { id: "users" as const, label: "Users" },
+            ...(canSeeAccess
+              ? [{ id: "access" as const, label: "Access control" }]
+              : []),
+          ] as { id: UsersPageTab; label: string }[]
+        ).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={activePageTab === t.id}
+            onClick={() => setPageTab(t.id)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+              activePageTab === t.id
+                ? "bg-ink text-white"
+                : "text-ink/55 hover:bg-ink/[0.04] hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activePageTab === "access" && canSeeAccess ? (
+        <AccessControlSettings />
+      ) : null}
+
+      {activePageTab === "users" ? (
+      <>
       {pendingTotal > 0 && (
         <div className="rounded-2xl border border-warning-border bg-warning-tint p-4">
           <div className="flex items-center justify-between gap-3">
@@ -672,6 +720,8 @@ export default function AdminUsersPage() {
           </div>
         </>
       )}
+      </>
+      ) : null}
 
       {/* Confirmation Modals */}
       {confirmAction && (

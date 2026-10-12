@@ -213,15 +213,22 @@ export function CalendarEventModal({
             </div>
 
             <label className={labelClass}>
-              Related bid (optional)
-              <select className={`${inputClass} pr-9`} value={form.bidId} onChange={(e) => set("bidId", e.target.value)}>
+              Related estimate (optional)
+              <select
+                className={`${inputClass} pr-9`}
+                value={form.bidId}
+                onChange={(e) => set("bidId", e.target.value)}
+              >
                 <option value="">None</option>
                 {(bids ?? []).map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.bidName ? `${b.estimateNumber} · ${b.bidName}` : b.estimateNumber}
+                    {b.bidName
+                      ? `${b.estimateNumber} · ${b.bidName}`
+                      : b.estimateNumber}
                   </option>
                 ))}
-                {editing?.bid && !(bids ?? []).some((b) => b.id === editing.bid!.id) ? (
+                {editing?.bid &&
+                !(bids ?? []).some((b) => b.id === editing.bid!.id) ? (
                   <option value={editing.bid.id}>{editing.bid.estimateNumber}</option>
                 ) : null}
               </select>

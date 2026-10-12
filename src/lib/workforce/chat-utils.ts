@@ -138,13 +138,32 @@ export function shouldShowSenderName(
   return conversationType !== "private";
 }
 
-/** Active thread id from `/workforce/chat` or `/workforce/chat/:id`. */
+/** Canonical messages app base (standalone module). Legacy `/workforce/chat` still parses. */
+export const MESSAGES_BASE_HREF = "/messages";
+const CHAT_PATH_BASES = [MESSAGES_BASE_HREF, "/workforce/chat"] as const;
+
+export function chatBaseHrefFromPath(pathname: string): string {
+  for (const base of CHAT_PATH_BASES) {
+    if (pathname === base || pathname.startsWith(`${base}/`)) return base;
+  }
+  return MESSAGES_BASE_HREF;
+}
+
+/** Active thread id from `/messages/:id` or legacy `/workforce/chat/:id`. */
 export function chatConversationIdFromPath(pathname: string): string | null {
-  if (pathname === "/workforce/chat") return null;
-  const prefix = "/workforce/chat/";
-  if (!pathname.startsWith(prefix)) return null;
-  const segment = pathname.slice(prefix.length).split("/")[0];
-  return segment ? decodeURIComponent(segment) : null;
+  for (const base of CHAT_PATH_BASES) {
+    if (pathname === base) return null;
+    const prefix = `${base}/`;
+    if (!pathname.startsWith(prefix)) continue;
+    const segment = pathname.slice(prefix.length).split("/")[0];
+    return segment ? decodeURIComponent(segment) : null;
+  }
+  return null;
+}
+
+export function chatHref(conversationId?: string | null): string {
+  if (!conversationId) return MESSAGES_BASE_HREF;
+  return `${MESSAGES_BASE_HREF}/${encodeURIComponent(conversationId)}`;
 }
 
 export function conversationLastMessageTime(c: ChatConversation): number {
