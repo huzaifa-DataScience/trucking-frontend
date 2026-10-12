@@ -266,7 +266,7 @@ export function BidSheetForm() {
         <div className="bid-workspace-form space-y-5 pb-4">
           {activeTab === "sheet" ? (
             <>
-          <div className="grid grid-cols-2 items-start gap-6 max-[1000px]:grid-cols-1">
+          <div className="grid grid-cols-2 items-start gap-6 max-[1100px]:grid-cols-1">
             <div className="min-w-0">
               <BidSheetHeaderSection
                 bid={bid}

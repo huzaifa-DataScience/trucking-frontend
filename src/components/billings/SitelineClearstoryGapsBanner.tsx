@@ -94,10 +94,12 @@ export function SitelineClearstoryGapsBanner({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
-            {items.length} project{items.length === 1 ? "" : "s"} with Siteline billing but no Clearstory match
+            {items.length === 1
+              ? "1 project is billed in Siteline but has no matching project in Clearstory"
+              : `${items.length} projects are billed in Siteline but have no matching project in Clearstory`}
           </p>
           <p className="mt-1 text-xs text-amber-800/90 dark:text-amber-200/80">
-            Ops is notified by email when the gap alert job runs. Review project / job numbers in Clearstory.
+            Usually the job number differs between the two systems. Open the list to check each one in Clearstory.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -108,15 +110,6 @@ export function SitelineClearstoryGapsBanner({
           >
             {expanded ? "Hide list" : "Show list"}
           </button>
-          <Link
-            href="/clearstory/projects"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700"
-          >
-            Open Clearstory
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-              <path d="M7 17L17 7M9 7h8v8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
         </div>
       </div>
 
@@ -130,6 +123,9 @@ export function SitelineClearstoryGapsBanner({
                 <th className="px-3 py-2 font-medium">PM</th>
                 <th className="px-3 py-2 text-right font-medium">Net $</th>
                 <th className="px-3 py-2 font-medium">Issue</th>
+                <th className="px-3 py-2 font-medium">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -147,6 +143,28 @@ export function SitelineClearstoryGapsBanner({
                     {row.netDollars.toLocaleString("en-US", { style: "currency", currency: "USD" })}
                   </td>
                   <td className="px-3 py-2">{GAP_LABELS[row.gapReason] ?? row.gapReason}</td>
+                  <td className="whitespace-nowrap px-3 py-2">
+                    <span className="flex items-center gap-3">
+                      {(row.internalProjectNumber ?? row.projectNumber) ? (
+                        <Link
+                          href={`/clearstory/projects?search=${encodeURIComponent(
+                            String(row.internalProjectNumber ?? row.projectNumber)
+                          )}`}
+                          className="font-medium text-amber-900 underline-offset-2 hover:underline dark:text-amber-200"
+                        >
+                          Search Clearstory for {row.internalProjectNumber ?? row.projectNumber}
+                        </Link>
+                      ) : null}
+                      {row.contractId ? (
+                        <Link
+                          href={`/billings/projects/${encodeURIComponent(row.contractId)}`}
+                          className="font-medium text-brand-secondary underline-offset-2 hover:underline"
+                        >
+                          Open billing project →
+                        </Link>
+                      ) : null}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

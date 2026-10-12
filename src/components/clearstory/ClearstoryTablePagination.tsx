@@ -48,6 +48,9 @@ function pageItems(current: number, totalPages: number): (number | "…")[] {
   return dedup;
 }
 
+const CTRL =
+  "cs-field h-9 border px-2.5 text-[13px] font-medium text-ink disabled:cursor-not-allowed disabled:opacity-40";
+
 export function ClearstoryTablePagination({
   total,
   page,
@@ -76,55 +79,41 @@ export function ClearstoryTablePagination({
   }, [page]);
 
   return (
-    <div className="mt-4 flex shrink-0 flex-col gap-3 border-t border-ink/[0.08] pt-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-sm text-ink/55">
-        <span className="text-ink/40">Total</span>{" "}
-        <strong className="font-semibold text-ink">{total.toLocaleString()}</strong>
-        <span className="mx-2 text-ink/25">·</span>
-        <span className="text-ink/40">Page</span>{" "}
-        <strong className="font-semibold text-ink">
-          {page} of {totalPages}
-        </strong>
-      </div>
+    <div className="mt-4 flex shrink-0 flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="cs-helper">
+        {total === 0
+          ? "0 rows"
+          : `${((page - 1) * pageSize + 1).toLocaleString()}–${Math.min(page * pageSize, total).toLocaleString()} of ${total.toLocaleString()}`}
+        <span className="mx-2 text-ink-soft">·</span>
+        Page {page} / {totalPages}
+      </p>
 
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor={`${idPrefix}-page-size`} className="sr-only">
           Page size
         </label>
-        <div className="relative">
-          <select
-            id={`${idPrefix}-page-size`}
-            value={pageSize}
-            onChange={(e) => {
-              onPageSizeChange(Number(e.target.value));
-              onPageChange(1);
-            }}
-            className="appearance-none rounded-lg border border-ink/12 bg-white px-3 py-2 pr-9 text-sm font-medium text-ink shadow-sm"
-          >
-            {pageSizeOptions.map((n) => (
-              <option key={n} value={n}>
-                {n} per page
-              </option>
-            ))}
-          </select>
-          <svg
-            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden
-          >
-            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
+        <select
+          id={`${idPrefix}-page-size`}
+          value={pageSize}
+          onChange={(e) => {
+            onPageSizeChange(Number(e.target.value));
+            onPageChange(1);
+          }}
+          className={`${CTRL} appearance-none pr-8`}
+        >
+          {pageSizeOptions.map((n) => (
+            <option key={n} value={n}>
+              {n} / page
+            </option>
+          ))}
+        </select>
 
         <nav className="flex items-center gap-1" aria-label={ariaLabel}>
           <button
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange(1)}
-            className="rounded-lg border border-ink/12 bg-white px-2.5 py-2 text-sm font-semibold text-ink/70 shadow-sm transition hover:bg-ink/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
+            className={CTRL}
           >
             First
           </button>
@@ -132,14 +121,14 @@ export function ClearstoryTablePagination({
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange(Math.max(1, page - 1))}
-            className="rounded-lg border border-ink/12 bg-white px-2.5 py-2 text-sm font-semibold text-ink/70 shadow-sm transition hover:bg-ink/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
+            className={CTRL}
           >
             Prev
           </button>
 
           {pageItems(page, totalPages).map((it, idx) =>
             it === "…" ? (
-              <span key={`e-${idx}`} className="px-2 text-sm font-semibold text-ink/35">
+              <span key={`e-${idx}`} className="px-2 text-sm font-medium text-ink-muted">
                 …
               </span>
             ) : (
@@ -148,10 +137,8 @@ export function ClearstoryTablePagination({
                 type="button"
                 onClick={() => onPageChange(it)}
                 aria-current={it === page ? "page" : undefined}
-                className={`min-w-10 rounded-lg border px-3 py-2 text-sm font-semibold shadow-sm transition ${
-                  it === page
-                    ? "border-brand/25 bg-brand/15 text-brand"
-                    : "border-ink/12 bg-white text-ink/70 hover:bg-ink/[0.03]"
+                className={`min-w-9 ${CTRL} ${
+                  it === page ? "border-brand/30 bg-brand-tint font-semibold text-ink" : ""
                 }`}
               >
                 {it}
@@ -163,7 +150,7 @@ export function ClearstoryTablePagination({
             type="button"
             disabled={page >= totalPages}
             onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-            className="rounded-lg border border-ink/12 bg-white px-2.5 py-2 text-sm font-semibold text-ink/70 shadow-sm transition hover:bg-ink/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
+            className={CTRL}
           >
             Next
           </button>
@@ -171,7 +158,7 @@ export function ClearstoryTablePagination({
             type="button"
             disabled={page >= totalPages}
             onClick={() => onPageChange(totalPages)}
-            className="rounded-lg border border-ink/12 bg-white px-2.5 py-2 text-sm font-semibold text-ink/70 shadow-sm transition hover:bg-ink/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
+            className={CTRL}
           >
             Last
           </button>
@@ -186,7 +173,7 @@ export function ClearstoryTablePagination({
             onPageChange(clampInt(Math.trunc(n), 1, totalPages));
           }}
         >
-          <label htmlFor={`${idPrefix}-page-input`} className="text-sm font-semibold text-ink/55">
+          <label htmlFor={`${idPrefix}-page-input`} className="cs-helper">
             Go to
           </label>
           <input
@@ -194,7 +181,7 @@ export function ClearstoryTablePagination({
             inputMode="numeric"
             value={pageInput}
             onChange={(e) => setPageInput(e.target.value.replace(/[^\d]/g, ""))}
-            className="w-20 rounded-lg border border-ink/12 bg-white px-3 py-2 text-sm font-semibold text-ink shadow-sm"
+            className={`w-16 ${CTRL}`}
           />
         </form>
       </div>
