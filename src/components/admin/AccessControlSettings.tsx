@@ -46,7 +46,7 @@ function SelectChevron() {
 }
 
 /**
- * Admin → Settings → Access control — FRONTEND_RBAC.md
+ * Admin → User Management → Access control — FRONTEND_RBAC.md
  * Default signup role + role × permission matrix. Never PATCH super_admin.
  */
 export function AccessControlSettings() {

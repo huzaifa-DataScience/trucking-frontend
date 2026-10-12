@@ -39,6 +39,18 @@ import {
 } from "@/lib/filters/types";
 import { BIDDING_FILTER_FIELDS_KEY, BIDDING_SAVED_VIEWS_KEY, FILTER_FIELDS, loadSelectedFilterFields, saveSelectedFilterFields } from "@/lib/bidding/savedViews";
 import { newId } from "@/lib/bidding/newId";
+import {
+  BID_LIST_COLUMN_CATALOG,
+  BIDDING_LIST_COLUMNS_INTERNAL_KEY,
+  BIDDING_LIST_COLUMNS_KEY,
+  columnsFromKeys,
+  DEFAULT_FULL_LIST_COLUMNS,
+  DEFAULT_INTERNAL_LIST_COLUMNS,
+  loadListColumns,
+  saveListColumns,
+  type BidListColumnKey,
+} from "@/lib/bidding/listColumns";
+import { ColumnPickerButton } from "@/components/clearstory/ClearstorySwaggerTable";
 
 type StatusFilter = "all" | BidStatus;
 type SortKey =
@@ -49,7 +61,9 @@ type SortKey =
   | "dueDate"
   | "bidDate"
   | "estimator"
+  | "assistantEstimator"
   | "captain"
+  | "client"
   | "internalBidDate"
   | "takeoffTurnedIn"
   | "status"
@@ -190,12 +204,9 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "name", label: "Name" },
   { value: "office", label: "Company" },
   { value: "captain", label: "Team captain" },
-  { value: "stage", label: "Current progress" },
-  { value: "outcome", label: "Outcome" },
   { value: "baseBid", label: "Base bid" },
-  { value: "status", label: "Record" },
   { value: "updated", label: "Last updated" },
-  { value: "estimate", label: "Estimate #" },
+  { value: "estimate", label: "Project #" },
   { value: "internalBidDate", label: "Internal bid date" },
   { value: "workType", label: "Work type" },
   { value: "contractAmount", label: "Contract amount" },
@@ -204,17 +215,15 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 
 const ESTIMATES_FILTER_CATALOG: { key: string; label: string }[] = [
   { key: "search", label: "Search" },
-  { key: "processStage", label: "Current progress" },
   { key: "bidDate", label: "Bid date" },
   { key: "captain", label: "Team captain" },
   { key: "entityId", label: "Company" },
   { key: "workType", label: "Work type" },
-  { key: "outcome", label: "Outcome" },
   { key: "bidKind", label: "Bid type" },
   { key: "constructionType", label: "Building type" },
 ];
 
-const DEFAULT_FILTER_KEYS = ["search", "processStage", "bidDate", "captain"];
+const DEFAULT_FILTER_KEYS = ["search", "bidDate", "captain"];
 
 function defaultSortDir(key: SortKey): SortDir {
   if (
@@ -385,6 +394,10 @@ export default function BiddingListPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_BID_PAGE_SIZE);
   const [serverPaged, setServerPaged] = useState(false);
+  const [fullColumnKeys, setFullColumnKeys] = useState<BidListColumnKey[]>(DEFAULT_FULL_LIST_COLUMNS);
+  const [internalColumnKeys, setInternalColumnKeys] = useState<BidListColumnKey[]>(
+    DEFAULT_INTERNAL_LIST_COLUMNS
+  );
   const pageRef = useRef(page);
   const pageSizeRef = useRef(pageSize);
   const serverPagedRef = useRef(serverPaged);
@@ -400,6 +413,10 @@ export default function BiddingListPage() {
   /** Scoped per-user so switching accounts on the same browser doesn't leak someone else's saved views. */
   const savedViewsKey = user ? `${BIDDING_SAVED_VIEWS_KEY}:${user.id}` : null;
   const crmFieldsKey = user ? `${BIDDING_FILTER_FIELDS_KEY}:${user.id}` : null;
+  const listColsKey = user ? `${BIDDING_LIST_COLUMNS_KEY}:${user.id}` : BIDDING_LIST_COLUMNS_KEY;
+  const listColsInternalKey = user
+    ? `${BIDDING_LIST_COLUMNS_INTERNAL_KEY}:${user.id}`
+    : BIDDING_LIST_COLUMNS_INTERNAL_KEY;
 
   useEffect(() => {
     setSavedViews(savedViewsKey ? loadSavedViews(savedViewsKey) : []);
@@ -408,6 +425,11 @@ export default function BiddingListPage() {
   useEffect(() => {
     setCrmFieldKeys(crmFieldsKey ? loadSelectedFilterFields(crmFieldsKey) : []);
   }, [crmFieldsKey]);
+
+  useEffect(() => {
+    setFullColumnKeys(loadListColumns(listColsKey, DEFAULT_FULL_LIST_COLUMNS));
+    setInternalColumnKeys(loadListColumns(listColsInternalKey, DEFAULT_INTERNAL_LIST_COLUMNS));
+  }, [listColsKey, listColsInternalKey]);
 
   useEffect(() => {
     void biddingApi
@@ -765,6 +787,14 @@ export default function BiddingListPage() {
             return (a.bidDate ?? "").localeCompare(b.bidDate ?? "");
           case "estimator":
             return (a.estimator ?? "").localeCompare(b.estimator ?? "", undefined, { sensitivity: "base" });
+          case "assistantEstimator":
+            return (a.assistantEstimator ?? "").localeCompare(b.assistantEstimator ?? "", undefined, {
+              sensitivity: "base",
+            });
+          case "client":
+            return (a.clientCompanyName ?? "").localeCompare(b.clientCompanyName ?? "", undefined, {
+              sensitivity: "base",
+            });
           case "captain":
             return (a.captain || a.estimator || "").localeCompare(b.captain || b.estimator || "", undefined, {
               sensitivity: "base",
@@ -808,7 +838,7 @@ export default function BiddingListPage() {
     import("xlsx").then((XLSX) => {
       const ws = XLSX.utils.json_to_sheet(
         visibleBids.map((b) => ({
-          "Estimate #": b.estimateNumber,
+          "Project #": b.estimateNumber,
           "Bid name": b.bidName,
           Contractor: b.clientCompanyName ?? "",
           "Team captain": b.captain ?? "",
@@ -816,13 +846,9 @@ export default function BiddingListPage() {
           "Cash expense": b.cashExpense ?? "",
           "Job start date": b.jobStartDate ?? "",
           "Job end date": b.jobEndDate ?? "",
-          Status: b.status,
           "Work type": formatWorkType(b.workType ?? undefined),
-          "Current progress": formatProcessStage(b.processStage ?? undefined),
-          Outcome: formatOutcome(b.outcomeStatus ?? undefined),
           "Bid date": b.bidDate ?? "",
           "Internal bid date": b.internalBidDate ?? "",
-          "Turned in": b.takeoffTurnedIn ? "Yes" : "",
           Updated: b.updatedAt,
         }))
       );
@@ -912,27 +938,46 @@ export default function BiddingListPage() {
   const toggleStatus = (value: StatusFilter) =>
     applyStatus(status === value ? "all" : value);
 
-  const listColumns: { key: SortKey; label: string; width: string }[] = internalList
-    ? [
-        { key: "estimate", label: "Estimate #", width: "min-w-[7.5rem]" },
-        { key: "name", label: "Name", width: "min-w-[14rem]" },
-        { key: "internalBidDate", label: "Internal bid date", width: "min-w-[8.5rem]" },
-        { key: "takeoffTurnedIn", label: "Turned in", width: "min-w-[5.5rem]" },
-      ]
-    : [
-        { key: "estimate", label: "Estimate #", width: "min-w-[7.5rem]" },
-        { key: "name", label: "Name", width: "min-w-[14rem]" },
-        { key: "bidDate", label: "Bid date & time", width: "min-w-[8.5rem]" },
-        { key: "office", label: "Company", width: "min-w-[8rem]" },
-        { key: "captain", label: "Team captain", width: "min-w-[9rem]" },
-        { key: "stage", label: "Current progress", width: "min-w-[9.5rem]" },
-        { key: "outcome", label: "Outcome", width: "min-w-[5.5rem]" },
-        { key: "baseBid", label: "Base bid", width: "min-w-[6.5rem]" },
-        { key: "status", label: "Record", width: "min-w-[5.5rem]" },
-        { key: "internalBidDate", label: "Internal bid date", width: "min-w-[8.5rem]" },
-        { key: "takeoffTurnedIn", label: "Turned in", width: "min-w-[5.5rem]" },
-        { key: "updated", label: "Updated", width: "min-w-[6.5rem]" },
-      ];
+  const activeColumnKeys = internalList ? internalColumnKeys : fullColumnKeys;
+  const listColumns = columnsFromKeys(activeColumnKeys).map((c) => ({
+    key: c.key as SortKey,
+    label: c.label,
+    width: c.width,
+  }));
+
+  const hiddenColumnKeys = useMemo(() => {
+    const visible = new Set(activeColumnKeys);
+    return new Set(
+      BID_LIST_COLUMN_CATALOG.filter((c) => !visible.has(c.key)).map((c) => c.key)
+    );
+  }, [activeColumnKeys]);
+
+  const toggleListColumn = (key: string) => {
+    const colKey = key as BidListColumnKey;
+    const locked = BID_LIST_COLUMN_CATALOG.find((c) => c.key === colKey)?.locked;
+    if (locked) return;
+    const apply = (prev: BidListColumnKey[]) => {
+      const next = prev.includes(colKey)
+        ? prev.filter((k) => k !== colKey)
+        : [...prev, colKey];
+      // Keep catalog order
+      const order = BID_LIST_COLUMN_CATALOG.map((c) => c.key);
+      return order.filter((k) => next.includes(k));
+    };
+    if (internalList) {
+      setInternalColumnKeys((prev) => {
+        const next = apply(prev);
+        saveListColumns(listColsInternalKey, next);
+        return next;
+      });
+    } else {
+      setFullColumnKeys((prev) => {
+        const next = apply(prev);
+        saveListColumns(listColsKey, next);
+        return next;
+      });
+    }
+  };
 
   const tabCount = (value: StatusFilter): number | null => {
     if (serverCounts) return value === "all" ? serverCounts.all : serverCounts[value];
@@ -958,6 +1003,10 @@ export default function BiddingListPage() {
         return bid.companyName || "—";
       case "estimator":
         return bid.estimator || "—";
+      case "assistantEstimator":
+        return bid.assistantEstimator || "—";
+      case "client":
+        return bid.clientCompanyName || "—";
       case "stage":
         return formatProcessStage(bid.processStage ?? undefined) || "—";
       case "outcome":
@@ -978,6 +1027,14 @@ export default function BiddingListPage() {
         return bid.internalBidDate ? formatDate(bid.internalBidDate.slice(0, 10)) : "—";
       case "takeoffTurnedIn":
         return bid.takeoffTurnedIn ? "Yes" : "—";
+      case "workType":
+        return formatWorkType(bid.workType ?? undefined) || "—";
+      case "contractAmount":
+        return bid.contractAmount != null ? formatMoney(bid.contractAmount) : "—";
+      case "jobStartDate":
+        return bid.jobStartDate ? formatDate(bid.jobStartDate.slice(0, 10)) : "—";
+      case "status":
+        return bid.status || "—";
       default:
         return "—";
     }
@@ -1160,6 +1217,14 @@ export default function BiddingListPage() {
                 </span>
               ) : null}
             </button>
+
+            <ColumnPickerButton
+              outline
+              columns={BID_LIST_COLUMN_CATALOG.map((c) => ({ key: c.key, label: c.label }))}
+              hidden={hiddenColumnKeys}
+              lockedKeys={["estimate", "name"]}
+              onToggle={toggleListColumn}
+            />
 
             <button
               type="button"

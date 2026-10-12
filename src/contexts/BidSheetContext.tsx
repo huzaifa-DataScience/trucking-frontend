@@ -88,6 +88,11 @@ type BidSheetContextValue = {
   reopenAsDraft: () => Promise<void>;
   uploadAttachment: (
     file: File,
+    opts?: { label?: string; category?: string; drawingCategory?: string; relativePath?: string }
+  ) => Promise<void>;
+  /** Folder / multi-file upload — one POST with `files` when count > 1 (FRONTEND_EST.md). */
+  uploadAttachments: (
+    files: File[],
     opts?: { label?: string; category?: string; drawingCategory?: string }
   ) => Promise<void>;
   deleteAttachment: (attachmentId: number) => Promise<void>;
@@ -716,18 +721,24 @@ export function BidSheetProvider({
     }
   }, [savePatch]);
 
-  const uploadAttachment = useCallback(
-    async (file: File, opts?: { label?: string; category?: string; drawingCategory?: string }) => {
-      // Attachments until archived (API) — process/spec photos after submit OK
+  const uploadAttachments = useCallback(
+    async (
+      files: File[],
+      opts?: { label?: string; category?: string; drawingCategory?: string }
+    ) => {
       if (bidRef.current?.status === "archived") {
         setError("Attachments cannot be added on an archived bid.");
         return;
       }
+      if (files.length === 0) return;
       setSaving(true);
       setError(null);
       try {
-        await biddingApi.uploadBidAttachment(bidId, file, opts);
+        const saved = await biddingApi.uploadBidAttachments(bidId, files, opts);
         await loadBid({ silent: true });
+        if (saved.togal && saved.togal.sent === false && saved.togal.message) {
+          showToast(saved.togal.message, "error");
+        }
       } catch (e) {
         setError(getApiErrorMessage(e, "Failed to upload attachment"));
         throw e;
@@ -735,7 +746,22 @@ export function BidSheetProvider({
         setSaving(false);
       }
     },
-    [bidId, loadBid]
+    [bidId, loadBid, showToast]
+  );
+
+  const uploadAttachment = useCallback(
+    async (
+      file: File,
+      opts?: {
+        label?: string;
+        category?: string;
+        drawingCategory?: string;
+        relativePath?: string;
+      }
+    ) => {
+      await uploadAttachments([file], opts);
+    },
+    [uploadAttachments]
   );
 
   const deleteAttachment = useCallback(
@@ -861,6 +887,7 @@ export function BidSheetProvider({
     markSubmitted,
     reopenAsDraft,
     uploadAttachment,
+    uploadAttachments,
     deleteAttachment,
   };
 

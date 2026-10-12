@@ -1,8 +1,9 @@
 "use client";
 
-export type BidSheetTab = "sheet" | "files" | "company";
+export type BidSheetTab = "letter" | "sheet" | "files" | "company";
 
 const TABS: { id: BidSheetTab; label: string }[] = [
+  { id: "letter", label: "Proposal letter" },
   { id: "sheet", label: "Bidding sheet" },
   { id: "files", label: "Images / CSV" },
   { id: "company", label: "Company data" },

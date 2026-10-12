@@ -81,39 +81,40 @@ export function SpecsGrid({
   const showRollCols = lines.some(isRollLine);
 
   return (
-    <div
-      className="intake-section min-h-0 flex-1 overflow-auto"
-      onMouseOver={(e) => {
-        const el = e.target;
-        if (
-          !(el instanceof HTMLSelectElement) &&
-          !(el instanceof HTMLInputElement) &&
-          !(el instanceof HTMLTextAreaElement)
-        ) {
-          return;
-        }
-        if (el instanceof HTMLSelectElement) {
-          const text = el.selectedOptions[0]?.text?.trim() ?? "";
-          const empty = !el.value || text === "—" || text === "";
-          if (empty) el.removeAttribute("title");
-          else el.title = text;
-          return;
-        }
-        const v = String(el.value ?? "").trim();
-        if (!v) el.removeAttribute("title");
-        else el.title = v;
-      }}
-      onFocus={(e) => {
-        const t = e.target;
-        if (t instanceof HTMLElement) t.dispatchEvent(new Event("mouseover", { bubbles: true }));
-      }}
-      onChange={(e) => {
-        const t = e.target;
-        if (t instanceof HTMLElement) t.dispatchEvent(new Event("mouseover", { bubbles: true }));
-      }}
-    >
+    <div className="intake-section flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="intake-section-head">Specs qty grid</div>
-      <div className="intake-section-body !p-0">
+      {/* Section chrome uses overflow:hidden — scroll must live on the body. */}
+      <div
+        className="intake-section-body intake-specs-scroll !p-0"
+        onMouseOver={(e) => {
+          const el = e.target;
+          if (
+            !(el instanceof HTMLSelectElement) &&
+            !(el instanceof HTMLInputElement) &&
+            !(el instanceof HTMLTextAreaElement)
+          ) {
+            return;
+          }
+          if (el instanceof HTMLSelectElement) {
+            const text = el.selectedOptions[0]?.text?.trim() ?? "";
+            const empty = !el.value || text === "—" || text === "";
+            if (empty) el.removeAttribute("title");
+            else el.title = text;
+            return;
+          }
+          const v = String(el.value ?? "").trim();
+          if (!v) el.removeAttribute("title");
+          else el.title = v;
+        }}
+        onFocus={(e) => {
+          const t = e.target;
+          if (t instanceof HTMLElement) t.dispatchEvent(new Event("mouseover", { bubbles: true }));
+        }}
+        onChange={(e) => {
+          const t = e.target;
+          if (t instanceof HTMLElement) t.dispatchEvent(new Event("mouseover", { bubbles: true }));
+        }}
+      >
       <table className="min-w-[1600px] w-full border-collapse text-left text-[12.5px] text-[#374151]">
         <thead className="sticky top-0 z-10">
           <tr className="border-b border-[#e5e7eb] bg-[#f3f1ea] text-[11px] font-semibold uppercase tracking-wide text-[#333333]">

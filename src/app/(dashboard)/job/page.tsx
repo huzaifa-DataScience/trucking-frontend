@@ -14,6 +14,100 @@ import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Skeleton, SkeletonStatRow, SkeletonTableRows } from "@/components/ui/Skeleton";
 import * as jobApi from "@/lib/api/endpoints/job-dashboard";
+import * as biddingApi from "@/lib/api/endpoints/bidding";
+import type { JobBidFile } from "@/lib/api/endpoints/bidding";
+
+async function openJobFile(file: JobBidFile, asDownload: boolean) {
+  const raw = await biddingApi.fetchBidAttachmentBlob(file.downloadPath);
+  const name = file.fileName.toLowerCase();
+  let type = file.mimeType?.trim() || raw.type || "";
+  if (!type || type === "application/octet-stream") {
+    if (name.endsWith(".pdf")) type = "application/pdf";
+    else if (name.endsWith(".png")) type = "image/png";
+    else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) type = "image/jpeg";
+    else if (name.endsWith(".webp")) type = "image/webp";
+  }
+  const blob = type && type !== raw.type ? new Blob([raw], { type }) : raw;
+  const url = URL.createObjectURL(blob);
+  if (asDownload) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.fileName;
+    a.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+function JobBidFiles({ jobId }: { jobId: string }) {
+  const [files, setFiles] = useState<JobBidFile[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFiles(null);
+    setError(null);
+    void biddingApi.listJobBidFiles(jobId).then(
+      (rows) => {
+        if (!cancelled) setFiles(rows);
+      },
+      () => {
+        if (!cancelled) setError("Couldn't load bid files for this job.");
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
+  return (
+    <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.06)] sm:p-5">
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-ink/40">Bid files</h2>
+      <p className="mt-1 text-[13px] text-ink/50">Files on bids linked to this job. View or download them here.</p>
+      {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
+      {files == null && !error ? <p className="mt-3 text-sm text-ink/40">Loading files…</p> : null}
+      {files && files.length === 0 ? (
+        <p className="mt-3 text-sm text-ink/40">No bid files linked to this job.</p>
+      ) : null}
+      {files && files.length > 0 ? (
+        <ul className="mt-3 divide-y divide-ink/[0.06]">
+          {files.map((file) => (
+            <li key={`${file.bidId}-${file.id}`} className="flex flex-wrap items-center gap-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-ink">{file.fileName}</p>
+                <p className="truncate text-[12px] text-ink/40">
+                  {[file.estimateNumber, file.bidName, file.label].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="cursor-pointer text-[12px] font-semibold text-brand hover:underline"
+                onClick={() => void openJobFile(file, false)}
+              >
+                View
+              </button>
+              <button
+                type="button"
+                className="cursor-pointer text-[12px] font-semibold text-ink/60 hover:underline"
+                onClick={() => void openJobFile(file, true)}
+              >
+                Download
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
 
 function createDefaultFilters(initialJobId?: string | null): FilterConfig {
   // Use local machine date for default end date
@@ -156,6 +250,8 @@ export default function JobDashboardPage() {
           )}
         </div>
       </div>
+
+      {filters.jobId !== "all" ? <JobBidFiles jobId={filters.jobId} /> : null}
 
       {error && (
         <div className="rounded-2xl border border-danger-border bg-danger-tint px-4 py-3 text-sm text-danger">

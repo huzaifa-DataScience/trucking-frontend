@@ -543,6 +543,78 @@ export type ContractorStatus =
 
 export type ProposalStatus = "not_submitted" | "submitted" | "revised" | "accepted" | "rejected" | null;
 
+/** FRONTEND_PROPOSAL.md — fixed line buckets on the printable sheet. */
+export type ProposalSheetBucket =
+  | "ductwork"
+  | "hvac_piping"
+  | "plumbing"
+  | "hvac_equipment"
+  | "plumbing_equipment";
+
+export const PROPOSAL_SHEET_BUCKETS: ProposalSheetBucket[] = [
+  "ductwork",
+  "hvac_piping",
+  "plumbing",
+  "hvac_equipment",
+  "plumbing_equipment",
+];
+
+export interface ProposalSheetLine {
+  bucket: ProposalSheetBucket | string;
+  systems?: string | null;
+  quantity?: string | null;
+  price?: number | null;
+}
+
+export interface ProposalSheetAlternate {
+  description?: string | null;
+  quantity?: string | null;
+  price?: number | null;
+}
+
+export interface ProposalSheetException {
+  key: string;
+  /** true = Included, false = Not Included, null = blank */
+  included?: boolean | null;
+}
+
+/** One recipient company the proposal goes to. */
+export interface ProposalSheetCopy {
+  id: string;
+  toName?: string | null;
+  toCompany?: string | null;
+  toEmail?: string | null;
+  toPhone?: string | null;
+  toAddress?: string | null;
+  /** null until chosen — hide qty column unless true */
+  showQuantities?: boolean | null;
+  prices?: Partial<Record<string, number | null>> | null;
+  alternatePrices?: Array<number | null> | null;
+}
+
+export interface ProposalSheet {
+  revision?: string | null;
+  proposalDate?: string | null;
+  drawings?: string | null;
+  specifications?: string | null;
+  wageScale?: string | null;
+  addenda?: string | null;
+  mechanicalDesigner?: string | null;
+  specialNotes?: string | null;
+  lines?: ProposalSheetLine[];
+  alternates?: ProposalSheetAlternate[];
+  exceptions?: ProposalSheetException[];
+  copies?: ProposalSheetCopy[];
+}
+
+export interface ProposalEditorSheetMeta {
+  buckets?: Array<{ value?: string; label?: string } | string>;
+  boilerplate?: string[];
+  exceptions?: Array<{ key?: string; label?: string } | string>;
+  /** Print MBE/NAICS cert page when true (DCB). */
+  certPage?: boolean | string | null;
+}
+
 export interface ProcessGcOrMech extends ProcessParty {
   hasTheJob?: boolean | null;
   receivedProposalBy?: string | null;
@@ -602,8 +674,14 @@ export interface BidProcess {
   dueDate?: string | null;
   /** Invitation / advertised price. Not the calculator `baseBid` object. */
   baseBidPrice?: number | null;
-  /** Overseas takeoff turn-in. Set on Handoff. Not client bidDate. */
+  /** Overseas takeoff turn-in. Set on Takeoff. Not client bidDate. */
   internalBidDate?: string | null;
+  /** Togal.ai — drawings stay there. FRONTEND_TOGAL.md */
+  togal?: {
+    projectUrl?: string | null;
+    projectId?: string | null;
+    sentAttachmentIds?: number[];
+  } | null;
   dateSubmitted?: string | null;
   amountSubmitted?: number | null;
   amendments?: unknown[];
@@ -624,6 +702,8 @@ export interface BidProcess {
   relatedBidNote?: string | null;
   budgetOnly?: boolean | null;
   proposalIteration?: number | null;
+  /** Printable proposal letter — FRONTEND_PROPOSAL.md (replaces Proposify). */
+  proposalSheet?: ProposalSheet | null;
   insulationSpecs?: Record<string, unknown> | null;
   /** Project-level Buy American — FRONTEND_SPEC_SHEET.md */
   buyAmerican?: boolean | null;
@@ -716,6 +796,8 @@ export interface ProcessMeta {
     alsoOnSetup?: string[] | Record<string, boolean>;
     /** Identity / assignment — show only. Includes ourEntityId. */
     readOnly?: string[] | Record<string, boolean>;
+    /** Printable letter sheet — FRONTEND_PROPOSAL.md */
+    sheet?: ProposalEditorSheetMeta;
     [key: string]: unknown;
   };
   clearances?: ProcessMetaEnumOption[] | string[];
