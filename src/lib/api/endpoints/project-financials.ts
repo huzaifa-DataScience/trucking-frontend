@@ -29,6 +29,11 @@ export function getProjectFinancialsJobs(query: FinancialsQuery): Promise<JobsRe
   return get<JobsResponse>("/project-financials/jobs", queryParams(query));
 }
 
+/** Same payload as `/jobs` — paint `job.bom`. */
+export function getProjectFinancialsBom(query: FinancialsQuery): Promise<JobsResponse> {
+  return get<JobsResponse>("/project-financials/bom", queryParams(query));
+}
+
 export function getProjectFinancialsJob(jobNumber: string): Promise<JobRow> {
   return get<JobRow>(`/project-financials/jobs/${encodeURIComponent(jobNumber)}`);
 }

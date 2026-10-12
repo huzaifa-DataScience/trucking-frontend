@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { BidAttachmentsSection } from "@/components/bidding/BidAttachmentsSection";
-import { TogalProjectBar } from "@/components/bidding/TogalPanels";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
 import type { ProcessMeta } from "@/lib/bidding/process-types";
@@ -47,8 +46,6 @@ export function BidDrawingsStage() {
       <header>
         <h2 className="intake-title">Drawings</h2>
       </header>
-
-      <TogalProjectBar />
 
       <BidAttachmentsSection
         attachments={drawings}
