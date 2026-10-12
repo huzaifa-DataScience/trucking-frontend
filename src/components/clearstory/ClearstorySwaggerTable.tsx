@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { JsonPayloadModal } from "@/components/clearstory/JsonPayloadModal";
 import { ClearstoryTablePagination } from "@/components/clearstory/ClearstoryTablePagination";
 import type { ClearstoryTableRow } from "@/lib/api/endpoints/clearstory";
@@ -17,9 +18,7 @@ import {
   tableColumnLabel,
 } from "@/lib/clearstory/swaggerTableColumns";
 
-const MAX_COLUMNS_NOTE = 60;
 
-type SortDir = "asc" | "desc";
 type SortState = { key: string; dir: SortDir } | null;
 
 function sortValueFor(row: ClearstoryTableRow, spec: TableColumnSpec): unknown {
@@ -54,34 +53,23 @@ function compareValues(a: unknown, b: unknown): number {
   return aStr.localeCompare(bStr);
 }
 
-function SortIcon({ dir }: { dir: SortDir | null }) {
-  if (!dir) {
-    return (
-      <svg className="h-3 w-3 shrink-0 text-ink/25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-        <path d="M8 9l4-4 4 4M8 15l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  return (
-    <svg className="h-3 w-3 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-      {dir === "desc" ? (
-        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-      ) : (
-        <path d="M6 15l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-      )}
-    </svg>
-  );
-}
-
 const TABLE_SCROLL =
   "min-h-0 min-w-0 w-full flex-1 overflow-x-auto overflow-y-auto max-h-[min(70dvh,calc(100dvh-14rem))]";
 
-/** Sticky-left classes for pinned columns. `isLast` puts the divider shadow only on the rightmost pinned column. */
+/**
+ * Divider on the rightmost pinned column. An inset shadow, not border-r: with border-collapse the table grid
+ * owns borders, so a border stays behind (and scrolls away) while the sticky cell slides.
+ */
+const PINNED_DIVIDER = "shadow-[inset_-1px_0_0_var(--border-subtle)]";
+
+/** Sticky-left classes for pinned columns. `isLast` puts the divider only on the rightmost pinned column. */
 export function pinnedHeaderClass(isLast: boolean): string {
-  return `sticky z-30 bg-[#f0f2f5] ${isLast ? "shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]" : ""}`;
+  return `sticky z-30 bg-[#f3f4f6] ${isLast ? PINNED_DIVIDER : ""}`;
 }
 export function pinnedBodyClass(zebra: boolean, isLast: boolean): string {
-  return `sticky z-10 ${zebra ? "bg-[#fbfbfc]" : "bg-white"} ${isLast ? "shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]" : ""}`;
+  // Sticky cells must be opaque or scrolled columns show through: #fafafa = canvas/50 flattened onto white.
+  // Follow the row's hover colour so the pinned part doesn't stay pale while the rest highlights.
+  return `sticky z-10 ${zebra ? "bg-[#fafafa]" : "bg-white"} [tr:hover>&]:bg-canvas ${isLast ? PINNED_DIVIDER : ""}`;
 }
 
 export function loadHiddenColumns(storageKey: string): Set<string> {
@@ -191,6 +179,8 @@ export function ColumnPickerButton({
   onToggle,
   pinned,
   onTogglePin,
+  iconOnly = false,
+  outline = false,
 }: {
   columns: { key: string; label: string }[];
   hidden: Set<string>;
@@ -199,6 +189,10 @@ export function ColumnPickerButton({
   /** When provided, each row gets a pin toggle (unlimited columns can be pinned). */
   pinned?: Set<string>;
   onTogglePin?: (key: string) => void;
+  /** Square icon button (count dot instead of text badges). */
+  iconOnly?: boolean;
+  /** Labelled button with the white bordered field style (for toolbars inside a white panel). */
+  outline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -239,7 +233,14 @@ export function ColumnPickerButton({
             .filter(Boolean)
             .join(" · ") || undefined
         }
-        className="flex items-center gap-1.5 rounded-lg border border-ink/12 bg-white px-3 py-1.5 text-xs font-semibold text-ink/70 shadow-sm transition hover:border-ink/20 hover:text-ink"
+        aria-label={iconOnly ? "Columns" : undefined}
+        className={
+          iconOnly
+            ? "relative flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-white text-ink-muted transition-colors hover:border-[#d1d5db] hover:text-ink"
+            : outline
+              ? "flex h-9 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-white px-3 text-[13px] font-medium text-ink-muted transition-colors hover:border-[#d1d5db] hover:text-ink"
+              : "cs-soft-control h-9 text-xs"
+        }
       >
         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
           <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
@@ -247,6 +248,14 @@ export function ColumnPickerButton({
           <circle cx="15" cy="12" r="1.6" fill="currentColor" stroke="none" />
           <circle cx="9" cy="18" r="1.6" fill="currentColor" stroke="none" />
         </svg>
+        {iconOnly ? (
+          hiddenCount + pinnedCount > 0 ? (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-medium text-white">
+              {hiddenCount + pinnedCount}
+            </span>
+          ) : null
+        ) : (
+          <>
         Columns
         {pinnedCount > 0 ? (
           <span className="flex items-center gap-1 rounded-full bg-ink/[0.06] px-1.5 py-0.5 text-[10px] font-bold text-ink/60">
@@ -257,6 +266,8 @@ export function ColumnPickerButton({
         {hiddenCount > 0 ? (
           <span className="rounded-full bg-brand/15 px-1.5 py-0.5 text-[10px] font-bold text-brand">{hiddenCount} hidden</span>
         ) : null}
+          </>
+        )}
       </button>
 
       {open ? (
@@ -340,7 +351,7 @@ function ObjectDetailCell({
       title="Click for full details"
       className="group flex w-full max-w-[min(18rem,100%)] min-w-0 items-center gap-2 rounded-lg border border-ink/[0.1] bg-linear-to-b from-white to-[#fafbfc] px-2.5 py-2 text-left shadow-[0_1px_2px_rgba(1,1,1,0.04)] transition hover:border-brand/40 hover:shadow-[0_2px_8px_rgba(91,173,232,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand"
     >
-      <span className="min-w-0 flex-1 truncate text-sm font-medium leading-snug text-ink">{preview}</span>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-snug text-ink">{preview}</span>
       <span
         aria-hidden
         className="shrink-0 rounded-md bg-ink/[0.06] px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-ink/50 group-hover:bg-brand/15 group-hover:text-brand"
@@ -364,6 +375,9 @@ export function ClearstorySwaggerTable({
   error,
   footer,
   hidePagination = false,
+  variant = "card",
+  headerAside,
+  bare = false,
 }: {
   title: string;
   subtitle?: string;
@@ -377,6 +391,12 @@ export function ClearstorySwaggerTable({
   error: string | null;
   footer?: ReactNode;
   hidePagination?: boolean;
+  /** "panel" = Projects-style chrome (count pill header, toolbar row with `footer` + Columns, footer pager). */
+  variant?: "card" | "panel";
+  /** Panel variant only: right side of the title row (falls back to `subtitle`). */
+  headerAside?: ReactNode;
+  /** Panel variant only: drop the outer border and title row, for a table embedded in another box. */
+  bare?: boolean;
 }) {
   const paginationIdPrefix = useMemo(() => {
     const slug = title
@@ -476,187 +496,240 @@ export function ClearstorySwaggerTable({
     return withValues.map((w) => w.row);
   }, [rows, sort, columnSpecs]);
 
+  const panel = variant === "panel";
+
+  const modal = (
+    <JsonPayloadModal
+      open={!!inspect}
+      title={inspect ? `“${inspect.columnKey}”` : ""}
+      subtitle={inspect ? `resourceKey: ${inspect.resourceKey}` : undefined}
+      loading={false}
+      error={null}
+      payload={inspect?.value}
+      onClose={() => setInspect(null)}
+    />
+  );
+
+  const loadingBar =
+    loading && rows.length > 0 ? (
+      <div className="absolute left-0 right-0 top-0 z-30 h-0.5 overflow-hidden bg-brand/15" aria-hidden>
+        <div className="h-full w-1/3 animate-[ticket-grid-loading_1s_ease-in-out_infinite] bg-brand" />
+      </div>
+    ) : null;
+
+  const columnPicker =
+    allHeaders.length > 0 ? (
+      <ColumnPickerButton
+        outline={panel}
+        columns={allHeaders.map((h) => ({ key: dataHeaderKey(h.spec), label: tableColumnLabel(h.spec) }))}
+        hidden={hiddenColumns}
+        lockedKey={idKey}
+        onToggle={toggleColumn}
+        pinned={pinnedSet}
+        onTogglePin={togglePin}
+      />
+    ) : null;
+
+  const table = (
+    <div className={`cs-data-table cs-table-shell ${TABLE_SCROLL}`}>
+      {rows.length === 0 ? (
+        <div className="p-4">
+          <p className="cs-helper">No rows for this page. Adjust filters or run a sync from Ops.</p>
+        </div>
+      ) : (
+        <table className="w-full min-w-[760px] border-collapse text-left">
+          <caption className="sr-only">{title}</caption>
+          {/* Header stays put while rows scroll; z-20 keeps it above pinned body cells (z-10). */}
+          <thead className="sticky top-0 z-20 bg-[#f3f4f6]">
+            <tr>
+              {orderedHeaders.map((h) => {
+                const key = dataHeaderKey(h.spec);
+                const dir = sort?.key === key ? sort.dir : null;
+                const isPinned = pinnedSet.has(key);
+                const isLastPinned = isPinned && activePinnedOrder[activePinnedOrder.length - 1] === key;
+                return (
+                  <SortableTh
+                    key={key}
+                    label={tableColumnLabel(h.spec)}
+                    column={key}
+                    active={dir != null}
+                    dir={dir ?? "asc"}
+                    onSort={toggleSort}
+                    style={isPinned ? { left: pinnedOffsets[key] ?? 0 } : undefined}
+                    className={isPinned ? pinnedHeaderClass(isLastPinned) : ""}
+                    thRef={(el) => {
+                      if (isPinned && el) pinnedCellRefs.current.set(key, el);
+                      else pinnedCellRefs.current.delete(key);
+                    }}
+                  />
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {sortedRows.map((row, rowIdx) => {
+              const zebra = rowIdx % 2 === 1;
+              return (
+                <tr
+                  key={row.resourceKey}
+                  className={`align-top border-b border-[var(--border-subtle)] transition-colors hover:bg-canvas ${
+                    zebra ? "bg-canvas/50" : "bg-white"
+                  }`}
+                >
+                  {orderedHeaders.map((h) => {
+                    const label = tableColumnLabel(h.spec);
+                    const cellKey = dataHeaderKey(h.spec);
+                    const isPinned = pinnedSet.has(cellKey);
+                    const isLastPinned = isPinned && activePinnedOrder[activePinnedOrder.length - 1] === cellKey;
+                    const cellStyle = isPinned ? { left: pinnedOffsets[cellKey] ?? 0 } : undefined;
+                    const cellClass = `max-w-[16rem] whitespace-nowrap px-3 py-2.5 align-middle text-[13px] ${isPinned ? pinnedBodyClass(zebra, isLastPinned) : ""}`;
+
+                    if (h.spec.kind === "group") {
+                      const raw = getGroupedSwaggerOrMirrorValue(row, h.spec.prefix);
+                      return (
+                        <td key={cellKey} className={cellClass} style={cellStyle}>
+                          {raw === undefined ? (
+                            <span className="text-[13px] text-ink/30">—</span>
+                          ) : (
+                            <ObjectDetailCell
+                              value={raw}
+                              ariaLabel={`Open ${label} details for row ${row.resourceKey}`}
+                              onOpen={() =>
+                                setInspect({
+                                  columnKey: label,
+                                  resourceKey: row.resourceKey,
+                                  value: raw,
+                                })
+                              }
+                            />
+                          )}
+                        </td>
+                      );
+                    }
+
+                    const raw = getSwaggerOrMirrorTopLevel(row, h.spec.key);
+                    const exp = expandCellForModal(raw);
+
+                    return (
+                      <td key={cellKey} className={cellClass} style={cellStyle}>
+                        {"empty" in exp ? (
+                          <span className="text-[13px] text-ink/30">—</span>
+                        ) : "modal" in exp ? (
+                          <ObjectDetailCell
+                            value={exp.modal}
+                            ariaLabel={`Open ${label} details for row ${row.resourceKey}`}
+                            onOpen={() =>
+                              setInspect({
+                                columnKey: label,
+                                resourceKey: row.resourceKey,
+                                value: exp.modal,
+                              })
+                            }
+                          />
+                        ) : (
+                          <span
+                            className="block max-w-full truncate text-sm leading-relaxed text-ink/90"
+                            title={exp.text.length > 80 ? exp.text : undefined}
+                          >
+                            {exp.text || "—"}
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+
+  const pagination = !hidePagination ? (
+    <ClearstoryTablePagination
+      total={total}
+      page={page}
+      pageSize={pageSize}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      ariaLabel={`${title} pages`}
+      idPrefix={paginationIdPrefix}
+    />
+  ) : null;
+
+  const showSkeleton = loading && rows.length === 0;
+  const errorEl = (
+    <p className={panel ? "cs-helper py-6 text-red-600" : "text-sm text-red-600"} role="alert">
+      {error}
+    </p>
+  );
+
+  if (panel) {
+    // Same chrome as the Clearstory Projects list: titled panel, toolbar row, table, footer pager.
+    return (
+      <section
+        className={`relative flex min-h-0 flex-1 flex-col overflow-hidden ${bare ? "" : "cs-content-panel rounded-lg"}`}
+        aria-label={bare ? title : undefined}
+      >
+        {bare ? null : (
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-5 py-4">
+          <div className="flex items-center gap-2">
+            <h2 className="cs-section-title">{title}</h2>
+            <span className="rounded-full bg-[#f3f4f6] px-2 py-0.5 text-[12px] font-medium text-ink-muted">
+              {total.toLocaleString()}
+            </span>
+          </div>
+          {headerAside ?? (subtitle ? <p className="cs-helper">{subtitle}</p> : null)}
+        </div>
+        )}
+
+        <div className="flex flex-col gap-3 px-5 pt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            {footer}
+            <div className="ml-auto flex items-center gap-2">{columnPicker}</div>
+          </div>
+        </div>
+
+        {modal}
+
+        <div className="relative flex min-h-0 flex-1 flex-col px-5 pb-4 pt-2">
+          {loadingBar}
+          {showSkeleton ? <TableSkeleton rows={8} /> : error ? errorEl : table}
+        </div>
+
+        {pagination && !showSkeleton && !error ? (
+          <div className="border-t border-[var(--border-subtle)] px-5 py-3 [&>div]:mt-0 [&>div]:border-t-0 [&>div]:pt-0">
+            {pagination}
+          </div>
+        ) : null}
+      </section>
+    );
+  }
+
   return (
     <Card className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <CardHeader title={title} subtitle={subtitle} />
       {footer ? <div className="mb-3">{footer}</div> : null}
 
-      <JsonPayloadModal
-        open={!!inspect}
-        title={inspect ? `“${inspect.columnKey}”` : ""}
-        subtitle={inspect ? `resourceKey: ${inspect.resourceKey}` : undefined}
-        loading={false}
-        error={null}
-        payload={inspect?.value}
-        onClose={() => setInspect(null)}
-      />
+      {modal}
 
-      {loading && rows.length > 0 ? (
-        <div className="absolute left-0 right-0 top-0 z-30 h-0.5 overflow-hidden bg-brand/15" aria-hidden>
-          <div className="h-full w-1/3 animate-[ticket-grid-loading_1s_ease-in-out_infinite] bg-brand" />
-        </div>
-      ) : null}
+      {loadingBar}
 
-      {loading && rows.length === 0 ? (
+      {showSkeleton ? (
         <TableSkeleton rows={8} />
       ) : error ? (
-        <p className="text-sm text-red-600" role="alert">
-          {error}
-        </p>
+        errorEl
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="mb-3 flex items-start justify-between gap-3">
-            {columnSpecs.length >= MAX_COLUMNS_NOTE ? (
-              <p className="text-xs text-amber-800">
-                Columns limited to {MAX_COLUMNS_NOTE}; dotted keys such as{" "}
-                <code className="rounded bg-ink/[0.06] px-1 py-0.5 font-mono text-[11px]">A.B</code> collapse to{" "}
-                <code className="rounded bg-ink/[0.06] px-1 py-0.5 font-mono text-[11px]">A</code>.
-              </p>
-            ) : (
-              <span />
-            )}
-            {allHeaders.length > 0 ? (
-              <ColumnPickerButton
-                columns={allHeaders.map((h) => ({ key: dataHeaderKey(h.spec), label: tableColumnLabel(h.spec) }))}
-                hidden={hiddenColumns}
-                lockedKey={idKey}
-                onToggle={toggleColumn}
-                pinned={pinnedSet}
-                onTogglePin={togglePin}
-              />
-            ) : null}
+            <span />
+            {columnPicker}
           </div>
 
-          <div className={`${TABLE_SCROLL} rounded-xl border border-ink/[0.1] bg-[#fafbfc] shadow-inner`}>
-            {rows.length === 0 ? (
-              <div className="p-4">
-                <p className="text-sm text-ink/55">No rows for this page. Adjust filters or run a sync from Ops.</p>
-              </div>
-            ) : (
-              <table className="w-full min-w-[760px] border-separate border-spacing-0 text-left">
-                <caption className="sr-only">{title}</caption>
-                <thead className="sticky top-0 z-20">
-                  <tr className="bg-[#f0f2f5]">
-                    {orderedHeaders.map((h) => {
-                      const key = dataHeaderKey(h.spec);
-                      const dir = sort?.key === key ? sort.dir : null;
-                      const isPinned = pinnedSet.has(key);
-                      const isLastPinned = isPinned && activePinnedOrder[activePinnedOrder.length - 1] === key;
-                      return (
-                        <th
-                          key={key}
-                          ref={(el) => {
-                            if (isPinned && el) pinnedCellRefs.current.set(key, el);
-                            else pinnedCellRefs.current.delete(key);
-                          }}
-                          scope="col"
-                          style={isPinned ? { left: pinnedOffsets[key] ?? 0 } : undefined}
-                          className={`whitespace-nowrap border-b border-ink/[0.1] px-0 py-0 text-xs font-semibold tracking-wide text-ink/60 ${
-                            isPinned ? pinnedHeaderClass(isLastPinned) : ""
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => toggleSort(key)}
-                            aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none"}
-                            className="flex w-full items-center gap-1 px-3 py-3 text-left transition hover:text-ink"
-                          >
-                            {tableColumnLabel(h.spec)}
-                            <SortIcon dir={dir} />
-                          </button>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody className="bg-white">
-                  {sortedRows.map((row, rowIdx) => {
-                    const zebra = rowIdx % 2 === 1;
-                    return (
-                      <tr
-                        key={row.resourceKey}
-                        className={`align-top transition-colors hover:bg-brand/[0.03] ${zebra ? "bg-ink/[0.015]" : ""}`}
-                      >
-                        {orderedHeaders.map((h) => {
-                          const label = tableColumnLabel(h.spec);
-                          const cellKey = dataHeaderKey(h.spec);
-                          const isPinned = pinnedSet.has(cellKey);
-                          const isLastPinned = isPinned && activePinnedOrder[activePinnedOrder.length - 1] === cellKey;
-                          const cellStyle = isPinned ? { left: pinnedOffsets[cellKey] ?? 0 } : undefined;
-                          const cellClass = `max-w-[16rem] border-b border-ink/[0.06] px-3 py-2.5 align-middle ${isPinned ? pinnedBodyClass(zebra, isLastPinned) : ""}`;
+          {table}
 
-                          if (h.spec.kind === "group") {
-                            const raw = getGroupedSwaggerOrMirrorValue(row, h.spec.prefix);
-                            return (
-                              <td key={cellKey} className={cellClass} style={cellStyle}>
-                                {raw === undefined ? (
-                                  <span className="text-sm text-ink/30">—</span>
-                                ) : (
-                                  <ObjectDetailCell
-                                    value={raw}
-                                    ariaLabel={`Open ${label} details for row ${row.resourceKey}`}
-                                    onOpen={() =>
-                                      setInspect({
-                                        columnKey: label,
-                                        resourceKey: row.resourceKey,
-                                        value: raw,
-                                      })
-                                    }
-                                  />
-                                )}
-                              </td>
-                            );
-                          }
-
-                          const raw = getSwaggerOrMirrorTopLevel(row, h.spec.key);
-                          const exp = expandCellForModal(raw);
-
-                          return (
-                            <td key={cellKey} className={cellClass} style={cellStyle}>
-                              {"empty" in exp ? (
-                                <span className="text-sm text-ink/30">—</span>
-                              ) : "modal" in exp ? (
-                                <ObjectDetailCell
-                                  value={exp.modal}
-                                  ariaLabel={`Open ${label} details for row ${row.resourceKey}`}
-                                  onOpen={() =>
-                                    setInspect({
-                                      columnKey: label,
-                                      resourceKey: row.resourceKey,
-                                      value: exp.modal,
-                                    })
-                                  }
-                                />
-                              ) : (
-                                <span
-                                  className="block max-w-full truncate text-sm leading-relaxed text-ink/90"
-                                  title={exp.text.length > 80 ? exp.text : undefined}
-                                >
-                                  {exp.text || "—"}
-                                </span>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-
-          {!hidePagination ? (
-            <ClearstoryTablePagination
-              total={total}
-              page={page}
-              pageSize={pageSize}
-              onPageChange={onPageChange}
-              onPageSizeChange={onPageSizeChange}
-              ariaLabel={`${title} pages`}
-              idPrefix={paginationIdPrefix}
-            />
-          ) : null}
+          {pagination}
         </div>
       )}
     </Card>

@@ -7,8 +7,11 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { BidStageProgressBar } from "@/components/bidding/BidStageProgressBar";
 import { BidStatusBadge } from "@/components/bidding/BidStatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { InlineSpinner, LoadingBar } from "@/components/ui/LoadingBar";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import { buttonClasses } from "@/components/ui/Button";
+import { SoftTab } from "@/components/ui/SoftTab";
+import { SortableTh, type SortDir as TableSortDir } from "@/components/ui/SortableTh";
 import { RestrictedState } from "@/components/ui/RestrictedState";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBiddingAccess } from "@/hooks/useBiddingAccess";
@@ -57,7 +60,7 @@ type SortKey =
   | "contractAmount"
   | "jobStartDate"
   | "office";
-type SortDir = "asc" | "desc";
+type SortDir = TableSortDir;
 
 const BID_PAGE_SIZES = [25, 50, 100] as const;
 const DEFAULT_BID_PAGE_SIZE = 25;
@@ -102,9 +105,9 @@ function BidListPager({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-xs text-ink/50">
-        {total === 0 ? "0 estimates" : `${start}–${end} of ${total.toLocaleString()}`}
-      </p>
+      <span className="cs-helper">
+        {total === 0 ? "0 estimates" : `Showing ${start}–${end} of ${total.toLocaleString()}`}
+      </span>
       <div className="flex flex-wrap items-center gap-2">
         <label className="sr-only" htmlFor="bids-page-size">
           Rows per page
@@ -227,40 +230,6 @@ function defaultSortDir(key: SortKey): SortDir {
   return "asc";
 }
 
-function SortableTh({
-  label,
-  column,
-  active,
-  dir,
-  onSort,
-  className,
-}: {
-  label: string;
-  column: SortKey;
-  active: boolean;
-  dir: SortDir;
-  onSort: (key: SortKey) => void;
-  className?: string;
-}) {
-  return (
-    <th className={className}>
-      <button
-        type="button"
-        onClick={() => onSort(column)}
-        className={`inline-flex items-center gap-1 text-left font-semibold ${
-          active ? "text-ink" : "text-ink/50 hover:text-ink"
-        }`}
-        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-      >
-        {label}
-        <span aria-hidden className="text-[10px]">
-          {active ? (dir === "asc" ? "↑" : "↓") : "↕"}
-        </span>
-      </button>
-    </th>
-  );
-}
-
 /** Bordered filter chip with a custom dropdown that always opens below the trigger (native <select> lets the browser decide, which can open upward). */
 function FilterSelect({
   prefix,
@@ -303,7 +272,7 @@ function FilterSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel ?? prefix}
-        className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-white/70 bg-white/50 pl-3 pr-2.5 text-sm font-medium text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] outline-none backdrop-blur-md transition hover:bg-white/70 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+        className="cs-field flex w-full items-center justify-between gap-2 pl-3 pr-2.5 font-medium text-ink"
       >
         <span className="truncate">
           {prefix}: {current?.label}
@@ -1031,7 +1000,7 @@ export default function BiddingListPage() {
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 ui-animate-in">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 ui-animate-in [--radius:10px] [--radius-md:8px]">
       <PageHeader
         title="Estimates"
         subtitle="Track each estimate from Intake through Outcome. Awarded or Lost bids continue on from their final outcome."
@@ -1045,7 +1014,7 @@ export default function BiddingListPage() {
                 className={`rounded-lg border px-2.5 py-2 text-xs font-semibold transition ${
                   showAllTeams
                     ? "border-brand/30 bg-brand/10 text-brand"
-                    : "border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md hover:bg-white/70 hover:text-ink"
+                    : "cs-soft-control h-auto py-2 text-xs"
                 }`}
                 title="GET /bids?teamId=all"
               >
@@ -1082,28 +1051,36 @@ export default function BiddingListPage() {
         </p>
       ) : null}
 
-      <div className="flex w-full items-baseline gap-2 rounded-xl border border-[var(--border-subtle)] bg-surface px-3.5 py-3 sm:w-fit sm:rounded-2xl sm:border-white/70 sm:bg-white/45 sm:px-5 sm:py-4 sm:shadow-[0_6px_16px_rgba(255,123,17,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] sm:backdrop-blur-xl">
-        {loading && bids.length === 0 ? (
-          <Skeleton className="h-9 w-24" />
-        ) : (
-          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 sm:block">
-            <p className="text-xl font-semibold leading-none text-ink sm:text-2xl">
-              {filteredTotal.toLocaleString()}
-              {!serverPaged && filteredTotal !== counts.total ? (
-                <span className="text-sm font-normal text-ink/40 sm:text-base"> of {counts.total}</span>
-              ) : null}
-            </p>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-ink/40 sm:mt-1.5 sm:text-xs">
-              {status === "all" ? "Estimates shown" : `${STATUS_FILTERS.find((f) => f.value === status)?.label} estimates shown`}
-            </p>
+      <section className="cs-content-panel relative flex min-h-0 flex-col overflow-hidden rounded-lg">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-5 py-4">
+          <div className="flex items-center gap-2">
+            <h2 className="cs-section-title">
+              {status === "all"
+                ? "All estimates"
+                : `${STATUS_FILTERS.find((f) => f.value === status)?.label} estimates`}
+            </h2>
+            {loading && bids.length === 0 ? (
+              <Skeleton className="h-5 w-10 rounded-full" />
+            ) : (
+              <span className="rounded-full bg-[#f3f4f6] px-2 py-0.5 text-[12px] font-medium text-ink-muted">
+                {filteredTotal.toLocaleString()}
+                {!serverPaged && filteredTotal !== counts.total ? ` of ${counts.total.toLocaleString()}` : ""}
+              </span>
+            )}
           </div>
-        )}
-      </div>
+          <p className="cs-helper inline-flex items-center gap-1.5 text-brand" role="status" aria-live="polite">
+            {refreshing ? (
+              <>
+                <InlineSpinner />
+                Updating…
+              </>
+            ) : null}
+          </p>
+        </div>
 
-      <div className="flex flex-col gap-3 sm:gap-4">
         {/* Record status — below xl only; xl+ uses secondary sidebar */}
         <div
-          className="sticky top-14 z-20 -mx-4 border-b border-[var(--border-subtle)] bg-canvas px-4 sm:top-[3.75rem] sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6 xl:hidden"
+          className="border-b border-[var(--border-subtle)] px-5 xl:hidden"
           role="tablist"
           aria-label="Estimate record status"
         >
@@ -1112,361 +1089,371 @@ export default function BiddingListPage() {
               const active = status === f.value;
               const count = tabCount(f.value);
               return (
-                <button
+                <SoftTab
                   key={f.value}
-                  type="button"
+                  selected={active}
                   onClick={() => (f.value === "all" ? applyStatus("all") : toggleStatus(f.value))}
-                  aria-pressed={active}
-                  className={`relative shrink-0 whitespace-nowrap rounded-md px-2.5 py-2 text-[12.5px] transition focus-visible:outline-none sm:px-3 sm:text-[13px] ${
-                    active
-                      ? "bg-brand-tint font-semibold text-ink"
-                      : "font-medium text-ink-muted hover:bg-canvas hover:text-ink"
-                  }`}
                 >
                   {f.label}{" "}
                   <span className={count == null || count === 0 ? "text-ink/30" : active ? "text-ink/50" : "text-ink/35"}>
                     {count == null ? "—" : count}
                   </span>
-                  {active ? (
-                    <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand" />
-                  ) : null}
-                </button>
+                </SoftTab>
               );
             })}
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-6 sm:gap-y-3">
-          {showFilter("search") ? <div className="w-full min-w-0 sm:mr-auto sm:w-[320px]">
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" aria-hidden>
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
-                </svg>
-              </span>
-              <input
-                type="search"
-                placeholder="Search name, estimate #, drawing #, architect, owner…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-10 w-full rounded-lg border border-white/70 bg-white/50 pl-9 pr-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] outline-none backdrop-blur-md transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+        <div className="flex flex-col gap-3 px-5 pt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            {showFilter("search") ? (
+              <div className="relative w-full min-w-0 sm:mr-auto sm:w-80">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" aria-hidden>
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <label htmlFor="bids-search" className="sr-only">
+                  Search estimates
+                </label>
+                <input
+                  id="bids-search"
+                  type="search"
+                  placeholder="Search name, estimate #, drawing #, architect, owner…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  autoComplete="off"
+                  className="cs-field w-full pl-9 pr-3"
+                />
+              </div>
+            ) : (
+              <div className="sm:mr-auto" />
+            )}
+
+            <div className="w-44 shrink-0">
+              <FilterSelect
+                prefix="Sort"
+                value={sortKey}
+                onChange={(v) => {
+                  const key = v as SortKey;
+                  setSortKey(key);
+                  setSortDir(defaultSortDir(key));
+                }}
+                options={SORT_OPTIONS}
+                ariaLabel="Sort estimates"
               />
             </div>
-          </div> : null}
 
-          <div className="w-44 shrink-0">
-            <FilterSelect
-              prefix="Sort"
-              value={sortKey}
-              onChange={(v) => {
-                const key = v as SortKey;
-                setSortKey(key);
-                setSortDir(defaultSortDir(key));
-              }}
-              options={SORT_OPTIONS}
-              ariaLabel="Sort estimates"
-            />
+            <button
+              type="button"
+              onClick={() => setFilterOpen(true)}
+              className="flex h-9 shrink-0 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-white px-3 text-[13px] font-medium text-ink-muted transition-colors hover:border-[#d1d5db] hover:text-ink"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                <path d="M4 5h16l-6 7.5V19l-4 1.5v-8L4 5z" strokeLinejoin="round" />
+              </svg>
+              Filters
+              {activeFilterCount > 0 ? (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-medium text-white">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </button>
+
+            <button
+              type="button"
+              onClick={exportToExcel}
+              disabled={visibleBids.length === 0}
+              title="Export the currently filtered/sorted list to Excel"
+              className="flex h-9 shrink-0 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-white px-3 text-[13px] font-medium text-ink-muted transition-colors hover:border-[#d1d5db] hover:text-ink disabled:pointer-events-none disabled:opacity-40"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Export
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setFilterOpen(true)}
-            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-white/70 bg-white/50 px-3.5 text-sm font-semibold text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md transition hover:border-brand/30 hover:bg-white/70 hover:text-brand"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-              <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
-            </svg>
-            Filters
-            {activeFilterCount > 0 ? (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">
-                {activeFilterCount}
-              </span>
-            ) : null}
-          </button>
-          {refreshing ? <span className="text-xs font-medium text-ink/40">Updating</span> : null}
-
-          <button
-            type="button"
-            onClick={exportToExcel}
-            disabled={visibleBids.length === 0}
-            title="Export the currently filtered/sorted list to Excel"
-            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-white/70 bg-white/50 px-3.5 text-sm font-semibold text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md transition hover:border-brand/30 hover:bg-white/70 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-              <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Export
-          </button>
-        </div>
-      </div>
-
-      {isInternalRole ? (
-        <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Estimates chrome">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={internalList}
-            onClick={() => setTeamTable(false)}
-            className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-              internalList ? "bg-ink text-white" : "border border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
-            }`}
-          >
-            Internal bid list
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={!internalList}
-            onClick={() => setTeamTable(true)}
-            className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-              !internalList ? "bg-ink text-white" : "border border-white/70 bg-white/50 text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
-            }`}
-          >
-            Full team table
-          </button>
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap items-end gap-3">
-        {showFilter("processStage") ? (
-          <label className="flex w-44 flex-col gap-1 text-xs font-semibold text-ink/50">
-            Current progress
-            <FilterSelect
-              prefix="Stage"
-              value={processStage}
-              onChange={setProcessStage}
-              options={STAGE_FILTERS}
-              ariaLabel="Current progress"
-            />
-          </label>
-        ) : null}
-        {showFilter("bidDate") ? (
-          <div className="flex items-end gap-2">
-            <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
-              Bid date from
-              <input
-                type="date"
-                value={localBidFrom}
-                onChange={(e) => setLocalBidFrom(e.target.value)}
-                className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
-              to
-              <input
-                type="date"
-                value={localBidTo}
-                onChange={(e) => setLocalBidTo(e.target.value)}
-                className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
-              />
-            </label>
-          </div>
-        ) : null}
-        {showFilter("captain") ? (
-          <label className="flex w-48 flex-col gap-1 text-xs font-semibold text-ink/50">
-            Team captain
-            <FilterSelect
-              prefix="Captain"
-              value={captainFilter}
-              onChange={setCaptainFilter}
-              options={[{ value: "", label: "All" }, ...(dynamicOptions.captain ?? [])]}
-              ariaLabel="Team captain"
-            />
-          </label>
-        ) : null}
-        {showFilter("workType") ? (
-          <label className="flex w-40 flex-col gap-1 text-xs font-semibold text-ink/50">
-            Work type
-            <FilterSelect
-              prefix="Work"
-              value={workType}
-              onChange={setWorkType}
-              options={WORK_TYPE_FILTERS}
-              ariaLabel="Work type"
-            />
-          </label>
-        ) : null}
-        {showFilter("outcome") ? (
-          <label className="flex w-40 flex-col gap-1 text-xs font-semibold text-ink/50">
-            Outcome
-            <FilterSelect
-              prefix="Outcome"
-              value={outcome}
-              onChange={setOutcome}
-              options={OUTCOME_FILTERS}
-              ariaLabel="Outcome"
-            />
-          </label>
-        ) : null}
-        {showFilter("bidKind") ? (
-          <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
-            Bid type
-            <input
-              value={bidKindFilter}
-              onChange={(e) => setBidKindFilter(e.target.value)}
-              className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
-            />
-          </label>
-        ) : null}
-        {showFilter("constructionType") ? (
-          <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
-            Building type
-            <input
-              value={constructionFilter}
-              onChange={(e) => setConstructionFilter(e.target.value)}
-              className="h-10 rounded-lg border border-white/70 bg-white/50 px-2 text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md"
-            />
-          </label>
-        ) : null}
-      </div>
-
-      <SavedViewTabs
-        views={savedViews}
-        fields={FILTER_FIELDS}
-        activeKeys={activeConditionKeys}
-        showClear={activeConditionKeys.length > 0 || activeFilterCount > 0}
-        onToggleCondition={toggleCondition}
-        onRemoveView={removeSavedView}
-        onClear={clearView}
-      />
-
-      {loading && bids.length === 0 ? (
-        <TableSkeleton rows={8} toolbar={false} />
-      ) : filteredTotal === 0 ? (
-        <EmptyState
-          message={emptyMessage}
-          action={
-            !error && canWrite ? (
-              <Link
-                href="/bidding/new"
-                className="text-sm font-semibold text-ink underline underline-offset-2 hover:text-ink"
+          {isInternalRole ? (
+            <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Estimates chrome">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={internalList}
+                onClick={() => setTeamTable(false)}
+                className={`h-8 rounded-[var(--radius-md)] border px-3 text-[13px] font-medium transition-colors ${
+                  internalList
+                    ? "border-ink bg-ink text-white"
+                    : "border-[var(--border-subtle)] bg-white text-ink-muted hover:border-[#d1d5db] hover:text-ink"
+                }`}
               >
-                Start a new estimate
-              </Link>
-            ) : undefined
-          }
-        />
-      ) : (
-        <div className="cs-data-table -mx-4 overflow-x-auto overscroll-x-contain border-y border-[var(--border-subtle)] bg-surface sm:-mx-6 md:mx-0 md:rounded-[var(--radius)] md:border">
-          <table className="w-max min-w-full border-collapse text-left">
-            <thead>
-              <tr>
-                {listColumns.map((column) => (
-                  <SortableTh
-                    key={column.key}
-                    label={column.label}
-                    column={column.key}
-                    active={sortKey === column.key}
-                    dir={sortDir}
-                    onSort={(key) => {
-                      if (sortKey === key) {
-                        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-                        return;
-                      }
-                      setSortKey(key);
-                      setSortDir(defaultSortDir(key));
-                    }}
-                    className={`${column.width} whitespace-nowrap px-3 py-2`}
-                  />
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {pageRows.map((bid, idx) => {
-                const teamColors = teamColorForId(bid.teamId);
-                const officeBrand = entityBrandForName(bid.companyName);
-                const schedule = formatBidDateAndTime({
-                  bidDate: bid.bidDate,
-                  dueDate: bid.dueDate,
-                  dueTime: bid.dueTime,
-                });
-                const crewLabel = teamNameFor(bid.teamId);
-                return (
-                  <tr
-                    key={bid.id}
-                    className={`border-b border-[var(--border-subtle)] transition-colors hover:bg-canvas ${idx % 2 === 1 ? "bg-canvas/50" : "bg-white"}`}
-                  >
-                    {listColumns.map((column) => {
-                      const text = cellText(bid, column.key);
-                      return (
-                        <td
-                          key={column.key}
-                          title={text}
-                          className={`whitespace-nowrap px-3 py-2.5 align-middle text-[13px] ${column.width}`}
-                        >
-                          {column.key === "estimate" || column.key === "name" ? (
-                            <Link
-                              href={rowHref(bid)}
-                              className="block max-w-[16rem] truncate font-medium text-ink hover:underline"
-                            >
-                              {softBreakText(text)}
-                            </Link>
-                          ) : column.key === "status" ? (
-                            status === "draft" && bid.status === "draft" ? null : (
-                              <BidStatusBadge status={bid.status} />
-                            )
-                          ) : column.key === "bidDate" ? (
-                            <div className="min-w-0">
-                              <p className="font-medium text-ink">{schedule.date}</p>
-                              {schedule.time ? (
-                                <p className="cs-helper">{schedule.time}</p>
-                              ) : null}
-                            </div>
-                          ) : column.key === "office" ? (
-                            <span className="inline-flex max-w-[10rem] items-center gap-2 truncate">
-                              <span
-                                className={`h-2 w-2 shrink-0 rounded-full ${officeBrand.dot}`}
-                                aria-hidden
-                                title={text}
-                              />
-                              <span className="truncate">{text}</span>
-                            </span>
-                          ) : column.key === "captain" ? (
-                            <div className="min-w-0 max-w-[11rem]">
-                              <p className="truncate">{softBreakText(text)}</p>
-                              {bid.teamId != null && crewLabel ? (
-                                <p className="cs-helper mt-0.5 inline-flex max-w-full items-center gap-1.5 truncate">
-                                  <span
-                                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${teamColors.dot}`}
-                                    aria-hidden
-                                  />
-                                  {crewLabel}
-                                </p>
-                              ) : null}
-                            </div>
-                          ) : column.key === "stage" ? (
-                            <BidStageProgressBar
-                              processStage={bid.processStage}
-                              teamId={bid.teamId}
-                              compact
-                            />
-                          ) : (
-                            <span className="block max-w-[12rem] truncate">{softBreakText(text)}</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                Internal bid list
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!internalList}
+                onClick={() => setTeamTable(true)}
+                className={`h-8 rounded-[var(--radius-md)] border px-3 text-[13px] font-medium transition-colors ${
+                  !internalList
+                    ? "border-ink bg-ink text-white"
+                    : "border-[var(--border-subtle)] bg-white text-ink-muted hover:border-[#d1d5db] hover:text-ink"
+                }`}
+              >
+                Full team table
+              </button>
+            </div>
+          ) : null}
 
-      {filteredTotal > 0 ? (
-        <BidListPager
-          page={currentPage}
-          pageSize={pageSize}
-          total={filteredTotal}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            setPage(1);
-          }}
-        />
-      ) : null}
+          <div className="flex flex-wrap items-end gap-3 empty:hidden">
+            {showFilter("processStage") ? (
+              <label className="flex w-44 flex-col gap-1 text-xs font-semibold text-ink/50">
+                Current progress
+                <FilterSelect
+                  prefix="Stage"
+                  value={processStage}
+                  onChange={setProcessStage}
+                  options={STAGE_FILTERS}
+                  ariaLabel="Current progress"
+                />
+              </label>
+            ) : null}
+            {showFilter("bidDate") ? (
+              <div className="flex items-end gap-2">
+                <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+                  Bid date from
+                  <input
+                    type="date"
+                    value={localBidFrom}
+                    onChange={(e) => setLocalBidFrom(e.target.value)}
+                    className="cs-field px-2"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+                  to
+                  <input
+                    type="date"
+                    value={localBidTo}
+                    onChange={(e) => setLocalBidTo(e.target.value)}
+                    className="cs-field px-2"
+                  />
+                </label>
+              </div>
+            ) : null}
+            {showFilter("captain") ? (
+              <label className="flex w-48 flex-col gap-1 text-xs font-semibold text-ink/50">
+                Team captain
+                <FilterSelect
+                  prefix="Captain"
+                  value={captainFilter}
+                  onChange={setCaptainFilter}
+                  options={[{ value: "", label: "All" }, ...(dynamicOptions.captain ?? [])]}
+                  ariaLabel="Team captain"
+                />
+              </label>
+            ) : null}
+            {showFilter("workType") ? (
+              <label className="flex w-40 flex-col gap-1 text-xs font-semibold text-ink/50">
+                Work type
+                <FilterSelect
+                  prefix="Work"
+                  value={workType}
+                  onChange={setWorkType}
+                  options={WORK_TYPE_FILTERS}
+                  ariaLabel="Work type"
+                />
+              </label>
+            ) : null}
+            {showFilter("outcome") ? (
+              <label className="flex w-40 flex-col gap-1 text-xs font-semibold text-ink/50">
+                Outcome
+                <FilterSelect
+                  prefix="Outcome"
+                  value={outcome}
+                  onChange={setOutcome}
+                  options={OUTCOME_FILTERS}
+                  ariaLabel="Outcome"
+                />
+              </label>
+            ) : null}
+            {showFilter("bidKind") ? (
+              <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+                Bid type
+                <input
+                  value={bidKindFilter}
+                  onChange={(e) => setBidKindFilter(e.target.value)}
+                  className="cs-field px-2"
+                />
+              </label>
+            ) : null}
+            {showFilter("constructionType") ? (
+              <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+                Building type
+                <input
+                  value={constructionFilter}
+                  onChange={(e) => setConstructionFilter(e.target.value)}
+                  className="cs-field px-2"
+                />
+              </label>
+            ) : null}
+          </div>
+
+          <SavedViewTabs
+            views={savedViews}
+            fields={FILTER_FIELDS}
+            activeKeys={activeConditionKeys}
+            showClear={activeConditionKeys.length > 0 || activeFilterCount > 0}
+            onToggleCondition={toggleCondition}
+            onRemoveView={removeSavedView}
+            onClear={clearView}
+          />
+        </div>
+
+        <div className="relative flex min-h-0 flex-col px-5 pb-4 pt-2" aria-busy={refreshing}>
+          {/* Tab, filter, sort and page changes keep the old rows up while the request runs: show it. */}
+          {refreshing ? <LoadingBar label="Loading estimates" /> : null}
+          {loading && bids.length === 0 ? (
+            <TableSkeleton rows={8} toolbar={false} />
+          ) : filteredTotal === 0 ? (
+            <EmptyState
+              message={emptyMessage}
+              action={
+                !error && canWrite ? (
+                  <Link
+                    href="/bidding/new"
+                    className="text-sm font-semibold text-ink underline underline-offset-2 hover:text-ink"
+                  >
+                    Start a new estimate
+                  </Link>
+                ) : undefined
+              }
+            />
+          ) : (
+            <div className="cs-data-table cs-table-shell min-h-0 overflow-y-auto max-h-[min(70dvh,calc(100dvh-14rem))]">
+              <table className="w-full border-collapse text-left">
+                <caption className="sr-only">Estimates</caption>
+                <thead>
+                  <tr>
+                    {listColumns.map((column) => (
+                      <SortableTh<SortKey>
+                        key={column.key}
+                        label={column.label}
+                        column={column.key}
+                        active={sortKey === column.key}
+                        dir={sortDir}
+                        onSort={(key) => {
+                          if (sortKey === key) {
+                            setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                            return;
+                          }
+                          setSortKey(key);
+                          setSortDir(defaultSortDir(key));
+                        }}
+                        className={column.width}
+                      />
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((bid, idx) => {
+                    const teamColors = teamColorForId(bid.teamId);
+                    const officeBrand = entityBrandForName(bid.companyName);
+                    const schedule = formatBidDateAndTime({
+                      bidDate: bid.bidDate,
+                      dueDate: bid.dueDate,
+                      dueTime: bid.dueTime,
+                    });
+                    const crewLabel = teamNameFor(bid.teamId);
+                    return (
+                      <tr
+                        key={bid.id}
+                        className={`border-b border-[var(--border-subtle)] transition-colors hover:bg-canvas ${idx % 2 === 1 ? "bg-canvas/50" : "bg-white"}`}
+                      >
+                        {listColumns.map((column) => {
+                          const text = cellText(bid, column.key);
+                          return (
+                            <td
+                              key={column.key}
+                              title={text}
+                              className={`whitespace-nowrap px-3 py-2.5 align-middle text-[13px] ${column.width}`}
+                            >
+                              {column.key === "estimate" || column.key === "name" ? (
+                                <Link
+                                  href={rowHref(bid)}
+                                  className="block max-w-[16rem] truncate font-medium text-ink hover:underline"
+                                >
+                                  {softBreakText(text)}
+                                </Link>
+                              ) : column.key === "status" ? (
+                                status === "draft" && bid.status === "draft" ? null : (
+                                  <BidStatusBadge status={bid.status} />
+                                )
+                              ) : column.key === "bidDate" ? (
+                                <div className="min-w-0">
+                                  <p className="font-medium text-ink">{schedule.date}</p>
+                                  {schedule.time ? (
+                                    <p className="cs-helper">{schedule.time}</p>
+                                  ) : null}
+                                </div>
+                              ) : column.key === "office" ? (
+                                <span className="inline-flex max-w-[10rem] items-center gap-2 truncate">
+                                  <span
+                                    className={`h-2 w-2 shrink-0 rounded-full ${officeBrand.dot}`}
+                                    aria-hidden
+                                    title={text}
+                                  />
+                                  <span className="truncate">{text}</span>
+                                </span>
+                              ) : column.key === "captain" ? (
+                                <div className="min-w-0 max-w-[11rem]">
+                                  <p className="truncate">{softBreakText(text)}</p>
+                                  {bid.teamId != null && crewLabel ? (
+                                    <p className="cs-helper mt-0.5 inline-flex max-w-full items-center gap-1.5 truncate">
+                                      <span
+                                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${teamColors.dot}`}
+                                        aria-hidden
+                                      />
+                                      {crewLabel}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : column.key === "stage" ? (
+                                <BidStageProgressBar
+                                  processStage={bid.processStage}
+                                  teamId={bid.teamId}
+                                  compact
+                                />
+                              ) : (
+                                <span className="block max-w-[12rem] truncate">{softBreakText(text)}</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {filteredTotal > 0 ? (
+          <div className="border-t border-[var(--border-subtle)] px-5 py-3">
+            <BidListPager
+              page={currentPage}
+              pageSize={pageSize}
+              total={filteredTotal}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
+          </div>
+        ) : null}
+      </section>
 
       <FilterSidebar
         open={filterOpen}
