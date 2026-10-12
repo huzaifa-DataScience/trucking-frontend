@@ -68,6 +68,44 @@ export type SummaryResponse = {
 
 export type JobStatus = "active" | "inactive" | "siteline_only" | "clearstory_only";
 
+export type BomCompany = {
+  entityId: number;
+  company: string;
+  materialCost: number;
+  laborHours: number;
+};
+
+export type BomTrimble = {
+  projectIds: number[];
+  itemCount: number;
+  ordered: number;
+  received: number;
+  orderedMinusReceived: number;
+  actualCost: number;
+  laborHours: number;
+  estLaborHours: number;
+  bomBudget: number;
+  remaining: number | null;
+  pctUsed: number | null;
+  bomBudgetPct: number | null;
+};
+
+export type JobBom = {
+  companies: BomCompany[];
+  totals: { materialCost: number; laborHours: number };
+  clearstory: {
+    contract: number;
+    approvedCos: number;
+    totalContract: number;
+    completionPct: number | null;
+  };
+  trimble: BomTrimble | null;
+  vsCompletion: {
+    materialVsCompletion: number | null;
+    laborVsCompletion: number | null;
+  };
+};
+
 export type JobRow = {
   jobNumber: string;
   name: string | null;
@@ -114,11 +152,13 @@ export type JobRow = {
     cashFlow: number | null;
   };
   recon: JobRecon;
+  bom: JobBom;
   sources: {
     siteline: boolean;
     clearstory: boolean;
     refJob: boolean;
     foundation: boolean;
+    trimble: boolean;
   };
 };
 

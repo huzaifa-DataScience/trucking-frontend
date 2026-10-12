@@ -200,8 +200,6 @@ export function BidAssignmentStage() {
 
   const renderRoleFields = (role: TakeoffRole, optional = false) => {
     const row = rowFor(role);
-    const status =
-      row?.status === "done" || row?.status === "none" ? row.status : "";
     return (
       <div key={role} className="flex min-w-0 flex-col gap-1.5">
         <label className="flex min-w-0 flex-col gap-0.5">
@@ -229,25 +227,6 @@ export function BidAssignmentStage() {
             value={row?.dueAt?.slice(0, 10) ?? ""}
             onChange={(v) => upsertRole(role, { dueAt: v || null })}
           />
-        </label>
-        <label className="flex min-w-0 flex-col gap-0.5">
-          <span className={labelClass}>Status</span>
-          <select
-            className={inputClass}
-            disabled={!editable}
-            aria-label={`${role} takeoff status`}
-            value={status}
-            onChange={(e) => {
-              const v = e.target.value;
-              upsertRole(role, {
-                status: v === "done" || v === "none" ? v : null,
-              });
-            }}
-          >
-            <option value="">—</option>
-            <option value="done">Done</option>
-            <option value="none">None (no scope)</option>
-          </select>
         </label>
       </div>
     );
@@ -540,8 +519,7 @@ export function BidAssignmentStage() {
         <h3 className={sectionHead}>Takeoff assignments</h3>
         <div className={`${sectionBody} flex flex-col gap-4`}>
           <p className="text-[11px] text-[#6b7280]">
-            Team/captain pick prefills blank roles. Status: done or none (no scope). VRF /
-            equipment stay optional.
+            Team/captain pick prefills blank roles. VRF / equipment stay optional.
           </p>
           <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
             {(
