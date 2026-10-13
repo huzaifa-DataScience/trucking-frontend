@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import type { JobRecon, JobRow, JobStatus } from "@/lib/project-financials/types";
 import { count, money, ratio } from "@/lib/project-financials/format";
+import {
+  FINANCIALS_TABLE_SCROLL,
+  FINANCIALS_TABLE_STICKY_HEAD,
+} from "@/components/project-financials/tableScroll";
 
 type BookView = "overview" | "contract" | "billing" | "cost";
 
@@ -44,46 +48,50 @@ export function JobBookTable({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boo
       </div>
 
       <div className={shell}>
-        <div className="hidden grid-cols-[minmax(16rem,1.5fr)_11rem_11rem_10rem_10rem] gap-3 border-b border-[rgba(91,173,232,0.22)] bg-[rgba(91,173,232,0.18)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-[#333333] lg:grid">
-          <span>Job</span>
-          {view === "overview" ? (
-            <>
-              <span className="text-right">Revised</span>
-              <span className="text-right">Billed</span>
-              <span className="text-right">Backlog</span>
-              <span className="text-right">Cash flow</span>
-            </>
-          ) : null}
-          {view === "contract" ? (
-            <>
-              <span className="text-right">Contract</span>
-              <span className="text-right">Approved COs</span>
-              <span className="text-right">ATP</span>
-              <span className="text-right">Revised</span>
-            </>
-          ) : null}
-          {view === "billing" ? (
-            <>
-              <span className="text-right">Billed</span>
-              <span className="text-right">Retainage</span>
-              <span className="text-right">AR</span>
-              <span className="text-right">% complete</span>
-            </>
-          ) : null}
-          {view === "cost" ? (
-            <>
-              <span className="text-right">LAB + BUR</span>
-              <span className="text-right">Total cost</span>
-              <span className="text-right">Hours</span>
-              <span className="text-right">Cash flow</span>
-            </>
-          ) : null}
+        <div className={FINANCIALS_TABLE_SCROLL}>
+          <div
+            className={`hidden grid-cols-[minmax(16rem,1.5fr)_11rem_11rem_10rem_10rem] gap-3 border-b border-[rgba(91,173,232,0.22)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-[#333333] lg:grid ${FINANCIALS_TABLE_STICKY_HEAD}`}
+          >
+            <span>Job</span>
+            {view === "overview" ? (
+              <>
+                <span className="text-right">Revised</span>
+                <span className="text-right">Billed</span>
+                <span className="text-right">Backlog</span>
+                <span className="text-right">Cash flow</span>
+              </>
+            ) : null}
+            {view === "contract" ? (
+              <>
+                <span className="text-right">Contract</span>
+                <span className="text-right">Approved COs</span>
+                <span className="text-right">ATP</span>
+                <span className="text-right">Revised</span>
+              </>
+            ) : null}
+            {view === "billing" ? (
+              <>
+                <span className="text-right">Billed</span>
+                <span className="text-right">Retainage</span>
+                <span className="text-right">AR</span>
+                <span className="text-right">% complete</span>
+              </>
+            ) : null}
+            {view === "cost" ? (
+              <>
+                <span className="text-right">LAB + BUR</span>
+                <span className="text-right">Total cost</span>
+                <span className="text-right">Hours</span>
+                <span className="text-right">Cash flow</span>
+              </>
+            ) : null}
+          </div>
+          <ul>
+            {jobs.map((job) => (
+              <JobLine key={job.jobNumber} job={job} view={view} hideCost={hideCost} />
+            ))}
+          </ul>
         </div>
-        <ul>
-          {jobs.map((job) => (
-            <JobLine key={job.jobNumber} job={job} view={view} hideCost={hideCost} />
-          ))}
-        </ul>
       </div>
       <FullSheet jobs={jobs} hideCost={hideCost} />
     </div>
@@ -207,10 +215,10 @@ function FullSheet({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boolean }) {
       <h2 className="border-b border-[rgba(91,173,232,0.22)] bg-[rgba(91,173,232,0.18)] px-4 py-3 text-center text-[13px] font-semibold text-[#333333]">
         Full sheet
       </h2>
-      <div className="overflow-x-auto">
+      <div className={FINANCIALS_TABLE_SCROLL}>
         <table className="w-full min-w-[2400px] border-collapse text-left">
           <thead>
-            <tr className="border-b border-ink/[0.06]">
+            <tr className={`border-b border-ink/[0.06] ${FINANCIALS_TABLE_STICKY_HEAD}`}>
               {[
                 "Job #",
                 "Name",

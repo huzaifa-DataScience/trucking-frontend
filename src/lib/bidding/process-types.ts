@@ -633,6 +633,49 @@ export interface ProcessInviteContact {
   preferredContact?: "email" | "phone" | null;
 }
 
+/** Togal session / file map on the bid — preserve on Save (needed for DELETE). */
+export type BidProcessTogal = {
+  projectUrl?: string | null;
+  projectId?: string | null;
+  setId?: string | null;
+  organizationId?: string | null;
+  files?: {
+    attachmentId: number;
+    fileId?: string | null;
+    pageIds?: string[] | null;
+  }[];
+  sentAttachmentIds?: number[];
+};
+
+/** Merge so Save never drops server Togal ids when the draft is stale/partial. */
+export function mergeProcessTogal(
+  server: BidProcessTogal | null | undefined,
+  local: BidProcessTogal | null | undefined
+): BidProcessTogal | null {
+  if (server == null && local == null) return null;
+  const files =
+    local?.files && local.files.length > 0
+      ? local.files
+      : server?.files && server.files.length > 0
+        ? server.files
+        : local?.files ?? server?.files;
+  return {
+    ...(server ?? {}),
+    ...(local ?? {}),
+    setId: local?.setId ?? server?.setId ?? null,
+    organizationId: local?.organizationId ?? server?.organizationId ?? null,
+    projectUrl: local?.projectUrl ?? server?.projectUrl ?? null,
+    projectId: local?.projectId ?? server?.projectId ?? null,
+    files: files ?? undefined,
+    sentAttachmentIds:
+      local?.sentAttachmentIds ?? server?.sentAttachmentIds ?? undefined,
+  };
+}
+
+export function isTogalProjectUrlOpenable(url: string | null | undefined): boolean {
+  return typeof url === "string" && /^https:\/\//i.test(url.trim());
+}
+
 /** Full process object from GET /bids/:id (empty defaults filled). */
 export interface BidProcess {
   stage?: ProcessStage | null;
@@ -677,11 +720,7 @@ export interface BidProcess {
   /** Overseas takeoff turn-in. Set on Takeoff. Not client bidDate. */
   internalBidDate?: string | null;
   /** Togal.ai — drawings stay there. FRONTEND_TOGAL.md */
-  togal?: {
-    projectUrl?: string | null;
-    projectId?: string | null;
-    sentAttachmentIds?: number[];
-  } | null;
+  togal?: BidProcessTogal | null;
   dateSubmitted?: string | null;
   amountSubmitted?: number | null;
   amendments?: unknown[];
