@@ -8,6 +8,7 @@ import { login } from "@/lib/api/endpoints/auth";
 import { homePathForRole } from "@/lib/auth/roles";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthCard, AuthError, AuthField, AuthSubmit } from "@/components/auth/AuthForm";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,60 +56,50 @@ export default function LoginPage() {
 
   return (
     <AuthShell>
-      <div className="ui-shadow-raised ui-animate-in w-full max-w-sm rounded-2xl border border-ink/[0.06] bg-surface p-8 dark:border-white/10 dark:bg-ink">
-        <h1 className="text-center text-lg font-semibold text-ink dark:text-white">Sign in</h1>
-        <p className="mt-1 text-center text-sm text-ink/55 dark:text-white/55">
-          Use your work email and password
-        </p>
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          {error && (
-            <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-300">
-              {error}
-            </div>
-          )}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-ink dark:text-white">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-ink shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand dark:border-white/15 dark:bg-ink dark:text-white"
-            />
+      <AuthCard title="Sign in" subtitle="Use your work email and password.">
+        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-6">
+          {error ? (
+            <AuthError title={error}>
+              {/invalid|incorrect|wrong|password|credential/i.test(error)
+                ? "Check your email and password and try again."
+                : null}
+            </AuthError>
+          ) : null}
+          <AuthField
+            id="email"
+            label="Work email"
+            icon="mail"
+            type="email"
+            autoComplete="email"
+            required
+            placeholder="name@goelservices.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <AuthField
+            id="password"
+            label="Password"
+            icon="lock"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <div className="-mt-1.5 flex justify-end">
+            <Link href="/forgot-password" className="text-[15px] font-medium text-brand-secondary hover:underline">
+              Forgot password?
+            </Link>
           </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-ink dark:text-white">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-ink shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand dark:border-white/15 dark:bg-ink dark:text-white"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-brand px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-secondary disabled:opacity-50 dark:bg-brand dark:hover:bg-brand-secondary"
-          >
-            {loading ? "Signing in…" : "Sign in"}
-          </button>
+          <AuthSubmit loading={loading} label="Sign in" loadingLabel="Signing in…" />
         </form>
-        <p className="mt-6 text-center text-sm text-ink/55 dark:text-white/55">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-medium text-brand hover:underline">
-            Sign up
+        <p className="mt-7 text-center text-[15px] text-[#6b7280]">
+          New here?{" "}
+          <Link href="/register" className="font-medium text-brand-secondary hover:underline">
+            Create an account
           </Link>
         </p>
-      </div>
+      </AuthCard>
     </AuthShell>
   );
 }

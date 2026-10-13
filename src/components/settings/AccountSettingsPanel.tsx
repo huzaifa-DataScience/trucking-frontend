@@ -12,6 +12,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import * as authApi from "@/lib/api/endpoints/auth";
 import { roleLabel } from "@/lib/auth/roles";
+import { PASSWORD_MIN_LENGTH, passwordPolicyError } from "@/lib/auth/password-policy";
 
 function canSeeMyTeamLink(role: string | undefined): boolean {
   return (
@@ -24,7 +25,7 @@ function canSeeMyTeamLink(role: string | undefined): boolean {
 
 /** Photo, name, and password — used on Account and Admin → Settings → Profile. */
 export function AccountSettingsPanel() {
-  const { user, refreshUser, setUser } = useAuth();
+  const { user, refreshUser, setUser, loginSuccess } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -119,8 +120,9 @@ export function AccountSettingsPanel() {
       setPasswordError(null);
       setPasswordSuccess(false);
 
-      if (newPassword.length < 6) {
-        setPasswordError("New password must be at least 6 characters.");
+      const pwError = passwordPolicyError(newPassword);
+      if (pwError) {
+        setPasswordError(`${pwError}.`);
         return;
       }
       if (newPassword !== confirmPassword) {
@@ -130,7 +132,9 @@ export function AccountSettingsPanel() {
 
       setPasswordBusy(true);
       try {
-        await authApi.changePassword(currentPassword, newPassword);
+        const session = await authApi.changePassword(currentPassword, newPassword);
+        // Other devices are now signed out; this one switches to the fresh session.
+        if (session) loginSuccess(session);
         setPasswordSuccess(true);
         setCurrentPassword("");
         setNewPassword("");
@@ -141,11 +145,31 @@ export function AccountSettingsPanel() {
         setPasswordBusy(false);
       }
     },
-    [currentPassword, newPassword, confirmPassword]
+    [currentPassword, newPassword, confirmPassword, loginSuccess]
   );
 
+  // Sign out of other devices: two clicks (confirm), then this device moves to a fresh session.
+  const [signOutConfirm, setSignOutConfirm] = useState(false);
+  const [signOutBusy, setSignOutBusy] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [signOutDone, setSignOutDone] = useState(false);
+  const handleSignOutOthers = useCallback(async () => {
+    setSignOutBusy(true);
+    setSignOutError(null);
+    try {
+      const session = await authApi.signOutOtherDevices();
+      loginSuccess(session);
+      setSignOutDone(true);
+      setSignOutConfirm(false);
+    } catch (err) {
+      setSignOutError(err instanceof Error ? err.message : "Couldn't sign out other devices.");
+    } finally {
+      setSignOutBusy(false);
+    }
+  }, [loginSuccess]);
+
   const canSubmitPassword =
-    currentPassword.length > 0 && newPassword.length >= 6 && confirmPassword.length >= 6;
+    currentPassword.length > 0 && newPassword.length >= PASSWORD_MIN_LENGTH && confirmPassword.length >= PASSWORD_MIN_LENGTH;
 
   if (!user) return null;
 
@@ -253,7 +277,7 @@ export function AccountSettingsPanel() {
       </Card>
 
       <Card>
-        <CardHeader title="Change password" subtitle="You'll stay signed in on this device." />
+        <CardHeader title="Change password" subtitle="You'll stay signed in here. Other devices will be signed out." />
         <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
           <label className="flex max-w-md flex-col gap-1.5">
             <span className="text-xs font-medium text-ink/55">Current password</span>
@@ -272,7 +296,7 @@ export function AccountSettingsPanel() {
               type="password"
               autoComplete="new-password"
               required
-              minLength={6}
+              minLength={PASSWORD_MIN_LENGTH}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="rounded-xl border border-ink/10 bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand/15"
@@ -284,7 +308,7 @@ export function AccountSettingsPanel() {
               type="password"
               autoComplete="new-password"
               required
-              minLength={6}
+              minLength={PASSWORD_MIN_LENGTH}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="rounded-xl border border-ink/10 bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand/15"
@@ -292,7 +316,9 @@ export function AccountSettingsPanel() {
           </label>
 
           {passwordError ? <p className="text-sm text-danger">{passwordError}</p> : null}
-          {passwordSuccess ? <p className="text-sm text-success">Password updated.</p> : null}
+          {passwordSuccess ? (
+            <p className="text-sm text-success">Password updated. Other devices have been signed out.</p>
+          ) : null}
 
           <div>
             <button
@@ -304,6 +330,57 @@ export function AccountSettingsPanel() {
             </button>
           </div>
         </form>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Signed-in devices"
+          subtitle="Signed in on a shared or lost device? Sign out everywhere else. You'll stay signed in here."
+        />
+        {signOutConfirm ? (
+          <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-sm text-amber-900">
+              This signs you out on every other phone, tablet and computer. You&apos;ll need your password to sign in
+              there again.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void handleSignOutOthers()}
+                disabled={signOutBusy}
+                aria-busy={signOutBusy}
+                className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {signOutBusy ? "Signing out…" : "Yes, sign out other devices"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSignOutConfirm(false)}
+                disabled={signOutBusy}
+                className="rounded-xl border border-ink/15 bg-surface px-4 py-2.5 text-sm font-medium text-ink/70 transition hover:bg-ink/[0.05] hover:text-ink disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setSignOutDone(false);
+                setSignOutConfirm(true);
+              }}
+              className="rounded-xl border border-ink/15 bg-surface px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-ink/[0.05]"
+            >
+              Sign out of other devices
+            </button>
+          </div>
+        )}
+        {signOutError ? <p className="mt-2 text-sm text-danger">{signOutError}</p> : null}
+        {signOutDone ? (
+          <p className="mt-2 text-sm text-success">Signed out of all other devices. You&apos;re still signed in here.</p>
+        ) : null}
       </Card>
     </div>
   );
