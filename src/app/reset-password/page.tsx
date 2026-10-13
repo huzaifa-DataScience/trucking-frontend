@@ -13,6 +13,7 @@ import {
   PasswordStrength,
   authHintClass,
 } from "@/components/auth/AuthForm";
+import { PASSWORD_MIN_LENGTH, PASSWORD_RULE_HINT, passwordPolicyError } from "@/lib/auth/password-policy";
 
 /** Step 2 of password reset: the emailed link opens this page with ?token=…; set the new password. */
 function ResetPasswordForm() {
@@ -21,15 +22,16 @@ function ResetPasswordForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  /** Password-rule error, shown under the password field instead of the top banner. */
+  const [passwordError, setPasswordError] = useState("");
   const [done, setDone] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
+    const pwError = passwordPolicyError(password);
+    setPasswordError(pwError ?? "");
+    if (pwError) return;
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -54,7 +56,7 @@ function ResetPasswordForm() {
         </p>
         <Link
           href="/forgot-password"
-          className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-[10px] bg-brand text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-secondary"
+          className="mt-6 inline-flex h-[54px] w-full items-center justify-center rounded-[12px] bg-brand text-[16px] font-semibold text-white transition-colors hover:bg-brand-secondary"
         >
           Get a new reset link
         </Link>
@@ -80,7 +82,7 @@ function ResetPasswordForm() {
         </div>
         <Link
           href="/login"
-          className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-[10px] bg-brand text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-secondary"
+          className="mt-6 inline-flex h-[54px] w-full items-center justify-center rounded-[12px] bg-brand text-[16px] font-semibold text-white transition-colors hover:bg-brand-secondary"
         >
           Go to sign in
         </Link>
@@ -109,14 +111,20 @@ function ResetPasswordForm() {
           type="password"
           autoComplete="new-password"
           required
-          minLength={6}
+          minLength={PASSWORD_MIN_LENGTH}
           autoFocus
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setPasswordError("");
+          }}
+          aria-invalid={passwordError ? true : undefined}
           hint={
             <>
               <PasswordStrength password={password} />
-              <p className={authHintClass}>At least 6 characters</p>
+              <p className={passwordError ? `${authHintClass} !text-[#dc2626]` : authHintClass} role={passwordError ? "alert" : undefined}>
+                {passwordError || PASSWORD_RULE_HINT}
+              </p>
             </>
           }
         />

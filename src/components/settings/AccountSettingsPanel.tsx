@@ -12,6 +12,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import * as authApi from "@/lib/api/endpoints/auth";
 import { roleLabel } from "@/lib/auth/roles";
+import { PASSWORD_MIN_LENGTH, passwordPolicyError } from "@/lib/auth/password-policy";
 
 function canSeeMyTeamLink(role: string | undefined): boolean {
   return (
@@ -119,8 +120,9 @@ export function AccountSettingsPanel() {
       setPasswordError(null);
       setPasswordSuccess(false);
 
-      if (newPassword.length < 6) {
-        setPasswordError("New password must be at least 6 characters.");
+      const pwError = passwordPolicyError(newPassword);
+      if (pwError) {
+        setPasswordError(`${pwError}.`);
         return;
       }
       if (newPassword !== confirmPassword) {
@@ -167,7 +169,7 @@ export function AccountSettingsPanel() {
   }, [loginSuccess]);
 
   const canSubmitPassword =
-    currentPassword.length > 0 && newPassword.length >= 6 && confirmPassword.length >= 6;
+    currentPassword.length > 0 && newPassword.length >= PASSWORD_MIN_LENGTH && confirmPassword.length >= PASSWORD_MIN_LENGTH;
 
   if (!user) return null;
 
@@ -294,7 +296,7 @@ export function AccountSettingsPanel() {
               type="password"
               autoComplete="new-password"
               required
-              minLength={6}
+              minLength={PASSWORD_MIN_LENGTH}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="rounded-xl border border-ink/10 bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand/15"
@@ -306,7 +308,7 @@ export function AccountSettingsPanel() {
               type="password"
               autoComplete="new-password"
               required
-              minLength={6}
+              minLength={PASSWORD_MIN_LENGTH}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="rounded-xl border border-ink/10 bg-[#f8f9fb] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand/15"

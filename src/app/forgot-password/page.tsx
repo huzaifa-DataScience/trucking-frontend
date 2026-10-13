@@ -55,14 +55,14 @@ export default function ForgotPasswordPage() {
           <div className="mt-6 flex flex-col gap-2.5">
             <Link
               href="/login"
-              className="inline-flex h-11 w-full items-center justify-center rounded-[10px] bg-brand text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-secondary"
+              className="inline-flex h-[54px] w-full items-center justify-center rounded-[12px] bg-brand text-[16px] font-semibold text-white transition-colors hover:bg-brand-secondary"
             >
               Back to sign in
             </Link>
             <button
               type="button"
               onClick={() => setSentTo(null)}
-              className="h-11 w-full rounded-[10px] border border-[#d1d5db] bg-white text-[14.5px] font-medium text-ink transition-colors hover:bg-[#f3f4f6]"
+              className="h-[54px] w-full rounded-[12px] border border-[#d1d5db] bg-white text-[16px] font-medium text-ink transition-colors hover:bg-[#f3f4f6]"
             >
               Use a different email
             </button>

@@ -8,6 +8,7 @@ import { register } from "@/lib/api/endpoints/auth";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { AuthCard, AuthError, AuthField, AuthSubmit, PasswordStrength, authHintClass } from "@/components/auth/AuthForm";
+import { PASSWORD_MIN_LENGTH, PASSWORD_RULE_HINT, passwordPolicyError } from "@/lib/auth/password-policy";
 
 
 export default function RegisterPage() {
@@ -21,6 +22,8 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  /** Password-rule error, shown under the password field instead of the top banner. */
+  const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,6 +37,9 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    const pwError = passwordPolicyError(password);
+    setPasswordError(pwError ?? "");
+    if (pwError) return;
     if (confirmPassword && password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -91,8 +97,8 @@ export default function RegisterPage() {
 
   return (
     <AuthShell>
-      <AuthCard wide title="Create account" subtitle="Sign up with your work details. An admin approves new accounts.">
-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+      <AuthCard wide compact title="Create account" subtitle="Sign up with your work details. An admin approves new accounts.">
+        <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-3.5">
           {error ? <AuthError title={error} /> : null}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <AuthField
@@ -155,13 +161,19 @@ export default function RegisterPage() {
             type="password"
             autoComplete="new-password"
             required
-            minLength={6}
+            minLength={PASSWORD_MIN_LENGTH}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setPasswordError("");
+            }}
+            aria-invalid={passwordError ? true : undefined}
             hint={
               <>
                 <PasswordStrength password={password} />
-                <p className={authHintClass}>At least 6 characters</p>
+                <p className={passwordError ? `${authHintClass} !text-[#dc2626]` : authHintClass} role={passwordError ? "alert" : undefined}>
+                  {passwordError || PASSWORD_RULE_HINT}
+                </p>
               </>
             }
           />
@@ -176,7 +188,7 @@ export default function RegisterPage() {
           />
           <AuthSubmit loading={loading} label="Create account" loadingLabel="Creating account…" />
         </form>
-        <p className="mt-5 text-center text-[14px] text-[#6b7280]">
+        <p className="mt-4 text-center text-[14px] text-[#6b7280]">
           Already have an account?{" "}
           <Link href="/login" className="font-medium text-brand-secondary hover:underline">
             Sign in

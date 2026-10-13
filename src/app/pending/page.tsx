@@ -51,14 +51,14 @@ export default function PendingApprovalPage() {
 
   return (
     <AuthShell>
-      <div className="ui-animate-in w-full max-w-[440px] rounded-2xl border border-[var(--border-subtle)] bg-white p-8 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_32px_-16px_rgba(0,0,0,0.14)]">
+      <div className="ui-animate-in w-full max-w-[580px] rounded-[22px] border border-[var(--border-subtle)] bg-white p-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_32px_-16px_rgba(0,0,0,0.14)]">
         <span className="mx-auto mb-3.5 grid h-14 w-14 place-items-center rounded-full bg-amber-50 text-amber-800" aria-hidden>
           <svg className="h-[26px] w-[26px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <circle cx="12" cy="12" r="9" />
             <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
-        <h1 className="text-[24px] font-semibold leading-[1.25] text-[#333333]">You&apos;re almost in</h1>
+        <h1 className="text-[32px] font-semibold leading-[1.2] text-[#333333]">You&apos;re almost in</h1>
         <p className="mt-2 text-[14px] leading-relaxed text-[#6b7280]">
           Your account{user.email ? ` (${user.email})` : ""} has been created and is waiting for an administrator to
           approve it. This usually doesn&apos;t take long.
@@ -103,7 +103,7 @@ export default function PendingApprovalPage() {
             onClick={() => void checkAgain()}
             disabled={checking}
             aria-busy={checking}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-brand text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-secondary disabled:cursor-not-allowed disabled:opacity-70"
+            className="inline-flex h-[54px] w-full items-center justify-center gap-2 rounded-[12px] bg-brand text-[16px] font-semibold text-white transition-colors hover:bg-brand-secondary disabled:cursor-not-allowed disabled:opacity-70"
           >
             {checking ? (
               <>
@@ -120,7 +120,7 @@ export default function PendingApprovalPage() {
           <button
             type="button"
             onClick={() => logout()}
-            className="h-11 w-full rounded-[10px] border border-[#d1d5db] bg-white text-[14.5px] font-medium text-ink transition-colors hover:bg-[#f3f4f6]"
+            className="h-[54px] w-full rounded-[12px] border border-[#d1d5db] bg-white text-[16px] font-medium text-ink transition-colors hover:bg-[#f3f4f6]"
           >
             Back to sign in
           </button>
