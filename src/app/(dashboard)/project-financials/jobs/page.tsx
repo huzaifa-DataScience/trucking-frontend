@@ -6,7 +6,6 @@ import { getProjectFinancialsJobs } from "@/lib/api/endpoints/project-financials
 import { demoJobs, PROJECT_FINANCIALS_USE_DEMO } from "@/lib/project-financials/demo-data";
 import { asOfLabel, foundationMissing } from "@/lib/project-financials/format";
 import type { JobsResponse } from "@/lib/project-financials/types";
-import { AlertQueue } from "@/components/project-financials/AlertQueue";
 import { FinancialsChrome } from "@/components/project-financials/FinancialsChrome";
 import { JobBookTable } from "@/components/project-financials/JobBookTable";
 import { MissingBanner } from "@/components/project-financials/MissingBanner";
@@ -46,7 +45,6 @@ function JobBookScreen() {
 
   return (
     <FinancialsChrome screen="jobs" asOf={data ? asOfLabel(data.asOf) : undefined}>
-      {data ? <AlertQueue alerts={data.alerts} /> : null}
       {data ? <MissingBanner missing={data.missing} /> : null}
       {loading && !data ? (
         <TableSkeleton rows={8} toolbar={false} />

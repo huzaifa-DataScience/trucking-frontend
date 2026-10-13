@@ -15,7 +15,7 @@ export function FinancialsChrome({
   asOf,
   children,
 }: {
-  screen: "summary" | "jobs";
+  screen: "summary" | "jobs" | "bom";
   asOf?: string;
   children: React.ReactNode;
 }) {
@@ -49,6 +49,7 @@ export function FinancialsChrome({
 
   const summaryHref = queryString ? `/project-financials?${queryString}` : "/project-financials";
   const jobsHref = queryString ? `/project-financials/jobs?${queryString}` : "/project-financials/jobs";
+  const bomHref = queryString ? `/project-financials/bom?${queryString}` : "/project-financials/bom";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -140,6 +141,9 @@ export function FinancialsChrome({
         </Tab>
         <Tab href={jobsHref} active={screen === "jobs"}>
           Job book
+        </Tab>
+        <Tab href={bomHref} active={screen === "bom"}>
+          BOM
         </Tab>
       </div>
 

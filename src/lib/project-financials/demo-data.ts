@@ -1,14 +1,15 @@
 import type {
   FinancialsFilters,
   FinancialsQuery,
+  JobBom,
   JobRow,
   JobsResponse,
   SummaryResponse,
   SummaryRow,
 } from "@/lib/project-financials/types";
 
-/** Flip off when the live `/project-financials` API should drive the screens. */
-export const PROJECT_FINANCIALS_USE_DEMO = true;
+/** Live `/project-financials` drives the screens. Demo helpers stay for tests. */
+export const PROJECT_FINANCIALS_USE_DEMO = false;
 
 const AS_OF = "2026-10-02T18:00:00.000Z";
 
@@ -19,6 +20,12 @@ const HIDDEN = {
   pctNet: null,
   netWith75Atp: null,
 } as const;
+
+const BOM_COMPANIES = [
+  { entityId: 1, company: "GOEL" },
+  { entityId: 2, company: "GOEL DC" },
+  { entityId: 3, company: "DCB" },
+] as const;
 
 export const DEMO_FILTERS: FinancialsFilters = {
   companies: [
@@ -31,8 +38,65 @@ export const DEMO_FILTERS: FinancialsFilters = {
   pms: ["Dave Rosowski", "Jibri Owens", "Tory Burton"],
 };
 
-function job(row: JobRow): JobRow {
-  return row;
+type JobSeed = Omit<JobRow, "bom" | "sources"> & {
+  sources: Omit<JobRow["sources"], "trimble"> & { trimble?: boolean };
+  trimble?: JobBom["trimble"];
+};
+
+function buildBom(seed: JobSeed): JobBom {
+  const companies = BOM_COMPANIES.map((c) => {
+    const home = c.entityId === seed.entityId;
+    return {
+      entityId: c.entityId,
+      company: c.company,
+      materialCost: home ? seed.cost.mat : 0,
+      laborHours: home ? seed.cost.labHours : 0,
+    };
+  });
+  const totals = {
+    materialCost: companies.reduce((n, c) => n + c.materialCost, 0),
+    laborHours: companies.reduce((n, c) => n + c.laborHours, 0),
+  };
+  const clearstory = {
+    contract: seed.contract.amount,
+    approvedCos: seed.contract.approvedCos,
+    totalContract: seed.contract.amount + seed.contract.approvedCos,
+    completionPct: seed.billing.pctBilled,
+  };
+  const trimble = seed.trimble === undefined ? null : seed.trimble;
+  const completion = clearstory.completionPct;
+  const expectedMat =
+    completion != null ? clearstory.totalContract * completion * 0.22 : null;
+  const expectedHrs =
+    trimble && completion != null ? trimble.estLaborHours * completion : null;
+  return {
+    companies,
+    totals,
+    clearstory,
+    trimble,
+    vsCompletion: {
+      materialVsCompletion:
+        expectedMat == null ? null : totals.materialCost - expectedMat,
+      laborVsCompletion:
+        expectedHrs == null ? null : totals.laborHours - expectedHrs,
+    },
+  };
+}
+
+function job(seed: JobSeed): JobRow {
+  const { trimble: _trimbleSeed, sources, ...rest } = seed;
+  const bom = buildBom(seed);
+  return {
+    ...rest,
+    bom,
+    sources: {
+      siteline: sources.siteline,
+      clearstory: sources.clearstory,
+      refJob: sources.refJob,
+      foundation: sources.foundation,
+      trimble: sources.trimble ?? bom.trimble != null,
+    },
+  };
 }
 
 export const DEMO_JOBS: JobRow[] = [
@@ -83,6 +147,20 @@ export const DEMO_JOBS: JobRow[] = [
     },
     recon: { sitelineClearstory: "ok", difference: 0, overUnderBillings: 550_700, alerts: [] },
     sources: { siteline: true, clearstory: true, refJob: true, foundation: true },
+    trimble: {
+      projectIds: [88021],
+      itemCount: 412,
+      ordered: 318_400,
+      received: 318_400,
+      orderedMinusReceived: 0,
+      actualCost: 296_800,
+      laborHours: 11_200,
+      estLaborHours: 13_500,
+      bomBudget: 520_000,
+      remaining: 223_200,
+      pctUsed: 0.571,
+      bomBudgetPct: 0.571,
+    },
   }),
   job({
     jobNumber: "21102",
@@ -136,6 +214,20 @@ export const DEMO_JOBS: JobRow[] = [
       alerts: [{ code: "FIX", label: "FIX" }],
     },
     sources: { siteline: true, clearstory: true, refJob: true, foundation: true },
+    trimble: {
+      projectIds: [88044],
+      itemCount: 188,
+      ordered: 142_000,
+      received: 128_500,
+      orderedMinusReceived: 13_500,
+      actualCost: 121_200,
+      laborHours: 2_840,
+      estLaborHours: 4_200,
+      bomBudget: 210_000,
+      remaining: 88_800,
+      pctUsed: 0.577,
+      bomBudgetPct: 0.577,
+    },
   }),
   job({
     jobNumber: "20881",
@@ -184,6 +276,20 @@ export const DEMO_JOBS: JobRow[] = [
     },
     recon: { sitelineClearstory: "ok", difference: 0, overUnderBillings: 158_100, alerts: [] },
     sources: { siteline: true, clearstory: true, refJob: true, foundation: true },
+    trimble: {
+      projectIds: [77102],
+      itemCount: 96,
+      ordered: 190_000,
+      received: 190_000,
+      orderedMinusReceived: 0,
+      actualCost: 184_200,
+      laborHours: 5_100,
+      estLaborHours: 5_400,
+      bomBudget: 195_000,
+      remaining: 10_800,
+      pctUsed: 0.945,
+      bomBudgetPct: 0.945,
+    },
   }),
   job({
     jobNumber: "20944",
@@ -232,6 +338,20 @@ export const DEMO_JOBS: JobRow[] = [
     },
     recon: { sitelineClearstory: "ok", difference: 0, overUnderBillings: 152_700, alerts: [] },
     sources: { siteline: true, clearstory: true, refJob: true, foundation: true },
+    trimble: {
+      projectIds: [77118],
+      itemCount: 54,
+      ordered: 138_000,
+      received: 138_000,
+      orderedMinusReceived: 0,
+      actualCost: 136_400,
+      laborHours: 2_760,
+      estLaborHours: 2_800,
+      bomBudget: 140_000,
+      remaining: 3_600,
+      pctUsed: 0.974,
+      bomBudgetPct: 0.974,
+    },
   }),
   job({
     jobNumber: "21145 - 02",
@@ -284,7 +404,8 @@ export const DEMO_JOBS: JobRow[] = [
       overUnderBillings: null,
       alerts: [{ code: "NOT_IN_SITELINE", label: "NOT IN SITELINE" }],
     },
-    sources: { siteline: true, clearstory: true, refJob: true, foundation: false },
+    sources: { siteline: true, clearstory: true, refJob: true, foundation: false, trimble: false },
+    trimble: null,
   }),
   job({
     jobNumber: "20710",
@@ -338,6 +459,20 @@ export const DEMO_JOBS: JobRow[] = [
       alerts: [{ code: "FIX", label: "FIX" }],
     },
     sources: { siteline: true, clearstory: false, refJob: false, foundation: true },
+    trimble: {
+      projectIds: [66201],
+      itemCount: 22,
+      ordered: 12_800,
+      received: 9_100,
+      orderedMinusReceived: 3_700,
+      actualCost: 8_900,
+      laborHours: 240,
+      estLaborHours: 400,
+      bomBudget: 18_000,
+      remaining: 9_100,
+      pctUsed: 0.494,
+      bomBudgetPct: 0.494,
+    },
   }),
 ];
 
@@ -448,7 +583,7 @@ export function demoSummary(query: FinancialsQuery): SummaryResponse {
     if (query.entityId != null || query.search || query.view === "active" || query.alert) return pms.has(row.pm);
     return true;
   }).map((row) => {
-    const mine = jobs.filter((job) => job.pm === row.pm);
+    const mine = jobs.filter((jobRow) => jobRow.pm === row.pm);
     const counts = alertCounts(mine);
     return { ...row, fixCount: counts.fix, notInSitelineCount: counts.notInSiteline };
   });
@@ -468,6 +603,11 @@ export function demoJobs(query: FinancialsQuery): JobsResponse {
     alerts: alertCounts(DEMO_JOBS.filter((row) => matchesJob(row, query))),
     jobs: DEMO_JOBS.filter((row) => matchesJob(row, query)),
   };
+}
+
+/** Same shape as jobs — BOM screen paints `job.bom`. */
+export function demoBom(query: FinancialsQuery): JobsResponse {
+  return demoJobs(query);
 }
 
 export function demoJob(jobNumber: string): JobRow | undefined {

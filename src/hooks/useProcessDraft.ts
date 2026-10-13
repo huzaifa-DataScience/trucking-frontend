@@ -6,6 +6,7 @@ import { useBidSheet } from "@/contexts/BidSheetContext";
 import { getApiErrorMessage, ApiError } from "@/lib/api/client";
 import { useToast } from "@/components/ui/ToastProvider";
 import type { BidProcess, SpecSheet } from "@/lib/bidding/process-types";
+import { mergeProcessTogal } from "@/lib/bidding/process-types";
 import {
   normalizeSpecSheets,
   specSheetsFingerprint,
@@ -114,6 +115,11 @@ export function useProcessDraft() {
       } catch {
         throw new Error("Process draft could not be serialized for save");
       }
+      // Never wipe Togal set/file ids — next DELETE needs them.
+      snapshot = {
+        ...snapshot,
+        togal: mergeProcessTogal(bid.process?.togal, snapshot.togal),
+      };
       if (typeof window !== "undefined") {
         // eslint-disable-next-line no-console
         console.log("[Save] PATCH /bids/%s { process }", bid.id);
@@ -150,6 +156,7 @@ export function useProcessDraft() {
       const mergedProcess: BidProcess = {
         ...(updated.process ?? {}),
         ...snapshot,
+        togal: mergeProcessTogal(updated.process?.togal, snapshot.togal),
         specSheets: sheets,
         insulationSpecs:
           updated.process?.insulationSpecs ?? snapshot.insulationSpecs ?? null,

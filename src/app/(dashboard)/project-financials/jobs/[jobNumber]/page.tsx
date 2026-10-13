@@ -201,11 +201,44 @@ export default function ProjectFinancialsJobPage() {
             </>
           )}
         </Panel>
+        <Panel title="BOM">
+          <Row label="Material total" value={money(job.bom.totals.materialCost)} />
+          <Row label="Labor hours total" value={count(job.bom.totals.laborHours)} />
+          <Row label="CS total contract" value={money(job.bom.clearstory.totalContract)} />
+          <Row label="Completion" value={ratio(job.bom.clearstory.completionPct)} />
+          {job.sources.trimble && job.bom.trimble ? (
+            <>
+              <Row label="BOM budget" value={money(job.bom.trimble.bomBudget)} />
+              <Row label="Budget % used" value={ratio(job.bom.trimble.bomBudgetPct)} />
+              <Row label="Ordered" value={money(job.bom.trimble.ordered)} />
+              <Row label="Received" value={money(job.bom.trimble.received)} />
+              <Row
+                label="Ordered − received"
+                value={money(job.bom.trimble.orderedMinusReceived)}
+                flag={Math.abs(job.bom.trimble.orderedMinusReceived) > 0.01}
+              />
+              <Row label="Actual cost" value={money(job.bom.trimble.actualCost)} />
+              {job.bom.trimble.projectIds[0] != null ? (
+                <div className="pt-1">
+                  <Link
+                    href={`/trimble/line-items?projectId=${job.bom.trimble.projectIds[0]}`}
+                    className="text-[13px] font-medium text-ink/55 hover:text-ink"
+                  >
+                    Trimble line items
+                  </Link>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="text-[13px] text-ink/50">Trimble BOM not available for this job.</p>
+          )}
+        </Panel>
         <Panel title="Sources">
           <Row label="Siteline" value={job.sources.siteline ? "Yes" : "No"} />
           <Row label="Clearstory" value={job.sources.clearstory ? "Yes" : "No"} />
           <Row label="Ref job" value={job.sources.refJob ? "Yes" : "No"} />
           <Row label="Foundation" value={job.sources.foundation ? "Yes" : "No"} />
+          <Row label="Trimble" value={job.sources.trimble ? "Yes" : "No"} />
           {job.pmEmail ? <Row label="PM email" value={job.pmEmail} /> : null}
         </Panel>
       </div>

@@ -46,7 +46,7 @@ type ViewMode =
   | "messages"
   | "calendar"
   | "workforce"
-  | "wfs"
+  | "financials"
   | "settings"
   /** System /admin — primary nav only, no workspace secondary rail. */
   | "admin";
@@ -71,7 +71,9 @@ function viewFromPathname(pathname: string): ViewMode {
   if (pathname.startsWith("/messages")) return "messages";
   if (pathname.startsWith("/calendar")) return "calendar";
   if (pathname.startsWith("/workforce")) return "workforce";
-  if (pathname.startsWith("/wfs")) return "wfs";
+  if (pathname.startsWith("/wfs") || pathname.startsWith("/project-financials")) {
+    return "financials";
+  }
   if (
     pathname.startsWith("/mike") ||
     pathname.startsWith("/estimation-files") ||
@@ -88,7 +90,7 @@ function viewFromPathname(pathname: string): ViewMode {
   return "operations";
 }
 
-function defaultHrefForView(view: ViewMode): string {
+function defaultHrefForView(view: ViewMode, preferWfs = false): string {
   if (view === "billings") return "/billings";
   if (view === "dashboard") return "/dashboard";
   if (view === "bidding") return "/bidding";
@@ -96,7 +98,7 @@ function defaultHrefForView(view: ViewMode): string {
   if (view === "messages") return "/messages";
   if (view === "calendar") return "/calendar";
   if (view === "workforce") return "/workforce";
-  if (view === "wfs") return "/wfs";
+  if (view === "financials") return preferWfs ? "/wfs" : "/project-financials";
   if (view === "settings") return "/settings/profile";
   if (view === "admin") return "/admin/users";
   return "/job";
@@ -138,7 +140,7 @@ function workspaceShowsSecondaryRail(view: ViewMode, pathname: string, canSeeBil
   if (view === "calendar") return true;
   if (view === "workforce") return true;
   if (view === "dashboard") return true;
-  if (view === "wfs") return true;
+  if (view === "financials") return true;
   if (view === "settings") return true;
   return false;
 }
@@ -221,12 +223,6 @@ const operationsNavItems: SidebarNavItem[] = [
     Icon: NavIconShield,
     permission: PERMISSIONS.forensicRead,
   },
-  {
-    href: "/project-financials",
-    label: "Project financials",
-    Icon: NavIconInvoice,
-    activePathPrefix: "/project-financials",
-  },
 ];
 
 const dashboardNavItems: SidebarNavItem[] = [
@@ -255,13 +251,19 @@ const calendarNavItems: SidebarNavItem[] = [
   },
 ];
 
-const wfsNavItems: SidebarNavItem[] = [
+const financialsNavItems: SidebarNavItem[] = [
   {
     href: "/wfs",
-    label: "Overview",
+    label: "WFS",
     Icon: NavIconInvoice,
     exact: true,
     // Visibility is role-gated (super_admin only) — not wfs:read.
+  },
+  {
+    href: "/project-financials",
+    label: "Project financials",
+    Icon: NavIconInvoice,
+    activePathPrefix: "/project-financials",
   },
 ];
 
@@ -439,8 +441,8 @@ function navItemVisible(
 
 const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ className?: string }> }[] = [
   { value: "dashboard", label: "Dashboard", Icon: NavIconChart },
-  { value: "wfs", label: "WFS", Icon: NavIconInvoice },
-  { value: "operations", label: "Ops", Icon: NavIconTruck },
+  { value: "financials", label: "Financials", Icon: NavIconInvoice },
+  { value: "operations", label: "Trucking", Icon: NavIconTruck },
   { value: "billings", label: "Billing", Icon: NavIconInvoice },
   { value: "bidding", label: "Estimates", Icon: NavIconProposal },
   { value: "mike", label: "Mike", Icon: NavIconTable },
@@ -451,10 +453,10 @@ const WORKSPACES: { value: ViewMode; label: string; Icon: ComponentType<{ classN
 ];
 
 const WORKSPACE_FULL_LABELS: Record<ViewMode, string> = {
-  operations: "Operations & reporting",
+  operations: "Trucking",
   billings: "Billing",
   dashboard: "Dashboard",
-  wfs: "WFS",
+  financials: "Financials",
   bidding: "Estimates",
   mike: "Mike",
   messages: "Messages",
@@ -523,8 +525,15 @@ export function Sidebar({
   const lgLabelFlex = `flex ${collapsed ? "sm:hidden" : ""}`;
 
   const visibleWorkspaces = WORKSPACES.filter(({ value }) => {
-    // FRONTEND_WFS.md — never show WFS via admin chrome; super_admin only.
-    if (value === "wfs") return showWfs;
+    // Financials: WFS (super_admin) and/or Project financials (ops viewers).
+    if (value === "financials") {
+      if (showWfs) return true;
+      if (hideOpsReportingBilling) return false;
+      return (
+        seesAllChrome ||
+        operationsNavItems.some((i) => navItemVisible(user, i))
+      );
+    }
     if (seesAllChrome) return true;
     if (value === "operations") {
       if (hideOpsReportingBilling) return false;
@@ -570,7 +579,7 @@ export function Sidebar({
     } catch {
       /* ignore */
     }
-    router.push(defaultHrefForView(value));
+    router.push(defaultHrefForView(value, value === "financials" && showWfs));
   };
 
   function itemsForView(view: ViewMode): SidebarNavItem[] {
@@ -580,7 +589,12 @@ export function Sidebar({
     if (view === "workforce") return workforceNavItems;
     if (view === "mike") return mikeNavItems;
     if (view === "dashboard") return dashboardNavItems;
-    if (view === "wfs") return wfsNavItems;
+    if (view === "financials") {
+      return financialsNavItems.filter((item) => {
+        if (item.href === "/wfs") return showWfs;
+        return true;
+      });
+    }
     if (view === "settings") return settingsNavItems;
     if (view === "billings") {
       return canSeeBillings
@@ -599,7 +613,11 @@ export function Sidebar({
       ? pathname.startsWith("/clearstory")
         ? "/clearstory/projects"
         : "/billings"
-      : defaultHrefForView(currentView);
+      : currentView === "financials"
+        ? pathname.startsWith("/wfs")
+          ? "/wfs"
+          : "/project-financials"
+        : defaultHrefForView(currentView);
 
   const inClearstory = pathname.startsWith("/clearstory");
   const activeBidId = bidDetailIdFromPath(pathname);

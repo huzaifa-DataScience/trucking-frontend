@@ -427,9 +427,9 @@ export function WfsDashboard() {
             Click AR / AP totals for aging detail. Bank opens cash.
           </p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="max-h-[min(70vh,calc(100dvh-16rem))] overflow-auto overscroll-contain">
           <table className="min-w-[1100px] w-full border-collapse text-left text-xs">
-            <thead className="bg-ink/[0.03] text-[10px] font-semibold uppercase tracking-wide text-ink/50">
+            <thead className="sticky top-0 z-[1] bg-ink/[0.03] text-[10px] font-semibold uppercase tracking-wide text-ink/50">
               <tr>
                 {COLS.map((c) => (
                   <th
@@ -639,9 +639,9 @@ export function WfsDashboard() {
         <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
           <h2 className="text-sm font-semibold text-ink">AR / AP aging</h2>
           <p className="text-xs text-ink/45">By company — click a row for lines</p>
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 max-h-[min(50vh,calc(100dvh-18rem))] overflow-auto overscroll-contain">
             <table className="w-full min-w-[520px] border-collapse text-xs">
-              <thead className="text-[10px] font-semibold uppercase tracking-wide text-ink/45">
+              <thead className="sticky top-0 z-[1] bg-surface text-[10px] font-semibold uppercase tracking-wide text-ink/45">
                 <tr>
                   <th className="px-1.5 py-1.5 text-left">Company</th>
                   <th className="px-1.5 py-1.5 text-left">Type</th>
