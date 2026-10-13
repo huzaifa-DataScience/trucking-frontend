@@ -101,6 +101,36 @@ export async function login(body: LoginRequest): Promise<LoginResponse> {
   return { access_token: data.access_token, user };
 }
 
+/** Shared error text from a Nest error body (message may be a string or a list). */
+function errorMessage(data: { message?: string | string[] }, fallback: string): string {
+  const msg = Array.isArray(data.message) ? data.message.join(" ") : data.message;
+  return msg || fallback;
+}
+
+/** Asks for a reset link. The answer is the same whether or not the email has an account. */
+export async function forgotPassword(email: string): Promise<string> {
+  const res = await fetch(`${BASE()}/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: email.trim() }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { message?: string | string[] };
+  if (!res.ok) throw new Error(errorMessage(data, "Couldn't send the reset link. Please try again."));
+  return errorMessage(data, "If that email has an account, we've sent a link to reset the password.");
+}
+
+/** Sets a new password from the token in a reset link. */
+export async function resetPassword(token: string, password: string, confirmPassword: string): Promise<string> {
+  const res = await fetch(`${BASE()}/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password, confirmPassword }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { message?: string | string[] };
+  if (!res.ok) throw new Error(errorMessage(data, "Couldn't change the password. Please try again."));
+  return errorMessage(data, "Your password has been changed. You can sign in now.");
+}
+
 export async function register(body: RegisterRequest): Promise<LoginResponse> {
   const res = await fetch(`${BASE()}/auth/register`, {
     method: "POST",
@@ -437,7 +467,11 @@ export async function deleteAvatar(): Promise<AuthUser> {
 }
 
 /** Changes the current user's password. Throws with a user-facing message on failure. */
-export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+/**
+ * Changes the password. Other devices are signed out; the response carries a fresh session for this
+ * device (save it with `loginSuccess`, or this device would be signed out too). Null if the API sent none.
+ */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<LoginResponse | null> {
   const token = getAccessToken();
   if (!token) throw new Error("Not signed in");
 
@@ -448,9 +482,31 @@ export async function changePassword(currentPassword: string, newPassword: strin
   });
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
     message?: string | string[];
+    access_token?: string;
+    user?: Record<string, unknown>;
   };
   if (!res.ok) {
     const msg = Array.isArray(data.message) ? data.message.join(" ") : data.message;
     throw new Error(msg || "Couldn't change password. Please try again.");
   }
+  return data.access_token && data.user ? { access_token: data.access_token, user: normalizeUser(data.user) } : null;
+}
+
+/** Signs out every other device. Returns a fresh session for this device (save it with `loginSuccess`). */
+export async function signOutOtherDevices(): Promise<LoginResponse> {
+  const token = getAccessToken();
+  if (!token) throw new Error("Not signed in");
+
+  const res = await fetch(`${BASE()}/auth/sign-out-other-devices`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    message?: string | string[];
+    access_token?: string;
+    user?: Record<string, unknown>;
+  };
+  if (!res.ok) throw new Error(errorMessage(data, "Couldn't sign out other devices. Please try again."));
+  if (!data.access_token || !data.user) throw new Error("Couldn't sign out other devices. Please try again.");
+  return { access_token: data.access_token, user: normalizeUser(data.user) };
 }

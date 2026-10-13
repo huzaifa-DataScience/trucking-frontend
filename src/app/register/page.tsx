@@ -7,10 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { register } from "@/lib/api/endpoints/auth";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthCard, AuthError, AuthField, AuthSubmit, PasswordStrength, authHintClass } from "@/components/auth/AuthForm";
 
-const inputClass =
-  "mt-1 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-ink shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand dark:border-white/15 dark:bg-ink dark:text-white";
-const labelClass = "block text-sm font-medium text-ink dark:text-white";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -93,136 +91,98 @@ export default function RegisterPage() {
 
   return (
     <AuthShell>
-      <div className="ui-shadow-raised ui-animate-in w-full max-w-md rounded-2xl border border-ink/[0.06] bg-surface p-8 dark:border-white/10 dark:bg-ink">
-        <h1 className="text-center text-lg font-semibold text-ink dark:text-white">Create account</h1>
-        <p className="mt-1 text-center text-sm text-ink/55 dark:text-white/55">
-          Sign up with your work details
-        </p>
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          {error && (
-            <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-300">
-              {error}
-            </div>
-          )}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="firstName" className={labelClass}>
-                First name
-              </label>
-              <input
-                id="firstName"
-                type="text"
-                autoComplete="given-name"
-                required
-                maxLength={100}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label htmlFor="lastName" className={labelClass}>
-                Last name
-              </label>
-              <input
-                id="lastName"
-                type="text"
-                autoComplete="family-name"
-                required
-                maxLength={100}
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="email" className={labelClass}>
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
+      <AuthCard wide title="Create account" subtitle="Sign up with your work details. An admin approves new accounts.">
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+          {error ? <AuthError title={error} /> : null}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <AuthField
+              id="firstName"
+              label="First name"
+              icon="user"
+              autoComplete="given-name"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputClass}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
+            <AuthField
+              id="lastName"
+              label="Last name"
+              icon="user"
+              autoComplete="family-name"
+              required
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
             />
           </div>
-          <div>
-            <label htmlFor="phone" className={labelClass}>
-              Phone
-            </label>
-            <input
+          <AuthField
+            id="email"
+            label="Work email"
+            icon="mail"
+            type="email"
+            autoComplete="email"
+            required
+            placeholder="name@goelservices.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <AuthField
               id="phone"
+              label="Phone"
+              icon="phone"
               type="tel"
               autoComplete="tel"
               required
+              placeholder="e.g. +15551234567"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. +15551234567"
-              className={inputClass}
             />
-          </div>
-          <div>
-            <label htmlFor="company" className={labelClass}>
-              Company <span className="text-stone-400">(optional)</span>
-            </label>
-            <input
+            <AuthField
               id="company"
-              type="text"
+              label="Company"
+              note="(optional)"
+              icon="company"
               autoComplete="organization"
-              maxLength={255}
+              placeholder="GOEL, GOEL DC or DCB"
               value={company}
               onChange={(e) => setCompany(e.target.value)}
-              className={inputClass}
             />
           </div>
-          <div>
-            <label htmlFor="password" className={labelClass}>
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={inputClass}
-            />
-            <p className="mt-0.5 text-xs text-ink/50 dark:text-white/50">At least 6 characters</p>
-          </div>
-          <div>
-            <label htmlFor="confirmPassword" className={labelClass}>
-              Confirm password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-brand px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-secondary disabled:opacity-50 dark:bg-brand dark:hover:bg-brand-secondary"
-          >
-            {loading ? "Creating account…" : "Sign up"}
-          </button>
+          <AuthField
+            id="password"
+            label="Password"
+            icon="lock"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            hint={
+              <>
+                <PasswordStrength password={password} />
+                <p className={authHintClass}>At least 6 characters</p>
+              </>
+            }
+          />
+          <AuthField
+            id="confirmPassword"
+            label="Confirm password"
+            icon="lock"
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+          <AuthSubmit loading={loading} label="Create account" loadingLabel="Creating account…" />
         </form>
-        <p className="mt-6 text-center text-sm text-ink/55 dark:text-white/55">
+        <p className="mt-5 text-center text-[14px] text-[#6b7280]">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-brand hover:underline">
+          <Link href="/login" className="font-medium text-brand-secondary hover:underline">
             Sign in
           </Link>
         </p>
-      </div>
+      </AuthCard>
     </AuthShell>
   );
 }
