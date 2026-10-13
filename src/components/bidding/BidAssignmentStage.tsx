@@ -12,9 +12,31 @@ import type {
 } from "@/lib/bidding/process-types";
 import type { BidCaptainLookup, BidContactLookup, BidTeam } from "@/lib/bidding/types";
 import { personDisplayName } from "@/lib/bidding/person-label";
-import { BidTeamBadge } from "@/components/bidding/BidTeamBadge";
+import { teamColorForId } from "@/lib/bidding/team-colors";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { useBidSheet } from "@/contexts/BidSheetContext";
+
+/** Dropdown arrow for selects (intake-field uses appearance-none, which hides the native one). */
+function SelectChevron() {
+  return (
+    <svg
+      className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** "Tory Burton" → "TB" (captain avatar in the Captain field). */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
 
 function captainDisplayName(c: BidCaptainLookup): string {
   return personDisplayName({
@@ -254,176 +276,199 @@ export function BidAssignmentStage() {
       ) : null}
 
       <section className="intake-section min-w-0">
-          <h3 className={sectionHead}>Assignment</h3>
-          <div className={`${sectionBody} intake-stack`}>
-            <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
-              <input
-                type="checkbox"
-                disabled={!editable}
-                checked={a.pursue !== false}
-                onChange={(e) => setAssignment({ pursue: e.target.checked })}
-              />
-              <span className="font-medium">Pursue this bid (uncheck = no bid)</span>
+        <h3 className={`${sectionHead} flex-wrap`}>
+          Assignment
+          {/* Pursue = a switch in the header (was a checkbox row). Unchecked = no bid. */}
+          <label className="flex items-center gap-2 text-[12.5px] font-medium normal-case tracking-normal text-[#374151] sm:absolute sm:right-3 sm:top-1/2 sm:-translate-y-1/2">
+            <input
+              type="checkbox"
+              role="switch"
+              className="peer sr-only"
+              disabled={!editable}
+              checked={a.pursue !== false}
+              onChange={(e) => setAssignment({ pursue: e.target.checked })}
+            />
+            <span
+              className="relative h-[18px] w-8 shrink-0 rounded-full bg-[#cbd5e1] transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-white after:transition-transform after:content-[''] peer-checked:bg-brand peer-checked:after:translate-x-3.5 peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 peer-disabled:opacity-50"
+              aria-hidden
+            />
+            {a.pursue !== false ? "Pursue this bid" : "Not pursuing (no bid)"}
+          </label>
+        </h3>
+        {/* Two columns in pairs, labels above (option A). */}
+        <div className={`${sectionBody} grid grid-cols-1 gap-x-[18px] gap-y-3.5 sm:grid-cols-2`}>
+          <p className="col-span-full text-[11px] font-semibold uppercase tracking-[0.05em] text-[#6b7280]">People</p>
+
+          <div className="flex min-w-0 flex-col gap-[5px]">
+            <label htmlFor="assign-captain" className={labelClass}>
+              Captain
             </label>
-            <label className="intake-row">
-              <span className={labelClass}>Captain</span>
-              <div className="min-w-0">
-                <select
-                  className={inputClass}
-                  disabled={!editable}
-                  value={a.captainUserId != null ? String(a.captainUserId) : ""}
-                  onChange={(e) => pickCaptain(e.target.value)}
+            <div className="relative">
+              {a.captain ? (
+                <span
+                  className="pointer-events-none absolute left-2 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full bg-brand text-[10px] font-bold text-white"
+                  aria-hidden
                 >
-                  <option value="">—</option>
-                  {captains.length === 0 ? (
-                    <option value="" disabled>
-                      No captains (API empty)
+                  {initials(a.captain)}
+                </span>
+              ) : null}
+              <select
+                id="assign-captain"
+                className={`${inputClass} !pr-8 ${a.captain ? "!pl-8" : ""}`}
+                disabled={!editable}
+                value={a.captainUserId != null ? String(a.captainUserId) : ""}
+                onChange={(e) => pickCaptain(e.target.value)}
+              >
+                <option value="">—</option>
+                {captains.length === 0 ? (
+                  <option value="" disabled>
+                    No captains (API empty)
+                  </option>
+                ) : (
+                  captains.map((c) => (
+                    <option key={c.userId} value={c.userId}>
+                      {captainDisplayName(c)}
+                      {c.teamName ? ` · ${c.teamName}` : ""}
+                      {c.teamId == null ? " (crew later in Settings)" : ""}
                     </option>
-                  ) : (
-                    captains.map((c) => (
-                      <option key={c.userId} value={c.userId}>
-                        {captainDisplayName(c)}
-                        {c.teamName ? ` · ${c.teamName}` : ""}
-                        {c.teamId == null ? " (crew later in Settings)" : ""}
-                      </option>
-                    ))
-                  )}
-                </select>
-                <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
-                  Pick captain first. Save captainUserId; backend fills team + name.
-                </span>
-              </div>
-            </label>
-            <label className="intake-row">
-              <span className={labelClass}>Team</span>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    className={inputClass}
-                    disabled={!editable}
-                    value={a.teamId != null ? String(a.teamId) : ""}
-                    onChange={(e) => pickTeam(e.target.value)}
-                  >
-                    <option value="">—</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.teamName}
-                      </option>
-                    ))}
-                  </select>
-                  <BidTeamBadge
-                    teamId={a.teamId}
-                    teamName={
-                      teams.find((t) => t.id === a.teamId)?.teamName ?? null
-                    }
-                    compact
-                  />
-                </div>
-                <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
-                  Changing team sets captain only if that crew has a login captain.
-                </span>
-              </div>
-            </label>
-            <label className="intake-row">
-              <span className={labelClass}>Priority</span>
-              <input
-                className={inputClass}
-                disabled={!editable}
-                value={a.priority ?? ""}
-                onChange={(e) => setAssignment({ priority: e.target.value || null })}
-                placeholder="e.g. high / normal"
-              />
-            </label>
-            <label className="intake-row">
-              <span className={labelClass}>Captain name</span>
-              <input
-                className={inputClass}
-                disabled
-                readOnly
-                value={a.captain ?? ""}
-                placeholder="Filled from captain pick"
-              />
-            </label>
-            <label className="intake-row">
-              <span className={labelClass}>Asst. estimator</span>
-              <div className="min-w-0">
-                <select
-                  className={inputClass}
-                  disabled={!editable}
-                  value={a.assistantEstimator ?? ""}
-                  onChange={(e) =>
-                    setAssignment({ assistantEstimator: e.target.value || null })
-                  }
-                >
-                  <option value="">—</option>
-                  {a.assistantEstimator &&
-                  !aes.some((c) => contactDisplayName(c) === a.assistantEstimator) ? (
-                    <option value={a.assistantEstimator}>{a.assistantEstimator}</option>
-                  ) : null}
-                  {aes.map((c, i) => {
-                    const name = contactDisplayName(c);
-                    if (!name) return null;
-                    return (
-                      <option
-                        key={
-                          c.appUserId != null
-                            ? `ae-app-${c.appUserId}`
-                            : c.connecteamUserId != null
-                              ? `ae-ct-${c.connecteamUserId}`
-                              : `ae-${name}-${i}`
-                        }
-                        value={name}
-                      >
-                        {name}
-                        {c.email ? ` · ${c.email}` : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-                <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
-                  From contacts — not the captain list.
-                </span>
-              </div>
-            </label>
-            <label className="intake-row">
-              <span className={labelClass}>Time est. (hrs)</span>
-              <input
-                type="number"
-                min={0}
-                step="0.5"
-                className={inputClass}
-                disabled={!editable}
-                value={bid.timeEstimate ?? ""}
-                onChange={(e) =>
-                  setBidHeader({
-                    timeEstimate: e.target.value === "" ? null : Number(e.target.value),
-                  })
-                }
-              />
-            </label>
-            {/* div not label — native <label> prevents react-aria DatePicker popover from staying open */}
-            <div className="intake-row">
-              <span className={labelClass}>Internal estimate due</span>
-              <DatePicker
-                ariaLabel="Internal estimate due"
-                className={inputClass}
-                disabled={!editable}
-                value={a.internalEstimateDue?.slice(0, 10) ?? ""}
-                onChange={(v) => setAssignment({ internalEstimateDue: v || null })}
-              />
+                  ))
+                )}
+              </select>
+              <SelectChevron />
             </div>
-            <div className="intake-row">
-              <span className={labelClass}>Internal review due</span>
-              <DatePicker
-                ariaLabel="Internal review due"
-                className={inputClass}
+            <span className="text-[11.5px] text-[#6b7280]">Picking a captain fills the team.</span>
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-[5px]">
+            <label htmlFor="assign-team" className={labelClass}>
+              Team
+            </label>
+            <div className="relative">
+              {a.teamId != null ? (
+                <span
+                  className={`pointer-events-none absolute left-2.5 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full ${teamColorForId(a.teamId).dot}`}
+                  aria-hidden
+                />
+              ) : null}
+              <select
+                id="assign-team"
+                className={`${inputClass} !pr-8 ${a.teamId != null ? "!pl-7" : ""}`}
                 disabled={!editable}
-                value={a.internalReviewDue?.slice(0, 10) ?? ""}
-                onChange={(v) => setAssignment({ internalReviewDue: v || null })}
-              />
+                value={a.teamId != null ? String(a.teamId) : ""}
+                onChange={(e) => pickTeam(e.target.value)}
+              >
+                <option value="">—</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.teamName}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
+            <span className="text-[11.5px] text-[#6b7280]">Changing team picks its captain, if it has one.</span>
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-[5px]">
+            <label htmlFor="assign-ae" className={labelClass}>
+              Asst. estimator
+            </label>
+            <div className="relative">
+              <select
+                id="assign-ae"
+                className={`${inputClass} !pr-8`}
+                disabled={!editable}
+                value={a.assistantEstimator ?? ""}
+                onChange={(e) => setAssignment({ assistantEstimator: e.target.value || null })}
+              >
+                <option value="">—</option>
+                {a.assistantEstimator && !aes.some((c) => contactDisplayName(c) === a.assistantEstimator) ? (
+                  <option value={a.assistantEstimator}>{a.assistantEstimator}</option>
+                ) : null}
+                {aes.map((c, i) => {
+                  const name = contactDisplayName(c);
+                  if (!name) return null;
+                  return (
+                    <option
+                      key={
+                        c.appUserId != null
+                          ? `ae-app-${c.appUserId}`
+                          : c.connecteamUserId != null
+                            ? `ae-ct-${c.connecteamUserId}`
+                            : `ae-${name}-${i}`
+                      }
+                      value={name}
+                    >
+                      {name}
+                      {c.email ? ` · ${c.email}` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+              <SelectChevron />
             </div>
           </div>
-        </section>
+
+          <div className="flex min-w-0 flex-col gap-[5px]">
+            <label htmlFor="assign-priority" className={labelClass}>
+              Priority
+            </label>
+            <input
+              id="assign-priority"
+              className={inputClass}
+              disabled={!editable}
+              value={a.priority ?? ""}
+              onChange={(e) => setAssignment({ priority: e.target.value || null })}
+              placeholder="e.g. High / Normal"
+            />
+          </div>
+
+          <div className="col-span-full my-0.5 h-px bg-[#eef1f5]" aria-hidden />
+          <p className="col-span-full text-[11px] font-semibold uppercase tracking-[0.05em] text-[#6b7280]">Schedule</p>
+
+          {/* div not label — native <label> prevents react-aria DatePicker popover from staying open */}
+          <div className="flex min-w-0 flex-col gap-[5px]">
+            <span className={labelClass}>Internal estimate due</span>
+            <DatePicker
+              ariaLabel="Internal estimate due"
+              className={inputClass}
+              disabled={!editable}
+              value={a.internalEstimateDue?.slice(0, 10) ?? ""}
+              onChange={(v) => setAssignment({ internalEstimateDue: v || null })}
+            />
+          </div>
+          <div className="flex min-w-0 flex-col gap-[5px]">
+            <span className={labelClass}>Internal review due</span>
+            <DatePicker
+              ariaLabel="Internal review due"
+              className={inputClass}
+              disabled={!editable}
+              value={a.internalReviewDue?.slice(0, 10) ?? ""}
+              onChange={(v) => setAssignment({ internalReviewDue: v || null })}
+            />
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-[5px]">
+            <label htmlFor="assign-time" className={labelClass}>
+              Time est. (hrs)
+            </label>
+            <input
+              id="assign-time"
+              type="number"
+              min={0}
+              step="0.5"
+              className={inputClass}
+              disabled={!editable}
+              value={bid.timeEstimate ?? ""}
+              onChange={(e) =>
+                setBidHeader({
+                  timeEstimate: e.target.value === "" ? null : Number(e.target.value),
+                })
+              }
+            />
+          </div>
+        </div>
+      </section>
 
       <section className="intake-section min-w-0">
         <h3 className={sectionHead}>Technical review</h3>
