@@ -268,6 +268,8 @@ export interface ClearstoryTablePageResponse {
   pageSize: number;
   total: number;
   rows: ClearstoryTableRow[];
+  /** Tags only: counts per status for the current project/search filter (status filter not applied). */
+  statusCounts?: Record<string, number>;
 }
 
 export interface ClearstoryCompanyTableResponse {
@@ -286,7 +288,15 @@ function clampTablePageSize(n: number): number {
 /** Omitted when empty; backend ignores missing/non-finite integer `projectId` (no filter, not 400). */
 export async function getClearstoryTablePage(
   module: ClearstoryTableModuleName,
-  params: { page: number; pageSize: number; projectId?: string }
+  params: {
+    page: number;
+    pageSize: number;
+    projectId?: string;
+    status?: string;
+    search?: string;
+    sort?: string;
+    sortDir?: "asc" | "desc";
+  }
 ): Promise<ClearstoryTablePageResponse> {
   const page = Math.max(1, Math.floor(params.page));
   const pageSize = clampTablePageSize(params.pageSize);
@@ -294,6 +304,11 @@ export async function getClearstoryTablePage(
     page,
     pageSize,
     projectId: params.projectId?.trim() || undefined,
+    // Tags only (ignored by other modules).
+    status: params.status || undefined,
+    search: params.search?.trim() || undefined,
+    sort: params.sort || undefined,
+    sortDir: params.sort ? params.sortDir : undefined,
   });
 }
 

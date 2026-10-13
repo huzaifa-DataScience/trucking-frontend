@@ -61,15 +61,15 @@ export function PayAppDetailModal({
       aria-modal="true"
       aria-labelledby="payapp-detail-title"
     >
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-xl dark:border-stone-700 dark:bg-stone-900">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-stone-200 bg-white px-6 py-4 dark:border-stone-700 dark:bg-stone-900">
-          <h2 id="payapp-detail-title" className="text-lg font-semibold text-stone-900 dark:text-stone-100">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-white shadow-lg  dark:bg-ink">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-subtle)] bg-white px-6 py-4  dark:bg-ink">
+          <h2 id="payapp-detail-title" className="text-lg font-semibold text-ink">
             Pay application #{payApp?.payAppNumber ?? "—"} {payApp?.contract?.project?.name && `· ${payApp.contract.project.name}`}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-canvas "
           >
             Close
           </button>
@@ -90,60 +90,60 @@ export function PayAppDetailModal({
                 return (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <p className="text-sm">
-                      <span className="font-medium text-stone-500 dark:text-stone-400">Period (dates)</span>
-                      <span className="ml-2 text-stone-900 dark:text-stone-100">
+                      <span className="font-medium text-ink-muted">Period (dates)</span>
+                      <span className="ml-2 text-ink">
                         {payApp.billingStart && payApp.billingEnd
                           ? `${start.date} – ${end.date}`
                           : "—"}
                       </span>
                     </p>
                     <p className="text-sm">
-                      <span className="font-medium text-stone-500 dark:text-stone-400">Period (times)</span>
-                      <span className="ml-2 text-stone-900 dark:text-stone-100">
+                      <span className="font-medium text-ink-muted">Period (times)</span>
+                      <span className="ml-2 text-ink">
                         {payApp.billingStart && payApp.billingEnd
                           ? `${start.time} – ${end.time}`
                           : "—"}
                       </span>
                     </p>
                     <p className="text-sm">
-                      <span className="font-medium text-stone-500 dark:text-stone-400">Due date</span>
-                      <span className="ml-2 text-stone-900 dark:text-stone-100">
+                      <span className="font-medium text-ink-muted">Due date</span>
+                      <span className="ml-2 text-ink">
                         {payApp.payAppDueDate ?? "—"}
                       </span>
                     </p>
                     <p className="text-sm">
-                      <span className="font-medium text-stone-500 dark:text-stone-400">Status</span>
-                      <span className="ml-2 text-stone-900 dark:text-stone-100">
+                      <span className="font-medium text-ink-muted">Status</span>
+                      <span className="ml-2 text-ink">
                         {payApp.status ?? "—"}
                       </span>
                     </p>
                     <p className="text-sm">
-                      <span className="font-medium text-stone-500 dark:text-stone-400">Updated date</span>
-                      <span className="ml-2 text-stone-900 dark:text-stone-100">
+                      <span className="font-medium text-ink-muted">Updated date</span>
+                      <span className="ml-2 text-ink">
                         {updated.date}
                       </span>
                     </p>
                     <p className="text-sm">
-                      <span className="font-medium text-stone-500 dark:text-stone-400">Updated time</span>
-                      <span className="ml-2 text-stone-900 dark:text-stone-100">
+                      <span className="font-medium text-ink-muted">Updated time</span>
+                      <span className="ml-2 text-ink">
                         {updated.time}
                       </span>
                     </p>
                     <p className="text-sm">
-                      <span className="font-medium text-stone-500 dark:text-stone-400">Current billed</span>
-                      <span className="ml-2 text-stone-900 dark:text-stone-100">
+                      <span className="font-medium text-ink-muted">Current billed</span>
+                      <span className="ml-2 text-ink">
                         {formatCurrency(payApp.currentBilled)}
                       </span>
                     </p>
                     <p className="text-sm">
-                      <span className="font-medium text-stone-500 dark:text-stone-400">Total value</span>
-                      <span className="ml-2 text-stone-900 dark:text-stone-100">
+                      <span className="font-medium text-ink-muted">Total value</span>
+                      <span className="ml-2 text-ink">
                         {formatCurrency(payApp.totalValue)}
                       </span>
                     </p>
                     <p className="text-sm">
-                      <span className="font-medium text-stone-500 dark:text-stone-400">Balance to finish</span>
-                      <span className="ml-2 text-stone-900 dark:text-stone-100">
+                      <span className="font-medium text-ink-muted">Balance to finish</span>
+                      <span className="ml-2 text-ink">
                         {formatCurrency(payApp.balanceToFinish)}
                       </span>
                     </p>
@@ -153,14 +153,14 @@ export function PayAppDetailModal({
 
               {g702 && Object.keys(g702).length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-stone-700 dark:text-stone-300 mb-3">G702 summary</h3>
+                  <h3 className="text-sm font-semibold text-ink-muted mb-3">G702 summary</h3>
                   <dl className="space-y-2">
                     {Object.entries(g702).map(([key, value]) => (
                       <div key={key} className="flex justify-between text-sm">
-                        <dt className="text-stone-500 dark:text-stone-400">
+                        <dt className="text-ink-muted">
                           {G702_LABELS[key] ?? key.replace(/([A-Z])/g, " $1").trim()}
                         </dt>
-                        <dd className="font-medium text-stone-900 dark:text-stone-100">
+                        <dd className="font-medium text-ink">
                           {typeof value === "number" ? formatCurrency(value) : String(value)}
                         </dd>
                       </div>

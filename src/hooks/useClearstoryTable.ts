@@ -12,7 +12,7 @@ const DEFAULT_PAGE_SIZE = 50;
 
 export function useClearstoryTable(
   module: ClearstoryTableModuleName,
-  options: { projectId?: string } = {}
+  options: { projectId?: string; status?: string; search?: string; sort?: string; sortDir?: "asc" | "desc" } = {}
 ) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -22,19 +22,25 @@ export function useClearstoryTable(
   const [initialLoading, setInitialLoading] = useState(true);
 
   const projectId = options.projectId?.trim() || undefined;
-  const prevProjectId = useRef(projectId);
+  const status = options.status || undefined;
+  const search = options.search?.trim() || undefined;
+  const sort = options.sort || undefined;
+  const sortDir = sort ? options.sortDir : undefined;
+  // Any filter change goes back to page 1.
+  const filterKey = `${projectId ?? ""}|${status ?? ""}|${search ?? ""}|${sort ?? ""}|${sortDir ?? ""}`;
+  const prevFilterKey = useRef(filterKey);
   useEffect(() => {
-    if (prevProjectId.current !== projectId) {
-      prevProjectId.current = projectId;
+    if (prevFilterKey.current !== filterKey) {
+      prevFilterKey.current = filterKey;
       setPage(1);
     }
-  }, [projectId]);
+  }, [filterKey]);
 
   const refetch = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getClearstoryTablePage(module, { page, pageSize, projectId });
+      const res = await getClearstoryTablePage(module, { page, pageSize, projectId, status, search, sort, sortDir });
       setData(res);
     } catch (e) {
       setData(null);
@@ -43,7 +49,7 @@ export function useClearstoryTable(
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [module, page, pageSize, projectId]);
+  }, [module, page, pageSize, projectId, status, search, sort, sortDir]);
 
   useEffect(() => {
     void refetch();
@@ -54,6 +60,7 @@ export function useClearstoryTable(
   return {
     rows: data?.rows ?? [],
     total: data?.total ?? 0,
+    statusCounts: data?.statusCounts,
     page: data?.page ?? page,
     pageSize: data?.pageSize ?? pageSize,
     setPage,
