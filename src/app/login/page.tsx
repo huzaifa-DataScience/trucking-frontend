@@ -57,7 +57,7 @@ export default function LoginPage() {
   return (
     <AuthShell>
       <AuthCard title="Sign in" subtitle="Use your work email and password.">
-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-6">
           {error ? (
             <AuthError title={error}>
               {/invalid|incorrect|wrong|password|credential/i.test(error)
@@ -87,13 +87,13 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
           <div className="-mt-1.5 flex justify-end">
-            <Link href="/forgot-password" className="text-[13.5px] font-medium text-brand-secondary hover:underline">
+            <Link href="/forgot-password" className="text-[15px] font-medium text-brand-secondary hover:underline">
               Forgot password?
             </Link>
           </div>
           <AuthSubmit loading={loading} label="Sign in" loadingLabel="Signing in…" />
         </form>
-        <p className="mt-5 text-center text-[14px] text-[#6b7280]">
+        <p className="mt-7 text-center text-[15px] text-[#6b7280]">
           New here?{" "}
           <Link href="/register" className="font-medium text-brand-secondary hover:underline">
             Create an account
