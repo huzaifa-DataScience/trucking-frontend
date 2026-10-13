@@ -4,6 +4,10 @@ import Link from "next/link";
 import type { SummaryRow } from "@/lib/project-financials/types";
 import { count, money, ratio } from "@/lib/project-financials/format";
 import { queryToSearch } from "@/components/project-financials/FinancialsChrome";
+import {
+  FINANCIALS_TABLE_SCROLL,
+  FINANCIALS_TABLE_STICKY_HEAD,
+} from "@/components/project-financials/tableScroll";
 import { useFinancialsQuery } from "@/components/project-financials/useFinancialsQuery";
 
 const panel =
@@ -79,10 +83,10 @@ export function SummaryTable({ rows, totals }: { rows: SummaryRow[]; totals: Sum
         <h2 className="border-b border-[rgba(91,173,232,0.22)] bg-[rgba(91,173,232,0.18)] px-4 py-3 text-center text-[13px] font-semibold text-[#333333]">
           Full sheet
         </h2>
-        <div className="overflow-x-auto">
+        <div className={FINANCIALS_TABLE_SCROLL}>
           <table className="w-full min-w-[1100px] border-collapse text-left">
             <thead>
-              <tr className="border-b border-ink/[0.06]">
+              <tr className={`border-b border-ink/[0.06] ${FINANCIALS_TABLE_STICKY_HEAD}`}>
                 <th className={head}>PM</th>
                 <th className={`${head} text-right`}>Active billings</th>
                 <th className={`${head} text-right`}>Backlog</th>

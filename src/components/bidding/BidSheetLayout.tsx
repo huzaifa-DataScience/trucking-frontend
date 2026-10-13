@@ -24,6 +24,7 @@ import {
   type BidChromeStage,
 } from "@/lib/bidding/process-types";
 import { BID_STAGE_ICONS } from "@/components/bidding/BidStageIcons";
+import { TogalConnectRail } from "@/components/bidding/TogalConnectRail";
 import {
   SECONDARY_COLLAPSED_KEY,
   SIDEBAR_SECONDARY_COLLAPSED_W,
@@ -378,6 +379,10 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
                 />
               ) : null}
             </nav>
+
+            <div className="mt-auto pt-3">
+              <TogalConnectRail collapsed={secondaryCollapsed} />
+            </div>
           </div>
         </aside>
       ) : null}

@@ -30,6 +30,7 @@ import type {
   BurdenedRateResult,
   PatchBidBody,
 } from "@/lib/bidding/types";
+import { mergeProcessTogal } from "@/lib/bidding/process-types";
 import { useBiddingLookups } from "@/hooks/useBiddingLookups";
 import { useBiddingAccess } from "@/hooks/useBiddingAccess";
 
@@ -215,10 +216,12 @@ export function BidSheetProvider({
         systems: withCalc.systems,
         // Full engine snapshot — do not strip unknown keys (buildClientComputedSnapshot spreads)
         computed: buildClientComputedSnapshot(withCalc, engineLookups),
-        // Merge dual-bound flags into process (BE may replace or deep-merge)
+        // Merge dual-bound flags into process (BE may replace or deep-merge).
+        // Keep Togal set/file ids — Save must not erase them.
         process: {
           ...(withCalc.process ?? {}),
           ...processPatch,
+          togal: mergeProcessTogal(withCalc.process?.togal, null),
         },
       };
     },
@@ -734,13 +737,13 @@ export function BidSheetProvider({
       setSaving(true);
       setError(null);
       try {
-        const saved = await biddingApi.uploadBidAttachments(bidId, files, opts);
+        // Waits for Togal — failed Togal = failed POST, file not in list.
+        await biddingApi.uploadBidAttachments(bidId, files, opts);
         await loadBid({ silent: true });
-        if (saved.togal && saved.togal.sent === false && saved.togal.message) {
-          showToast(saved.togal.message, "error");
-        }
       } catch (e) {
-        setError(getApiErrorMessage(e, "Failed to upload attachment"));
+        const message = getApiErrorMessage(e, "Failed to upload attachment");
+        setError(message);
+        showToast(message, "error");
         throw e;
       } finally {
         setSaving(false);
@@ -776,13 +779,15 @@ export function BidSheetProvider({
         await biddingApi.deleteBidAttachment(bidId, attachmentId);
         await loadBid({ silent: true });
       } catch (e) {
-        setError(getApiErrorMessage(e, "Failed to delete attachment"));
+        const message = getApiErrorMessage(e, "Failed to delete attachment");
+        setError(message);
+        showToast(message, "error");
         throw e;
       } finally {
         setSaving(false);
       }
     },
-    [bidId, loadBid]
+    [bidId, loadBid, showToast]
   );
 
   const selectedTeam = useMemo(() => {

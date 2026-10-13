@@ -25,8 +25,19 @@ import { formatBidDateAndTime, formatDate, formatMoney } from "@/lib/bidding/for
 import { personDisplayName } from "@/lib/bidding/person-label";
 import { teamColorForId } from "@/lib/bidding/team-colors";
 import { entityBrandForName } from "@/lib/branding/entity-colors";
-import { formatOutcome, formatProcessStage, formatWorkType } from "@/lib/bidding/process-types";
-import type { BidCaptainLookup, BidListItem, BidStatus, BidTeam } from "@/lib/bidding/types";
+import {
+  bidKindOptionsFromMeta,
+  formatOutcome,
+  formatProcessStage,
+  formatWorkType,
+} from "@/lib/bidding/process-types";
+import type {
+  BidCaptainLookup,
+  BidListItem,
+  BidStatus,
+  BidTeam,
+  LookupNameItem,
+} from "@/lib/bidding/types";
 import { FilterSidebar } from "@/components/filters/FilterSidebar";
 import { SavedViewTabs, conditionKey } from "@/components/filters/SavedViewTabs";
 import {
@@ -254,11 +265,19 @@ function FilterSelect({
   ariaLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const current = options.find((o) => o.value === value) ?? options[0];
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? options.filter((o) => o.label.toLowerCase().includes(q))
+    : options;
 
   useEffect(() => {
     if (!open) return;
+    setQuery("");
+    const t = window.setTimeout(() => searchRef.current?.focus(), 0);
     const onClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
@@ -268,6 +287,7 @@ function FilterSelect({
     document.addEventListener("mousedown", onClick);
     document.addEventListener("keydown", onKey);
     return () => {
+      window.clearTimeout(t);
       document.removeEventListener("mousedown", onClick);
       document.removeEventListener("keydown", onKey);
     };
@@ -300,30 +320,51 @@ function FilterSelect({
 
       {open ? (
         <div
-          role="listbox"
-          aria-label={ariaLabel ?? prefix}
-          className="absolute left-0 top-full z-30 mt-1.5 w-full min-w-max overflow-hidden rounded-xl border border-ink/10 bg-white p-1.5 shadow-[0_12px_28px_rgba(1,1,1,0.16)]"
+          className="absolute left-0 top-full z-30 mt-1.5 flex w-full min-w-[12rem] flex-col overflow-hidden rounded-xl border border-ink/10 bg-white shadow-[0_12px_28px_rgba(1,1,1,0.16)]"
         >
-          {options.map((o) => {
-            const selected = o.value === value;
-            return (
-              <button
-                key={o.value || "all"}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                onClick={() => {
-                  onChange(o.value);
-                  setOpen(false);
-                }}
-                className={`block w-full whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm transition ${
-                  selected ? "bg-brand/10 font-semibold text-ink" : "font-medium text-ink/70 hover:bg-ink/[0.04] hover:text-ink"
-                }`}
-              >
-                {prefix}: {o.label}
-              </button>
-            );
-          })}
+          <div className="border-b border-ink/[0.06] p-1.5">
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search…"
+              aria-label={`Search ${ariaLabel ?? prefix}`}
+              className="h-8 w-full rounded-lg border border-ink/10 bg-ink/[0.03] px-2.5 text-sm text-ink outline-none placeholder:text-ink/35 focus:border-brand/40 focus:bg-white"
+            />
+          </div>
+          <div
+            role="listbox"
+            aria-label={ariaLabel ?? prefix}
+            className="max-h-52 overflow-y-auto overscroll-contain p-1.5"
+          >
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-ink/45">No matches</p>
+            ) : (
+              filtered.map((o) => {
+                const selected = o.value === value;
+                return (
+                  <button
+                    key={o.value || "all"}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => {
+                      onChange(o.value);
+                      setOpen(false);
+                    }}
+                    className={`block w-full whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm transition ${
+                      selected
+                        ? "bg-brand/10 font-semibold text-ink"
+                        : "font-medium text-ink/70 hover:bg-ink/[0.04] hover:text-ink"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
       ) : null}
     </div>
@@ -385,6 +426,10 @@ export default function BiddingListPage() {
   const [captainFilter, setCaptainFilter] = useState("");
   const [bidKindFilter, setBidKindFilter] = useState("");
   const [constructionFilter, setConstructionFilter] = useState("");
+  const [bidKindOptions, setBidKindOptions] = useState<{ value: string; label: string }[]>(
+    () => bidKindOptionsFromMeta(null)
+  );
+  const [buildingTypeOptions, setBuildingTypeOptions] = useState<LookupNameItem[]>([]);
   const [localBidFrom, setLocalBidFrom] = useState("");
   const [localBidTo, setLocalBidTo] = useState("");
   const [filterKeys, setFilterKeys] = useState<string[]>(DEFAULT_FILTER_KEYS);
@@ -461,6 +506,14 @@ export default function BiddingListPage() {
       .getBiddingTeams()
       .then(setTeams)
       .catch(() => setTeams([]));
+    void biddingApi
+      .getProcessMeta()
+      .then((meta) => setBidKindOptions(bidKindOptionsFromMeta(meta)))
+      .catch(() => setBidKindOptions(bidKindOptionsFromMeta(null)));
+    void biddingApi
+      .getBiddingBuildingTypes()
+      .then(setBuildingTypeOptions)
+      .catch(() => setBuildingTypeOptions([]));
   }, []);
 
   const teamNameFor = useCallback(
@@ -764,14 +817,8 @@ export default function BiddingListPage() {
     const filtered = (status === "all" ? bids : bids.filter((b) => b.status === status))
       .filter((b) => rowMatchesGroups(b as unknown as Record<string, unknown>, filterGroups))
       .filter((b) => !captainFilter || resolveCaptainLabel(b.captain || b.estimator) === captainFilter)
-      .filter((b) => {
-        const q = bidKindFilter.trim().toLowerCase();
-        return !q || (b.bidKind || "").toLowerCase().includes(q);
-      })
-      .filter((b) => {
-        const q = constructionFilter.trim().toLowerCase();
-        return !q || (b.constructionType || "").toLowerCase().includes(q);
-      });
+      .filter((b) => !bidKindFilter || (b.bidKind || "") === bidKindFilter)
+      .filter((b) => !constructionFilter || (b.constructionType || "") === constructionFilter);
     return [...filtered].sort((a, b) => {
       const cmp = (() => {
         switch (sortKey) {
@@ -1343,22 +1390,32 @@ export default function BiddingListPage() {
               </label>
             ) : null}
             {showFilter("bidKind") ? (
-              <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+              <label className="flex w-48 flex-col gap-1 text-xs font-semibold text-ink/50">
                 Bid type
-                <input
+                <FilterSelect
+                  prefix="Bid type"
                   value={bidKindFilter}
-                  onChange={(e) => setBidKindFilter(e.target.value)}
-                  className="cs-field px-2"
+                  onChange={setBidKindFilter}
+                  options={[
+                    { value: "", label: "All" },
+                    ...bidKindOptions.map((o) => ({ value: o.value, label: o.label })),
+                  ]}
+                  ariaLabel="Bid type"
                 />
               </label>
             ) : null}
             {showFilter("constructionType") ? (
-              <label className="flex flex-col gap-1 text-xs font-semibold text-ink/50">
+              <label className="flex w-52 flex-col gap-1 text-xs font-semibold text-ink/50">
                 Building type
-                <input
+                <FilterSelect
+                  prefix="Building"
                   value={constructionFilter}
-                  onChange={(e) => setConstructionFilter(e.target.value)}
-                  className="cs-field px-2"
+                  onChange={setConstructionFilter}
+                  options={[
+                    { value: "", label: "All" },
+                    ...buildingTypeOptions.map((o) => ({ value: o.name, label: o.name })),
+                  ]}
+                  ariaLabel="Building type"
                 />
               </label>
             ) : null}

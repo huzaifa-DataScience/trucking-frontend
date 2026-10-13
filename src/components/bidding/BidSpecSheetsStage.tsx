@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { BidHubFiles } from "@/components/bidding/BidHubFiles";
 import { BidSpecSheetsSection } from "@/components/bidding/BidSpecSheetsSection";
-import { TogalProjectBar } from "@/components/bidding/TogalPanels";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
 import type { ProcessMeta, SpecSheet } from "@/lib/bidding/process-types";
 
@@ -45,8 +44,6 @@ export function BidSpecSheetsStage() {
                 : "Read only"}
         </p>
       </header>
-
-      <TogalProjectBar />
 
       {error ? (
         <p className="rounded border border-danger/25 bg-danger-tint/40 px-3 py-1.5 text-[12.5px] text-danger">

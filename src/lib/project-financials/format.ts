@@ -32,3 +32,7 @@ export function asOfLabel(iso: string | undefined): string {
 export function foundationMissing(missing: string[] | undefined): boolean {
   return (missing ?? []).includes("foundation_job_cost");
 }
+
+export function trimbleBomMissing(missing: string[] | undefined): boolean {
+  return (missing ?? []).includes("trimble_bom");
+}
