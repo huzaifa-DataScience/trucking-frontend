@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
+import { useBidSheet } from "@/contexts/BidSheetContext";
 import { useConfirmDialog } from "@/contexts/ConfirmDialogContext";
+import { getApiErrorMessage } from "@/lib/api/client";
+import { isTogalProjectUrlOpenable } from "@/lib/bidding/process-types";
 import type { BidAttachment } from "@/lib/bidding/types";
 import {
   INTAKE_ADD_BTN,
@@ -37,6 +40,40 @@ function folderFromFileName(fileName: string): string {
   const norm = fileName.replace(/\\/g, "/");
   const i = norm.lastIndexOf("/");
   return i > 0 ? norm.slice(0, i) : "";
+}
+
+/** Opens Togal only when server has sent an https:// projectUrl. */
+function OpenInTogalButton() {
+  const { bid } = useBidSheet();
+  const url = bid?.process?.togal?.projectUrl?.trim() ?? "";
+  const ready = isTogalProjectUrlOpenable(url);
+  if (ready) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="intake-head-btn inline-flex items-center no-underline"
+      >
+        Open in Togal
+      </a>
+    );
+  }
+  return (
+    <button
+      type="button"
+      disabled
+      title="Togal project link is not ready yet"
+      className="intake-head-btn cursor-default opacity-50"
+    >
+      Open in Togal
+    </button>
+  );
+}
+
+function showTogalOpenForLabels(labels: string[] | undefined): boolean {
+  if (!labels?.length) return false;
+  return labels.includes("drawings");
 }
 
 function groupAttachmentsByFolder(attachments: BidAttachment[]): {
@@ -444,7 +481,6 @@ function DrawingsPanel({
   activePhase,
   onPhaseChange,
   onBrowse,
-  onBrowseFolder,
   onDropFiles,
   inputRef,
   confirmDialog,
@@ -459,7 +495,6 @@ function DrawingsPanel({
   activePhase: string;
   onPhaseChange: (phase: string) => void;
   onBrowse: () => void;
-  onBrowseFolder: () => void;
   onDropFiles: (files: FileList | null) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
   confirmDialog: ReturnType<typeof useConfirmDialog>;
@@ -515,7 +550,10 @@ function DrawingsPanel({
           <h3 className="m-0 text-[13px] font-semibold tracking-[0.02em] text-[#5a5340]">
             {phaseTitle}
           </h3>
-          <span className="shrink-0 text-[12px] font-normal text-[#7a7360]">{fileMeta}</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <OpenInTogalButton />
+            <span className="text-[12px] font-normal text-[#7a7360]">{fileMeta}</span>
+          </div>
         </div>
 
         <div className="intake-section-body">
@@ -557,7 +595,7 @@ function DrawingsPanel({
                     {busy ? "Uploading…" : "Drop PDF or image here"}
                   </p>
                   <p className="mt-0.5 text-[12px] text-[#6b7280]">
-                    or browse — max {MAX_FILES} files · ZIP / folder ok
+                    or browse — max {MAX_FILES} files · ZIP ok
                   </p>
                 </div>
               </div>
@@ -572,17 +610,6 @@ function DrawingsPanel({
                   }}
                 >
                   Browse files
-                </button>
-                <button
-                  type="button"
-                  disabled={busy || atLimit}
-                  className="intake-head-btn cursor-pointer border-[#d9d4c8] bg-white text-[#5a5340] hover:bg-[#f3f1ea] disabled:cursor-default disabled:opacity-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onBrowseFolder();
-                  }}
-                >
-                  Add folder
                 </button>
               </div>
               <input
@@ -648,7 +675,6 @@ export function BidAttachmentsSection({
   title?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const folderInputRef = useRef<HTMLInputElement>(null);
   const pendingLabelRef = useRef(
     labels?.[0] ?? (mode === "markup" ? "takeoff" : "drawings")
   );
@@ -672,13 +698,6 @@ export function BidAttachmentsSection({
       setPendingDrawingCategory(fallback.value);
     }
   }, [mode, phaseOptions, pendingDrawingCategory]);
-
-  useEffect(() => {
-    const el = folderInputRef.current;
-    if (!el) return;
-    el.setAttribute("webkitdirectory", "");
-    el.setAttribute("directory", "");
-  }, []);
 
   const uploadOptsFor = useCallback(
     (label: string) => {
@@ -712,9 +731,7 @@ export function BidAttachmentsSection({
       const opts = uploadOptsFor(label);
       setLocalUploading(true);
       try {
-        if (onUploadMany && batch.length > 1) {
-          await onUploadMany(batch, opts);
-        } else if (onUploadMany) {
+        if (onUploadMany) {
           await onUploadMany(batch, opts);
         } else {
           for (const file of batch) {
@@ -724,6 +741,8 @@ export function BidAttachmentsSection({
             await onUpload(file, { ...opts, relativePath });
           }
         }
+      } catch (e) {
+        setLocalError(getApiErrorMessage(e, "Failed to upload attachment"));
       } finally {
         setLocalUploading(false);
       }
@@ -733,34 +752,21 @@ export function BidAttachmentsSection({
 
   if (mode === "drawings") {
     return (
-      <>
-        <input
-          ref={folderInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            void handleFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-        <DrawingsPanel
-          attachments={attachments}
-          isEditable={isEditable}
-          uploading={uploading}
-          localUploading={localUploading}
-          localError={localError}
-          drawingCategoryOptions={phaseOptions}
-          activePhase={pendingDrawingCategory}
-          onPhaseChange={setPendingDrawingCategory}
-          onBrowse={() => inputRef.current?.click()}
-          onBrowseFolder={() => folderInputRef.current?.click()}
-          onDropFiles={(files) => void handleFiles(files)}
-          inputRef={inputRef}
-          confirmDialog={confirmDialog}
-          onDelete={onDelete}
-        />
-      </>
+      <DrawingsPanel
+        attachments={attachments}
+        isEditable={isEditable}
+        uploading={uploading}
+        localUploading={localUploading}
+        localError={localError}
+        drawingCategoryOptions={phaseOptions}
+        activePhase={pendingDrawingCategory}
+        onPhaseChange={setPendingDrawingCategory}
+        onBrowse={() => inputRef.current?.click()}
+        onDropFiles={(files) => void handleFiles(files)}
+        inputRef={inputRef}
+        confirmDialog={confirmDialog}
+        onDelete={onDelete}
+      />
     );
   }
 
@@ -796,31 +802,23 @@ export function BidAttachmentsSection({
   const perLabelAdd = Boolean(labels?.length);
   pendingLabelRef.current = pendingLabel;
 
-  const browseForLabel = (label: string, folder = false) => {
+  const browseForLabel = (label: string) => {
     setPendingLabel(label);
     pendingLabelRef.current = label;
-    if (folder) folderInputRef.current?.click();
-    else inputRef.current?.click();
+    inputRef.current?.click();
   };
 
   return (
     <section className="intake-section">
-      <div className="intake-section-head">{title ?? "Bid documents"}</div>
+      <div className="intake-section-head flex items-center justify-between gap-3">
+        <span>{title ?? "Bid documents"}</span>
+        {showTogalOpenForLabels(labels) ? <OpenInTogalButton /> : null}
+      </div>
       <div className="intake-section-body flex flex-col gap-2">
         <input
           ref={inputRef}
           type="file"
           accept={ACCEPT}
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            void handleFiles(e.target.files, pendingLabelRef.current);
-            e.target.value = "";
-          }}
-        />
-        <input
-          ref={folderInputRef}
-          type="file"
           multiple
           className="hidden"
           onChange={(e) => {
@@ -863,14 +861,6 @@ export function BidAttachmentsSection({
             >
               {busy ? "Uploading…" : "Add file"}
             </button>
-            <button
-              type="button"
-              disabled={busy || atLimit}
-              onClick={() => folderInputRef.current?.click()}
-              className="intake-head-btn disabled:opacity-50"
-            >
-              Add folder
-            </button>
           </div>
         ) : null}
 
@@ -899,39 +889,28 @@ export function BidAttachmentsSection({
                   {o.label}
                 </p>
                 {isEditable && perLabelAdd ? (
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      disabled={busy || atLimit}
-                      onClick={() => browseForLabel(o.value, false)}
-                      className={`${INTAKE_ADD_BTN} disabled:opacity-50`}
-                      aria-label={
-                        busy && pendingLabel === o.value
-                          ? "Uploading"
-                          : `Add ${o.label}`
-                      }
-                      title={
-                        busy && pendingLabel === o.value
-                          ? "Uploading…"
-                          : `Add ${o.label}`
-                      }
-                    >
-                      {busy && pendingLabel === o.value ? (
-                        <span className="text-[10px] font-semibold">…</span>
-                      ) : (
-                        <PlusIcon />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy || atLimit}
-                      onClick={() => browseForLabel(o.value, true)}
-                      className="text-[11px] font-semibold text-brand hover:underline disabled:opacity-50"
-                      title={`Add folder to ${o.label}`}
-                    >
-                      Folder
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    disabled={busy || atLimit}
+                    onClick={() => browseForLabel(o.value)}
+                    className={`${INTAKE_ADD_BTN} disabled:opacity-50`}
+                    aria-label={
+                      busy && pendingLabel === o.value
+                        ? "Uploading"
+                        : `Add ${o.label}`
+                    }
+                    title={
+                      busy && pendingLabel === o.value
+                        ? "Uploading…"
+                        : `Add ${o.label}`
+                    }
+                  >
+                    {busy && pendingLabel === o.value ? (
+                      <span className="text-[10px] font-semibold">…</span>
+                    ) : (
+                      <PlusIcon />
+                    )}
+                  </button>
                 ) : null}
               </div>
               <AttachmentGrid
