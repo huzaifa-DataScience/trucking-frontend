@@ -56,6 +56,88 @@ function contactDisplayName(c: BidContactLookup): string {
   );
 }
 
+/** Local "YYYY-MM-DD" for today (dates on the bid are stored as plain dates). */
+function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Whole days from `today` to `iso` (negative = past). Null when no date. */
+function daysUntil(iso: string | null | undefined, today: string): number | null {
+  const d = iso?.slice(0, 10);
+  if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  return Math.round((Date.parse(`${d}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+}
+
+/** "2026-10-20" → "Oct 20". */
+function shortDate(iso: string | null | undefined): string | null {
+  const d = iso?.slice(0, 10);
+  if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  return new Date(`${d}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+type Tone = "ok" | "warn" | "bad" | "info" | "none";
+
+const PILL: Record<Tone, string> = {
+  ok: "border-[#a7f3d0] bg-[#ecfdf5] text-[#047857]",
+  warn: "border-[#fde68a] bg-[#fffbeb] text-[#92400e]",
+  bad: "border-[#fecaca] bg-[#fef2f2] text-[#b91c1c]",
+  info: "border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8]",
+  none: "border-[#e5e7eb] bg-[#f9fafb] text-[#6b7280]",
+};
+
+/** Takeoff table rows, grouped by trade. VRF / equipment are optional scopes. */
+const TAKEOFF_GROUPS: { title: string; roles: { role: TakeoffRole; label: string; optional?: boolean }[] }[] = [
+  {
+    title: "Duct",
+    roles: [
+      { role: "duct1", label: "Duct 1" },
+      { role: "duct2", label: "Duct 2" },
+    ],
+  },
+  {
+    title: "Hydronic",
+    roles: [
+      { role: "hydronic1", label: "Hydronic 1" },
+      { role: "hydronic2", label: "Hydronic 2" },
+    ],
+  },
+  {
+    title: "Plumbing",
+    roles: [
+      { role: "plumbing1", label: "Plumbing 1" },
+      { role: "plumbing2", label: "Plumbing 2" },
+    ],
+  },
+  {
+    title: "Other scopes",
+    roles: [
+      { role: "vrf", label: "VRF", optional: true },
+      { role: "equipment", label: "Equipment", optional: true },
+      { role: "other", label: "Other" },
+    ],
+  },
+];
+
+/** Status chip for one takeoff row: turned in, overdue, due soon, or not assigned. */
+function takeoffStatus(
+  row: ProcessTakeoffAssignment | undefined,
+  optional: boolean,
+  today: string
+): { tone: Tone; label: string } {
+  if (!row?.assigneeName?.trim()) return { tone: "none", label: optional ? "No scope" : "Not assigned" };
+  if (row.completed) return { tone: "ok", label: "Turned in" };
+  const days = daysUntil(row.dueAt, today);
+  if (days == null) return { tone: "info", label: "Assigned" };
+  if (days < 0) return { tone: "bad", label: `Overdue ${plural(-days, "day")}` };
+  if (days === 0) return { tone: "warn", label: "Due today" };
+  return { tone: days <= 3 ? "warn" : "info", label: `Due in ${plural(days, "day")}` };
+}
+
 /** Stage 2 — Assignment (FRONTEND_INTAKE.md). Nick + PJ + bid clerk. */
 export function BidAssignmentStage() {
   const { setBidHeader } = useBidSheet();
@@ -73,9 +155,11 @@ export function BidAssignmentStage() {
   const labelClass = "intake-label";
   const sectionHead = "intake-section-head";
   const sectionBody = "intake-section-body";
+  const fieldWrap = "flex min-w-0 flex-col gap-[5px]";
   const [teams, setTeams] = useState<BidTeam[]>([]);
   const [captains, setCaptains] = useState<BidCaptainLookup[]>([]);
   const [aes, setAes] = useState<BidContactLookup[]>([]);
+  const [today] = useState(todayIso);
 
   useEffect(() => {
     void biddingApi
@@ -220,42 +304,59 @@ export function BidAssignmentStage() {
     setField("technicalReview", { ...review, ...patch });
   };
 
-  const renderRoleFields = (role: TakeoffRole, optional = false) => {
+
+  const renderTakeoffRow = ({ role, label, optional }: { role: TakeoffRole; label: string; optional?: boolean }) => {
     const row = rowFor(role);
+    const status = takeoffStatus(row, !!optional, today);
+    const name = row?.assigneeName ?? "";
     return (
-      <div key={role} className="flex min-w-0 flex-col gap-1.5">
-        <label className="flex min-w-0 flex-col gap-0.5">
-          <span className={labelClass}>
-            {role}
-            {optional ? " (optional)" : ""}
-          </span>
-          <input
-            className={inputClass}
-            disabled={!editable}
-            aria-label={`${role} assignee`}
-            placeholder={optional ? "Leave blank if no scope" : "Assignee"}
-            value={row?.assigneeName ?? ""}
-            onChange={(e) =>
-              upsertRole(role, { assigneeName: e.target.value || null })
-            }
-          />
-        </label>
-        <label className="flex min-w-0 flex-col gap-0.5">
-          <span className={labelClass}>Due</span>
+      <tr key={role} className="border-b border-[#eef1f5] last:border-b-0">
+        <td className="w-[120px] whitespace-nowrap px-3 py-[7px] align-middle text-[13px] font-semibold text-[#1f2937]">
+          {label}
+          {optional ? <small className="block text-[11px] font-normal text-[#9ca3af]">optional</small> : null}
+        </td>
+        <td className="px-2 py-[7px] align-middle">
+          <div className="relative">
+            {name.trim() ? (
+              <span
+                className="pointer-events-none absolute left-2 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full bg-[#94a3b8] text-[10px] font-bold text-white"
+                aria-hidden
+              >
+                {initials(name)}
+              </span>
+            ) : null}
+            <input
+              className={`${inputClass} ${name.trim() ? "!pl-8" : ""}`}
+              disabled={!editable}
+              aria-label={`${label} assignee`}
+              placeholder={optional ? "Leave blank if no scope" : "Assign…"}
+              value={name}
+              onChange={(e) => upsertRole(role, { assigneeName: e.target.value || null })}
+            />
+          </div>
+        </td>
+        <td className="w-[160px] px-2 py-[7px] align-middle">
           <DatePicker
-            ariaLabel={`${role} takeoff due`}
-            className={`${inputClass} w-full`}
+            ariaLabel={`${label} takeoff due`}
+            className={inputClass}
             disabled={!editable}
             value={row?.dueAt?.slice(0, 10) ?? ""}
             onChange={(v) => upsertRole(role, { dueAt: v || null })}
           />
-        </label>
-      </div>
+        </td>
+        <td className="w-[140px] px-3 py-[7px] align-middle">
+          <span
+            className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-[11.5px] font-semibold ${PILL[status.tone]}`}
+          >
+            {status.label}
+          </span>
+        </td>
+      </tr>
     );
   };
 
   return (
-    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-4 overflow-auto sm:gap-6">
+    <div className="intake-compact flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
       <header>
         <h2 className="intake-title">Assignment</h2>
         <p className="intake-sub mt-0.5">
@@ -275,270 +376,274 @@ export function BidAssignmentStage() {
         </p>
       ) : null}
 
-      <section className="intake-section min-w-0">
-        <h3 className={`${sectionHead} flex-wrap`}>
-          Assignment
-          {/* Pursue = a switch in the header (was a checkbox row). Unchecked = no bid. */}
-          <label className="flex items-center gap-2 text-[12.5px] font-medium normal-case tracking-normal text-[#374151] sm:absolute sm:right-3 sm:top-1/2 sm:-translate-y-1/2">
-            <input
-              type="checkbox"
-              role="switch"
-              className="peer sr-only"
-              disabled={!editable}
-              checked={a.pursue !== false}
-              onChange={(e) => setAssignment({ pursue: e.target.checked })}
-            />
-            <span
-              className="relative h-[18px] w-8 shrink-0 rounded-full bg-[#cbd5e1] transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-white after:transition-transform after:content-[''] peer-checked:bg-brand peer-checked:after:translate-x-3.5 peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 peer-disabled:opacity-50"
-              aria-hidden
-            />
-            {a.pursue !== false ? "Pursue this bid" : "Not pursuing (no bid)"}
-          </label>
-        </h3>
-        {/* Two columns in pairs, labels above (option A). */}
-        <div className={`${sectionBody} grid grid-cols-1 gap-x-[18px] gap-y-3.5 sm:grid-cols-2`}>
-          <p className="col-span-full text-[11px] font-semibold uppercase tracking-[0.05em] text-[#6b7280]">People</p>
-
-          <div className="flex min-w-0 flex-col gap-[5px]">
-            <label htmlFor="assign-captain" className={labelClass}>
-              Captain
-            </label>
-            <div className="relative">
-              {a.captain ? (
+      <div className="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <section className="intake-section min-w-0">
+            <h3 className={`${sectionHead} flex-wrap`}>
+              People &amp; schedule
+              {/* Pursue = a switch in the header (was a checkbox row). Unchecked = no bid. */}
+              <label className="flex items-center gap-2 text-[12.5px] font-medium normal-case tracking-normal text-[#374151] sm:absolute sm:right-3 sm:top-1/2 sm:-translate-y-1/2">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  className="peer sr-only"
+                  disabled={!editable}
+                  checked={a.pursue !== false}
+                  onChange={(e) => setAssignment({ pursue: e.target.checked })}
+                />
                 <span
-                  className="pointer-events-none absolute left-2 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full bg-brand text-[10px] font-bold text-white"
-                  aria-hidden
-                >
-                  {initials(a.captain)}
-                </span>
-              ) : null}
-              <select
-                id="assign-captain"
-                className={`${inputClass} !pr-8 ${a.captain ? "!pl-8" : ""}`}
-                disabled={!editable}
-                value={a.captainUserId != null ? String(a.captainUserId) : ""}
-                onChange={(e) => pickCaptain(e.target.value)}
-              >
-                <option value="">—</option>
-                {captains.length === 0 ? (
-                  <option value="" disabled>
-                    No captains (API empty)
-                  </option>
-                ) : (
-                  captains.map((c) => (
-                    <option key={c.userId} value={c.userId}>
-                      {captainDisplayName(c)}
-                      {c.teamName ? ` · ${c.teamName}` : ""}
-                      {c.teamId == null ? " (crew later in Settings)" : ""}
-                    </option>
-                  ))
-                )}
-              </select>
-              <SelectChevron />
-            </div>
-            <span className="text-[11.5px] text-[#6b7280]">Picking a captain fills the team.</span>
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-[5px]">
-            <label htmlFor="assign-team" className={labelClass}>
-              Team
-            </label>
-            <div className="relative">
-              {a.teamId != null ? (
-                <span
-                  className={`pointer-events-none absolute left-2.5 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full ${teamColorForId(a.teamId).dot}`}
+                  className="relative h-[18px] w-8 shrink-0 rounded-full bg-[#cbd5e1] transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-white after:transition-transform after:content-[''] peer-checked:bg-brand peer-checked:after:translate-x-3.5 peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40 peer-disabled:opacity-50"
                   aria-hidden
                 />
-              ) : null}
-              <select
-                id="assign-team"
-                className={`${inputClass} !pr-8 ${a.teamId != null ? "!pl-7" : ""}`}
-                disabled={!editable}
-                value={a.teamId != null ? String(a.teamId) : ""}
-                onChange={(e) => pickTeam(e.target.value)}
-              >
-                <option value="">—</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.teamName}
-                  </option>
-                ))}
-              </select>
-              <SelectChevron />
-            </div>
-            <span className="text-[11.5px] text-[#6b7280]">Changing team picks its captain, if it has one.</span>
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-[5px]">
-            <label htmlFor="assign-ae" className={labelClass}>
-              Asst. estimator
-            </label>
-            <div className="relative">
-              <select
-                id="assign-ae"
-                className={`${inputClass} !pr-8`}
-                disabled={!editable}
-                value={a.assistantEstimator ?? ""}
-                onChange={(e) => setAssignment({ assistantEstimator: e.target.value || null })}
-              >
-                <option value="">—</option>
-                {a.assistantEstimator && !aes.some((c) => contactDisplayName(c) === a.assistantEstimator) ? (
-                  <option value={a.assistantEstimator}>{a.assistantEstimator}</option>
-                ) : null}
-                {aes.map((c, i) => {
-                  const name = contactDisplayName(c);
-                  if (!name) return null;
-                  return (
-                    <option
-                      key={
-                        c.appUserId != null
-                          ? `ae-app-${c.appUserId}`
-                          : c.connecteamUserId != null
-                            ? `ae-ct-${c.connecteamUserId}`
-                            : `ae-${name}-${i}`
-                      }
-                      value={name}
+                {a.pursue !== false ? "Pursue this bid" : "Not pursuing (no bid)"}
+              </label>
+            </h3>
+            <div className={`${sectionBody} grid grid-cols-1 gap-x-[18px] gap-y-3.5 sm:grid-cols-2`}>
+              <div className={fieldWrap}>
+                <label htmlFor="assign-captain" className={labelClass}>
+                  Captain
+                </label>
+                <div className="relative">
+                  {a.captain ? (
+                    <span
+                      className="pointer-events-none absolute left-2 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full bg-brand text-[10px] font-bold text-white"
+                      aria-hidden
                     >
-                      {name}
-                      {c.email ? ` · ${c.email}` : ""}
-                    </option>
-                  );
-                })}
-              </select>
-              <SelectChevron />
-            </div>
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-[5px]">
-            <label htmlFor="assign-priority" className={labelClass}>
-              Priority
-            </label>
-            <input
-              id="assign-priority"
-              className={inputClass}
-              disabled={!editable}
-              value={a.priority ?? ""}
-              onChange={(e) => setAssignment({ priority: e.target.value || null })}
-              placeholder="e.g. High / Normal"
-            />
-          </div>
-
-          <div className="col-span-full my-0.5 h-px bg-[#eef1f5]" aria-hidden />
-          <p className="col-span-full text-[11px] font-semibold uppercase tracking-[0.05em] text-[#6b7280]">Schedule</p>
-
-          {/* div not label — native <label> prevents react-aria DatePicker popover from staying open */}
-          <div className="flex min-w-0 flex-col gap-[5px]">
-            <span className={labelClass}>Internal estimate due</span>
-            <DatePicker
-              ariaLabel="Internal estimate due"
-              className={inputClass}
-              disabled={!editable}
-              value={a.internalEstimateDue?.slice(0, 10) ?? ""}
-              onChange={(v) => setAssignment({ internalEstimateDue: v || null })}
-            />
-          </div>
-          <div className="flex min-w-0 flex-col gap-[5px]">
-            <span className={labelClass}>Internal review due</span>
-            <DatePicker
-              ariaLabel="Internal review due"
-              className={inputClass}
-              disabled={!editable}
-              value={a.internalReviewDue?.slice(0, 10) ?? ""}
-              onChange={(v) => setAssignment({ internalReviewDue: v || null })}
-            />
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-[5px]">
-            <label htmlFor="assign-time" className={labelClass}>
-              Time est. (hrs)
-            </label>
-            <input
-              id="assign-time"
-              type="number"
-              min={0}
-              step="0.5"
-              className={inputClass}
-              disabled={!editable}
-              value={bid.timeEstimate ?? ""}
-              onChange={(e) =>
-                setBidHeader({
-                  timeEstimate: e.target.value === "" ? null : Number(e.target.value),
-                })
-              }
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="intake-section min-w-0">
-        <h3 className={sectionHead}>Technical review</h3>
-        <div className={`${sectionBody} intake-grid`}>
-          <p className="col-span-full text-[11px] text-[#6b7280]">
-            Nick or PJ reviews before assign — same fields as Handoff.
-          </p>
-          <label className="intake-row">
-            <span className={labelClass}>Prepared by</span>
-            <input
-              className={inputClass}
-              disabled={!editable}
-              value={review.preparedBy ?? ""}
-              onChange={(e) => setReview({ preparedBy: e.target.value || null })}
-            />
-          </label>
-          <label className="intake-row">
-            <span className={labelClass}>Reviewed by</span>
-            <input
-              className={inputClass}
-              disabled={!editable}
-              value={review.reviewedBy ?? ""}
-              onChange={(e) => setReview({ reviewedBy: e.target.value || null })}
-            />
-          </label>
-          <label className="intake-row">
-            <span className={labelClass}>Review date</span>
-            <DatePicker
-              ariaLabel="Review date"
-              className={inputClass}
-              disabled={!editable}
-              value={review.reviewDate?.slice(0, 10) ?? ""}
-              onChange={(v) => setReview({ reviewDate: v || null })}
-            />
-          </label>
-          <label className="intake-row col-span-full">
-            <span className={labelClass}>Comments</span>
-            <textarea
-              className={`${inputClass} min-h-[4.5rem] resize-y`}
-              disabled={!editable}
-              value={review.comments ?? ""}
-              onChange={(e) => setReview({ comments: e.target.value || null })}
-            />
-          </label>
-          <div className="col-span-full flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-2.5 py-2">
-            <div className="min-w-0">
-              <p className="text-[12.5px] font-semibold text-[#1f2937]">
-                {review.approvedForTakeoff
-                  ? "Approved for takeoff"
-                  : "Takeoff approval"}
-              </p>
-              <p className="text-[11px] text-[#6b7280]">
-                {review.approvedForTakeoff
-                  ? "Approved — revoke if review needs another pass."
-                  : "Optional here; Handoff can still require approval before Complete."}
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              {review.approvedForTakeoff ? (
-                <>
-                  <span className="text-[11px] font-semibold text-[#047857]">Approved</span>
-                  <button
-                    type="button"
+                      {initials(a.captain)}
+                    </span>
+                  ) : null}
+                  <select
+                    id="assign-captain"
+                    className={`${inputClass} !pr-8 ${a.captain ? "!pl-8" : ""}`}
                     disabled={!editable}
-                    onClick={() => setReview({ approvedForTakeoff: false })}
-                    className="intake-head-btn disabled:opacity-40"
+                    value={a.captainUserId != null ? String(a.captainUserId) : ""}
+                    onChange={(e) => pickCaptain(e.target.value)}
                   >
-                    Revoke approval
-                  </button>
-                </>
+                    <option value="">—</option>
+                    {captains.length === 0 ? (
+                      <option value="" disabled>
+                        No captains (API empty)
+                      </option>
+                    ) : (
+                      captains.map((c) => (
+                        <option key={c.userId} value={c.userId}>
+                          {captainDisplayName(c)}
+                          {c.teamName ? ` · ${c.teamName}` : ""}
+                          {c.teamId == null ? " (crew later in Settings)" : ""}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <SelectChevron />
+                </div>
+              </div>
+
+              <div className={fieldWrap}>
+                <label htmlFor="assign-team" className={labelClass}>
+                  Team
+                </label>
+                <div className="relative">
+                  {a.teamId != null ? (
+                    <span
+                      className={`pointer-events-none absolute left-2.5 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full ${teamColorForId(a.teamId).dot}`}
+                      aria-hidden
+                    />
+                  ) : null}
+                  <select
+                    id="assign-team"
+                    className={`${inputClass} !pr-8 ${a.teamId != null ? "!pl-7" : ""}`}
+                    disabled={!editable}
+                    value={a.teamId != null ? String(a.teamId) : ""}
+                    onChange={(e) => pickTeam(e.target.value)}
+                  >
+                    <option value="">—</option>
+                    {teams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.teamName}
+                      </option>
+                    ))}
+                  </select>
+                  <SelectChevron />
+                </div>
+              </div>
+
+              <div className={fieldWrap}>
+                <label htmlFor="assign-ae" className={labelClass}>
+                  Asst. estimator
+                </label>
+                <div className="relative">
+                  <select
+                    id="assign-ae"
+                    className={`${inputClass} !pr-8`}
+                    disabled={!editable}
+                    value={a.assistantEstimator ?? ""}
+                    onChange={(e) => setAssignment({ assistantEstimator: e.target.value || null })}
+                  >
+                    <option value="">—</option>
+                    {a.assistantEstimator && !aes.some((c) => contactDisplayName(c) === a.assistantEstimator) ? (
+                      <option value={a.assistantEstimator}>{a.assistantEstimator}</option>
+                    ) : null}
+                    {aes.map((c, i) => {
+                      const name = contactDisplayName(c);
+                      if (!name) return null;
+                      return (
+                        <option
+                          key={
+                            c.appUserId != null
+                              ? `ae-app-${c.appUserId}`
+                              : c.connecteamUserId != null
+                                ? `ae-ct-${c.connecteamUserId}`
+                                : `ae-${name}-${i}`
+                          }
+                          value={name}
+                        >
+                          {name}
+                          {c.email ? ` · ${c.email}` : ""}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <SelectChevron />
+                </div>
+              </div>
+
+              <div className={fieldWrap}>
+                <label htmlFor="assign-priority" className={labelClass}>
+                  Priority
+                </label>
+                <input
+                  id="assign-priority"
+                  className={inputClass}
+                  disabled={!editable}
+                  value={a.priority ?? ""}
+                  onChange={(e) => setAssignment({ priority: e.target.value || null })}
+                  placeholder="e.g. High / Normal"
+                />
+              </div>
+
+              {/* div not label — native <label> prevents react-aria DatePicker popover from staying open */}
+              <div className={fieldWrap}>
+                <span className={labelClass}>Internal estimate due</span>
+                <DatePicker
+                  ariaLabel="Internal estimate due"
+                  className={inputClass}
+                  disabled={!editable}
+                  value={a.internalEstimateDue?.slice(0, 10) ?? ""}
+                  onChange={(v) => setAssignment({ internalEstimateDue: v || null })}
+                />
+              </div>
+              <div className={fieldWrap}>
+                <span className={labelClass}>Internal review due</span>
+                <DatePicker
+                  ariaLabel="Internal review due"
+                  className={inputClass}
+                  disabled={!editable}
+                  value={a.internalReviewDue?.slice(0, 10) ?? ""}
+                  onChange={(v) => setAssignment({ internalReviewDue: v || null })}
+                />
+              </div>
+
+              <div className={fieldWrap}>
+                <label htmlFor="assign-time" className={labelClass}>
+                  Time est. (hrs)
+                </label>
+                <input
+                  id="assign-time"
+                  type="number"
+                  min={0}
+                  step="0.5"
+                  className={inputClass}
+                  disabled={!editable}
+                  value={bid.timeEstimate ?? ""}
+                  onChange={(e) =>
+                    setBidHeader({
+                      timeEstimate: e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="intake-section min-w-0">
+            <h3 className={sectionHead}>Takeoff assignments</h3>
+            <div className="min-w-0 overflow-x-auto">
+              <table className="w-full min-w-[600px] border-collapse">
+                <thead>
+                  <tr>
+                    {["Scope", "Assignee", "Due", "Status"].map((h, i) => (
+                      <th
+                        key={h}
+                        className={`border-y border-[#eef1f5] bg-[#fafafa] py-2 text-left text-[11.5px] font-semibold text-[#6b7280] ${i === 0 || i === 3 ? "px-3" : "px-2"}`}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                {TAKEOFF_GROUPS.map((g) => (
+                  <tbody key={g.title}>
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="border-b border-[#eef1f5] bg-[#fcfcfd] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#6b7280]"
+                      >
+                        {g.title}
+                      </td>
+                    </tr>
+                    {g.roles.map(renderTakeoffRow)}
+                  </tbody>
+                ))}
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div className="min-w-0 xl:sticky xl:top-0">
+          <section className="intake-section min-w-0">
+            <h3 className={sectionHead}>Technical review</h3>
+            <div className={`${sectionBody} flex flex-col gap-3.5`}>
+              {/* Approval status: icon + text + action, no tinted box. */}
+              <div className="flex items-center gap-3">
+                <span
+                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${
+                    review.approvedForTakeoff ? "bg-[#ecfdf5] text-[#059669]" : "bg-[#f1f5f9] text-[#64748b]"
+                  }`}
+                  aria-hidden
+                >
+                  {review.approvedForTakeoff ? (
+                    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={2.4}>
+                      <path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <circle cx="12" cy="12" r="8.5" />
+                      <path d="M12 7.5V12l3 2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13.5px] font-semibold leading-tight text-[#1f2937]">
+                    {review.approvedForTakeoff ? "Approved for takeoff" : "Awaiting approval"}
+                  </p>
+                  {review.approvedForTakeoff ? (
+                    <p className="mt-0.5 text-[12px] leading-snug text-[#6b7280]">
+                      {shortDate(review.reviewDate)
+                        ? `Reviewed ${shortDate(review.reviewDate)}${review.reviewedBy ? ` by ${review.reviewedBy}` : ""}`
+                        : "Revoke if the review needs another pass."}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              {review.approvedForTakeoff ? (
+                <button
+                  type="button"
+                  disabled={!editable}
+                  onClick={() => setReview({ approvedForTakeoff: false })}
+                  className="h-9 w-full cursor-pointer rounded-[10px] border border-[#e2e8f0] bg-white text-[12.5px] font-semibold text-[#475569] transition hover:border-[#cbd5e1] hover:bg-[#f8fafc] disabled:cursor-default disabled:opacity-40"
+                >
+                  Revoke approval
+                </button>
               ) : (
                 <button
                   type="button"
@@ -550,45 +655,68 @@ export function BidAssignmentStage() {
                         review.reviewDate || new Date().toISOString().slice(0, 10),
                     })
                   }
-                  className="intake-head-btn disabled:opacity-40"
+                  className="h-9 w-full cursor-pointer rounded-[10px] bg-brand text-[12.5px] font-semibold text-white transition hover:bg-brand/90 disabled:cursor-default disabled:opacity-40"
                 >
                   Approve for takeoff
                 </button>
               )}
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <section className="intake-section min-w-0">
-        <h3 className={sectionHead}>Takeoff assignments</h3>
-        <div className={`${sectionBody} flex flex-col gap-4`}>
-          <p className="text-[11px] text-[#6b7280]">
-            Team/captain pick prefills blank roles. VRF / equipment stay optional.
-          </p>
-          <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
-            {(
-              [
-                ["Duct", ["duct1", "duct2"]],
-                ["Hydronic", ["hydronic1", "hydronic2"]],
-                ["Plumbing", ["plumbing1", "plumbing2"]],
-              ] as const
-            ).map(([title, roles]) => (
-              <div key={title} className="flex min-w-0 flex-col gap-3">
-                <p className="mb-0.5 text-center text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
-                  {title}
-                </p>
-                {roles.map((role) => renderRoleFields(role))}
+              <div className="my-1 h-px bg-[#eef1f5]" aria-hidden />
+
+              <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+                <div className={fieldWrap}>
+                  <label htmlFor="review-prepared" className={labelClass}>
+                    Prepared by
+                  </label>
+                  <input
+                    id="review-prepared"
+                    className={inputClass}
+                    disabled={!editable}
+                    value={review.preparedBy ?? ""}
+                    onChange={(e) => setReview({ preparedBy: e.target.value || null })}
+                  />
+                </div>
+                <div className={fieldWrap}>
+                  <label htmlFor="review-reviewed" className={labelClass}>
+                    Reviewed by
+                  </label>
+                  <input
+                    id="review-reviewed"
+                    className={inputClass}
+                    disabled={!editable}
+                    placeholder="Nick or PJ"
+                    value={review.reviewedBy ?? ""}
+                    onChange={(e) => setReview({ reviewedBy: e.target.value || null })}
+                  />
+                </div>
               </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 items-start gap-5 border-t border-[#e8ecf1] pt-4 sm:grid-cols-2 sm:gap-5 sm:pt-5 lg:grid-cols-3 lg:gap-6">
-            {(["vrf", "equipment", "other"] as const).map((role) =>
-              renderRoleFields(role, role === "vrf" || role === "equipment")
-            )}
-          </div>
+              <div className={fieldWrap}>
+                <span className={labelClass}>Review date</span>
+                <DatePicker
+                  ariaLabel="Review date"
+                  className={inputClass}
+                  disabled={!editable}
+                  value={review.reviewDate?.slice(0, 10) ?? ""}
+                  onChange={(v) => setReview({ reviewDate: v || null })}
+                />
+              </div>
+              <div className={fieldWrap}>
+                <label htmlFor="review-comments" className={labelClass}>
+                  Comments
+                </label>
+                <textarea
+                  id="review-comments"
+                  className={`${inputClass} min-h-[5.5rem] resize-y`}
+                  disabled={!editable}
+                  placeholder="Notes for the estimator…"
+                  value={review.comments ?? ""}
+                  onChange={(e) => setReview({ comments: e.target.value || null })}
+                />
+              </div>
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
     </div>
   );
 }
