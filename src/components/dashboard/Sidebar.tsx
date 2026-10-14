@@ -4,7 +4,7 @@ import { useEffect, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { roleLabel, isAdminPanelRole, canSeeWfs } from "@/lib/auth/roles";
+import { isAdminPanelRole, canSeeWfs } from "@/lib/auth/roles";
 import { can, canBidding, PERMISSIONS } from "@/lib/auth/permissions";
 import { AppLogo } from "@/components/ui/AppLogo";
 import {
@@ -29,8 +29,6 @@ import {
   NavIconBell,
 } from "@/components/dashboard/DashboardNavIcons";
 import type { AuthUser } from "@/lib/auth/types";
-import { userFullName } from "@/lib/auth/user-name";
-import { AvatarCircle } from "@/components/ui/AvatarCircle";
 import { useChatUnreadTotal } from "@/hooks/useChatUnreadTotal";
 import { ChatUnreadBadge } from "@/components/workforce/chat/ChatUnreadBadge";
 import { BID_HANDOFF_STAGES } from "@/lib/bidding/process-types";
@@ -179,10 +177,6 @@ export function dashboardMainOffsetClass(
   return `${primary} ${withSecondary}`;
 }
 
-function displayName(user: AuthUser | null): string {
-  return userFullName(user);
-}
-
 function itemIsActive(
   pathname: string,
   item: Pick<SidebarNavItem, "href" | "activePathPrefix" | "exact">
@@ -306,7 +300,7 @@ const clearstorySubItems: { href: string; label: string; Icon: ComponentType<{ c
   { href: "/clearstory/rates", label: "Rates", Icon: NavIconInvoice },
   { href: "/clearstory/directory", label: "Directory", Icon: NavIconUsers },
   { href: "/clearstory/tags", label: "Tags", Icon: NavIconTag },
-  { href: "/clearstory/notifications", label: "Notifications", Icon: NavIconBell },
+  { href: "/clearstory/change-notifications", label: "Notifications", Icon: NavIconBell },
   { href: "/clearstory/settings", label: "Settings", Icon: NavIconCog },
 ];
 
@@ -486,7 +480,7 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAdmin, user, logout } = useAuth();
+  const { isAdmin, user } = useAuth();
   const chatUnreadTotal = useChatUnreadTotal();
 
   useEffect(() => {
@@ -862,42 +856,6 @@ export function Sidebar({
             </div>
           )}
         </nav>
-
-        <div className={`mt-auto border-t border-white/[0.08] p-3 ${collapsed ? "" : "sm:p-4"}`}>
-          <div
-            className={`flex flex-col items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.04] p-2.5 ${
-              collapsed ? "" : "sm:flex-row sm:gap-3 sm:p-3"
-            }`}
-          >
-            <div
-              className="shrink-0 shadow-[0_2px_8px_rgba(0,0,0,0.28)]"
-              title={displayName(user)}
-            >
-              <AvatarCircle user={user} />
-            </div>
-            <div className={`min-w-0 flex-1 ${lgLabel}`}>
-              <p className="truncate text-[13px] font-semibold text-white/95">{displayName(user)}</p>
-              <p className="truncate text-[11px] text-white/50">
-                {roleLabel(user?.role ?? "user")}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => logout()}
-              className="shrink-0 rounded-lg p-2 text-white/40 transition hover:bg-white/10 hover:text-white"
-              title="Log out"
-              aria-label="Log out"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-                <path
-                  d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* Workspace secondary rail — xl+; collapsible to a thin strip */}

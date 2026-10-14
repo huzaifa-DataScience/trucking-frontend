@@ -173,7 +173,7 @@ export function RateResult({ payload, rateType }: { payload: unknown; rateType: 
 }
 
 /** COR contract summary: original vs pending contract value and the amount in each COR status. */
-export function CorContractSummaryResult({ payload }: { payload: unknown }) {
+export function CorContractSummaryResult({ payload, inbox }: { payload: unknown; inbox?: "sent" | "received" }) {
   const p = obj(payload);
   const values = obj(p.contractSummaryValues);
   const original = isNum(p.originalContractValue) ? p.originalContractValue : 0;
@@ -217,7 +217,13 @@ export function CorContractSummaryResult({ payload }: { payload: unknown }) {
         ))}
       </div>
 
-      <div className="cs-data-table cs-table-shell">
+      {total === 0 ? (
+        <p className="rounded-[var(--radius)] border border-[var(--border-subtle)] bg-white px-4 py-6 text-center text-[13px] text-ink-muted">
+          No change order amounts {inbox === "received" ? "received" : inbox === "sent" ? "sent" : ""} in Clearstory for this
+          contract summary, so every status is $0.
+        </p>
+      ) : (
+      <div className="cs-data-table cs-table-shell table-scroll">
         <table className="w-full border-collapse text-left">
           <caption className="sr-only">Change order amount by status</caption>
           <thead>
@@ -247,11 +253,13 @@ export function CorContractSummaryResult({ payload }: { payload: unknown }) {
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-[#f3f4f6]">
-                      <span
-                        className="block h-full rounded-full bg-brand"
-                        style={{ width: `${(r.amount / max) * 100}%` }}
-                      />
+                    <span className="h-2 flex-1">
+                      {r.amount > 0 ? (
+                        <span
+                          className="block h-full rounded-full bg-brand"
+                          style={{ width: `${Math.max((r.amount / max) * 100, 2)}%` }}
+                        />
+                      ) : null}
                     </span>
                     <span className="w-12 shrink-0 text-right text-[12px] tabular-nums text-ink-muted">
                       {total > 0 ? `${((r.amount / total) * 100).toFixed(0)}%` : "—"}
@@ -270,6 +278,7 @@ export function CorContractSummaryResult({ payload }: { payload: unknown }) {
           </tfoot>
         </table>
       </div>
+      )}
     </div>
   );
 }

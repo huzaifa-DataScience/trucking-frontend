@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
@@ -182,13 +182,18 @@ export function ColumnPickerButton({
   onTogglePin,
   iconOnly = false,
   outline = false,
+  order,
+  onReorder,
+  onResetOrder,
+  orderChanged = false,
 }: {
   columns: { key: string; label: string }[];
   hidden: Set<string>;
   lockedKey?: string;
   /** Prefer over single `lockedKey` when more than one column must stay visible. */
   lockedKeys?: string[];
-  onToggle: (key: string) => void;
+  /** Show/hide checkboxes; leave out for tables that only allow reordering. */
+  onToggle?: (key: string) => void;
   /** When provided, each row gets a pin toggle (unlimited columns can be pinned). */
   pinned?: Set<string>;
   onTogglePin?: (key: string) => void;
@@ -196,8 +201,16 @@ export function ColumnPickerButton({
   iconOnly?: boolean;
   /** Labelled button with the white bordered field style (for toolbars inside a white panel). */
   outline?: boolean;
+  /** Shown columns in table order. With `onReorder`, shown rows can be dragged to change the order. */
+  order?: string[];
+  onReorder?: (keys: string[]) => void;
+  /** "Reset order" link, shown when `orderChanged`. */
+  onResetOrder?: () => void;
+  orderChanged?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  const [overKey, setOverKey] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const lockedSet = useMemo(
     () => new Set<string>([...(lockedKeys ?? []), ...(lockedKey ? [lockedKey] : [])]),
@@ -224,6 +237,31 @@ export function ColumnPickerButton({
   const pinnedCount = columns.filter((c) => !lockedSet.has(c.key) && (pinned?.has(c.key) ?? false)).length;
   const hiddenNames = columns.filter((c) => hidden.has(c.key) && !lockedSet.has(c.key)).map((c) => c.label);
   const pinnedNames = columns.filter((c) => !lockedSet.has(c.key) && (pinned?.has(c.key) ?? false)).map((c) => c.label);
+
+  // Reordering: shown columns first in table order (draggable), then hidden ones.
+  const reorderable = Boolean(onReorder && order);
+  const shownOrder = reorderable ? (order ?? []).filter((k) => columns.some((c) => c.key === k)) : [];
+  const labelOf = new Map(columns.map((c) => [c.key, c.label]));
+  const menuRows: { key: string; label: string; section: "shown" | "hidden" | "all" }[] = reorderable
+    ? [
+        ...shownOrder.map((k) => ({ key: k, label: labelOf.get(k) ?? k, section: "shown" as const })),
+        ...columns.filter((c) => !shownOrder.includes(c.key)).map((c) => ({ ...c, section: "hidden" as const })),
+      ]
+    : columns.map((c) => ({ ...c, section: "all" as const }));
+  const dropOn = (targetKey: string) => {
+    if (!dragKey || !onReorder) return;
+    const from = shownOrder.indexOf(dragKey);
+    // Fixed columns stay at the start.
+    const firstMovable = shownOrder.findIndex((k) => !lockedSet.has(k));
+    const to = Math.max(shownOrder.indexOf(targetKey), firstMovable < 0 ? 0 : firstMovable);
+    setDragKey(null);
+    setOverKey(null);
+    if (from < 0 || from === to) return;
+    const next = [...shownOrder];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onReorder(next);
+  };
 
   return (
     <div className="relative shrink-0" ref={ref}>
@@ -283,28 +321,88 @@ export function ColumnPickerButton({
           className="absolute right-0 top-full z-30 mt-1.5 max-h-96 w-72 overflow-y-auto rounded-xl border border-ink/[0.08] bg-white p-1.5 shadow-[0_12px_32px_-8px_rgba(1,1,1,0.18)]"
         >
           <div className="flex items-center gap-2 px-2.5 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-wide text-ink/35">
-            <span className="flex-1">Show column</span>
-            <span className="w-16 shrink-0 text-right">Pin left</span>
+            <span className="flex-1">{reorderable ? "Shown · drag to reorder" : "Show column"}</span>
+            {reorderable && onResetOrder && orderChanged ? (
+              <button
+                type="button"
+                onClick={onResetOrder}
+                className="shrink-0 cursor-pointer text-[11px] font-semibold normal-case tracking-normal text-brand hover:underline"
+              >
+                Reset order
+              </button>
+            ) : null}
+            {onTogglePin ? <span className="w-16 shrink-0 text-right">Pin left</span> : null}
           </div>
-          {columns.map(({ key, label }) => {
+          {menuRows.map(({ key, label, section }, i) => {
             const locked = lockedSet.has(key);
             const checked = locked || !hidden.has(key);
             const isPinned = locked || (pinned?.has(key) ?? false);
+            const draggable = reorderable && section === "shown" && !locked;
+            const firstHidden = section === "hidden" && menuRows[i - 1]?.section !== "hidden";
             return (
+              <Fragment key={key}>
+              {firstHidden ? (
+                <div className="mt-1 border-t border-ink/[0.06] px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-ink/35">
+                  Hidden
+                </div>
+              ) : null}
               <div
-                key={key}
-                className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition ${
+                draggable={draggable}
+                onDragStart={
+                  draggable
+                    ? (e) => {
+                        setDragKey(key);
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("text/plain", key);
+                      }
+                    : undefined
+                }
+                onDragOver={
+                  reorderable && section === "shown"
+                    ? (e) => {
+                        if (!dragKey) return;
+                        e.preventDefault();
+                        if (overKey !== key) setOverKey(key);
+                      }
+                    : undefined
+                }
+                onDrop={
+                  reorderable && section === "shown"
+                    ? (e) => {
+                        e.preventDefault();
+                        if (dragKey) dropOn(key);
+                      }
+                    : undefined
+                }
+                onDragEnd={() => {
+                  setDragKey(null);
+                  setOverKey(null);
+                }}
+                className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm transition ${
                   locked ? "text-ink/40" : "text-ink/75 hover:bg-ink/[0.04]"
+                } ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${dragKey === key ? "opacity-40" : ""} ${
+                  overKey === key && dragKey && dragKey !== key ? "border-brand bg-brand/[0.06]" : "border-transparent"
                 }`}
               >
-                <label className={`flex min-w-0 flex-1 items-center gap-2 ${locked ? "cursor-not-allowed" : "cursor-pointer"}`}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    disabled={locked}
-                    onChange={() => onToggle(key)}
-                    className="h-3.5 w-3.5 shrink-0 rounded border-ink/25 accent-brand"
-                  />
+                {reorderable ? (
+                  <span className={`w-3 shrink-0 text-center text-[11px] leading-none tracking-[-1px] ${draggable ? "text-ink/35" : "text-transparent"}`} aria-hidden>
+                    ⋮⋮
+                  </span>
+                ) : null}
+                <label
+                  className={`flex min-w-0 flex-1 items-center gap-2 ${
+                    locked || !onToggle ? "cursor-default" : "cursor-pointer"
+                  } ${draggable ? "cursor-grab" : ""}`}
+                >
+                  {onToggle ? (
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={locked}
+                      onChange={() => onToggle(key)}
+                      className="h-3.5 w-3.5 shrink-0 rounded border-ink/25 accent-brand"
+                    />
+                  ) : null}
                   <span className="truncate">{label}</span>
                 </label>
                 {locked ? (
@@ -321,10 +419,11 @@ export function ColumnPickerButton({
                     <PinIcon filled={isPinned} className="h-3 w-3" />
                     {isPinned ? "Pinned" : "Pin"}
                   </button>
-                ) : (
+                ) : onTogglePin ? (
                   <span className="w-16 shrink-0" />
-                )}
+                ) : null}
               </div>
+              </Fragment>
             );
           })}
         </div>

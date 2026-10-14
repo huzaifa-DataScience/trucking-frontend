@@ -26,9 +26,15 @@ import {
   userDisplayName,
 } from "@/lib/workforce/display";
 
+import { useTableSort } from "@/hooks/useTableSort";
 function OverviewContent() {
   const { syncSubtitle, status } = useWorkforce();
   const [hoursRows, setHoursRows] = useState<HoursByJobRow[]>([]);
+  const hoursSort = useTableSort(hoursRows, {
+    job: (r) => hoursByJobDisplayLabel(r),
+    hours: (r) => r.totalHours,
+    shifts: (r) => r.shiftCount,
+  });
   const [openShifts, setOpenShifts] = useState<TimeActivity[]>([]);
   const [pendingPto, setPendingPto] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -89,17 +95,17 @@ function OverviewContent() {
             ) : hoursRows.length === 0 ? (
               <p className="text-sm text-ink/45">No hours reported yet.</p>
             ) : (
-              <WorkforceScrollPanel maxHeightClass="h-full">
+              <WorkforceScrollPanel maxHeightClass="h-full max-h-[min(70dvh,calc(100dvh-14rem))]">
                 <table className="w-full min-w-[320px] text-sm">
                   <thead className="sticky top-0 z-10 bg-surface">
                     <tr className="border-b border-ink/10 text-left text-xs text-ink/45">
-                      <th className="py-2 pl-3 pr-3 font-medium">Job</th>
-                      <th className="py-2 pr-3 font-medium">Hours</th>
-                      <th className="py-2 pr-3 font-medium">Shifts</th>
+                      <th className="py-2 pl-3 pr-3 font-medium">{hoursSort.header("job", "Job")}</th>
+                      <th className="py-2 pr-3 font-medium">{hoursSort.header("hours", "Hours")}</th>
+                      <th className="py-2 pr-3 font-medium">{hoursSort.header("shifts", "Shifts")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {hoursRows.map((row) => {
+                    {hoursSort.sorted.map((row) => {
                       const label = hoursByJobDisplayLabel(row);
                       const filterKey = row.normalizedJobNumber ?? row.jobId ?? "";
                       return (
@@ -144,7 +150,7 @@ function OverviewContent() {
             ) : openShifts.length === 0 ? (
               <p className="text-sm text-ink/45">No one clocked in.</p>
             ) : (
-              <WorkforceScrollPanel maxHeightClass="h-full">
+              <WorkforceScrollPanel maxHeightClass="h-full max-h-[min(70dvh,calc(100dvh-14rem))]">
                 <ul className="divide-y divide-ink/[0.06]">
                   {openShifts.map((s) => (
                     <li

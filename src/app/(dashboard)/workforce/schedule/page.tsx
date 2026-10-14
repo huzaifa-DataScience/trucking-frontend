@@ -24,6 +24,7 @@ import {
   WORKFORCE_PAGE_SIZE,
 } from "@/lib/workforce/display";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 export default function WorkforceSchedulePage() {
   const { syncSubtitle } = useWorkforce();
   const { isAdmin } = useAuth();
@@ -106,11 +107,13 @@ export default function WorkforceSchedulePage() {
                 }}
                 className="w-full appearance-none rounded-xl border border-ink/10 bg-surface px-3 py-2 pr-9 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
               >
-                {schedulers.map((s) => (
-                  <option key={s.schedulerId} value={s.schedulerId}>
-                    {s.name}
-                  </option>
-                ))}
+                <SortedOptions>
+                  {schedulers.map((s) => (
+                    <option key={s.schedulerId} value={s.schedulerId}>
+                      {s.name}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <svg
                 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"

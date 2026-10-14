@@ -478,7 +478,7 @@ export function BidSheetForm() {
                       />
                     </div>
                     {burdenedRate.lines.length > 0 ? (
-                      <div className="mt-4 overflow-x-auto">
+                      <div className="mt-4 overflow-x-auto table-scroll">
                         <table className="w-full min-w-[280px] text-left text-xs">
                           <thead>
                             <tr className="border-b border-ink/10 text-ink/45">

@@ -9,6 +9,7 @@ import type {
 } from "@/lib/api/endpoints/biddingParties";
 import type { ProcessParty } from "@/lib/bidding/process-types";
 
+import { compareText } from "@/lib/sort";
 const PAGE_SIZE = 10;
 
 /** Stable viewport-fixed host — escapes transformed ancestors (e.g. bid-animate-in). */
@@ -180,11 +181,12 @@ function AddressBookModal({
   }, [open, role, debouncedQ, page]);
 
   const filtered = useMemo(() => {
+    const byName = [...rows].sort((a, b) => compareText(a.name, b.name));
     // Role-backed: `rows` is the current server page.
-    if (role) return rows;
+    if (role) return byName;
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((o) => {
+    if (!q) return byName;
+    return byName.filter((o) => {
       const hay = [o.name, o.company, o.contactName, o.email, o.phone, o.status]
         .filter(Boolean)
         .join(" ")
@@ -240,7 +242,7 @@ function AddressBookModal({
       }}
     >
       <div
-        className="flex w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-[#d5dbe3] bg-white shadow-xl"
+        className="flex max-h-[calc(100dvh-4rem)] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-[#d5dbe3] bg-white shadow-xl"
         style={{ maxHeight: "min(92dvh, 900px)", height: "min(92dvh, 900px)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -587,10 +589,11 @@ export function PartyNameCombobox({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (partyRole && remoteOptions) {
-      return remoteOptions.slice(0, 40);
+      return [...remoteOptions].sort((a, b) => compareText(a.name, b.name)).slice(0, 40);
     }
-    if (!q) return listOptions.slice(0, 40);
-    return listOptions
+    const sortedOptions = [...listOptions].sort((a, b) => compareText(a.name, b.name));
+    if (!q) return sortedOptions.slice(0, 40);
+    return sortedOptions
       .filter((o) => {
         const hay =
           `${o.name} ${o.company ?? ""} ${o.email ?? ""} ${o.phone ?? ""}`.toLowerCase();

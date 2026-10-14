@@ -17,6 +17,8 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DatePicker } from "@/components/ui/DatePicker";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
+import { useTableSort } from "@/hooks/useTableSort";
 const PAGE_SIZE = 25;
 
 function useUrlFilters(): [UserFilters, (filters: Partial<UserFilters>) => void] {
@@ -95,6 +97,13 @@ export default function AdminUsersPage() {
     userEmail?: string;
   } | null>(null);
   const { showToast } = useToast();
+  const userSort = useTableSort(users, {
+    email: (u) => u.email,
+    role: (u) => u.role,
+    status: (u) => u.status,
+    created: (u) => u.createdAt,
+    lastLogin: (u) => u.lastLoginAt,
+  });
   const [searchInput, setSearchInput] = useState(filters.search || "");
   const searchDebounceRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const setFiltersRef = useRef(setFilters);
@@ -418,11 +427,13 @@ export default function AdminUsersPage() {
                 onChange={(e) => setFilters({ status: e.target.value as UserStatus | "all" })}
                 className="w-full appearance-none rounded-lg border border-ink/10 bg-surface px-3 py-2 pr-9 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
               >
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="rejected">Rejected</option>
+                <SortedOptions>
+                  <option value="all" data-pin>All</option>
+                  <option value="pending">Pending</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="rejected">Rejected</option>
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>
@@ -435,12 +446,14 @@ export default function AdminUsersPage() {
                 onChange={(e) => setFilters({ role: e.target.value as UserRole | "all" })}
                 className="w-full appearance-none rounded-lg border border-ink/10 bg-surface px-3 py-2 pr-9 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
               >
-                <option value="all">All</option>
-                {APP_ROLE_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {APP_ROLE_LABELS[id]}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="all" data-pin>All</option>
+                  {APP_ROLE_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {APP_ROLE_LABELS[id]}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>
@@ -524,7 +537,7 @@ export default function AdminUsersPage() {
       {!loading && users.length > 0 && (
         <>
           <div className="rounded-xl border border-ink/[0.08] bg-surface shadow-[0_1px_2px_rgba(1,1,1,0.04)]">
-            <div className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0">
+            <div className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0 table-scroll">
               <div className="inline-block min-w-full align-middle">
                 <table className="min-w-full text-sm">
                   <thead>
@@ -538,19 +551,19 @@ export default function AdminUsersPage() {
                         />
                       </th>
                       <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
-                        Email
+                        {userSort.header("email", "Email")}
                       </th>
                       <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
-                        Role
+                        {userSort.header("role", "Role")}
                       </th>
                       <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
-                        Status
+                        {userSort.header("status", "Status")}
                       </th>
                       <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
-                        Created
+                        {userSort.header("created", "Created")}
                       </th>
                       <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
-                        Last Login
+                        {userSort.header("lastLogin", "Last Login")}
                       </th>
                       <th className="sticky top-0 z-10 whitespace-nowrap bg-ink/[0.02] px-3 py-2 text-left font-semibold">
                         Actions
@@ -558,7 +571,7 @@ export default function AdminUsersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((user) => {
+                    {userSort.sorted.map((user) => {
                       const isCurrentUser = currentUser?.id === user.id;
                       return (
                         <tr

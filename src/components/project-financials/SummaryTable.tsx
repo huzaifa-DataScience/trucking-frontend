@@ -10,6 +10,7 @@ import {
 } from "@/components/project-financials/tableScroll";
 import { useFinancialsQuery } from "@/components/project-financials/useFinancialsQuery";
 
+import { useTableSort } from "@/hooks/useTableSort";
 const panel =
   "overflow-hidden rounded-xl border border-white/70 bg-white/55 shadow-[0_6px_16px_rgba(91,173,232,0.08)] backdrop-blur-md";
 const head =
@@ -19,6 +20,22 @@ const cell = "whitespace-nowrap px-3 py-2.5 text-right text-sm tabular-nums text
 export function SummaryTable({ rows, totals }: { rows: SummaryRow[]; totals: SummaryRow }) {
   const { query } = useFinancialsQuery();
   const body = rows.filter((row) => row.pm !== "Total");
+  // The Total row stays pinned at the bottom; only PM rows sort.
+  const pmSort = useTableSort(body, {
+    pm: (r) => r.pm,
+    activeBillings: (r) => r.activeBillings,
+    backlog: (r) => r.backlog,
+    ar: (r) => r.ar,
+    atp: (r) => r.atp,
+    atpPctOfBillings: (r) => r.atpPctOfBillings,
+    openJobs: (r) => r.openJobs,
+    activeJobs: (r) => r.activeJobs,
+    retentionOnly: (r) => r.retentionOnly,
+    totalCost: (r) => r.totalCost,
+    cashFlow: (r) => r.cashFlow,
+    fixCount: (r) => r.fixCount,
+    notInSitelineCount: (r) => r.notInSitelineCount,
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -87,23 +104,23 @@ export function SummaryTable({ rows, totals }: { rows: SummaryRow[]; totals: Sum
           <table className="w-full min-w-[1100px] border-collapse text-left">
             <thead>
               <tr className={`border-b border-ink/[0.06] ${FINANCIALS_TABLE_STICKY_HEAD}`}>
-                <th className={head}>PM</th>
-                <th className={`${head} text-right`}>Active billings</th>
-                <th className={`${head} text-right`}>Backlog</th>
-                <th className={`${head} text-right`}>AR</th>
-                <th className={`${head} text-right`}>Approved to proceed</th>
-                <th className={`${head} text-right`}>% ATP → billings</th>
-                <th className={`${head} text-right`}>Open jobs</th>
-                <th className={`${head} text-right`}>Active jobs</th>
-                <th className={`${head} text-right`}>Retention only</th>
-                <th className={`${head} text-right`}>Total cost</th>
-                <th className={`${head} text-right`}>Cash flow</th>
-                <th className={`${head} text-right`}>FIX</th>
-                <th className={`${head} text-right`}>NOT IN SITELINE</th>
+                <th className={head}>{pmSort.header("pm", "PM")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("activeBillings", "Active billings", "right")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("backlog", "Backlog", "right")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("ar", "AR", "right")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("atp", "Approved to proceed", "right")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("atpPctOfBillings", "% ATP → billings", "right")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("openJobs", "Open jobs", "right")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("activeJobs", "Active jobs", "right")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("retentionOnly", "Retention only", "right")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("totalCost", "Total cost", "right")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("cashFlow", "Cash flow", "right")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("fixCount", "FIX", "right")}</th>
+                <th className={`${head} text-right`}>{pmSort.header("notInSitelineCount", "NOT IN SITELINE", "right")}</th>
               </tr>
             </thead>
             <tbody>
-              {body.map((row) => (
+              {pmSort.sorted.map((row) => (
                 <tr key={row.pm} className="border-b border-ink/[0.06]">
                   <td className="px-3 py-2.5 text-sm font-semibold text-ink">{row.pm}</td>
                   <SummaryNumbers row={row} />

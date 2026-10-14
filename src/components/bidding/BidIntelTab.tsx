@@ -409,7 +409,7 @@ export function BidIntelTab() {
             {competitors.length === 0 ? (
               <p className="text-[12.5px] text-[#9ca3af]">No competitors recorded yet.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto table-scroll">
                 <table className="w-full min-w-[520px] border-collapse text-left text-[12.5px]">
                   <thead>
                     <tr className="border-b border-ink/[0.08] text-[11px] font-semibold text-ink/50">

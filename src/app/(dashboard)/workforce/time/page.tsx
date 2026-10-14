@@ -25,6 +25,7 @@ import {
   WORKFORCE_PAGE_SIZE,
 } from "@/lib/workforce/display";
 
+import { useTableSort } from "@/hooks/useTableSort";
 function sourceTone(source?: string): "info" | "neutral" {
   return source === "native" ? "info" : "neutral";
 }
@@ -37,6 +38,15 @@ function TimePageContent() {
 
   const [jobSearch, setJobSearch] = useState(jobFilter);
   const [activities, setActivities] = useState<TimeActivity[]>([]);
+  const timeSort = useTableSort(activities, {
+    employee: (a) => userDisplayName(a.user, a.userId),
+    job: (a) => jobDisplayLabel(a.job, { jobId: a.jobId }),
+    clock: (a) => a.timeClockName,
+    in: (a) => (a.startAt ? Date.parse(a.startAt) : a.startTimestamp),
+    out: (a) => (isActivityOpen(a) ? null : a.endAt ? Date.parse(a.endAt) : a.endTimestamp),
+    hours: (a) => (isActivityOpen(a) ? null : (a.durationHours ?? (a.durationMinutes != null ? a.durationMinutes / 60 : null))),
+    status: (a) => (isActivityOpen(a) ? "On clock" : "Closed"),
+  });
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -119,13 +129,13 @@ function TimePageContent() {
             <table className="w-full min-w-[800px] text-sm">
               <thead className="sticky top-0 z-10 bg-surface">
                 <tr className="border-b border-ink/10 text-left text-xs text-ink/45">
-                  <th className="py-2 pl-3 pr-3 font-medium">Employee</th>
-                  <th className="py-2 pr-3 font-medium">Job</th>
-                  <th className="py-2 pr-3 font-medium">Clock</th>
-                  <th className="py-2 pr-3 font-medium">In</th>
-                  <th className="py-2 pr-3 font-medium">Out</th>
-                  <th className="py-2 pr-3 font-medium">Hours</th>
-                  <th className="py-2 pr-3 font-medium">Status</th>
+                  <th className="py-2 pl-3 pr-3 font-medium">{timeSort.header("employee", "Employee")}</th>
+                  <th className="py-2 pr-3 font-medium">{timeSort.header("job", "Job")}</th>
+                  <th className="py-2 pr-3 font-medium">{timeSort.header("clock", "Clock")}</th>
+                  <th className="py-2 pr-3 font-medium">{timeSort.header("in", "In")}</th>
+                  <th className="py-2 pr-3 font-medium">{timeSort.header("out", "Out")}</th>
+                  <th className="py-2 pr-3 font-medium">{timeSort.header("hours", "Hours")}</th>
+                  <th className="py-2 pr-3 font-medium">{timeSort.header("status", "Status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -162,7 +172,7 @@ function TimePageContent() {
                     </td>
                   </tr>
                 ) : (
-                  activities.map((a) => {
+                  timeSort.sorted.map((a) => {
                     const open = isActivityOpen(a);
                     return (
                       <tr key={a.shiftId} className="border-b border-ink/[0.05]">

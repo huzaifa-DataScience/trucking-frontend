@@ -24,6 +24,7 @@ import type {
   WfsStatus,
 } from "@/lib/wfs/types";
 
+import { useTableSort } from "@/hooks/useTableSort";
 function money(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
   return formatMoney(n);
@@ -161,6 +162,23 @@ export function WfsDashboard() {
   const [snapshotMsg, setSnapshotMsg] = useState<string | null>(null);
   const [chartFrom, setChartFrom] = useState("");
   const [chartTo, setChartTo] = useState("");
+  const companySort = useTableSort(
+    data?.companies ?? [],
+    Object.fromEntries(COLS.map((c) => [c.key, (row: WfsCompanyRow) => row[c.key]])) as Record<
+      string,
+      (row: WfsCompanyRow) => string | number | null | undefined
+    >
+  );
+  const agingSort = useTableSort(data?.aging ?? [], {
+    label: (a) => a.label,
+    type: (a) => a.type,
+    current: (a) => a.current,
+    d31: (a) => a.d31,
+    d61: (a) => a.d61,
+    d90: (a) => a.d90,
+    retainage: (a) => a.retainage,
+    total: (a) => a.total,
+  });
 
   const load = useCallback(async () => {
     if (!canRead) {
@@ -438,13 +456,13 @@ export function WfsDashboard() {
                       c.align === "left" ? "text-left" : "text-right"
                     }`}
                   >
-                    {c.label}
+                    {companySort.header(c.key, c.label, c.align === "left" ? "left" : "right")}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {data.companies.map((row) => (
+              {companySort.sorted.map((row) => (
                 <tr
                   key={row.key}
                   className="border-t border-ink/[0.05] hover:bg-ink/[0.02]"
@@ -643,18 +661,18 @@ export function WfsDashboard() {
             <table className="w-full min-w-[520px] border-collapse text-xs">
               <thead className="sticky top-0 z-[1] bg-surface text-[10px] font-semibold uppercase tracking-wide text-ink/45">
                 <tr>
-                  <th className="px-1.5 py-1.5 text-left">Company</th>
-                  <th className="px-1.5 py-1.5 text-left">Type</th>
-                  <th className="px-1.5 py-1.5 text-right">Current</th>
-                  <th className="px-1.5 py-1.5 text-right">31+</th>
-                  <th className="px-1.5 py-1.5 text-right">61+</th>
-                  <th className="px-1.5 py-1.5 text-right">90+</th>
-                  <th className="px-1.5 py-1.5 text-right">Ret.</th>
-                  <th className="px-1.5 py-1.5 text-right">Total</th>
+                  <th className="px-1.5 py-1.5 text-left">{agingSort.header("label", "Company")}</th>
+                  <th className="px-1.5 py-1.5 text-left">{agingSort.header("type", "Type")}</th>
+                  <th className="px-1.5 py-1.5 text-right">{agingSort.header("current", "Current", "right")}</th>
+                  <th className="px-1.5 py-1.5 text-right">{agingSort.header("d31", "31+", "right")}</th>
+                  <th className="px-1.5 py-1.5 text-right">{agingSort.header("d61", "61+", "right")}</th>
+                  <th className="px-1.5 py-1.5 text-right">{agingSort.header("d90", "90+", "right")}</th>
+                  <th className="px-1.5 py-1.5 text-right">{agingSort.header("retainage", "Ret.", "right")}</th>
+                  <th className="px-1.5 py-1.5 text-right">{agingSort.header("total", "Total", "right")}</th>
                 </tr>
               </thead>
               <tbody>
-                {(data.aging ?? []).map((a) => (
+                {agingSort.sorted.map((a) => (
                   <tr
                     key={`${a.companyKey}-${a.type}`}
                     className="border-t border-ink/[0.05] cursor-pointer hover:bg-ink/[0.02]"

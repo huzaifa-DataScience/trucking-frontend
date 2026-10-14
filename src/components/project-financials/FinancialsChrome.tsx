@@ -7,6 +7,7 @@ import { DEMO_FILTERS, PROJECT_FINANCIALS_USE_DEMO } from "@/lib/project-financi
 import type { FinancialsFilters, FinancialsQuery } from "@/lib/project-financials/types";
 import { useFinancialsQuery } from "@/components/project-financials/useFinancialsQuery";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 const fieldClass =
   "h-10 rounded-lg border border-ink/10 bg-white/80 px-3 text-sm text-ink shadow-[0_4px_12px_rgba(91,173,232,0.06)] outline-none backdrop-blur-sm focus:border-brand/40";
 
@@ -70,12 +71,14 @@ export function FinancialsChrome({
               setQuery({ entityId: e.target.value ? Number(e.target.value) : undefined })
             }
           >
-            <option value="">All companies</option>
-            {(filters?.companies ?? []).map((c) => (
-              <option key={c.entityId} value={c.entityId}>
-                {c.company}
-              </option>
-            ))}
+            <SortedOptions>
+              <option value="">All companies</option>
+              {(filters?.companies ?? []).map((c) => (
+                <option key={c.entityId} value={c.entityId}>
+                  {c.company}
+                </option>
+              ))}
+            </SortedOptions>
           </select>
           <select
             aria-label="Project manager"
@@ -83,12 +86,14 @@ export function FinancialsChrome({
             value={query.pm ?? ""}
             onChange={(e) => setQuery({ pm: e.target.value || undefined })}
           >
-            <option value="">All PMs</option>
-            {(filters?.pms ?? []).map((pm) => (
-              <option key={pm} value={pm}>
-                {pm}
-              </option>
-            ))}
+            <SortedOptions>
+              <option value="">All PMs</option>
+              {(filters?.pms ?? []).map((pm) => (
+                <option key={pm} value={pm}>
+                  {pm}
+                </option>
+              ))}
+            </SortedOptions>
           </select>
           <select
             aria-label="Alerts"
@@ -101,10 +106,12 @@ export function FinancialsChrome({
               });
             }}
           >
-            <option value="">All alerts</option>
-            <option value="fix">FIX</option>
-            <option value="not_in_siteline">NOT IN SITELINE</option>
-            <option value="any">Any</option>
+            <SortedOptions>
+              <option value="">All alerts</option>
+              <option value="fix">FIX</option>
+              <option value="not_in_siteline">NOT IN SITELINE</option>
+              <option value="any">Any</option>
+            </SortedOptions>
           </select>
           <input
             aria-label="Search jobs"

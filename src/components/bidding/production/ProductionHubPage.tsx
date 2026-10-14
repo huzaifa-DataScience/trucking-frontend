@@ -11,6 +11,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import { ProductionHubSkeleton } from "@/components/bidding/MikeModuleSkeletons";
 import type { ProductionReportListRow } from "@/lib/bidding/production-types";
 
+import { useTableSort } from "@/hooks/useTableSort";
 function fmtWhen(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
@@ -32,6 +33,14 @@ export function ProductionHubPage() {
   const { canRead } = useBiddingAccess();
   const router = useRouter();
   const [rows, setRows] = useState<ProductionReportListRow[]>([]);
+  const hubSort = useTableSort(rows, {
+    estimate: (r) => r.estimateNumber ?? r.bidId,
+    bidName: (r) => r.bidName,
+    job: (r) => r.jobNumber,
+    files: (r) => r.fileCount,
+    specs: (r) => r.specLineCount,
+    updated: (r) => r.latestUploadAt,
+  });
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -127,22 +136,22 @@ export function ProductionHubPage() {
           </Link>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+        <div className="table-scroll rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
           <table className="w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-ink/[0.08] text-[10px] uppercase tracking-wide text-ink/40">
-                <th className="px-4 py-3 font-semibold">Estimate #</th>
-                <th className="px-4 py-3 font-semibold">Bid name</th>
-                <th className="px-4 py-3 font-semibold">Job #</th>
+                <th className="px-4 py-3 font-semibold">{hubSort.header("estimate", "Estimate #")}</th>
+                <th className="px-4 py-3 font-semibold">{hubSort.header("bidName", "Bid name")}</th>
+                <th className="px-4 py-3 font-semibold">{hubSort.header("job", "Job #")}</th>
                 <th className="min-w-[12rem] px-4 py-3 font-semibold">
-                  Files (combined)
+                  {hubSort.header("files", "Files (combined)")}
                 </th>
-                <th className="px-4 py-3 font-semibold">Specs ready?</th>
-                <th className="px-4 py-3 font-semibold">Updated</th>
+                <th className="px-4 py-3 font-semibold">{hubSort.header("specs", "Specs ready?")}</th>
+                <th className="px-4 py-3 font-semibold">{hubSort.header("updated", "Updated")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/[0.05]">
-              {rows.map((row) => {
+              {hubSort.sorted.map((row) => {
                 const canOpen =
                   Boolean(row.fileCount > 0) && row.specLineCount > 0;
                 return (

@@ -388,6 +388,21 @@ select.cs-soft-control:hover {
   }
 }
 
+/* Any data table: scrolls inside its own box (both directions) so the page never scrolls because of it. */
+.table-scroll {
+  min-width: 0;
+  max-width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  max-height: min(70dvh, calc(100dvh - 14rem));
+}
+.table-scroll thead {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: #ffffff;
+}
+
 .cs-table-shell {
   min-width: 0;
   width: 100%;
@@ -847,6 +862,7 @@ select.cs-soft-control:hover {
 .intake-compact .intake-specs-scroll {
   min-width: 0;
   max-width: 100%;
+  max-height: min(70dvh, calc(100dvh - 14rem));
   overflow-x: auto;
   overflow-y: auto;
   overscroll-behavior: contain;

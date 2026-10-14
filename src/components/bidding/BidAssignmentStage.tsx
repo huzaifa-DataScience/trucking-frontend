@@ -16,6 +16,7 @@ import { teamColorForId } from "@/lib/bidding/team-colors";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 /** Dropdown arrow for selects (intake-field uses appearance-none, which hides the native one). */
 function SelectChevron() {
   return (
@@ -419,20 +420,22 @@ export function BidAssignmentStage() {
                     value={a.captainUserId != null ? String(a.captainUserId) : ""}
                     onChange={(e) => pickCaptain(e.target.value)}
                   >
-                    <option value="">—</option>
-                    {captains.length === 0 ? (
-                      <option value="" disabled>
-                        No captains (API empty)
-                      </option>
-                    ) : (
-                      captains.map((c) => (
-                        <option key={c.userId} value={c.userId}>
-                          {captainDisplayName(c)}
-                          {c.teamName ? ` · ${c.teamName}` : ""}
-                          {c.teamId == null ? " (crew later in Settings)" : ""}
+                    <SortedOptions>
+                      <option value="">—</option>
+                      {captains.length === 0 ? (
+                        <option value="" disabled>
+                          No captains (API empty)
                         </option>
-                      ))
-                    )}
+                      ) : (
+                        captains.map((c) => (
+                          <option key={c.userId} value={c.userId}>
+                            {captainDisplayName(c)}
+                            {c.teamName ? ` · ${c.teamName}` : ""}
+                            {c.teamId == null ? " (crew later in Settings)" : ""}
+                          </option>
+                        ))
+                      )}
+                    </SortedOptions>
                   </select>
                   <SelectChevron />
                 </div>
@@ -456,12 +459,14 @@ export function BidAssignmentStage() {
                     value={a.teamId != null ? String(a.teamId) : ""}
                     onChange={(e) => pickTeam(e.target.value)}
                   >
-                    <option value="">—</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.teamName}
-                      </option>
-                    ))}
+                    <SortedOptions>
+                      <option value="">—</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.teamName}
+                        </option>
+                      ))}
+                    </SortedOptions>
                   </select>
                   <SelectChevron />
                 </div>
@@ -479,29 +484,31 @@ export function BidAssignmentStage() {
                     value={a.assistantEstimator ?? ""}
                     onChange={(e) => setAssignment({ assistantEstimator: e.target.value || null })}
                   >
-                    <option value="">—</option>
-                    {a.assistantEstimator && !aes.some((c) => contactDisplayName(c) === a.assistantEstimator) ? (
-                      <option value={a.assistantEstimator}>{a.assistantEstimator}</option>
-                    ) : null}
-                    {aes.map((c, i) => {
-                      const name = contactDisplayName(c);
-                      if (!name) return null;
-                      return (
-                        <option
-                          key={
-                            c.appUserId != null
-                              ? `ae-app-${c.appUserId}`
-                              : c.connecteamUserId != null
-                                ? `ae-ct-${c.connecteamUserId}`
-                                : `ae-${name}-${i}`
-                          }
-                          value={name}
-                        >
-                          {name}
-                          {c.email ? ` · ${c.email}` : ""}
-                        </option>
-                      );
-                    })}
+                    <SortedOptions>
+                      <option value="">—</option>
+                      {a.assistantEstimator && !aes.some((c) => contactDisplayName(c) === a.assistantEstimator) ? (
+                        <option value={a.assistantEstimator}>{a.assistantEstimator}</option>
+                      ) : null}
+                      {aes.map((c, i) => {
+                        const name = contactDisplayName(c);
+                        if (!name) return null;
+                        return (
+                          <option
+                            key={
+                              c.appUserId != null
+                                ? `ae-app-${c.appUserId}`
+                                : c.connecteamUserId != null
+                                  ? `ae-ct-${c.connecteamUserId}`
+                                  : `ae-${name}-${i}`
+                            }
+                            value={name}
+                          >
+                            {name}
+                            {c.email ? ` · ${c.email}` : ""}
+                          </option>
+                        );
+                      })}
+                    </SortedOptions>
                   </select>
                   <SelectChevron />
                 </div>
@@ -567,7 +574,7 @@ export function BidAssignmentStage() {
 
           <section className="intake-section min-w-0">
             <h3 className={sectionHead}>Takeoff assignments</h3>
-            <div className="min-w-0 overflow-x-auto">
+            <div className="min-w-0 overflow-x-auto table-scroll">
               <table className="w-full min-w-[600px] border-collapse">
                 <thead>
                   <tr>
