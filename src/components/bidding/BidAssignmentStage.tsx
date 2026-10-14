@@ -16,6 +16,7 @@ import { BidTeamBadge } from "@/components/bidding/BidTeamBadge";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { useBidSheet } from "@/contexts/BidSheetContext";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 function captainDisplayName(c: BidCaptainLookup): string {
   return personDisplayName({
     firstName: c.firstName,
@@ -274,20 +275,22 @@ export function BidAssignmentStage() {
                   value={a.captainUserId != null ? String(a.captainUserId) : ""}
                   onChange={(e) => pickCaptain(e.target.value)}
                 >
-                  <option value="">—</option>
-                  {captains.length === 0 ? (
-                    <option value="" disabled>
-                      No captains (API empty)
-                    </option>
-                  ) : (
-                    captains.map((c) => (
-                      <option key={c.userId} value={c.userId}>
-                        {captainDisplayName(c)}
-                        {c.teamName ? ` · ${c.teamName}` : ""}
-                        {c.teamId == null ? " (crew later in Settings)" : ""}
+                  <SortedOptions>
+                    <option value="">—</option>
+                    {captains.length === 0 ? (
+                      <option value="" disabled>
+                        No captains (API empty)
                       </option>
-                    ))
-                  )}
+                    ) : (
+                      captains.map((c) => (
+                        <option key={c.userId} value={c.userId}>
+                          {captainDisplayName(c)}
+                          {c.teamName ? ` · ${c.teamName}` : ""}
+                          {c.teamId == null ? " (crew later in Settings)" : ""}
+                        </option>
+                      ))
+                    )}
+                  </SortedOptions>
                 </select>
                 <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
                   Pick captain first. Save captainUserId; backend fills team + name.
@@ -304,12 +307,14 @@ export function BidAssignmentStage() {
                     value={a.teamId != null ? String(a.teamId) : ""}
                     onChange={(e) => pickTeam(e.target.value)}
                   >
-                    <option value="">—</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.teamName}
-                      </option>
-                    ))}
+                    <SortedOptions>
+                      <option value="">—</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.teamName}
+                        </option>
+                      ))}
+                    </SortedOptions>
                   </select>
                   <BidTeamBadge
                     teamId={a.teamId}
@@ -355,30 +360,32 @@ export function BidAssignmentStage() {
                     setAssignment({ assistantEstimator: e.target.value || null })
                   }
                 >
-                  <option value="">—</option>
-                  {a.assistantEstimator &&
-                  !aes.some((c) => contactDisplayName(c) === a.assistantEstimator) ? (
-                    <option value={a.assistantEstimator}>{a.assistantEstimator}</option>
-                  ) : null}
-                  {aes.map((c, i) => {
-                    const name = contactDisplayName(c);
-                    if (!name) return null;
-                    return (
-                      <option
-                        key={
-                          c.appUserId != null
-                            ? `ae-app-${c.appUserId}`
-                            : c.connecteamUserId != null
-                              ? `ae-ct-${c.connecteamUserId}`
-                              : `ae-${name}-${i}`
-                        }
-                        value={name}
-                      >
-                        {name}
-                        {c.email ? ` · ${c.email}` : ""}
-                      </option>
-                    );
-                  })}
+                  <SortedOptions>
+                    <option value="">—</option>
+                    {a.assistantEstimator &&
+                    !aes.some((c) => contactDisplayName(c) === a.assistantEstimator) ? (
+                      <option value={a.assistantEstimator}>{a.assistantEstimator}</option>
+                    ) : null}
+                    {aes.map((c, i) => {
+                      const name = contactDisplayName(c);
+                      if (!name) return null;
+                      return (
+                        <option
+                          key={
+                            c.appUserId != null
+                              ? `ae-app-${c.appUserId}`
+                              : c.connecteamUserId != null
+                                ? `ae-ct-${c.connecteamUserId}`
+                                : `ae-${name}-${i}`
+                          }
+                          value={name}
+                        >
+                          {name}
+                          {c.email ? ` · ${c.email}` : ""}
+                        </option>
+                      );
+                    })}
+                  </SortedOptions>
                 </select>
                 <span className="mt-0.5 block text-[10px] text-[#9ca3af]">
                   From contacts — not the captain list.

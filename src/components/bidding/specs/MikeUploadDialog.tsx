@@ -6,6 +6,7 @@ import { parseMikeFile } from "@/lib/bidding/parseMikeFile";
 import type { LookupItem } from "@/lib/api/types";
 import type { MikeUploadOptions } from "@/lib/bidding/uploadMikeSpecs";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 function stripExt(name: string): string {
   return name.replace(/\.(csv|xlsx|xls)$/i, "").trim() || name;
 }
@@ -177,13 +178,15 @@ export function MikeUploadDialog({
                 className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm font-normal text-ink"
                 autoFocus
               >
-                <option value="">Select estimate…</option>
-                {bids.map((b) => (
-                  <option key={String(b.id)} value={String(b.id)}>
-                    {b.estimateNumber}
-                    {b.bidName ? ` · ${b.bidName}` : ""}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="">Select estimate…</option>
+                  {bids.map((b) => (
+                    <option key={String(b.id)} value={String(b.id)}>
+                      {b.estimateNumber}
+                      {b.bidName ? ` · ${b.bidName}` : ""}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
             </label>
           ) : null}
@@ -206,12 +209,14 @@ export function MikeUploadDialog({
               onChange={(e) => setJobId(e.target.value)}
               className="rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm font-normal text-ink"
             >
-              <option value="">Select job…</option>
-              {jobs.map((j) => (
-                <option key={j.id} value={String(j.id)}>
-                  {jobLabel(j)}
-                </option>
-              ))}
+              <SortedOptions>
+                <option value="">Select job…</option>
+                {jobs.map((j) => (
+                  <option key={j.id} value={String(j.id)}>
+                    {jobLabel(j)}
+                  </option>
+                ))}
+              </SortedOptions>
             </select>
           </label>
 

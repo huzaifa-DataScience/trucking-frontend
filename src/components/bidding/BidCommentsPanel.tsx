@@ -13,6 +13,7 @@ import type {
 } from "@/lib/bidding/types";
 import { personDisplayName, personInitials } from "@/lib/bidding/person-label";
 
+import { compareText } from "@/lib/sort";
 const MAX_FILES = 5;
 const ACCEPT = "image/jpeg,image/png,image/webp";
 const ACCEPT_SET = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -237,7 +238,9 @@ export function BidCommentsPanel({
         .getBiddingMentionUsers(q || "a")
         .then((list) => {
           if (cancelled) return;
-          const filtered = list.filter((u) => u.id !== user?.id);
+          const filtered = list
+            .filter((u) => u.id !== user?.id)
+            .sort((a, b) => compareText(mentionUserLabel(a), mentionUserLabel(b)));
           setMentionSuggestions(filtered);
           setMentionIndex(0);
         })

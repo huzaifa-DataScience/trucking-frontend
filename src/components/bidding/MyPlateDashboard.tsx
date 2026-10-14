@@ -21,6 +21,7 @@ import {
 } from "@/lib/bidding/process-types";
 import { formatDate } from "@/lib/bidding/format";
 
+import { useTableSort } from "@/hooks/useTableSort";
 /** Columns we never show as table cells — surfaced as badges / actions instead. */
 const META_COLUMN_KEYS = new Set([
   "isNew",
@@ -175,6 +176,22 @@ function QueueTable({
 }) {
   const columns = normalizeColumns(group.columns);
   const rows = group.rows ?? [];
+  // Sort by the raw value (numbers, ISO dates); otherwise by the text shown in the cell.
+  const plateSort = useTableSort(
+    rows,
+    Object.fromEntries(
+      columns.map((col) => [
+        col.key,
+        (row: MyPlateRow) => {
+          if (col.key === "bidDate" || col.key === "dueDate") return String(row[col.key] ?? "").slice(0, 10) || null;
+          const v = row[col.key];
+          if (typeof v === "number") return v;
+          const text = cellText(row, col.key, teamLabel);
+          return text === "—" ? null : text;
+        },
+      ])
+    )
+  );
 
   if (rows.length === 0) {
     return (
@@ -199,7 +216,7 @@ function QueueTable({
                 key={col.key}
                 className="whitespace-nowrap px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink/45"
               >
-                {col.label}
+                {plateSort.header(col.key, col.label)}
               </th>
             ))}
             <th className="w-20 whitespace-nowrap px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink/45">
@@ -208,7 +225,7 @@ function QueueTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, idx) => {
+          {plateSort.sorted.map((row, idx) => {
             const canEdit = row.canEdit !== false;
             const href = rowHref(row);
             return (

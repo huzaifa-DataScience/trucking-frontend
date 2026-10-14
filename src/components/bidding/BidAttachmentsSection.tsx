@@ -14,6 +14,7 @@ import {
   TrashIcon,
 } from "@/components/bidding/intakeIcons";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 const MAX_FILES = 200;
 const ACCEPT =
   "image/jpeg,image/png,image/webp,application/pdf,text/csv,.csv,application/zip,.zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.doc,.docx";
@@ -835,11 +836,13 @@ export function BidAttachmentsSection({
               onChange={(e) => setPendingCategory(e.target.value)}
               aria-label="Attachment category"
             >
-              {ATTACHMENT_CATEGORY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
+              <SortedOptions>
+                {ATTACHMENT_CATEGORY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </SortedOptions>
             </select>
             <select
               className="intake-field appearance-none"
@@ -847,11 +850,13 @@ export function BidAttachmentsSection({
               onChange={(e) => setPendingLabel(e.target.value)}
               aria-label="Document type"
             >
-              {labelOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
+              <SortedOptions>
+                {labelOptions.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </SortedOptions>
             </select>
             <button
               type="button"

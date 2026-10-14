@@ -33,6 +33,7 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { sitelineEntityIdFromContext } from "@/lib/siteline-entity";
 import { SitelineClearstoryGapsBanner } from "@/components/billings/SitelineClearstoryGapsBanner";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 const formatCurrency = (value: number | undefined) =>
   value != null
     ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value)
@@ -729,10 +730,12 @@ export default function BillingsPage() {
                     }
                     className="appearance-none rounded-lg border border-stone-300 bg-white px-2 py-1 pr-6 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                   >
-                    <option value="ALL">Any</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                    <option value="ARCHIVED">Archived</option>
+                    <SortedOptions>
+                      <option value="ALL" data-pin>Any</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                      <option value="ARCHIVED">Archived</option>
+                    </SortedOptions>
                   </select>
                   <SelectChevron />
                 </span>
@@ -747,9 +750,11 @@ export default function BillingsPage() {
                     }
                     className="appearance-none rounded-lg border border-stone-300 bg-white px-2 py-1 pr-6 text-xs text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                   >
-                    <option value="ALL">Any</option>
-                    <option value="SUBMITTED_SYNCED_PAID">Submitted / Synced / Paid</option>
-                    <option value="DRAFT">Draft</option>
+                    <SortedOptions>
+                      <option value="ALL" data-pin>Any</option>
+                      <option value="SUBMITTED_SYNCED_PAID">Submitted / Synced / Paid</option>
+                      <option value="DRAFT">Draft</option>
+                    </SortedOptions>
                   </select>
                   <SelectChevron />
                 </span>

@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { can } from "@/lib/auth/permissions";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 function groupPermissions(perms: RbacPermissionMeta[]) {
   const groups = new Map<string, RbacPermissionMeta[]>();
   for (const p of perms) {
@@ -207,11 +208,13 @@ export function AccessControlSettings() {
                   onChange={(e) => setDefaultRole(e.target.value)}
                   className="w-full appearance-none rounded-lg border border-stone-300 bg-white px-3 py-2 pr-9 text-sm dark:border-stone-600 dark:bg-stone-900 dark:text-stone-100"
                 >
-                  {editableRoles.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.label || r.id}
-                    </option>
-                  ))}
+                  <SortedOptions>
+                    {editableRoles.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.label || r.id}
+                      </option>
+                    ))}
+                  </SortedOptions>
                 </select>
                 <SelectChevron />
               </div>

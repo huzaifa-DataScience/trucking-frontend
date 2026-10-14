@@ -9,6 +9,8 @@ import {
   FINANCIALS_TABLE_STICKY_HEAD,
 } from "@/components/project-financials/tableScroll";
 
+import { useTableSort } from "@/hooks/useTableSort";
+import type { SortValue } from "@/lib/sort";
 type BookView = "overview" | "contract" | "billing" | "cost";
 
 const STATUS_LABEL: Record<JobStatus, string> = {
@@ -210,6 +212,53 @@ function ReconChips({ alerts }: { alerts: JobRecon["alerts"] }) {
 }
 
 function FullSheet({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boolean }) {
+  // Header label → value the column sorts by (raw numbers, not formatted money).
+  const sheetColumns: [string, (j: JobRow) => SortValue][] = [
+    ["Job #", (j) => j.jobNumber],
+    ["Name", (j) => j.name],
+    ["Customer", (j) => j.customer],
+    ["City", (j) => j.city],
+    ["State", (j) => j.state],
+    ["Company", (j) => j.company],
+    ["PM", (j) => j.pm],
+    ["Status", (j) => STATUS_LABEL[j.status]],
+    ["Contract", (j) => j.contract.amount],
+    ["Approved COs", (j) => j.contract.approvedCos],
+    ["ATP", (j) => j.contract.atp],
+    ["In review", (j) => j.contract.inReview],
+    ["Placeholder", (j) => j.contract.placeholder],
+    ["Revised", (j) => j.contract.revised],
+    ["Siteline contract", (j) => j.contract.siteline],
+    ["Difference", (j) => j.recon.difference ?? j.contract.difference],
+    ["Alerts", (j) => j.recon.alerts.map((a) => a.label).join(", ")],
+    ["Siteline / Clearstory", (j) => RECON_STATUS[j.recon.sitelineClearstory]],
+    ["Over / under billings", (j) => j.recon.overUnderBillings],
+    ["Billed", (j) => j.billing.billed],
+    ["Retainage", (j) => j.billing.retainage],
+    ["Backlog", (j) => j.billing.backlog],
+    ["AR", (j) => j.billing.ar],
+    ["% billed", (j) => j.billing.pctBilled],
+    ["% complete", (j) => j.billing.percentComplete],
+    ["Retention only", (j) => (j.billing.retentionOnly ? "Yes" : "No")],
+    ...(hideCost
+      ? []
+      : ([
+          ["LAB", (j) => (hideCost || !j.sources.foundation ? null : j.cost.lab)],
+          ["MAT", (j) => (hideCost || !j.sources.foundation ? null : j.cost.mat)],
+          ["SUB", (j) => (hideCost || !j.sources.foundation ? null : j.cost.sub)],
+          ["EQU", (j) => (hideCost || !j.sources.foundation ? null : j.cost.equ)],
+          ["BUR", (j) => (hideCost || !j.sources.foundation ? null : j.cost.bur)],
+          ["INS", (j) => (hideCost || !j.sources.foundation ? null : j.cost.ins)],
+          ["OTH", (j) => (hideCost || !j.sources.foundation ? null : j.cost.oth)],
+          ["DIS", (j) => (hideCost || !j.sources.foundation ? null : j.cost.dis)],
+          ["Total cost", (j) => (hideCost || !j.sources.foundation ? null : j.cost.total)],
+          ["Labor hours", (j) => (hideCost || !j.sources.foundation ? null : j.cost.labHours)],
+          ["Labor rate", (j) => (hideCost || !j.sources.foundation ? null : j.cost.laborRate)],
+          ["LAB + BUR", (j) => (hideCost || !j.sources.foundation ? null : j.cost.laborWithBurden)],
+          ["Cash flow", (j) => (hideCost || !j.sources.foundation ? null : j.cost.cashFlow)],
+        ] as [string, (j: JobRow) => SortValue][])),
+  ];
+  const sheetSort = useTableSort(jobs, Object.fromEntries(sheetColumns));
   return (
     <div className={shell}>
       <h2 className="border-b border-[rgba(91,173,232,0.22)] bg-[rgba(91,173,232,0.18)] px-4 py-3 text-center text-[13px] font-semibold text-[#333333]">
@@ -219,62 +268,18 @@ function FullSheet({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boolean }) {
         <table className="w-full min-w-[2400px] border-collapse text-left">
           <thead>
             <tr className={`border-b border-ink/[0.06] ${FINANCIALS_TABLE_STICKY_HEAD}`}>
-              {[
-                "Job #",
-                "Name",
-                "Customer",
-                "City",
-                "State",
-                "Company",
-                "PM",
-                "Status",
-                "Contract",
-                "Approved COs",
-                "ATP",
-                "In review",
-                "Placeholder",
-                "Revised",
-                "Siteline contract",
-                "Difference",
-                "Alerts",
-                "Siteline / Clearstory",
-                "Over / under billings",
-                "Billed",
-                "Retainage",
-                "Backlog",
-                "AR",
-                "% billed",
-                "% complete",
-                "Retention only",
-                ...(hideCost
-                  ? []
-                  : [
-                      "LAB",
-                      "MAT",
-                      "SUB",
-                      "EQU",
-                      "BUR",
-                      "INS",
-                      "OTH",
-                      "DIS",
-                      "Total cost",
-                      "Labor hours",
-                      "Labor rate",
-                      "LAB + BUR",
-                      "Cash flow",
-                    ]),
-              ].map((label) => (
+              {sheetColumns.map(([label]) => (
                 <th
                   key={label}
                   className="whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-[#333333]"
                 >
-                  {label}
+                  {sheetSort.header(label, label)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {jobs.map((job) => {
+            {sheetSort.sorted.map((job) => {
               const difference = job.recon.difference ?? job.contract.difference;
               const alerted = job.recon.alerts.length > 0;
               const costOff = hideCost || !job.sources.foundation;

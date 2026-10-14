@@ -6,6 +6,7 @@ import * as lookupsApi from "@/lib/api/endpoints/lookups";
 import { getSpecsErrorMessage } from "@/lib/bidding/specs-errors";
 import type { LookupItem } from "@/lib/api/types";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 /**
  * Job for Qty Received — PATCH /bids/:id { jobId } anytime (reselect allowed).
  * Backend updates trimbleProjectId with the new job. Not a Trimble picker.
@@ -105,15 +106,17 @@ export function SpecsJobSelect({
         value={value}
         onChange={(e) => void apply(e.target.value)}
       >
-        <option value="">{needsPick ? "Choose job…" : "No job linked"}</option>
-        {jobs.map((j) => (
-          <option key={j.id} value={String(j.id)}>
-            {jobLabel(j)}
-          </option>
-        ))}
-        {jobId != null && !jobs.some((j) => Number(j.id) === jobId) ? (
-          <option value={String(jobId)}>Job #{jobId}</option>
-        ) : null}
+        <SortedOptions>
+          <option value="">{needsPick ? "Choose job…" : "No job linked"}</option>
+          {jobs.map((j) => (
+            <option key={j.id} value={String(j.id)}>
+              {jobLabel(j)}
+            </option>
+          ))}
+          {jobId != null && !jobs.some((j) => Number(j.id) === jobId) ? (
+            <option value={String(jobId)}>Job #{jobId}</option>
+          ) : null}
+        </SortedOptions>
       </select>
     </div>
   );

@@ -3,6 +3,8 @@
 import { useState, useCallback } from "react";
 import type { EfficiencyOutlierRow } from "@/lib/types";
 
+import { useTableSort } from "@/hooks/useTableSort";
+import { asDate } from "@/lib/sort";
 const ROWS_PER_PAGE = 50;
 
 interface EfficiencyOutlierGridProps {
@@ -13,7 +15,20 @@ export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / ROWS_PER_PAGE) || 1;
   const start = page * ROWS_PER_PAGE;
-  const pageRows = rows.slice(start, start + ROWS_PER_PAGE);
+  // Sort the whole list, then page it, so a header click orders every page.
+  const outlierSort = useTableSort(rows, {
+    date: (r) => asDate(r.date),
+    jobName: (r) => r.jobName,
+    route: (r) => r.route,
+    truck: (r) => r.truckNumber,
+    hauler: (r) => r.haulerName,
+    tickets: (r) => r.totalTickets,
+    duration: (r) => r.workDuration,
+    avgCycle: (r) => r.myAvgCycle,
+    benchmark: (r) => r.fleetBenchmark,
+    status: (r) => r.statusLabel,
+  });
+  const pageRows = outlierSort.sorted.slice(start, start + ROWS_PER_PAGE);
 
   const exportExcel = useCallback(() => {
     import("xlsx").then((XLSX) => {
@@ -56,16 +71,16 @@ export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
           <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
-              <Th>Date</Th>
-              <Th>Job Name</Th>
-              <Th>Route</Th>
-              <Th>Truck Number</Th>
-              <Th>Hauler Name</Th>
-              <Th>Total Tickets</Th>
-              <Th>Work Duration</Th>
-              <Th>My Avg Cycle</Th>
-              <Th>Fleet Benchmark</Th>
-              <Th>Status</Th>
+              <Th>{outlierSort.header("date", "Date")}</Th>
+              <Th>{outlierSort.header("jobName", "Job Name")}</Th>
+              <Th>{outlierSort.header("route", "Route")}</Th>
+              <Th>{outlierSort.header("truck", "Truck Number")}</Th>
+              <Th>{outlierSort.header("hauler", "Hauler Name")}</Th>
+              <Th>{outlierSort.header("tickets", "Total Tickets")}</Th>
+              <Th>{outlierSort.header("duration", "Work Duration")}</Th>
+              <Th>{outlierSort.header("avgCycle", "My Avg Cycle")}</Th>
+              <Th>{outlierSort.header("benchmark", "Fleet Benchmark")}</Th>
+              <Th>{outlierSort.header("status", "Status")}</Th>
             </tr>
           </thead>
           <tbody>

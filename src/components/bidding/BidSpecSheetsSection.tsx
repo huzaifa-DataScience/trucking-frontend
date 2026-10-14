@@ -65,6 +65,7 @@ import {
 } from "@/lib/bidding/specSheetMap";
 import { newId } from "@/lib/bidding/newId";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 const WORD_DOC_MIMES = new Set([
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -539,12 +540,14 @@ function ManufacturerAllowedSelect({
           : "Pick again to unselect"
       }
     >
-      <option value="">{summary}</option>
-      {options.map((opt) => (
-        <option key={opt.id} value={opt.id}>
-          {allowedSet.has(opt.id) ? `✓ ${opt.label}` : opt.label}
-        </option>
-      ))}
+      <SortedOptions>
+        <option value="">{summary}</option>
+        {options.map((opt) => (
+          <option key={opt.id} value={opt.id}>
+            {allowedSet.has(opt.id) ? `✓ ${opt.label}` : opt.label}
+          </option>
+        ))}
+      </SortedOptions>
     </select>
   );
 }
@@ -591,12 +594,14 @@ function ManufacturerPreferredSelect({
           : "Preferred (not cheapest)"
       }
     >
-      <option value="">—</option>
-      {allowedIds.map((id) => (
-        <option key={id} value={id}>
-          {labelFor(id)}
-        </option>
-      ))}
+      <SortedOptions>
+        <option value="">—</option>
+        {allowedIds.map((id) => (
+          <option key={id} value={id}>
+            {labelFor(id)}
+          </option>
+        ))}
+      </SortedOptions>
     </select>
   );
 }
@@ -1806,20 +1811,22 @@ export function BidSpecSheetsSection({
                                     pickSystem(active.id, row, e.target.value)
                                   }
                                 >
-                                  <option value="">—</option>
-                                  {systems.map((s) => (
-                                    <option key={s.id} value={s.systemName}>
-                                      {s.systemName}
-                                    </option>
-                                  ))}
-                                  {row.systemName &&
-                                  !systems.some(
-                                    (s) => s.systemName === row.systemName
-                                  ) ? (
-                                    <option value={row.systemName}>
-                                      {row.systemName}
-                                    </option>
-                                  ) : null}
+                                  <SortedOptions>
+                                    <option value="">—</option>
+                                    {systems.map((s) => (
+                                      <option key={s.id} value={s.systemName}>
+                                        {s.systemName}
+                                      </option>
+                                    ))}
+                                    {row.systemName &&
+                                    !systems.some(
+                                      (s) => s.systemName === row.systemName
+                                    ) ? (
+                                      <option value={row.systemName}>
+                                        {row.systemName}
+                                      </option>
+                                    ) : null}
+                                  </SortedOptions>
                                 </select>
                               </CellBusy>
                             </td>
@@ -1844,20 +1851,22 @@ export function BidSpecSheetsSection({
                                     pickArea(active.id, row, e.target.value)
                                   }
                                 >
-                                  <option value="">—</option>
-                                  {areas.map((a) => (
-                                    <option key={a.id} value={a.areaName}>
-                                      {a.areaName}
-                                    </option>
-                                  ))}
-                                  {row.areaName &&
-                                  !areas.some(
-                                    (a) => a.areaName === row.areaName
-                                  ) ? (
-                                    <option value={row.areaName}>
-                                      {row.areaName}
-                                    </option>
-                                  ) : null}
+                                  <SortedOptions>
+                                    <option value="">—</option>
+                                    {areas.map((a) => (
+                                      <option key={a.id} value={a.areaName}>
+                                        {a.areaName}
+                                      </option>
+                                    ))}
+                                    {row.areaName &&
+                                    !areas.some(
+                                      (a) => a.areaName === row.areaName
+                                    ) ? (
+                                      <option value={row.areaName}>
+                                        {row.areaName}
+                                      </option>
+                                    ) : null}
+                                  </SortedOptions>
                                 </select>
                               </CellBusy>
                             </td>
@@ -1875,12 +1884,14 @@ export function BidSpecSheetsSection({
                                   pickFamily(active.id, row, e.target.value)
                                 }
                               >
-                                <option value="">—</option>
-                                {familyOptions.map((f) => (
-                                  <option key={f.id} value={f.id}>
-                                    {f.label}
-                                  </option>
-                                ))}
+                                <SortedOptions>
+                                  <option value="">—</option>
+                                  {familyOptions.map((f) => (
+                                    <option key={f.id} value={f.id}>
+                                      {f.label}
+                                    </option>
+                                  ))}
+                                </SortedOptions>
                               </select>
                             </td>
                             <td className="px-1 py-0.5">
@@ -1903,12 +1914,14 @@ export function BidSpecSheetsSection({
                                 }
                                 title="1 insulation always. Pick 2–4 for more columns."
                               >
-                                <option value="">1</option>
-                                {SPEC_INSULATION_LAYER_COUNTS.map((n) => (
-                                  <option key={n} value={String(n)}>
-                                    {n}
-                                  </option>
-                                ))}
+                                <SortedOptions>
+                                  <option value="">1</option>
+                                  {SPEC_INSULATION_LAYER_COUNTS.map((n) => (
+                                    <option key={n} value={String(n)}>
+                                      {n}
+                                    </option>
+                                  ))}
+                                </SortedOptions>
                               </select>
                             </td>
                             {Array.from(
@@ -1952,30 +1965,32 @@ export function BidSpecSheetsSection({
                                               )
                                             }
                                           >
-                                            <option value="">
-                                              {matsLoading
-                                                ? "Loading…"
-                                                : "—"}
-                                            </option>
-                                            {rowMats.map((m) => (
-                                              <option
-                                                key={m.id}
-                                                value={m.description}
-                                              >
-                                                {m.code
-                                                  ? `${m.description} (${m.code})`
-                                                  : m.description}
+                                            <SortedOptions>
+                                              <option value="">
+                                                {matsLoading
+                                                  ? "Loading…"
+                                                  : "—"}
                                               </option>
-                                            ))}
-                                            {displayName &&
-                                            !rowMats.some(
-                                              (m) =>
-                                                m.description === displayName
-                                            ) ? (
-                                              <option value={displayName}>
-                                                {displayName}
-                                              </option>
-                                            ) : null}
+                                              {rowMats.map((m) => (
+                                                <option
+                                                  key={m.id}
+                                                  value={m.description}
+                                                >
+                                                  {m.code
+                                                    ? `${m.description} (${m.code})`
+                                                    : m.description}
+                                                </option>
+                                              ))}
+                                              {displayName &&
+                                              !rowMats.some(
+                                                (m) =>
+                                                  m.description === displayName
+                                              ) ? (
+                                                <option value={displayName}>
+                                                  {displayName}
+                                                </option>
+                                              ) : null}
+                                            </SortedOptions>
                                           </select>
                                         </CellBusy>
                                       ) : (
@@ -2065,20 +2080,22 @@ export function BidSpecSheetsSection({
                                     })
                                   }
                                 >
-                                  <option value="">—</option>
-                                  {facings.map((f) => (
-                                    <option key={f.value} value={f.value}>
-                                      {f.label || f.value}
-                                    </option>
-                                  ))}
-                                  {row.facing &&
-                                  !facings.some(
-                                    (f) => f.value === row.facing
-                                  ) ? (
-                                    <option value={row.facing}>
-                                      {row.facing}
-                                    </option>
-                                  ) : null}
+                                  <SortedOptions>
+                                    <option value="">—</option>
+                                    {facings.map((f) => (
+                                      <option key={f.value} value={f.value}>
+                                        {f.label || f.value}
+                                      </option>
+                                    ))}
+                                    {row.facing &&
+                                    !facings.some(
+                                      (f) => f.value === row.facing
+                                    ) ? (
+                                      <option value={row.facing}>
+                                        {row.facing}
+                                      </option>
+                                    ) : null}
+                                  </SortedOptions>
                                 </select>
                               </CellBusy>
                             </td>
@@ -2095,12 +2112,14 @@ export function BidSpecSheetsSection({
                                   })
                                 }
                               >
-                                <option value="">—</option>
-                                {coveringOptions.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.label}
-                                  </option>
-                                ))}
+                                <SortedOptions>
+                                  <option value="">—</option>
+                                  {coveringOptions.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                      {c.label}
+                                    </option>
+                                  ))}
+                                </SortedOptions>
                               </select>
                             </td>
                             {showDuctShape ? (
@@ -2118,12 +2137,14 @@ export function BidSpecSheetsSection({
                                     })
                                   }
                                 >
-                                  <option value="">—</option>
-                                  {ductShapeOptions.map((d) => (
-                                    <option key={d.id} value={d.id}>
-                                      {d.label}
-                                    </option>
-                                  ))}
+                                  <SortedOptions>
+                                    <option value="">—</option>
+                                    {ductShapeOptions.map((d) => (
+                                      <option key={d.id} value={d.id}>
+                                        {d.label}
+                                      </option>
+                                    ))}
+                                  </SortedOptions>
                                 </select>
                               </td>
                             ) : null}

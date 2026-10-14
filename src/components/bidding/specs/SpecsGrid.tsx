@@ -17,6 +17,7 @@ import {
 } from "@/lib/bidding/specs-types";
 import { INTAKE_REMOVE_BTN, TrashIcon } from "@/components/bidding/intakeIcons";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 function fmtQty(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return "—";
   return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -283,12 +284,14 @@ function SpecsLineRow({
           value={draft.type}
           onChange={(e) => schedulePatch("type", e.target.value)}
         >
-          <option value="">—</option>
-          {SPEC_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
+          <SortedOptions>
+            <option value="">—</option>
+            {SPEC_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </SortedOptions>
         </select>
       </td>
       <td className="px-1 py-1">
@@ -298,14 +301,16 @@ function SpecsLineRow({
           value={draft.systemName}
           onChange={(e) => schedulePatch("systemName", e.target.value)}
         >
-          {systems.map((s) => (
-            <option key={s.id} value={s.systemName}>
-              {s.systemName}
-            </option>
-          ))}
-          {!systems.some((s) => s.systemName === draft.systemName) && draft.systemName ? (
-            <option value={draft.systemName}>{draft.systemName}</option>
-          ) : null}
+          <SortedOptions>
+            {systems.map((s) => (
+              <option key={s.id} value={s.systemName}>
+                {s.systemName}
+              </option>
+            ))}
+            {!systems.some((s) => s.systemName === draft.systemName) && draft.systemName ? (
+              <option value={draft.systemName}>{draft.systemName}</option>
+            ) : null}
+          </SortedOptions>
         </select>
       </td>
       <td className="px-1 py-1">
@@ -315,14 +320,16 @@ function SpecsLineRow({
           value={draft.areaName}
           onChange={(e) => schedulePatch("areaName", e.target.value)}
         >
-          {areas.map((a) => (
-            <option key={a.id} value={a.areaName}>
-              {a.areaName}
-            </option>
-          ))}
-          {!areas.some((a) => a.areaName === draft.areaName) && draft.areaName ? (
-            <option value={draft.areaName}>{draft.areaName}</option>
-          ) : null}
+          <SortedOptions>
+            {areas.map((a) => (
+              <option key={a.id} value={a.areaName}>
+                {a.areaName}
+              </option>
+            ))}
+            {!areas.some((a) => a.areaName === draft.areaName) && draft.areaName ? (
+              <option value={draft.areaName}>{draft.areaName}</option>
+            ) : null}
+          </SortedOptions>
         </select>
       </td>
       <td className="sticky left-0 z-[1] bg-surface px-1 py-1 shadow-[2px_0_0_rgba(0,0,0,0.04)]">
@@ -332,14 +339,16 @@ function SpecsLineRow({
           value={draft.insulation}
           onChange={(e) => schedulePatch("insulation", e.target.value)}
         >
-          {materials.map((m) => (
-            <option key={m.id} value={m.description}>
-              {m.description}
-            </option>
-          ))}
-          {!materials.some((m) => m.description === draft.insulation) && draft.insulation ? (
-            <option value={draft.insulation}>{draft.insulation}</option>
-          ) : null}
+          <SortedOptions>
+            {materials.map((m) => (
+              <option key={m.id} value={m.description}>
+                {m.description}
+              </option>
+            ))}
+            {!materials.some((m) => m.description === draft.insulation) && draft.insulation ? (
+              <option value={draft.insulation}>{draft.insulation}</option>
+            ) : null}
+          </SortedOptions>
         </select>
       </td>
       <td className="px-1 py-1">
@@ -380,12 +389,14 @@ function SpecsLineRow({
             onChange={(e) => schedulePatch("facing", e.target.value)}
             aria-label="Facing"
           >
-            <option value="">—</option>
-            {facingOptions.map((f) => (
-              <option key={`${f.id}-${f.value}`} value={f.value}>
-                {f.label || f.value}
-              </option>
-            ))}
+            <SortedOptions>
+              <option value="">—</option>
+              {facingOptions.map((f) => (
+                <option key={`${f.id}-${f.value}`} value={f.value}>
+                  {f.label || f.value}
+                </option>
+              ))}
+            </SortedOptions>
           </select>
         </div>
       </td>

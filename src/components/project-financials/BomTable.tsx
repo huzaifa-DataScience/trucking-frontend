@@ -8,6 +8,7 @@ import {
   FINANCIALS_TABLE_STICKY_HEAD,
 } from "@/components/project-financials/tableScroll";
 
+import { useTableSort } from "@/hooks/useTableSort";
 const shell =
   "overflow-hidden rounded-xl border border-white/70 bg-white/55 shadow-[0_6px_16px_rgba(91,173,232,0.08)] backdrop-blur-md";
 
@@ -31,6 +32,35 @@ export function BomTable({
         { entityId: 2, company: "GOEL DC" },
         { entityId: 3, company: "DCB" },
       ];
+  const trimbleOf = (j: JobRow) => (hideTrimble || !j.sources.trimble ? null : j.bom.trimble);
+  const companyCell = (j: JobRow, entityId: number) => j.bom.companies.find((row) => row.entityId === entityId);
+  const bomSort = useTableSort(jobs, {
+    job: (j) => j.jobNumber,
+    ...Object.fromEntries(
+      cols.flatMap((c) => [
+        [`mat-${c.entityId}`, (j: JobRow) => companyCell(j, c.entityId)?.materialCost ?? 0],
+        [`hrs-${c.entityId}`, (j: JobRow) => companyCell(j, c.entityId)?.laborHours ?? 0],
+      ])
+    ),
+    matTotal: (j) => j.bom.totals.materialCost,
+    hrsTotal: (j) => j.bom.totals.laborHours,
+    csContract: (j) => j.bom.clearstory.contract,
+    csCos: (j) => j.bom.clearstory.approvedCos,
+    totalContract: (j) => j.bom.clearstory.totalContract,
+    completion: (j) => j.bom.clearstory.completionPct,
+    bomBudget: (j) => trimbleOf(j)?.bomBudget,
+    bomBudgetPct: (j) => trimbleOf(j)?.bomBudgetPct,
+    ordered: (j) => trimbleOf(j)?.ordered,
+    received: (j) => trimbleOf(j)?.received,
+    ordMinusRec: (j) => trimbleOf(j)?.orderedMinusReceived,
+    actualCost: (j) => trimbleOf(j)?.actualCost,
+    trimbleHrs: (j) => trimbleOf(j)?.laborHours,
+    estHrs: (j) => trimbleOf(j)?.estLaborHours,
+    remaining: (j) => trimbleOf(j)?.remaining,
+    pctUsed: (j) => trimbleOf(j)?.pctUsed,
+    matVsCompletion: (j) => j.bom.vsCompletion.materialVsCompletion,
+    hrsVsCompletion: (j) => j.bom.vsCompletion.laborVsCompletion,
+  } as Record<string, (j: JobRow) => number | string | null | undefined>);
 
   return (
     <div className={shell}>
@@ -39,44 +69,44 @@ export function BomTable({
         <thead>
           <tr className={`border-b border-[rgba(91,173,232,0.22)] ${FINANCIALS_TABLE_STICKY_HEAD}`}>
             <th className="sticky left-0 z-[2] w-36 max-w-[9rem] bg-[rgba(91,173,232,0.18)] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-[#333333]">
-              Job
+              {bomSort.header("job", "Job")}
             </th>
             {cols.map((c) => (
               <th key={`mat-${c.entityId}`} className={th} title={`${c.company} material`}>
-                {c.company} mat
+                {bomSort.header(`mat-${c.entityId}`, `${c.company} mat`, "right")}
               </th>
             ))}
             {cols.map((c) => (
               <th key={`hrs-${c.entityId}`} className={th} title={`${c.company} labor hours`}>
-                {c.company} hrs
+                {bomSort.header(`hrs-${c.entityId}`, `${c.company} hrs`, "right")}
               </th>
             ))}
-            <th className={th}>Mat total</th>
-            <th className={th}>Hrs total</th>
-            <th className={th}>CS contract</th>
-            <th className={th}>CS COs</th>
-            <th className={th}>Total contract</th>
-            <th className={th}>Completion</th>
+            <th className={th}>{bomSort.header("matTotal", "Mat total", "right")}</th>
+            <th className={th}>{bomSort.header("hrsTotal", "Hrs total", "right")}</th>
+            <th className={th}>{bomSort.header("csContract", "CS contract", "right")}</th>
+            <th className={th}>{bomSort.header("csCos", "CS COs", "right")}</th>
+            <th className={th}>{bomSort.header("totalContract", "Total contract", "right")}</th>
+            <th className={th}>{bomSort.header("completion", "Completion", "right")}</th>
             {hideTrimble ? null : (
               <>
-                <th className={th}>BOM budget</th>
-                <th className={th}>Budget % used</th>
-                <th className={th}>Ordered</th>
-                <th className={th}>Received</th>
-                <th className={th}>Ord − Rec</th>
-                <th className={th}>Actual cost</th>
-                <th className={th}>Trimble hrs</th>
-                <th className={th}>Est hrs</th>
-                <th className={th}>Remaining</th>
-                <th className={th}>% used</th>
+                <th className={th}>{bomSort.header("bomBudget", "BOM budget", "right")}</th>
+                <th className={th}>{bomSort.header("bomBudgetPct", "Budget % used", "right")}</th>
+                <th className={th}>{bomSort.header("ordered", "Ordered", "right")}</th>
+                <th className={th}>{bomSort.header("received", "Received", "right")}</th>
+                <th className={th}>{bomSort.header("ordMinusRec", "Ord − Rec", "right")}</th>
+                <th className={th}>{bomSort.header("actualCost", "Actual cost", "right")}</th>
+                <th className={th}>{bomSort.header("trimbleHrs", "Trimble hrs", "right")}</th>
+                <th className={th}>{bomSort.header("estHrs", "Est hrs", "right")}</th>
+                <th className={th}>{bomSort.header("remaining", "Remaining", "right")}</th>
+                <th className={th}>{bomSort.header("pctUsed", "% used", "right")}</th>
               </>
             )}
-            <th className={th}>Mat vs completion</th>
-            <th className={th}>Hrs vs completion</th>
+            <th className={th}>{bomSort.header("matVsCompletion", "Mat vs completion", "right")}</th>
+            <th className={th}>{bomSort.header("hrsVsCompletion", "Hrs vs completion", "right")}</th>
           </tr>
         </thead>
         <tbody>
-          {jobs.map((job) => (
+          {bomSort.sorted.map((job) => (
             <BomRow key={job.jobNumber} job={job} companies={cols} hideTrimble={hideTrimble} />
           ))}
         </tbody>

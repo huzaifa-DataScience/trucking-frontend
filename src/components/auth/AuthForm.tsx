@@ -21,7 +21,7 @@ export function AuthCard({
   return (
     <div
       data-compact={compact || undefined}
-      className={`group/authcard ui-animate-in w-full ${wide ? "max-w-[680px]" : "max-w-[580px]"} rounded-[22px] border border-[var(--border-subtle)] bg-white ${compact ? "px-10 py-8" : "p-12"} shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_32px_-16px_rgba(0,0,0,0.14)]`}
+      className={`group/authcard ui-animate-in w-full ${wide ? "max-w-[680px]" : "max-w-[580px]"} rounded-[22px] relative overflow-hidden border border-white bg-[linear-gradient(150deg,#e6f1fe_0%,#f6faff_38%,#fff7ef_68%,#ffe9d6_100%)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-[linear-gradient(90deg,#1e88e5,#e8893a)] before:content-[''] ${compact ? "px-10 py-8" : "p-12"} shadow-[0_1px_2px_rgba(15,23,42,0.05),0_20px_44px_-18px_rgba(30,136,229,0.28)]`}
     >
       <h1 className="text-[32px] font-semibold group-data-[compact]/authcard:text-[26px] leading-[1.2] text-[#333333]">{title}</h1>
       {subtitle ? <p className="mt-2 text-[16px] text-[#6b7280] group-data-[compact]/authcard:mt-1 group-data-[compact]/authcard:text-[14.5px]">{subtitle}</p> : null}
