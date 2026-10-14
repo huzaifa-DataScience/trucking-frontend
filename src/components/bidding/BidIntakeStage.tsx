@@ -35,6 +35,7 @@ import {
   TrashIcon,
 } from "@/components/bidding/intakeIcons";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 function SelectChevron() {
   return (
     <svg
@@ -624,9 +625,11 @@ export function BidIntakeStage() {
                 });
               }}
             >
-              <option value="">—</option>
-              <option value="email">Email</option>
-              <option value="phone">Phone</option>
+              <SortedOptions>
+                <option value="">—</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+              </SortedOptions>
             </select>
             <SelectChevron />
           </div>
@@ -741,18 +744,20 @@ export function BidIntakeStage() {
                   void patchOurEntityId(n);
                 }}
               >
-                {(lookups.ourEntities.length
-                  ? lookups.ourEntities
-                  : [
-                      { id: 1, name: "GOEL" },
-                      { id: 2, name: "GOEL DC" },
-                      { id: 3, name: "DCB" },
-                    ]
-                ).map((e) => (
-                  <option key={e.id} value={String(e.id)}>
-                    {e.name}
-                  </option>
-                ))}
+                <SortedOptions>
+                  {(lookups.ourEntities.length
+                    ? lookups.ourEntities
+                    : [
+                        { id: 1, name: "GOEL" },
+                        { id: 2, name: "GOEL DC" },
+                        { id: 3, name: "DCB" },
+                      ]
+                  ).map((e) => (
+                    <option key={e.id} value={String(e.id)}>
+                      {e.name}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>
@@ -777,12 +782,14 @@ export function BidIntakeStage() {
                 )
               }
             >
-              <option value="">—</option>
-              {bidKinds.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
+              <SortedOptions>
+                <option value="">—</option>
+                {bidKinds.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </SortedOptions>
             </select>
             <SelectChevron />
           </div>
@@ -822,15 +829,17 @@ export function BidIntakeStage() {
                   )
                 }
               >
-                <option value="">—</option>
-                {(meta?.drawingCategories?.includes("cd")
-                  ? meta.drawingCategories
-                  : [...(meta?.drawingCategories ?? ["sd", "dd", "ifb", "ifp", "ifc", "ifr"]), "cd"]
-                ).map((id) => (
-                  <option key={id} value={id}>
-                    {meta?.drawingCategoryLabels?.[id] ?? (id === "cd" ? "CD" : id)}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="">—</option>
+                  {(meta?.drawingCategories?.includes("cd")
+                    ? meta.drawingCategories
+                    : [...(meta?.drawingCategories ?? ["sd", "dd", "ifb", "ifp", "ifc", "ifr"]), "cd"]
+                  ).map((id) => (
+                    <option key={id} value={id}>
+                      {meta?.drawingCategoryLabels?.[id] ?? (id === "cd" ? "CD" : id)}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>
@@ -903,12 +912,14 @@ export function BidIntakeStage() {
                   });
                 }}
               >
-                <option value="">No job linked</option>
-                {lookups.jobs.map((j) => (
-                  <option key={j.id} value={String(j.id)}>
-                    {j.name || `Job #${j.id}`}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="">No job linked</option>
+                  {lookups.jobs.map((j) => (
+                    <option key={j.id} value={String(j.id)}>
+                      {j.name || `Job #${j.id}`}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>
@@ -958,12 +969,14 @@ export function BidIntakeStage() {
                 )
               }
             >
-              <option value="">—</option>
-              {workTypes.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
+              <SortedOptions>
+                <option value="">—</option>
+                {workTypes.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </SortedOptions>
             </select>
             <SelectChevron />
           </div>
@@ -979,12 +992,14 @@ export function BidIntakeStage() {
                 setField("constructionType", e.target.value || null)
               }
             >
-              <option value="">—</option>
-              {buildingTypes.map((o) => (
-                <option key={o.id ?? o.name} value={o.name}>
-                  {o.name}
-                </option>
-              ))}
+              <SortedOptions>
+                <option value="">—</option>
+                {buildingTypes.map((o) => (
+                  <option key={o.id ?? o.name} value={o.name}>
+                    {o.name}
+                  </option>
+                ))}
+              </SortedOptions>
             </select>
             <SelectChevron />
           </div>
@@ -1000,12 +1015,14 @@ export function BidIntakeStage() {
                 setField("constructionSubtype", e.target.value || null)
               }
             >
-              <option value="">—</option>
-              {projectTypes.map((o) => (
-                <option key={o.id ?? o.name} value={o.name}>
-                  {o.name}
-                </option>
-              ))}
+              <SortedOptions>
+                <option value="">—</option>
+                {projectTypes.map((o) => (
+                  <option key={o.id ?? o.name} value={o.name}>
+                    {o.name}
+                  </option>
+                ))}
+              </SortedOptions>
             </select>
             <SelectChevron />
           </div>
@@ -1116,9 +1133,11 @@ export function BidIntakeStage() {
                   )
                 }
               >
-                <option value="">—</option>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
+                <SortedOptions>
+                  <option value="">—</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>
@@ -1294,12 +1313,14 @@ export function BidIntakeStage() {
                         setList(list.map((r, i) => (i === index ? { ...r, contractorStatus } : r)));
                       }}
                     >
-                      <option value="">Contractor status</option>
-                      {CONTRACTOR_STATUS_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
+                      <SortedOptions>
+                        <option value="">Contractor status</option>
+                        {CONTRACTOR_STATUS_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </SortedOptions>
                     </select>
                     <select
                       className={`${inputClass} w-40`}
@@ -1310,12 +1331,14 @@ export function BidIntakeStage() {
                         setList(list.map((r, i) => (i === index ? { ...r, proposalStatus } : r)));
                       }}
                     >
-                      <option value="">Proposal status</option>
-                      {PROPOSAL_STATUS_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
+                      <SortedOptions>
+                        <option value="">Proposal status</option>
+                        {PROPOSAL_STATUS_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </SortedOptions>
                     </select>
                     {editable ? (
                       <button
@@ -1540,9 +1563,11 @@ export function BidIntakeStage() {
                         });
                       }}
                     >
-                      <option value="">—</option>
-                      <option value="email">Email</option>
-                      <option value="phone">Phone</option>
+                      <SortedOptions>
+                        <option value="">—</option>
+                        <option value="email">Email</option>
+                        <option value="phone">Phone</option>
+                      </SortedOptions>
                     </select>
                     <SelectChevron />
                   </div>
@@ -1942,7 +1967,7 @@ export function BidIntakeStage() {
           ) : null}
         </div>
         <div className={`${sectionBody} intake-layer-scroll flex flex-col gap-2`}>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto table-scroll">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="text-[11px] text-[#6b7280]">
@@ -1970,12 +1995,14 @@ export function BidIntakeStage() {
                             patchTier(index, { role: e.target.value || null })
                           }
                         >
-                          <option value="">—</option>
-                          {tierRoles.map((o) => (
-                            <option key={o.value} value={o.value}>
-                              {o.label}
-                            </option>
-                          ))}
+                          <SortedOptions>
+                            <option value="">—</option>
+                            {tierRoles.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </SortedOptions>
                         </select>
                         <SelectChevron />
                       </div>
@@ -2013,9 +2040,11 @@ export function BidIntakeStage() {
                             })
                           }
                         >
-                          <option value="">?</option>
-                          <option value="yes">Yes</option>
-                          <option value="no">No</option>
+                          <SortedOptions>
+                            <option value="">?</option>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                          </SortedOptions>
                         </select>
                         <SelectChevron />
                       </div>

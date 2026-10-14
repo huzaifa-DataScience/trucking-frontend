@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api/client";
 import { CorOverviewContent } from "@/components/clearstory/CorOverviewSummary";
 import { CorContractSummaryResult, GenericResult, RateResult } from "@/components/clearstory/ClearstoryRateResult";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 const RATE_TYPES = ["labor", "material", "equipment", "other"] as const;
 
 type Mode = "company" | "project" | "overview" | "contract_summary";
@@ -94,17 +95,27 @@ export default function ClearstoryRatesPage() {
   const [recordId, setRecordId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [inbox, setInbox] = useState<"sent" | "received">("sent");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<RateError | null>(null);
-  // What was loaded, kept with the mode/rate type it was loaded for (the form can change afterwards).
-  const [result, setResult] = useState<{ mode: Mode; rateType: string; payload: unknown; fetchedAt: string | null } | null>(
-    null
-  );
+  // Each tab keeps its own result / error / loading, so switching tabs never shows another tab's data.
+  // A result is kept with the rate type it was loaded for (the form can change afterwards).
+  const [loadingBy, setLoadingBy] = useState<Partial<Record<Mode, boolean>>>({});
+  const [errorBy, setErrorBy] = useState<Partial<Record<Mode, RateError | null>>>({});
+  const [resultBy, setResultBy] = useState<
+    Partial<Record<Mode, { mode: Mode; rateType: string; inbox: "sent" | "received"; payload: unknown; fetchedAt: string | null } | null>>
+  >({});
+  const loading = Boolean(loadingBy[mode]);
+  const error = errorBy[mode] ?? null;
+  const result = resultBy[mode] ?? null;
 
   const isCorMode = mode === "overview" || mode === "contract_summary";
   const actionLabel = MODES.find((m) => m.value === mode)?.action ?? "Load";
 
   const run = async () => {
+    // Write to the tab that started the request, even if the user switches tabs before it returns.
+    const forMode = mode;
+    const setLoading = (v: boolean) => setLoadingBy((p) => ({ ...p, [forMode]: v }));
+    const setError = (e: RateError | null) => setErrorBy((p) => ({ ...p, [forMode]: e }));
+    const setResult = (r: { mode: Mode; rateType: string; inbox: "sent" | "received"; payload: unknown; fetchedAt: string | null } | null) =>
+      setResultBy((p) => ({ ...p, [forMode]: r }));
     setLoading(true);
     setError(null);
     setResult(null);
@@ -164,7 +175,7 @@ export default function ClearstoryRatesPage() {
           key: `inbox=${inbox}`,
         });
       }
-      setResult({ mode, rateType, payload: res.payload, fetchedAt: res.lastFetchedAt ?? null });
+      setResult({ mode, rateType, inbox, payload: res.payload, fetchedAt: res.lastFetchedAt ?? null });
     } catch (e) {
       setError(
         describeRateError(e, { mode, rateType, projectId: projectId.trim(), recordId: recordId.trim(), inbox })
@@ -227,8 +238,10 @@ export default function ClearstoryRatesPage() {
                     onChange={(e) => setInbox(e.target.value as "sent" | "received")}
                     className="cs-field w-full appearance-none px-3 pr-9"
                   >
-                    <option value="sent">Sent</option>
-                    <option value="received">Received</option>
+                    <SortedOptions>
+                      <option value="sent">Sent</option>
+                      <option value="received">Received</option>
+                    </SortedOptions>
                   </select>
                   <SelectChevron />
                 </div>
@@ -262,11 +275,13 @@ export default function ClearstoryRatesPage() {
                       onChange={(e) => setRateType(e.target.value)}
                       className="cs-field w-full appearance-none px-3 pr-9"
                     >
-                      {RATE_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {capitalize(t)}
-                        </option>
-                      ))}
+                      <SortedOptions>
+                        {RATE_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {capitalize(t)}
+                          </option>
+                        ))}
+                      </SortedOptions>
                     </select>
                     <SelectChevron />
                   </div>
@@ -330,7 +345,7 @@ export default function ClearstoryRatesPage() {
                 ) : result.mode === "overview" ? (
                   <CorOverviewContent payload={result.payload} />
                 ) : result.mode === "contract_summary" ? (
-                  <CorContractSummaryResult payload={result.payload} />
+                  <CorContractSummaryResult payload={result.payload} inbox={result.inbox} />
                 ) : (
                   <GenericResult payload={result.payload} />
                 )}

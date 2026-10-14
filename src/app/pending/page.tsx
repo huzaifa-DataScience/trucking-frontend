@@ -51,7 +51,7 @@ export default function PendingApprovalPage() {
 
   return (
     <AuthShell>
-      <div className="ui-animate-in w-full max-w-[580px] rounded-[22px] border border-[var(--border-subtle)] bg-white p-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_32px_-16px_rgba(0,0,0,0.14)]">
+      <div className="ui-animate-in w-full max-w-[580px] rounded-[22px] relative overflow-hidden border border-white bg-[linear-gradient(150deg,#e6f1fe_0%,#f6faff_38%,#fff7ef_68%,#ffe9d6_100%)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-[linear-gradient(90deg,#1e88e5,#e8893a)] before:content-[''] p-12 text-center shadow-[0_1px_2px_rgba(15,23,42,0.05),0_20px_44px_-18px_rgba(30,136,229,0.28)]">
         <span className="mx-auto mb-3.5 grid h-14 w-14 place-items-center rounded-full bg-amber-50 text-amber-800" aria-hidden>
           <svg className="h-[26px] w-[26px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <circle cx="12" cy="12" r="9" />

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 function clampInt(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
 }
@@ -101,11 +102,13 @@ export function ClearstoryTablePagination({
           }}
           className={`${CTRL} appearance-none pr-8`}
         >
-          {pageSizeOptions.map((n) => (
-            <option key={n} value={n}>
-              {n} / page
-            </option>
-          ))}
+          <SortedOptions>
+            {pageSizeOptions.map((n) => (
+              <option key={n} value={n}>
+                {n} / page
+              </option>
+            ))}
+          </SortedOptions>
         </select>
 
         <nav className="flex items-center gap-1" aria-label={ariaLabel}>

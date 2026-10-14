@@ -6,6 +6,7 @@ import { useBidSheet } from "@/contexts/BidSheetContext";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { BidAttachment } from "@/lib/bidding/types";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 function folderFromFileName(fileName: string): string {
   const norm = fileName.replace(/\\/g, "/");
   const i = norm.lastIndexOf("/");
@@ -137,12 +138,14 @@ export function BidHubFiles({
                           value={att.drawingCategory ?? ""}
                           onChange={(e) => void setPhase(att, e.target.value)}
                         >
-                          <option value="">Phase</option>
-                          {drawingCategoryOptions.map((o) => (
-                            <option key={o.value} value={o.value}>
-                              {o.label}
-                            </option>
-                          ))}
+                          <SortedOptions>
+                            <option value="">Phase</option>
+                            {drawingCategoryOptions.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </SortedOptions>
                         </select>
                       ) : null}
                     </li>

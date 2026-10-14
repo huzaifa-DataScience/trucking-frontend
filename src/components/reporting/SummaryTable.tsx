@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 
+import { useTableSort } from "@/hooks/useTableSort";
 const thClass =
   "sticky top-0 z-10 whitespace-nowrap bg-[#f8f9fb] px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-ink/45";
 const tdClass = "whitespace-nowrap px-3 py-2.5 text-sm text-ink/85";
@@ -35,20 +36,25 @@ export function SummaryTable<T extends Record<string, string | number>>({
   const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
   const safePage = Math.min(page, totalPages - 1);
   const start = safePage * PAGE_SIZE;
-  const pageRows = rows.slice(start, start + PAGE_SIZE);
+  // Sort the whole list, then page it, so a header click orders every page.
+  const summarySort = useTableSort(
+    rows,
+    Object.fromEntries(columns.map((col) => [String(col.key), (row: T) => row[col.key as keyof T]]))
+  );
+  const pageRows = summarySort.sorted.slice(start, start + PAGE_SIZE);
   const rangeEnd = Math.min(start + PAGE_SIZE, total);
 
   return (
     <Card className={className}>
       <CardHeader title={title} subtitle={subtitle} />
-      <div className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0">
+      <div className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0 table-scroll">
         <div className="inline-block min-w-full align-middle">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-ink/[0.08]">
                 {columns.map((col) => (
                   <th key={String(col.key)} className={thClass}>
-                    {col.label}
+                    {summarySort.header(String(col.key), col.label)}
                   </th>
                 ))}
               </tr>

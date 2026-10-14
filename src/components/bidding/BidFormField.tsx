@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-ink/10 bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink/30 focus:border-brand focus:ring-2 focus:ring-brand/20";
 const selectClass = `${inputClass} pr-9`;
@@ -159,11 +160,13 @@ export function BidSelect({
         disabled={disabled}
         className={`${selectClass} appearance-none disabled:cursor-not-allowed disabled:opacity-50`}
       >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
+        <SortedOptions>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+        </SortedOptions>
       </select>
       <SelectChevron />
     </div>

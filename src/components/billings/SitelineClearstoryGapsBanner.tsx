@@ -114,7 +114,7 @@ export function SitelineClearstoryGapsBanner({
       </div>
 
       {expanded ? (
-        <div className="mt-3 overflow-x-auto rounded-lg border border-amber-200/70 bg-white/50 dark:border-amber-900/50 dark:bg-transparent">
+        <div className="table-scroll mt-3 overflow-x-auto rounded-lg border border-amber-200/70 bg-white/50 dark:border-amber-900/50 dark:bg-transparent">
           <table className="min-w-full text-left text-xs">
             <thead>
               <tr className="border-b border-amber-200/80 text-amber-900/80 dark:border-amber-800">

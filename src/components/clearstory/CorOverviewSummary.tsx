@@ -170,7 +170,7 @@ export function CorOverviewContent({ payload }: { payload: unknown }) {
         />
       </div>
 
-      <div className="cs-data-table cs-table-shell">
+      <div className="cs-data-table cs-table-shell table-scroll">
         <table className="w-full border-collapse text-left">
           <caption className="sr-only">Change orders by status</caption>
           <thead>

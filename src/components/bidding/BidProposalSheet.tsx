@@ -25,6 +25,7 @@ import {
   TrashIcon,
 } from "@/components/bidding/intakeIcons";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 function moneyInput(raw: string): number | null {
   const t = raw.trim().replace(/[$,\s]/g, "");
   if (!t) return null;
@@ -221,7 +222,7 @@ export function BidProposalSheet() {
 
           <section className="intake-section min-w-0">
             <h3 className="intake-section-head">Breakdown</h3>
-            <div className="intake-section-body overflow-x-auto">
+            <div className="intake-section-body overflow-x-auto table-scroll">
               <table className="w-full min-w-[20rem] border-collapse text-left text-[12.5px]">
                 <thead>
                   <tr className="border-b border-ink/10 text-[11px] text-ink/45">
@@ -462,12 +463,14 @@ export function BidProposalSheet() {
                     setPreviewCopyId(e.target.value === "sheet" ? "sheet" : e.target.value)
                   }
                 >
-                  <option value="sheet">Master sheet</option>
-                  {(sheet.copies ?? []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.toCompany || c.toName || c.id}
-                    </option>
-                  ))}
+                  <SortedOptions>
+                    <option value="sheet" data-pin>Master sheet</option>
+                    {(sheet.copies ?? []).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.toCompany || c.toName || c.id}
+                      </option>
+                    ))}
+                  </SortedOptions>
                 </select>
                 <button
                   type="button"
@@ -585,9 +588,11 @@ function CopyEditor({
               })
             }
           >
-            <option value="">Not chosen</option>
-            <option value="yes">Yes</option>
-            <option value="no">No — lump only</option>
+            <SortedOptions>
+              <option value="">Not chosen</option>
+              <option value="yes">Yes</option>
+              <option value="no">No — lump only</option>
+            </SortedOptions>
           </select>
         </label>
       </div>

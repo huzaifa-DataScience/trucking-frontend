@@ -115,7 +115,7 @@ export function BillingCompanyBreakdown({
   }, [entityIds, rows, overdue]);
 
   return (
-    <div className="border-t border-[var(--border-subtle)] bg-[#fafbfc] lg:col-span-2">
+    <div className="bg-white">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
           <h3 className="text-[14px] font-semibold text-ink">By company</h3>
