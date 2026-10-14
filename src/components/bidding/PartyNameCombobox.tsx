@@ -242,7 +242,7 @@ function AddressBookModal({
       }}
     >
       <div
-        className="flex w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-[#d5dbe3] bg-white shadow-xl"
+        className="flex max-h-[calc(100dvh-4rem)] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-[#d5dbe3] bg-white shadow-xl"
         style={{ maxHeight: "min(92dvh, 900px)", height: "min(92dvh, 900px)" }}
         onClick={(e) => e.stopPropagation()}
       >

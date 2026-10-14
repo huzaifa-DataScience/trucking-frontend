@@ -47,7 +47,7 @@ export function SummaryTable<T extends Record<string, string | number>>({
   return (
     <Card className={className}>
       <CardHeader title={title} subtitle={subtitle} />
-      <div className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0">
+      <div className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0 table-scroll">
         <div className="inline-block min-w-full align-middle">
           <table className="min-w-full text-sm">
             <thead>

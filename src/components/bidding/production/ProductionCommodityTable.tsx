@@ -38,7 +38,7 @@ export function ProductionCommodityTable({
   });
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+    <div className="table-scroll min-h-0 flex-1 overflow-auto rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
       <table className="min-w-[1100px] w-full border-collapse text-left text-xs">
         <thead className="sticky top-0 z-10 bg-surface">
           <tr className="border-b border-ink/[0.08] text-[10px] uppercase tracking-wide text-ink/40">

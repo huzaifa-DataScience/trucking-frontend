@@ -207,7 +207,7 @@ function QueueTable({
   const badgeColIdx = nameColIdx >= 0 ? nameColIdx : 0;
 
   return (
-    <div className="cs-data-table -mx-4 overflow-x-auto overscroll-x-contain border-y border-[var(--border-subtle)] bg-surface sm:-mx-0 sm:rounded-[var(--radius)] sm:border">
+    <div className="cs-data-table table-scroll -mx-4 overflow-x-auto overscroll-x-contain border-y border-[var(--border-subtle)] bg-surface sm:-mx-0 sm:rounded-[var(--radius)] sm:border">
       <table className="w-max min-w-full border-collapse text-left">
         <thead>
           <tr>

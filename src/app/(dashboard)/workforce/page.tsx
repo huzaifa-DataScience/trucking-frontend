@@ -95,7 +95,7 @@ function OverviewContent() {
             ) : hoursRows.length === 0 ? (
               <p className="text-sm text-ink/45">No hours reported yet.</p>
             ) : (
-              <WorkforceScrollPanel maxHeightClass="h-full">
+              <WorkforceScrollPanel maxHeightClass="h-full max-h-[min(70dvh,calc(100dvh-14rem))]">
                 <table className="w-full min-w-[320px] text-sm">
                   <thead className="sticky top-0 z-10 bg-surface">
                     <tr className="border-b border-ink/10 text-left text-xs text-ink/45">
@@ -150,7 +150,7 @@ function OverviewContent() {
             ) : openShifts.length === 0 ? (
               <p className="text-sm text-ink/45">No one clocked in.</p>
             ) : (
-              <WorkforceScrollPanel maxHeightClass="h-full">
+              <WorkforceScrollPanel maxHeightClass="h-full max-h-[min(70dvh,calc(100dvh-14rem))]">
                 <ul className="divide-y divide-ink/[0.06]">
                   {openShifts.map((s) => (
                     <li

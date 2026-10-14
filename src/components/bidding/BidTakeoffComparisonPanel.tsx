@@ -57,7 +57,7 @@ export function BidTakeoffComparisonPanel() {
         </span>
       </div>
       <div className="intake-section-body overflow-x-auto">
-        <div className="overflow-hidden rounded-xl border border-[#e8ecf1] shadow-sm">
+        <div className="table-scroll rounded-xl border border-[#e8ecf1] shadow-sm">
           <table className="w-full min-w-[32rem] text-left text-[12.5px] text-[#374151]">
             <thead className="bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
               <tr>

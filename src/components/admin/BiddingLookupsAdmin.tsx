@@ -180,7 +180,7 @@ function TeamsSection({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-lg border border-stone-200 dark:border-stone-700">
+      <div className="overflow-x-auto rounded-lg border border-stone-200 dark:border-stone-700 table-scroll">
         <table className="w-full min-w-[480px] text-left text-sm">
           <thead className="bg-stone-50 text-xs font-medium text-stone-500 dark:bg-stone-900/50 dark:text-stone-400">
             <tr>
@@ -334,7 +334,7 @@ function WageRatesSection({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-lg border border-stone-200 dark:border-stone-700">
+      <div className="overflow-x-auto rounded-lg border border-stone-200 dark:border-stone-700 table-scroll">
         <table className="w-full min-w-[480px] text-left text-sm">
           <thead className="bg-stone-50 text-xs font-medium text-stone-500 dark:bg-stone-900/50 dark:text-stone-400">
             <tr>
@@ -486,7 +486,7 @@ function PayrollBurdenSection({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-lg border border-stone-200 dark:border-stone-700">
+      <div className="overflow-x-auto rounded-lg border border-stone-200 dark:border-stone-700 table-scroll">
         <table className="w-full min-w-[520px] text-left text-sm">
           <thead className="bg-stone-50 text-xs font-medium text-stone-500 dark:bg-stone-900/50 dark:text-stone-400">
             <tr>

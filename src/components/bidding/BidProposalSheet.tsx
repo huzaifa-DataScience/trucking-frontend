@@ -222,7 +222,7 @@ export function BidProposalSheet() {
 
           <section className="intake-section min-w-0">
             <h3 className="intake-section-head">Breakdown</h3>
-            <div className="intake-section-body overflow-x-auto">
+            <div className="intake-section-body overflow-x-auto table-scroll">
               <table className="w-full min-w-[20rem] border-collapse text-left text-[12.5px]">
                 <thead>
                   <tr className="border-b border-ink/10 text-[11px] text-ink/45">

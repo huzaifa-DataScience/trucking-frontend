@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { buttonClasses } from "@/components/ui/Button";
@@ -38,7 +38,8 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { sitelineEntityIdFromContext } from "@/lib/siteline-entity";
 import { BillingGapsChip } from "@/components/billings/BillingGapsChip";
 import { BillingCompanyBreakdown } from "@/components/billings/BillingCompanyBreakdown";
-import { AgingColumnsChart, type AgingColumn } from "@/components/billings/AgingColumnsChart";
+import { type AgingColumn } from "@/components/billings/AgingColumnsChart";
+import { AgingStackedBar } from "@/components/billings/AgingStackedBar";
 import { splitProjectName } from "@/lib/siteline-project-name";
 import {
   BILLING_COMPANY_PARAM,
@@ -56,6 +57,8 @@ import {
 } from "@/components/billings/BillingFiltersDrawer";
 
 import { SortedOptions } from "@/components/ui/SortedOptions";
+import { useColumnOrder } from "@/hooks/useColumnOrder";
+import { ColumnPickerButton } from "@/components/clearstory/ClearstorySwaggerTable";
 const formatCurrency = (value: number | undefined) =>
   value != null
     ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value)
@@ -194,9 +197,23 @@ const SITELINE_AGING_DISPLAY_MAP: Record<string, string> = {
   ">120 Days": ">120 days",
 };
 
+/** Built-in column order for the Past due table (users can reorder it). */
+const OVERDUE_DEFAULT_ORDER = [
+  "project",
+  "company",
+  "projectNumber",
+  "pm",
+  "dueDate",
+  "daysPastDue",
+  "invoiceNumber",
+  "invoiceDate",
+  "netDollars",
+  "status",
+];
+
 /** Fills remaining card size; scroll inside viewport (Billings aging / overdue). */
 const BILLING_TABLE_FILL_SCROLL =
-  "cs-data-table cs-table-shell min-h-0 min-w-0 w-full flex-1 overflow-x-auto overflow-y-auto";
+  "cs-data-table min-h-0 min-w-0 w-full flex-1 overflow-x-auto overflow-y-auto max-h-[min(70dvh,calc(100dvh-14rem))]";
 
 /** Contracts / pay apps tab (fixed max height when that tab is enabled). */
 const BILLING_TABLE_SCROLL_WRAPPER =
@@ -658,6 +675,13 @@ export default function BillingsPage() {
   }, [agingReport, agingSort]);
 
   const [overdueSort, setOverdueSort] = useState<SortState>({ by: null, dir: "asc" });
+  // User-chosen column order per table (saved in this browser). Defaults are the built-in order.
+  const agingDefaultOrder = useMemo(
+    () => ["project", "company", "pm", "invoiceNumber", "invoiceDate", ...agingDisplayBuckets.map((b) => `bucket:${b}`), "projectTotal"],
+    [agingDisplayBuckets]
+  );
+  const agingColOrder = useColumnOrder("billing.columns.aging", agingDefaultOrder);
+  const overdueColOrder = useColumnOrder("billing.columns.overdue", OVERDUE_DEFAULT_ORDER);
   const onOverdueSort = useCallback((key: string) => setOverdueSort((s) => toggleSort(s, key)), []);
   const sortedOverdueItems = useMemo(() => {
     const items = agingOverdue?.items ?? [];
@@ -765,6 +789,204 @@ export default function BillingsPage() {
   const showAgingSkeleton = statusLoading || agingLoading;
   const showOverdueSkeleton = statusLoading || agingOverdueLoading;
 
+  // ---- Table columns: one definition per column (header + cell + totals) so the order is user-configurable. ----
+  type AgingRow = AgingReportResponse["rows"][number];
+  type TableCol<R> = {
+    key: string;
+    label: string;
+    sortKey: string;
+    align?: "left" | "right";
+    cell: (row: R, first: boolean) => ReactNode;
+    /** Totals-row cell (A/R aging only); columns without one get an empty cell. */
+    total?: () => ReactNode;
+  };
+  const cellBase = "whitespace-nowrap px-3 py-2.5 align-middle text-[13px]";
+  const projectWidth = "w-[17rem] min-w-[17rem] max-w-[17rem]";
+  const pmCell = (name?: string | null, email?: string | null) => (
+    <td className={`${cellBase} text-ink`}>
+      <div className="flex flex-col">
+        <span>{name ?? "—"}</span>
+        {email && (
+          <a href={`mailto:${email}`} className="cs-helper hover:text-ink hover:underline">
+            {email}
+          </a>
+        )}
+      </div>
+    </td>
+  );
+  const companyCell = (entityId?: number | null) => (
+    <td className={`${cellBase} text-ink-muted`}>{entityId != null ? COMPANY_SHORT[entityId] : "—"}</td>
+  );
+
+  const agingColDefs: TableCol<AgingRow>[] = [
+    {
+      key: "project",
+      label: "Project",
+      sortKey: "projectName",
+      cell: (row, first) => {
+        const p = splitProjectName(row.projectName);
+        return (
+          <td
+            title={row.projectName}
+            className={`${projectWidth} px-3 py-2 align-middle text-[13px] ${
+              first ? "sticky left-0 z-10 bg-white [tr:hover>&]:bg-canvas [tr:nth-child(even)>&]:bg-[#fafafa]" : ""
+            }`}
+          >
+            {row.contractId ? (
+              <Link
+                href={`/billings/projects/${encodeURIComponent(row.contractId)}`}
+                onClick={() => rememberList("aging")}
+                className="block truncate font-medium text-ink hover:text-brand-secondary hover:underline"
+              >
+                {p.number ? <span className="tabular-nums">{p.number} · </span> : null}
+                {p.name}
+              </Link>
+            ) : (
+              <span className="block truncate font-medium text-ink">
+                {p.number ? <span className="tabular-nums">{p.number} · </span> : null}
+                {p.name}
+              </span>
+            )}
+            {p.detail ? <span className="cs-helper block truncate">{p.detail}</span> : null}
+          </td>
+        );
+      },
+    },
+    { key: "company", label: "Company", sortKey: "entityId", cell: (row) => companyCell(row.entityId) },
+    { key: "pm", label: "PM", sortKey: "leadPmName", cell: (row) => pmCell(row.leadPmName, row.leadPmEmail) },
+    {
+      key: "invoiceNumber",
+      label: "Invoice #",
+      sortKey: "invoiceNumber",
+      align: "right",
+      cell: (row) => <td className={`${cellBase} text-right text-ink tabular-nums`}>{formatInvoiceNumber(row.invoiceNumber)}</td>,
+    },
+    {
+      key: "invoiceDate",
+      label: "Invoice date",
+      sortKey: "invoiceDate",
+      cell: (row) => <td className={`${cellBase} text-left text-ink`}>{formatInvoiceDate(row.invoiceDate)}</td>,
+    },
+    ...agingDisplayBuckets.map(
+      (b): TableCol<AgingRow> => ({
+        key: `bucket:${b}`,
+        label: SITELINE_AGING_DISPLAY_MAP[b] ?? b,
+        sortKey: `bucket:${b}`,
+        align: "right",
+        cell: (row) => {
+          const v = row.buckets[b as keyof typeof row.buckets];
+          return (
+            <td className={`${cellBase} text-right tabular-nums ${agingBucketCellClass(b, v, "text-ink")}`}>
+              {formatAgingCurrency(v)}
+            </td>
+          );
+        },
+        total: () => {
+          const v = agingReport?.totals[b as keyof typeof agingReport.totals];
+          return (
+            <td className={`${cellBase} text-right tabular-nums ${agingBucketCellClass(b, v, "text-ink")}`}>
+              {formatAgingCurrency(v)}
+            </td>
+          );
+        },
+      })
+    ),
+    {
+      key: "projectTotal",
+      label: "Project Total",
+      sortKey: "projectTotal",
+      align: "right",
+      cell: (row) => (
+        <td className={`${cellBase} text-right font-medium text-ink tabular-nums`}>{formatAgingCurrency(row.projectTotal)}</td>
+      ),
+      total: () => (
+        <td className={`${cellBase} text-right text-ink tabular-nums`}>{formatAgingCurrency(agingReport?.totals.projectTotal)}</td>
+      ),
+    },
+  ];
+  const agingTableCols = agingColOrder.order
+    .map((k) => agingColDefs.find((c) => c.key === k))
+    .filter((c): c is TableCol<AgingRow> => c != null);
+  // "TOTALS" goes in the first column that has no total of its own.
+  const agingTotalsLabelKey = agingTableCols.find((c) => !c.total)?.key;
+
+  const overdueColDefs: TableCol<AgingOverdueItem>[] = [
+    {
+      key: "project",
+      label: "Project",
+      sortKey: "projectName",
+      cell: (item) => (
+        <td className={`${cellBase} text-ink`}>
+          <div className="flex flex-col">
+            {item.contractId ? (
+              <Link
+                href={`/billings/projects/${encodeURIComponent(item.contractId)}`}
+                onClick={() => rememberList("overdue")}
+                className="font-medium text-ink hover:text-brand-secondary hover:underline"
+              >
+                {item.projectName ?? "—"}
+              </Link>
+            ) : (
+              <span>{item.projectName ?? "—"}</span>
+            )}
+            {item.internalProjectNumber && <span className="cs-helper">{item.internalProjectNumber}</span>}
+          </div>
+        </td>
+      ),
+    },
+    { key: "company", label: "Company", sortKey: "entityId", cell: (item) => companyCell(item.entityId) },
+    {
+      key: "projectNumber",
+      label: "GC / Project #",
+      sortKey: "projectNumber",
+      cell: (item) => <td className={`${cellBase} text-ink`}>{item.projectNumber ?? "—"}</td>,
+    },
+    { key: "pm", label: "PM", sortKey: "leadPmName", cell: (item) => pmCell(item.leadPmName, item.leadPmEmail) },
+    {
+      key: "dueDate",
+      label: "Due date",
+      sortKey: "dueDate",
+      cell: (item) => (
+        <td className={`${cellBase} text-ink`}>
+          {item.dueDate
+            ? new Date(item.dueDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" })
+            : "—"}
+        </td>
+      ),
+    },
+    {
+      key: "daysPastDue",
+      label: "Days past due",
+      sortKey: "daysPastDue",
+      align: "right",
+      cell: (item) => <td className={`${cellBase} text-right text-ink tabular-nums`}>{item.daysPastDue}</td>,
+    },
+    {
+      key: "invoiceNumber",
+      label: "Invoice #",
+      sortKey: "invoiceNumber",
+      align: "right",
+      cell: (item) => <td className={`${cellBase} text-right text-ink tabular-nums`}>{formatInvoiceNumber(item.invoiceNumber)}</td>,
+    },
+    {
+      key: "invoiceDate",
+      label: "Invoice date",
+      sortKey: "invoiceDate",
+      cell: (item) => <td className={`${cellBase} text-left text-ink`}>{formatInvoiceDate(item.invoiceDate)}</td>,
+    },
+    {
+      key: "netDollars",
+      label: "Net amount",
+      sortKey: "netDollars",
+      align: "right",
+      cell: (item) => <td className={`${cellBase} text-right text-ink tabular-nums`}>{formatAgingCurrency(item.netDollars)}</td>,
+    },
+    { key: "status", label: "Status", sortKey: "status", cell: (item) => <td className={`${cellBase} text-ink`}>{item.status ?? "—"}</td> },
+  ];
+  const overdueTableCols = overdueColOrder.order
+    .map((k) => overdueColDefs.find((c) => c.key === k))
+    .filter((c): c is TableCol<AgingOverdueItem> => c != null);
+
   return (
     <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-6 ui-animate-in [--radius:10px] [--radius-md:8px]">
       {/* Header bar: title, company switch, sync status and the "not in Clearstory" chip in one line. */}
@@ -855,30 +1077,21 @@ export default function BillingsPage() {
 
       {(statusLoading || configured) && (
         <>
-          {/* Summary card: four colour-coded tiles + biggest older balance on the left, A/R by age on the right. */}
-          <section className="cs-content-panel grid shrink-0 overflow-hidden rounded-lg lg:grid-cols-2">
-          <div className="flex min-w-0 flex-col gap-3.5 border-b border-[var(--border-subtle)] px-5 py-[18px] lg:border-b-0 lg:border-r">
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-[14px] font-semibold text-ink">Summary{agingFiltered ? " (filtered)" : ""}</h2>
-              <span className="text-[12px] text-ink-muted">
-                {allCompanies ? "All companies" : entityIds ? entityNames[entityIds[0]] ?? "" : ""}
-              </span>
-            </div>
-            <dl className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          {/* Summary (option A): one strip of figures + A/R by age, the biggest older balance under it,
+              then the companies row. Keeps the table high on the screen. */}
+          <section className="cs-content-panel flex shrink-0 flex-col overflow-hidden rounded-lg">
+          <div className="flex min-w-0 flex-col gap-3.5 px-5 py-4">
+            <dl className="grid grid-cols-2 gap-y-3.5 lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.6fr)]">
               {[
                 {
                   label: "Total A/R",
                   value: showAgingSkeleton ? null : formatCurrency(agingTotal),
                   note: agingReport ? `${agingReport.rows.length} contracts` : "",
-                  icon: "total",
-                  iconClass: "bg-[#e3f2fd] text-[#1565c0]",
                 },
                 {
                   label: "Billed over 30 days ago",
                   value: showOverdueSkeleton ? null : formatCurrency(pastDueTotal),
                   note: agingTotal > 0 ? `${((pastDueTotal / agingTotal) * 100).toFixed(1)}% of A/R` : "",
-                  icon: "late",
-                  iconClass: "bg-[#fde7c4] text-[#8a4b00]",
                   late: true,
                 },
                 {
@@ -889,67 +1102,48 @@ export default function BillingsPage() {
                     agingReport && agingReport.rows.length > 0
                       ? `${((pastDueContracts / agingReport.rows.length) * 100).toFixed(1)}% of contracts`
                       : "",
-                  icon: "doc",
-                  iconClass: "bg-[#fde2e2] text-[#991b1b]",
                 },
                 {
                   label: "Over 90 days",
                   value: showAgingSkeleton ? null : formatCurrency(over90Total),
                   note: agingTotal > 0 ? `${((over90Total / agingTotal) * 100).toFixed(1)}% of A/R` : "",
-                  icon: "old",
-                  iconClass: "bg-[#dbe4f3] text-[#104281]",
                 },
-              ].map((k) => (
+              ].map((k, i) => (
                 <div
                   key={k.label}
-                  className={`flex min-w-0 items-start gap-2.5 rounded-[10px] border px-3.5 py-3 ${
-                    k.late ? "border-[#f7dfb0] bg-[#fff4e5]" : "border-[var(--border-subtle)] bg-white"
+                  className={`flex min-w-0 flex-col gap-0.5 pr-4 lg:border-l lg:border-[var(--border-subtle)] lg:pl-4 lg:first:border-l-0 lg:first:pl-0 ${
+                    i % 2 === 1 ? "border-l border-[var(--border-subtle)] pl-4" : ""
                   }`}
                 >
-                  <span className={`grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] ${k.iconClass}`} aria-hidden>
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                      {k.icon === "total" ? <path d="M4 19h16M7 16V9M12 16V5M17 16v-4" /> : null}
-                      {k.icon === "late" ? (
-                        <>
-                          <circle cx="12" cy="12" r="9" />
-                          <path d="M12 7v5l3 2" />
-                        </>
-                      ) : null}
-                      {k.icon === "doc" ? (
-                        <>
-                          <path d="M14 3H6v18h12V7z" />
-                          <path d="M14 3v4h4M9 13h6M9 17h4" />
-                        </>
-                      ) : null}
-                      {k.icon === "old" ? <path d="M8 3v4M16 3v4M4 9h16M5 5h14v15H5z" /> : null}
-                    </svg>
-                  </span>
-                  <div className="flex min-w-0 flex-col">
-                    <dt className="text-[12px] text-ink-muted">{k.label}</dt>
-                    <dd className="flex min-w-0 flex-col">
-                      {k.value == null ? (
-                        <Skeleton className="my-0.5 h-6 w-24" />
-                      ) : (
-                        <span
-                          className={`truncate text-[20px] font-semibold leading-[1.15] tabular-nums ${
-                            k.late ? "text-[#8a4b00]" : "text-ink"
-                          }`}
-                        >
-                          {k.value}
-                          {k.of ? <span className="ml-1 text-[13px] font-medium text-ink-muted">{k.of}</span> : null}
-                        </span>
-                      )}
-                      {k.value == null ? (
-                        <Skeleton className="mt-1 h-3 w-16" />
-                      ) : (
-                        <span className="truncate text-[11.5px] text-ink-muted">{k.note}</span>
-                      )}
-                    </dd>
-                  </div>
+                  <dt className="truncate text-[12px] text-ink-muted">{k.label}</dt>
+                  <dd className="flex min-w-0 flex-col">
+                    {k.value == null ? (
+                      <Skeleton className="my-0.5 h-6 w-24" />
+                    ) : (
+                      <span
+                        className={`truncate text-[19px] font-semibold leading-[1.2] tabular-nums ${
+                          k.late ? "text-[#8a4b00]" : "text-ink"
+                        }`}
+                      >
+                        {k.value}
+                        {k.of ? <span className="ml-1 text-[13px] font-medium text-ink-muted">{k.of}</span> : null}
+                      </span>
+                    )}
+                    {k.value == null ? (
+                      <Skeleton className="mt-1 h-3 w-16" />
+                    ) : (
+                      <span className="truncate text-[11.5px] text-ink-muted">{k.note}</span>
+                    )}
+                  </dd>
                 </div>
               ))}
+              <div className="col-span-2 flex min-w-0 flex-col gap-2 border-t border-[var(--border-subtle)] pt-3.5 lg:col-span-1 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+                <dt className="text-[12px] text-ink-muted">A/R by age{agingFiltered ? " (filtered)" : ""}</dt>
+                <dd>
+                  <AgingStackedBar columns={agingColumns} total={agingTotal} loading={showAgingSkeleton} unit="contract" />
+                </dd>
+              </div>
             </dl>
-
             {/* Biggest older balance: the one contract most worth a call. */}
             {showOverdueSkeleton ? (
               <Skeleton className="h-[62px] w-full rounded-[10px]" />
@@ -988,26 +1182,9 @@ export default function BillingsPage() {
               })()
             ) : null}
           </div>
-
-          <AgingColumnsChart
-            title={agingFiltered ? "A/R by age (filtered)" : "A/R by age"}
-            columns={agingColumns}
-            total={agingTotal}
-            loading={showAgingSkeleton}
-            height={200}
-            caption={
-              showAgingSkeleton ? (
-                <Skeleton className="inline-block h-3.5 w-28 align-middle" />
-              ) : (
-                <>
-                  Total <span className="font-semibold tabular-nums text-ink">{formatCurrency(agingTotal)}</span>
-                </>
-              )
-            }
-            bare
-            unit="contract"
-          />
+          </section>
           {agingReport || showAgingSkeleton ? (
+            <section className="cs-content-panel shrink-0 overflow-hidden rounded-lg">
             <BillingCompanyBreakdown
               entityIds={ALL_ENTITY_IDS}
               loading={showAgingSkeleton || showOverdueSkeleton}
@@ -1017,12 +1194,12 @@ export default function BillingsPage() {
               selectedId={allCompanies ? null : sitelineEntityId ?? null}
               onShowAll={() => setCompanyId(null)}
             />
+            </section>
           ) : null}
-          </section>
 
-          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
-          {/* Same tab strip as T&M Tags / Clearstory Settings / bid stages. */}
-          <div className="box-border flex h-[52px] w-full shrink-0 items-center overflow-hidden rounded-[14px] border border-[#E5E7EB] bg-white px-1.5 shadow-[0_1px_2px_rgba(33,33,33,0.04)]">
+          {/* Table panel (option A): tabs on top, then search / Filters, then the table edge to edge. */}
+          <div className="cs-content-panel flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden rounded-lg">
+          <div className="box-border flex h-[52px] w-full shrink-0 items-center overflow-hidden border-b border-[var(--border-subtle)] bg-white px-1.5">
             <div
               className="flex min-w-0 flex-1 flex-nowrap items-center gap-0.5 overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               role="tablist"
@@ -1059,7 +1236,7 @@ export default function BillingsPage() {
             </div>
           </div>
 
-          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col pt-2">
+          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
           {CONTRACTS_PAYAPPS_TAB_ENABLED && activeTab === "contracts" && (
           <>
           <Card>
@@ -1337,13 +1514,9 @@ export default function BillingsPage() {
           )}
 
           {activeTab === "aging" && (
-            <Card className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
               <div className="shrink-0 w-full min-w-0">
-              <CardHeader
-                title="A/R Aging"
-                subtitle="Net dollars by project and days past due. Data syncs every 10 minutes."
-              />
-              <div className="mb-3 flex w-full min-w-0 flex-wrap items-center gap-2">
+              <div className="flex w-full min-w-0 flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-2.5">
                 <div className="relative w-full min-w-0 sm:w-80">
                   <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" aria-hidden>
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -1380,6 +1553,15 @@ export default function BillingsPage() {
                     </span>
                   ) : null}
                 </button>
+                <ColumnPickerButton
+                  outline
+                  columns={agingTableCols.map((c) => ({ key: c.key, label: c.label }))}
+                  hidden={new Set<string>()}
+                  order={agingColOrder.order}
+                  onReorder={agingColOrder.setOrder}
+                  onResetOrder={agingColOrder.reset}
+                  orderChanged={agingColOrder.isCustom}
+                />
                 {agingFilterCount > 0 || agingFilters.search ? (
                   <button
                     type="button"
@@ -1395,7 +1577,7 @@ export default function BillingsPage() {
               </div>
               </div>
               {agingError && (
-                <div className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
+                <div className="m-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
                   {agingError}
                   <button
                     type="button"
@@ -1416,49 +1598,24 @@ export default function BillingsPage() {
                   <table className="w-full min-w-full border-collapse text-left">
                     <thead>
                       <tr>
-                        <BillingSortableTh
-                          label="Project"
-                          sortKey="projectName"
-                          sort={agingSort}
-                          onSort={onAgingSort}
-                          className="sticky left-0 z-20 w-[17rem] min-w-[17rem] max-w-[17rem] bg-canvas"
-                        />
-                        {allCompanies ? (
-                          <BillingSortableTh label="Company" sortKey="entityId" sort={agingSort} onSort={onAgingSort} />
-                        ) : null}
-                        <BillingSortableTh label="PM" sortKey="leadPmName" sort={agingSort} onSort={onAgingSort} />
-                        <BillingSortableTh
-                          label="Invoice #"
-                          sortKey="invoiceNumber"
-                          sort={agingSort}
-                          onSort={onAgingSort}
-                          align="right"
-                        />
-                        <BillingSortableTh label="Invoice date" sortKey="invoiceDate" sort={agingSort} onSort={onAgingSort} />
-                        {agingDisplayBuckets.map((b) => (
+                        {agingTableCols.map((c, ci) => (
                           <BillingSortableTh
-                            key={b}
-                            label={SITELINE_AGING_DISPLAY_MAP[b] ?? b}
-                            sortKey={`bucket:${b}`}
+                            key={c.key}
+                            label={c.label}
+                            sortKey={c.sortKey}
                             sort={agingSort}
                             onSort={onAgingSort}
-                            align="right"
+                            align={c.align}
+                            className={c.key === "project" && ci === 0 ? `sticky left-0 z-20 ${projectWidth} bg-canvas` : ""}
                           />
                         ))}
-                        <BillingSortableTh
-                          label="Project Total"
-                          sortKey="projectTotal"
-                          sort={agingSort}
-                          onSort={onAgingSort}
-                          align="right"
-                        />
                       </tr>
                     </thead>
                     <tbody>
                       {showAgingSkeleton &&
                         Array.from({ length: 8 }, (_, i) => (
                           <tr key={`skeleton-${i}`} className="border-b border-[var(--border-subtle)] last:border-0">
-                            {Array.from({ length: agingDisplayBuckets.length + (allCompanies ? 6 : 5) }, (_, j) => (
+                            {Array.from({ length: agingTableCols.length }, (_, j) => (
                               <td key={j} className="px-3 py-2.5">
                                 <div className="h-3.5 w-full max-w-24 animate-pulse rounded bg-canvas" />
                               </td>
@@ -1471,118 +1628,41 @@ export default function BillingsPage() {
                           key={i}
                           className="border-b border-[var(--border-subtle)] bg-white transition-colors last:border-0 even:bg-canvas/50 hover:bg-canvas"
                         >
-                          {(() => {
-                            const p = splitProjectName(row.projectName);
-                            return (
-                              <td
-                                title={row.projectName}
-                                className="sticky left-0 z-10 w-[17rem] min-w-[17rem] max-w-[17rem] bg-white px-3 py-2 align-middle text-[13px] [tr:hover>&]:bg-canvas [tr:nth-child(even)>&]:bg-[#fafafa]"
-                              >
-                                {row.contractId ? (
-                                  <Link
-                                    href={`/billings/projects/${encodeURIComponent(row.contractId)}`}
-                                    onClick={() => rememberList("aging")}
-                                    className="block truncate font-medium text-ink hover:text-brand-secondary hover:underline"
-                                  >
-                                    {p.number ? <span className="tabular-nums">{p.number} · </span> : null}
-                                    {p.name}
-                                  </Link>
-                                ) : (
-                                  <span className="block truncate font-medium text-ink">
-                                    {p.number ? <span className="tabular-nums">{p.number} · </span> : null}
-                                    {p.name}
-                                  </span>
-                                )}
-                                {p.detail ? <span className="cs-helper block truncate">{p.detail}</span> : null}
-                              </td>
-                            );
-                          })()}
-                          {allCompanies ? (
-                            <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-ink-muted">
-                              {row.entityId != null ? COMPANY_SHORT[row.entityId] : "—"}
-                            </td>
-                          ) : null}
-                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-ink">
-                            <div className="flex flex-col">
-                              <span>{row.leadPmName ?? "—"}</span>
-                              {row.leadPmEmail && (
-                                <a
-                                  href={`mailto:${row.leadPmEmail}`}
-                                  className="cs-helper hover:text-ink hover:underline"
-                                >
-                                  {row.leadPmEmail}
-                                </a>
-                              )}
-                            </div>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-right text-ink tabular-nums">
-                            {formatInvoiceNumber(row.invoiceNumber)}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-left text-ink">
-                            {formatInvoiceDate(row.invoiceDate)}
-                          </td>
-                          {agingDisplayBuckets.map((b) => {
-                            const bucketValue = row.buckets[b as keyof typeof row.buckets];
-                            return (
-                              <td
-                                key={b}
-                                className={`whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-right tabular-nums ${agingBucketCellClass(b, bucketValue, "text-ink")}`}
-                              >
-                                {formatAgingCurrency(bucketValue)}
-                              </td>
-                            );
-                          })}
-                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-right font-medium text-ink tabular-nums">
-                            {formatAgingCurrency(row.projectTotal)}
-                          </td>
+                          {agingTableCols.map((c, ci) => (
+                            <Fragment key={c.key}>{c.cell(row, ci === 0)}</Fragment>
+                          ))}
                         </tr>
                       ))}
                       {!showAgingSkeleton && agingReport && (
                         <tr className="border-t-2 border-[var(--border-subtle)] bg-canvas font-semibold">
-                          <td className="sticky left-0 z-10 w-[17rem] min-w-[17rem] max-w-[17rem] bg-canvas whitespace-nowrap px-3 py-2.5 align-middle text-[13px] ">
-                            TOTALS
-                          </td>
-                          {allCompanies ? <td aria-hidden /> : null}
-                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-ink tabular-nums">
-                            {/* PM column has no totals */}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-ink tabular-nums">
-                            {/* Invoice # column has no totals */}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-ink">
-                            {/* Invoice date column has no totals */}
-                          </td>
-                          {agingDisplayBuckets.map((b) => {
-                            const bucketTotal = agingReport.totals[b as keyof typeof agingReport.totals];
-                            return (
-                              <td
-                                key={b}
-                                className={`whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-right tabular-nums ${agingBucketCellClass(b, bucketTotal, "text-ink")}`}
-                              >
-                                {formatAgingCurrency(bucketTotal)}
-                              </td>
-                            );
-                          })}
-                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-right text-ink tabular-nums">
-                            {formatAgingCurrency(agingReport.totals.projectTotal)}
-                          </td>
+                          {agingTableCols.map((c, ci) => (
+                            <Fragment key={c.key}>
+                              {c.total ? (
+                                c.total()
+                              ) : (
+                                <td
+                                  className={`${cellBase} text-ink ${
+                                    ci === 0 ? "sticky left-0 z-10 bg-canvas" : ""
+                                  }`}
+                                >
+                                  {c.key === agingTotalsLabelKey ? "TOTALS" : null}
+                                </td>
+                              )}
+                            </Fragment>
+                          ))}
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
               )}
-            </Card>
+            </div>
           )}
 
           {activeTab === "overdue" && (
-            <Card className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
               <div className="shrink-0 w-full min-w-0">
-              <CardHeader
-                title="Past due pay apps"
-                subtitle={`Pay apps at least ${overdueMinDays} days past due. Change the threshold in Filters.`}
-              />
-              <div className="mb-3 flex w-full min-w-0 flex-wrap items-center gap-2">
+              <div className="flex w-full min-w-0 flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-2.5">
                 <div className="relative w-full min-w-0 sm:w-80">
                   <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" aria-hidden>
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -1619,6 +1699,15 @@ export default function BillingsPage() {
                     </span>
                   ) : null}
                 </button>
+                <ColumnPickerButton
+                  outline
+                  columns={overdueTableCols.map((c) => ({ key: c.key, label: c.label }))}
+                  hidden={new Set<string>()}
+                  order={overdueColOrder.order}
+                  onReorder={overdueColOrder.setOrder}
+                  onResetOrder={overdueColOrder.reset}
+                  orderChanged={overdueColOrder.isCustom}
+                />
                 {overdueFilterCount > 0 || overdueFilters.search ? (
                   <button
                     type="button"
@@ -1634,7 +1723,7 @@ export default function BillingsPage() {
               </div>
               </div>
               {agingOverdueError && (
-                <div className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
+                <div className="m-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
                   {agingOverdueError}
                   <button
                     type="button"
@@ -1659,53 +1748,23 @@ export default function BillingsPage() {
                     <table className="w-full min-w-full border-collapse text-left">
                       <thead>
                         <tr>
-                          <BillingSortableTh label="Project" sortKey="projectName" sort={overdueSort} onSort={onOverdueSort} />
-                          {allCompanies ? (
-                            <BillingSortableTh label="Company" sortKey="entityId" sort={overdueSort} onSort={onOverdueSort} />
-                          ) : null}
-                          <BillingSortableTh
-                            label="GC / Project #"
-                            sortKey="projectNumber"
-                            sort={overdueSort}
-                            onSort={onOverdueSort}
-                          />
-                          <BillingSortableTh label="PM" sortKey="leadPmName" sort={overdueSort} onSort={onOverdueSort} />
-                          <BillingSortableTh label="Due date" sortKey="dueDate" sort={overdueSort} onSort={onOverdueSort} />
-                          <BillingSortableTh
-                            label="Days past due"
-                            sortKey="daysPastDue"
-                            sort={overdueSort}
-                            onSort={onOverdueSort}
-                            align="right"
-                          />
-                          <BillingSortableTh
-                            label="Invoice #"
-                            sortKey="invoiceNumber"
-                            sort={overdueSort}
-                            onSort={onOverdueSort}
-                            align="right"
-                          />
-                          <BillingSortableTh
-                            label="Invoice date"
-                            sortKey="invoiceDate"
-                            sort={overdueSort}
-                            onSort={onOverdueSort}
-                          />
-                          <BillingSortableTh
-                            label="Net amount"
-                            sortKey="netDollars"
-                            sort={overdueSort}
-                            onSort={onOverdueSort}
-                            align="right"
-                          />
-                          <BillingSortableTh label="Status" sortKey="status" sort={overdueSort} onSort={onOverdueSort} />
+                          {overdueTableCols.map((c) => (
+                            <BillingSortableTh
+                              key={c.key}
+                              label={c.label}
+                              sortKey={c.sortKey}
+                              sort={overdueSort}
+                              onSort={onOverdueSort}
+                              align={c.align}
+                            />
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
                         {showOverdueSkeleton &&
                           Array.from({ length: 8 }, (_, i) => (
                             <tr key={`skeleton-${i}`} className="border-b border-[var(--border-subtle)] last:border-0">
-                              {Array.from({ length: allCompanies ? 10 : 9 }, (_, j) => (
+                              {Array.from({ length: overdueTableCols.length }, (_, j) => (
                                 <td key={j} className="px-3 py-2.5">
                                   <div className="h-3.5 w-full max-w-24 animate-pulse rounded bg-canvas" />
                                 </td>
@@ -1713,87 +1772,21 @@ export default function BillingsPage() {
                             </tr>
                           ))}
                         {!showOverdueSkeleton &&
-                          sortedOverdueItems.map((item: AgingOverdueItem, idx: number) => {
-                          const due = item.dueDate
-                            ? new Date(item.dueDate).toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "2-digit",
-                              })
-                            : "—";
-                          const invDate = formatInvoiceDate(item.invoiceDate);
-                          return (
+                          sortedOverdueItems.map((item: AgingOverdueItem, idx: number) => (
                             <tr
                               key={`${item.contractId}-${idx}`}
                               className="border-b border-[var(--border-subtle)] bg-white transition-colors last:border-0 even:bg-canvas/50 hover:bg-canvas"
                             >
-                              <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-ink">
-                                <div className="flex flex-col">
-                                  {item.contractId ? (
-                                    <Link
-                                      href={`/billings/projects/${encodeURIComponent(item.contractId)}`}
-                                      onClick={() => rememberList("overdue")}
-                                      className="font-medium text-ink hover:text-brand-secondary hover:underline"
-                                    >
-                                      {item.projectName ?? "—"}
-                                    </Link>
-                                  ) : (
-                                    <span>{item.projectName ?? "—"}</span>
-                                  )}
-                                  {item.internalProjectNumber && (
-                                    <span className="cs-helper">
-                                      {item.internalProjectNumber}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              {allCompanies ? (
-                                <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-ink-muted">
-                                  {item.entityId != null ? COMPANY_SHORT[item.entityId] : "—"}
-                                </td>
-                              ) : null}
-                              <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-ink">
-                                {item.projectNumber ?? "—"}
-                              </td>
-                              <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-ink">
-                                <div className="flex flex-col">
-                                  <span>{item.leadPmName ?? "—"}</span>
-                                  {item.leadPmEmail && (
-                                    <a
-                                      href={`mailto:${item.leadPmEmail}`}
-                                      className="cs-helper hover:text-ink hover:underline"
-                                    >
-                                      {item.leadPmEmail}
-                                    </a>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-ink">
-                                {due}
-                              </td>
-                              <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-right text-ink tabular-nums">
-                                {item.daysPastDue}
-                              </td>
-                              <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-right text-ink tabular-nums">
-                                {formatInvoiceNumber(item.invoiceNumber)}
-                              </td>
-                              <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-left text-ink">
-                                {invDate}
-                              </td>
-                              <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-right text-ink tabular-nums">
-                                {formatAgingCurrency(item.netDollars)}
-                              </td>
-                              <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[13px] text-ink">
-                                {item.status ?? "—"}
-                              </td>
+                              {overdueTableCols.map((c) => (
+                                <Fragment key={c.key}>{c.cell(item, false)}</Fragment>
+                              ))}
                             </tr>
-                          );
-                        })}
+                          ))}
                       </tbody>
                     </table>
                   </div>
                 )}
-            </Card>
+            </div>
           )}
           </div>
           </div>

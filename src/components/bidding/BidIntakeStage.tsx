@@ -1967,7 +1967,7 @@ export function BidIntakeStage() {
           ) : null}
         </div>
         <div className={`${sectionBody} intake-layer-scroll flex flex-col gap-2`}>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto table-scroll">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="text-[11px] text-[#6b7280]">

@@ -429,7 +429,7 @@ function ProjectView({ contractId }: { contractId: string }) {
           {data.payApps.length === 0 ? (
             <p className="cs-helper py-4">No pay apps on this contract yet.</p>
           ) : (
-            <div className="cs-data-table cs-table-shell">
+            <div className="cs-data-table cs-table-shell table-scroll">
               <table className="w-full min-w-[760px] border-collapse text-left">
                 <caption className="sr-only">Pay apps</caption>
                 <thead>
@@ -529,7 +529,7 @@ function ProjectView({ contractId }: { contractId: string }) {
           {m.cors.length === 0 ? (
             <p className="cs-helper py-4">No change orders on this job.</p>
           ) : (
-            <div className="cs-data-table cs-table-shell">
+            <div className="cs-data-table cs-table-shell table-scroll">
               <table className="w-full min-w-[720px] border-collapse text-left">
                 <caption className="sr-only">Change orders, longest waiting first</caption>
                 <thead>
