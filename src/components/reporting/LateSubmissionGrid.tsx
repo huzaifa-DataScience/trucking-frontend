@@ -3,6 +3,8 @@
 import { useState, useCallback } from "react";
 import type { LateSubmissionRow } from "@/lib/types";
 
+import { useTableSort } from "@/hooks/useTableSort";
+import { asDate } from "@/lib/sort";
 const ROWS_PER_PAGE = 50;
 
 interface LateSubmissionGridProps {
@@ -15,7 +17,17 @@ export function LateSubmissionGrid({ rows, onOpenDetail }: LateSubmissionGridPro
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / ROWS_PER_PAGE) || 1;
   const start = page * ROWS_PER_PAGE;
-  const pageRows = rows.slice(start, start + ROWS_PER_PAGE);
+  // Sort the whole list, then page it, so a header click orders every page.
+  const lateSort = useTableSort(rows, {
+    ticket: (r) => r.ticketNumber,
+    ticketDate: (r) => asDate(r.ticketDate),
+    entryDate: (r) => asDate(r.systemEntryDate),
+    lag: (r) => r.lagTime,
+    signedBy: (r) => r.signedBy,
+    jobName: (r) => r.jobName,
+    hauler: (r) => r.haulerCompanyName,
+  });
+  const pageRows = lateSort.sorted.slice(start, start + ROWS_PER_PAGE);
 
   const exportExcel = useCallback(() => {
     import("xlsx").then((XLSX) => {
@@ -45,13 +57,13 @@ export function LateSubmissionGrid({ rows, onOpenDetail }: LateSubmissionGridPro
           <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
-              <Th>Ticket Number</Th>
-              <Th>Ticket Date</Th>
-              <Th>System Entry Date</Th>
-              <Th>Lag Time</Th>
-              <Th>Signed By</Th>
-              <Th>Job Name</Th>
-              <Th>Hauler Name</Th>
+              <Th>{lateSort.header("ticket", "Ticket Number")}</Th>
+              <Th>{lateSort.header("ticketDate", "Ticket Date")}</Th>
+              <Th>{lateSort.header("entryDate", "System Entry Date")}</Th>
+              <Th>{lateSort.header("lag", "Lag Time")}</Th>
+              <Th>{lateSort.header("signedBy", "Signed By")}</Th>
+              <Th>{lateSort.header("jobName", "Job Name")}</Th>
+              <Th>{lateSort.header("hauler", "Hauler Name")}</Th>
             </tr>
           </thead>
           <tbody>

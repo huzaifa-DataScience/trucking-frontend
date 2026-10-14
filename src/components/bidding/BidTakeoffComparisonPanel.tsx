@@ -2,6 +2,7 @@
 
 import { useBidSheet } from "@/contexts/BidSheetContext";
 
+import { useTableSort } from "@/hooks/useTableSort";
 interface TakeoffComparison {
   scope?: string;
   roleA?: string;
@@ -35,6 +36,15 @@ function label(value: string | undefined): string {
 export function BidTakeoffComparisonPanel() {
   const { bid } = useBidSheet();
   const rows = comparisonsFromWorkflow(bid?.workflow?.takeoffComparisons);
+  const compareSort = useTableSort(rows, {
+    scope: (r) => label(r.scope),
+    takeoffA: (r) => r.quantityA,
+    takeoffB: (r) => r.quantityB,
+    diff: (r) => r.difference,
+    variance: (r) => r.differencePct,
+    final: (r) => r.finalQuantity,
+    status: (r) => (r.reconciliationRequired ? "Review required" : "Matched"),
+  });
 
   if (!bid || rows.length === 0) return null;
 
@@ -51,17 +61,17 @@ export function BidTakeoffComparisonPanel() {
           <table className="w-full min-w-[32rem] text-left text-[12.5px] text-[#374151]">
             <thead className="bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
               <tr>
-                <th className="px-3 py-2.5">Scope</th>
-                <th className="px-3 py-2.5">Takeoff A</th>
-                <th className="px-3 py-2.5">Takeoff B</th>
-                <th className="px-3 py-2.5">Diff</th>
-                <th className="px-3 py-2.5">Var</th>
-                <th className="px-3 py-2.5">Final</th>
-                <th className="px-3 py-2.5">Status</th>
+                <th className="px-3 py-2.5">{compareSort.header("scope", "Scope")}</th>
+                <th className="px-3 py-2.5">{compareSort.header("takeoffA", "Takeoff A")}</th>
+                <th className="px-3 py-2.5">{compareSort.header("takeoffB", "Takeoff B")}</th>
+                <th className="px-3 py-2.5">{compareSort.header("diff", "Diff")}</th>
+                <th className="px-3 py-2.5">{compareSort.header("variance", "Var")}</th>
+                <th className="px-3 py-2.5">{compareSort.header("final", "Final")}</th>
+                <th className="px-3 py-2.5">{compareSort.header("status", "Status")}</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {compareSort.sorted.map((row) => (
                 <tr
                   key={`${row.scope}-${row.roleA}-${row.roleB}`}
                   className="border-t border-[#eef2f6]"

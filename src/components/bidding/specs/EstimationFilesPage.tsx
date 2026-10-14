@@ -19,6 +19,7 @@ import {
 import type { MikeFileInfo } from "@/lib/bidding/specs-types";
 import type { BidListItem } from "@/lib/bidding/types";
 
+import { useTableSort } from "@/hooks/useTableSort";
 function fmtWhen(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
@@ -126,6 +127,13 @@ export function EstimationFilesPage() {
         .some((v) => String(v).toLowerCase().includes(needle))
     );
   }, [takeoffs, search]);
+  const fileSort = useTableSort(filtered, {
+    takeoff: (t) => t.fileName,
+    estimate: (t) => t.estimateNumber,
+    bidName: (t) => t.bidName,
+    rows: (t) => t.totalRows,
+    updated: (t) => t.updatedAt,
+  });
 
   const confirmUpload = async (values: MikeUploadOptions) => {
     const bidId = values.bidId;
@@ -263,15 +271,15 @@ export function EstimationFilesPage() {
           <table className="min-w-[720px] w-full border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-surface">
               <tr className="border-b border-ink/[0.08] text-[10px] uppercase tracking-wide text-ink/40">
-                <th className="px-4 py-3 font-semibold">Takeoff</th>
-                <th className="px-3 py-3 font-semibold">Estimate #</th>
-                <th className="px-3 py-3 font-semibold">Bid name</th>
-                <th className="px-3 py-3 font-semibold">Rows</th>
-                <th className="px-3 py-3 font-semibold">Updated</th>
+                <th className="px-4 py-3 font-semibold">{fileSort.header("takeoff", "Takeoff")}</th>
+                <th className="px-3 py-3 font-semibold">{fileSort.header("estimate", "Estimate #")}</th>
+                <th className="px-3 py-3 font-semibold">{fileSort.header("bidName", "Bid name")}</th>
+                <th className="px-3 py-3 font-semibold">{fileSort.header("rows", "Rows")}</th>
+                <th className="px-3 py-3 font-semibold">{fileSort.header("updated", "Updated")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/[0.05]">
-              {filtered.map((t) => (
+              {fileSort.sorted.map((t) => (
                 <tr
                   key={t.bidId}
                   className="cursor-pointer hover:bg-canvas/60"

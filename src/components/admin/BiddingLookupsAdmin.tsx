@@ -10,6 +10,8 @@ import { getApiErrorMessage } from "@/lib/api/client";
 import type { BidTeam, BidWageRate, PayrollBurdenItem, PayrollBurdenRateType } from "@/lib/bidding/types";
 import type { TeamCrewSlot } from "@/lib/api/endpoints/bidding";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
+import { useTableSort } from "@/hooks/useTableSort";
 const CREW_SLOTS: { key: TeamCrewSlot; label: string }[] = [
   { key: "bidClerk", label: "Assistant Estimator" },
   { key: "assistantManager", label: "Assistant manager" },
@@ -134,6 +136,11 @@ function TeamsSection({
   onReload: () => Promise<unknown>;
 }) {
   const { showToast } = useToast();
+  const teamSort = useTableSort(teams, {
+    teamName: (t) => t.teamName,
+    captain: (t) => t.captain,
+    asstEstimator: (t) => t.bidClerk,
+  });
   const [saving, setSaving] = useState(false);
   const [teamName, setTeamName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -177,9 +184,9 @@ function TeamsSection({
         <table className="w-full min-w-[480px] text-left text-sm">
           <thead className="bg-stone-50 text-xs font-medium text-stone-500 dark:bg-stone-900/50 dark:text-stone-400">
             <tr>
-              <th className="px-3 py-2">Team name</th>
-              <th className="px-3 py-2">Captain</th>
-              <th className="px-3 py-2">Asst. estimator</th>
+              <th className="px-3 py-2">{teamSort.header("teamName", "Team name")}</th>
+              <th className="px-3 py-2">{teamSort.header("captain", "Captain")}</th>
+              <th className="px-3 py-2">{teamSort.header("asstEstimator", "Asst. estimator")}</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
@@ -191,7 +198,7 @@ function TeamsSection({
                 </td>
               </tr>
             ) : (
-              teams.map((t) => (
+              teamSort.sorted.map((t) => (
                 <Fragment key={t.id}>
                   <tr className="border-t border-stone-100 dark:border-stone-800">
                     <td className="px-3 py-2 font-medium text-stone-900 dark:text-stone-100">
@@ -273,6 +280,12 @@ function WageRatesSection({
   onReload: () => Promise<unknown>;
 }) {
   const { showToast } = useToast();
+  const wageSort = useTableSort(wageRates, {
+    label: (r) => r.displayLabel || r.rateLabel,
+    wage: (r) => r.wage,
+    fringe: (r) => r.fringe,
+    total: (r) => r.total,
+  });
   const [saving, setSaving] = useState(false);
   const [rateLabel, setRateLabel] = useState("");
   const [wage, setWage] = useState("");
@@ -325,10 +338,10 @@ function WageRatesSection({
         <table className="w-full min-w-[480px] text-left text-sm">
           <thead className="bg-stone-50 text-xs font-medium text-stone-500 dark:bg-stone-900/50 dark:text-stone-400">
             <tr>
-              <th className="px-3 py-2">Label</th>
-              <th className="px-3 py-2">Wage</th>
-              <th className="px-3 py-2">Fringe</th>
-              <th className="px-3 py-2">Total</th>
+              <th className="px-3 py-2">{wageSort.header("label", "Label")}</th>
+              <th className="px-3 py-2">{wageSort.header("wage", "Wage")}</th>
+              <th className="px-3 py-2">{wageSort.header("fringe", "Fringe")}</th>
+              <th className="px-3 py-2">{wageSort.header("total", "Total")}</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
@@ -340,7 +353,7 @@ function WageRatesSection({
                 </td>
               </tr>
             ) : (
-              wageRates.map((r) => (
+              wageSort.sorted.map((r) => (
                 <tr key={r.id} className="border-t border-stone-100 dark:border-stone-800">
                   <td className="px-3 py-2 font-medium text-stone-900 dark:text-stone-100">
                     {r.displayLabel || r.rateLabel}
@@ -416,6 +429,12 @@ function PayrollBurdenSection({
   onReload: () => Promise<unknown>;
 }) {
   const { showToast } = useToast();
+  const burdenSort = useTableSort(payrollBurden, {
+    code: (i) => i.code,
+    label: (i) => i.label,
+    type: (i) => RATE_TYPE_LABELS[i.rateType],
+    rate: (i) => i.rate,
+  });
   const [saving, setSaving] = useState(false);
   const [code, setCode] = useState("");
   const [label, setLabel] = useState("");
@@ -471,10 +490,10 @@ function PayrollBurdenSection({
         <table className="w-full min-w-[520px] text-left text-sm">
           <thead className="bg-stone-50 text-xs font-medium text-stone-500 dark:bg-stone-900/50 dark:text-stone-400">
             <tr>
-              <th className="px-3 py-2">Code</th>
-              <th className="px-3 py-2">Label</th>
-              <th className="px-3 py-2">Type</th>
-              <th className="px-3 py-2">Rate</th>
+              <th className="px-3 py-2">{burdenSort.header("code", "Code")}</th>
+              <th className="px-3 py-2">{burdenSort.header("label", "Label")}</th>
+              <th className="px-3 py-2">{burdenSort.header("type", "Type")}</th>
+              <th className="px-3 py-2">{burdenSort.header("rate", "Rate")}</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
@@ -486,7 +505,7 @@ function PayrollBurdenSection({
                 </td>
               </tr>
             ) : (
-              payrollBurden.map((item) => (
+              burdenSort.sorted.map((item) => (
                 <tr key={item.id} className="border-t border-stone-100 dark:border-stone-800">
                   <td className="px-3 py-2 font-mono text-stone-700 dark:text-stone-300">
                     {item.code}
@@ -536,11 +555,13 @@ function PayrollBurdenSection({
             onChange={(e) => setRateType(e.target.value as PayrollBurdenRateType)}
             className="w-full appearance-none rounded-lg border border-stone-300 px-3 py-2 pr-9 text-sm dark:border-stone-600 dark:bg-stone-900"
           >
-            {(Object.keys(RATE_TYPE_LABELS) as PayrollBurdenRateType[]).map((t) => (
-              <option key={t} value={t}>
-                {RATE_TYPE_LABELS[t]}
-              </option>
-            ))}
+            <SortedOptions>
+              {(Object.keys(RATE_TYPE_LABELS) as PayrollBurdenRateType[]).map((t) => (
+                <option key={t} value={t}>
+                  {RATE_TYPE_LABELS[t]}
+                </option>
+              ))}
+            </SortedOptions>
           </select>
           <SelectChevron />
         </div>

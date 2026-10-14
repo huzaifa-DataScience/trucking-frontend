@@ -3,6 +3,7 @@
 import type { Direction } from "@/lib/types";
 import { DatePicker } from "@/components/ui/DatePicker";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 export interface FilterConfig {
   startDate: string;
   endDate: string;
@@ -104,12 +105,14 @@ export function ReportFilters({
                 onChange={(e) => update({ jobId: e.target.value })}
                 className={selectClass}
               >
-                <option value="all">All</option>
-                {options.jobs.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="all">All</option>
+                  {options.jobs.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>
@@ -124,12 +127,14 @@ export function ReportFilters({
                 onChange={(e) => update({ materialId: e.target.value })}
                 className={selectClass}
               >
-                <option value="all">All</option>
-                {options.materials.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="all">All</option>
+                  {options.materials.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>
@@ -144,12 +149,14 @@ export function ReportFilters({
                 onChange={(e) => update({ haulerId: e.target.value })}
                 className={selectClass}
               >
-                <option value="all">All</option>
-                {options.haulers.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="all">All</option>
+                  {options.haulers.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>
@@ -164,12 +171,14 @@ export function ReportFilters({
                 onChange={(e) => update({ truckTypeId: e.target.value })}
                 className={selectClass}
               >
-                <option value="all">All</option>
-                {options.truckTypes.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="all">All</option>
+                  {options.truckTypes.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>
@@ -184,11 +193,13 @@ export function ReportFilters({
                 onChange={(e) => update({ direction: e.target.value as Direction })}
                 className={selectClass}
               >
-                {DIRECTION_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
+                <SortedOptions>
+                  {DIRECTION_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>
@@ -205,11 +216,13 @@ export function ReportFilters({
                 }
                 className={selectClass}
               >
-                {options.ourEntities.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
+                <SortedOptions>
+                  {options.ourEntities.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>

@@ -21,6 +21,7 @@ import * as biddingApi from "@/lib/api/endpoints/bidding";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type { BidContactLookup } from "@/lib/bidding/types";
 
+import { compareText } from "@/lib/sort";
 type SlotDraft = {
   connecteamUserId: number | null;
   appUserId: number | null;
@@ -111,9 +112,10 @@ function SlotPersonPicker({
 
   const q = query.trim();
   const qLower = q.toLowerCase();
+  const sortedRoster = [...roster].sort((a, b) => compareText(contactLabel(a), contactLabel(b)));
   const hits = !qLower
-    ? roster
-    : roster.filter((c) => {
+    ? sortedRoster
+    : sortedRoster.filter((c) => {
         const hay = [
           contactLabel(c),
           c.email,

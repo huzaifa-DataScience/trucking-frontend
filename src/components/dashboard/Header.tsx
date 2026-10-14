@@ -15,6 +15,7 @@ import { NotificationBell } from "@/components/dashboard/NotificationBell";
 import { MessagesBell } from "@/components/dashboard/MessagesBell";
 import { entityBrandForName } from "@/lib/branding/entity-colors";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { companyId, company, setCompanyId, companies } = useCompany();
   const { user, logout } = useAuth();
@@ -184,12 +185,14 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                 }`}
                 aria-label="Select company or branch"
               >
-                <option value="all">All companies</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="all">All companies</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <svg
                 className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink/45"

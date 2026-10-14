@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth/roles";
 import { useAuth } from "@/contexts/AuthContext";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 interface UserDetailModalProps {
   user: AdminUser | null;
   isOpen: boolean;
@@ -146,11 +147,13 @@ export function UserDetailModal({
                     }
                     className="w-full appearance-none rounded-lg border border-ink/10 bg-surface px-3 py-2 pr-9 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
                   >
-                    {roleOptions.map((id) => (
-                      <option key={id} value={id}>
-                        {APP_ROLE_LABELS[id]}
-                      </option>
-                    ))}
+                    <SortedOptions>
+                      {roleOptions.map((id) => (
+                        <option key={id} value={id}>
+                          {APP_ROLE_LABELS[id]}
+                        </option>
+                      ))}
+                    </SortedOptions>
                   </select>
                   <SelectChevron />
                 </div>
@@ -170,10 +173,12 @@ export function UserDetailModal({
                     onChange={(e) => setStatus(e.target.value as UserStatus)}
                     className="w-full appearance-none rounded-lg border border-ink/10 bg-surface px-3 py-2 pr-9 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
                   >
-                    <option value="pending">Pending</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="rejected">Rejected</option>
+                    <SortedOptions>
+                      <option value="pending">Pending</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="rejected">Rejected</option>
+                    </SortedOptions>
                   </select>
                   <SelectChevron />
                 </div>

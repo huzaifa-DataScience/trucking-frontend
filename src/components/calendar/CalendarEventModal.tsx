@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/endpoints/calendar";
 import { toYmd, type CalendarBidInfo, type CalendarEventBody, type CalendarItem } from "@/lib/calendar/calendar";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-ink/10 bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink/30 focus:border-brand focus:ring-2 focus:ring-brand/20";
 const labelClass = "block text-xs font-semibold text-ink/60";
@@ -219,18 +220,20 @@ export function CalendarEventModal({
                 value={form.bidId}
                 onChange={(e) => set("bidId", e.target.value)}
               >
-                <option value="">None</option>
-                {(bids ?? []).map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.bidName
-                      ? `${b.estimateNumber} · ${b.bidName}`
-                      : b.estimateNumber}
-                  </option>
-                ))}
-                {editing?.bid &&
-                !(bids ?? []).some((b) => b.id === editing.bid!.id) ? (
-                  <option value={editing.bid.id}>{editing.bid.estimateNumber}</option>
-                ) : null}
+                <SortedOptions>
+                  <option value="">None</option>
+                  {(bids ?? []).map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.bidName
+                        ? `${b.estimateNumber} · ${b.bidName}`
+                        : b.estimateNumber}
+                    </option>
+                  ))}
+                  {editing?.bid &&
+                  !(bids ?? []).some((b) => b.id === editing.bid!.id) ? (
+                    <option value={editing.bid.id}>{editing.bid.estimateNumber}</option>
+                  ) : null}
+                </SortedOptions>
               </select>
             </label>
 

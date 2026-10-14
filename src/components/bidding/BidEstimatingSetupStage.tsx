@@ -12,6 +12,7 @@ import {
   type WageDecision,
 } from "@/lib/bidding/process-types";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 /** Stage 3 — Estimating Setup (wage decision ≠ wage rate). Spec sheets = next tab. */
 export function BidEstimatingSetupStage() {
   const {
@@ -94,12 +95,14 @@ export function BidEstimatingSetupStage() {
                   )
                 }
               >
-                <option value="">—</option>
-                {clearances.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="">—</option>
+                  {clearances.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
             </label>
             <label className="intake-row">
@@ -117,12 +120,14 @@ export function BidEstimatingSetupStage() {
                   )
                 }
               >
-                <option value="">—</option>
-                {decisions.map((d) => (
-                  <option key={d.id} value={String(d.id)}>
-                    {d.label || d.decisionNumber || `Decision #${d.id}`}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="">—</option>
+                  {decisions.map((d) => (
+                    <option key={d.id} value={String(d.id)}>
+                      {d.label || d.decisionNumber || `Decision #${d.id}`}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
             </label>
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-1 sm:grid-cols-3">
@@ -307,12 +312,14 @@ export function BidEstimatingSetupStage() {
                   if (e.target.value) void selectWageRate(Number(e.target.value));
                 }}
               >
-                <option value="">Select wage rate…</option>
-                {lookups.wageRates.map((w) => (
-                  <option key={w.id} value={String(w.id)}>
-                    {w.displayLabel || w.rateLabel}
-                  </option>
-                ))}
+                <SortedOptions>
+                  <option value="">Select wage rate…</option>
+                  {lookups.wageRates.map((w) => (
+                    <option key={w.id} value={String(w.id)}>
+                      {w.displayLabel || w.rateLabel}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
             </label>
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">

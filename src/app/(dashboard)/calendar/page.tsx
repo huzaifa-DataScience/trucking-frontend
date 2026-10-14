@@ -28,6 +28,7 @@ import {
   type CalendarView,
 } from "@/lib/calendar/calendar";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 const VIEWS: Array<{ id: CalendarView; label: string }> = [
   { id: "month", label: "Month" },
   { id: "week", label: "Week" },
@@ -194,11 +195,13 @@ export default function CalendarPage() {
                 onChange={(e) => setPersonId(Number(e.target.value))}
                 aria-label="Whose calendar"
               >
-                {people.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.id === user?.id ? `${p.name} (me)` : p.name}
-                  </option>
-                ))}
+                <SortedOptions>
+                  {people.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.id === user?.id ? `${p.name} (me)` : p.name}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
             ) : null}
             <div

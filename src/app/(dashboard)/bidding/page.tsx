@@ -60,6 +60,8 @@ import {
 } from "@/lib/bidding/listColumns";
 import { ColumnPickerButton } from "@/components/clearstory/ClearstorySwaggerTable";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
+import { compareText } from "@/lib/sort";
 type StatusFilter = "all" | BidStatus;
 type SortKey =
   | "updated"
@@ -140,11 +142,13 @@ function BidListPager({
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
           className="cs-field h-9 border px-2.5 text-[13px] font-medium text-ink"
         >
-          {BID_PAGE_SIZES.map((size) => (
-            <option key={size} value={size}>
-              {size} / page
-            </option>
-          ))}
+          <SortedOptions>
+            {BID_PAGE_SIZES.map((size) => (
+              <option key={size} value={size}>
+                {size} / page
+              </option>
+            ))}
+          </SortedOptions>
         </select>
         <button
           type="button"
@@ -301,9 +305,13 @@ function FilterSelect({
   const searchRef = useRef<HTMLInputElement>(null);
   const current = options.find((o) => o.value === value) ?? options[0];
   const q = query.trim().toLowerCase();
+  const ordered = [
+    ...options.filter((o) => o.value === ""),
+    ...options.filter((o) => o.value !== "").sort((a, b) => compareText(a.label, b.label)),
+  ];
   const filtered = q
-    ? options.filter((o) => o.label.toLowerCase().includes(q))
-    : options;
+    ? ordered.filter((o) => o.label.toLowerCase().includes(q))
+    : ordered;
 
   useEffect(() => {
     if (!open) return;

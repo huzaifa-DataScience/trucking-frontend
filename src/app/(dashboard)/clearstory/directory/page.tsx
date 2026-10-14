@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { getClearstoryApiPayload } from "@/lib/api/endpoints/clearstory";
 import { getApiErrorMessage } from "@/lib/api/client";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 const ENTITY_TYPES: { value: string; label: string; keyHint: string }[] = [
   { value: "company", label: "Company (current)", keyHint: "Use key: current" },
   { value: "user", label: "User", keyHint: "User id (e.g. 42)" },
@@ -106,11 +107,13 @@ export default function ClearstoryDirectoryPage() {
                 }}
                 className="appearance-none rounded-xl border border-ink/10 bg-[#f8f9fb] px-3 py-2 pr-9 text-sm"
               >
-                {ENTITY_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
+                <SortedOptions>
+                  {ENTITY_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </SortedOptions>
               </select>
               <SelectChevron />
             </div>

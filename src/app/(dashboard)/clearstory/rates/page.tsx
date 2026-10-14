@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { getClearstoryApiPayload } from "@/lib/api/endpoints/clearstory";
 import { getApiErrorMessage } from "@/lib/api/client";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 const RATE_TYPES = ["labor", "material", "equipment", "other"] as const;
 
 function SelectChevron() {
@@ -132,8 +133,10 @@ export default function ClearstoryRatesPage() {
                   onChange={(e) => setInbox(e.target.value as "sent" | "received")}
                   className="appearance-none rounded-xl border border-ink/10 bg-[#f8f9fb] px-3 py-2 pr-9 text-sm"
                 >
-                  <option value="sent">inbox=sent</option>
-                  <option value="received">inbox=received</option>
+                  <SortedOptions>
+                    <option value="sent">inbox=sent</option>
+                    <option value="received">inbox=received</option>
+                  </SortedOptions>
                 </select>
                 <SelectChevron />
               </div>
@@ -173,11 +176,13 @@ export default function ClearstoryRatesPage() {
                   onChange={(e) => setRateType(e.target.value)}
                   className="appearance-none rounded-xl border border-ink/10 bg-[#f8f9fb] px-3 py-2 pr-9 text-sm"
                 >
-                  {RATE_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
+                  <SortedOptions>
+                    {RATE_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </SortedOptions>
                 </select>
                 <SelectChevron />
               </div>

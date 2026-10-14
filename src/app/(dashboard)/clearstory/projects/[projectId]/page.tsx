@@ -15,6 +15,7 @@ import {
   type ClearstoryCorBucket,
 } from "@/lib/api/endpoints/clearstory";
 
+import { useTableSort } from "@/hooks/useTableSort";
 const BUCKETS: { key: ClearstoryCorBucket | "ALL"; label: string }[] = [
   { key: "ALL", label: "All" },
   { key: "APPROVED", label: "Approved" },
@@ -99,6 +100,16 @@ export default function ClearstoryProjectDetailPage() {
   );
 
   const items = cors?.items ?? [];
+  const corSort = useTableSort(items, {
+    cor: (r) => r.corNumber ?? r.issueNumber ?? r.numericId ?? r.id,
+    bucket: (r) => bucketLabel(r.statusBucket),
+    status: (r) => r.status?.trim(),
+    stage: (r) => r.stage?.trim(),
+    requested: (r) => normalizeMoney(r.requestedAmount),
+    total: (r) => normalizeMoney(r.totalAmount),
+    void: (r) => normalizeMoney(r.voidAmount),
+    updated: (r) => r.updatedAt,
+  });
 
   if (!projectId) {
     return (
@@ -216,28 +227,28 @@ export default function ClearstoryProjectDetailPage() {
               <thead>
                 <tr className="border-b border-ink/[0.08] text-xs font-semibold uppercase tracking-wide text-ink/45">
                   <th scope="col" className="sticky left-0 z-[1] bg-surface px-2 py-2.5">
-                    COR #
+                    {corSort.header("cor", "COR #")}
                   </th>
                   <th scope="col" className="px-2 py-2.5">
-                    Bucket
+                    {corSort.header("bucket", "Bucket")}
                   </th>
                   <th scope="col" className="px-2 py-2.5">
-                    Status
+                    {corSort.header("status", "Status")}
                   </th>
                   <th scope="col" className="px-2 py-2.5">
-                    Stage
+                    {corSort.header("stage", "Stage")}
                   </th>
                   <th scope="col" className="px-2 py-2.5 text-right">
-                    Requested
+                    {corSort.header("requested", "Requested", "right")}
                   </th>
                   <th scope="col" className="px-2 py-2.5 text-right">
-                    Total
+                    {corSort.header("total", "Total", "right")}
                   </th>
                   <th scope="col" className="px-2 py-2.5 text-right">
-                    Void
+                    {corSort.header("void", "Void", "right")}
                   </th>
                   <th scope="col" className="px-2 py-2.5">
-                    Updated
+                    {corSort.header("updated", "Updated")}
                   </th>
                   <th scope="col" className="px-2 py-2.5">
                     <span className="sr-only">Full JSON</span>
@@ -245,7 +256,7 @@ export default function ClearstoryProjectDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((row) => {
+                {corSort.sorted.map((row) => {
                   const statusText = row.status?.trim() || "—";
                   const stageText = row.stage?.trim() || "—";
                   return (

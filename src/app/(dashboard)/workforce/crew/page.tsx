@@ -18,6 +18,7 @@ import { getApiErrorMessage } from "@/lib/api/client";
 import type { ConnecteamUser } from "@/lib/workforce/types";
 import { userDisplayName, WORKFORCE_PAGE_SIZE } from "@/lib/workforce/display";
 
+import { useTableSort } from "@/hooks/useTableSort";
 export default function WorkforceCrewPage() {
   const { syncSubtitle } = useWorkforce();
   const { isAdmin } = useAuth();
@@ -25,6 +26,12 @@ export default function WorkforceCrewPage() {
 
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState<ConnecteamUser[]>([]);
+  const crewSort = useTableSort(users, {
+    name: (u) => userDisplayName(u),
+    email: (u) => u.email,
+    employeeId: (u) => u.employeeId,
+    portal: (u) => (u.appUserId ? "Linked" : "Not linked"),
+  });
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -104,10 +111,10 @@ export default function WorkforceCrewPage() {
                 <table className="w-full min-w-[640px] text-sm">
                   <thead className="sticky top-0 z-10 bg-surface">
                     <tr className="border-b border-ink/10 text-left text-xs text-ink/45">
-                      <th className="py-2 pl-3 pr-3 font-medium">Name</th>
-                      <th className="py-2 pr-3 font-medium">Email</th>
-                      <th className="py-2 pr-3 font-medium">Employee ID</th>
-                      <th className="py-2 pr-3 font-medium">Portal</th>
+                      <th className="py-2 pl-3 pr-3 font-medium">{crewSort.header("name", "Name")}</th>
+                      <th className="py-2 pr-3 font-medium">{crewSort.header("email", "Email")}</th>
+                      <th className="py-2 pr-3 font-medium">{crewSort.header("employeeId", "Employee ID")}</th>
+                      <th className="py-2 pr-3 font-medium">{crewSort.header("portal", "Portal")}</th>
                       {isAdmin ? <th className="py-2 pr-3 font-medium">Link</th> : null}
                     </tr>
                   </thead>
@@ -137,7 +144,7 @@ export default function WorkforceCrewPage() {
                             ) : null}
                           </tr>
                         ))
-                      : users.map((u) => (
+                      : crewSort.sorted.map((u) => (
                           <tr key={u.userId} className="border-b border-ink/[0.05]">
                             <td className="py-2.5 pl-3 pr-3">
                               <div className="flex items-center gap-2.5">

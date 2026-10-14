@@ -25,6 +25,7 @@ import {
   shiftStartDisplay,
 } from "@/lib/workforce/display";
 
+import { SortedOptions } from "@/components/ui/SortedOptions";
 export function MyDayClock() {
   const { showToast } = useToast();
   const { me, refreshMe } = useWorkforce();
@@ -280,11 +281,13 @@ export function MyDayClock() {
               }}
               className="w-full appearance-none rounded-xl border border-ink/10 bg-surface px-3 py-2.5 pr-9 text-sm"
             >
-              {clocks.map((c) => (
-                <option key={c.timeClockId} value={c.timeClockId}>
-                  {c.name}
-                </option>
-              ))}
+              <SortedOptions>
+                {clocks.map((c) => (
+                  <option key={c.timeClockId} value={c.timeClockId}>
+                    {c.name}
+                  </option>
+                ))}
+              </SortedOptions>
             </select>
             <svg
               className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
