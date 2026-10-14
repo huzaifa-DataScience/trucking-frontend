@@ -251,7 +251,7 @@ export function AccessControlSettings() {
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-stone-200 dark:border-stone-700">
+          <div className="overflow-x-auto rounded-xl border border-stone-200 dark:border-stone-700 table-scroll">
             <table className="min-w-full border-collapse text-left text-xs">
               <thead className="bg-stone-50 dark:bg-stone-900/60">
                 <tr>

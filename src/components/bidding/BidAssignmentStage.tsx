@@ -574,7 +574,7 @@ export function BidAssignmentStage() {
 
           <section className="intake-section min-w-0">
             <h3 className={sectionHead}>Takeoff assignments</h3>
-            <div className="min-w-0 overflow-x-auto">
+            <div className="min-w-0 overflow-x-auto table-scroll">
               <table className="w-full min-w-[600px] border-collapse">
                 <thead>
                   <tr>

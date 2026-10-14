@@ -537,7 +537,7 @@ export default function AdminUsersPage() {
       {!loading && users.length > 0 && (
         <>
           <div className="rounded-xl border border-ink/[0.08] bg-surface shadow-[0_1px_2px_rgba(1,1,1,0.04)]">
-            <div className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0">
+            <div className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0 table-scroll">
               <div className="inline-block min-w-full align-middle">
                 <table className="min-w-full text-sm">
                   <thead>

@@ -1012,12 +1012,16 @@ export default function BiddingListPage() {
     const locked = BID_LIST_COLUMN_CATALOG.find((c) => c.key === colKey)?.locked;
     if (locked) return;
     const apply = (prev: BidListColumnKey[]) => {
-      const next = prev.includes(colKey)
-        ? prev.filter((k) => k !== colKey)
-        : [...prev, colKey];
-      // Keep catalog order
-      const order = BID_LIST_COLUMN_CATALOG.map((c) => c.key);
-      return order.filter((k) => next.includes(k));
+      if (prev.includes(colKey)) return prev.filter((k) => k !== colKey);
+      // Keep the user's order: a re-shown column goes back next to its nearest catalog neighbour.
+      const catalog = BID_LIST_COLUMN_CATALOG.map((c) => c.key);
+      const before = catalog
+        .slice(0, catalog.indexOf(colKey))
+        .reverse()
+        .find((k) => prev.includes(k));
+      const next = [...prev];
+      next.splice(before ? next.indexOf(before) + 1 : 0, 0, colKey);
+      return next;
     };
     if (internalList) {
       setInternalColumnKeys((prev) => {
@@ -1031,6 +1035,20 @@ export default function BiddingListPage() {
         saveListColumns(listColsKey, next);
         return next;
       });
+    }
+  };
+
+  /** Visible columns in catalog order: what "Reset order" goes back to. */
+  const catalogOrder = BID_LIST_COLUMN_CATALOG.map((c) => c.key).filter((k) => activeColumnKeys.includes(k));
+  const columnsReordered = catalogOrder.some((k, i) => activeColumnKeys[i] !== k);
+  const reorderListColumns = (keys: string[]) => {
+    const next = keys as BidListColumnKey[];
+    if (internalList) {
+      setInternalColumnKeys(next);
+      saveListColumns(listColsInternalKey, next);
+    } else {
+      setFullColumnKeys(next);
+      saveListColumns(listColsKey, next);
     }
   };
 
@@ -1279,6 +1297,10 @@ export default function BiddingListPage() {
               hidden={hiddenColumnKeys}
               lockedKeys={["estimate", "name"]}
               onToggle={toggleListColumn}
+              order={activeColumnKeys}
+              onReorder={reorderListColumns}
+              onResetOrder={() => reorderListColumns(catalogOrder)}
+              orderChanged={columnsReordered}
             />
 
             <button

@@ -23,7 +23,7 @@ export function BidSystemsInputTable({
     <section className="intake-section min-w-0">
       <div className="intake-section-head">Systems — inputs</div>
       <div className="intake-section-body">
-        <div className="overflow-x-auto rounded-xl border border-[#e8ecf1] shadow-sm">
+        <div className="overflow-x-auto rounded-xl border border-[#e8ecf1] shadow-sm table-scroll">
           <table className="w-full min-w-[48rem] border-separate border-spacing-0 text-left text-[12.5px] text-[#374151]">
             <thead>
               <tr className="bg-[#f8fafc] text-left text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">

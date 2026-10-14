@@ -1584,7 +1584,7 @@ export function BidSpecSheetsSection({
                     {s.rows.length === 0 ? (
                       <p className="text-xs text-ink/40">No rows</p>
                     ) : (
-                      <div className="overflow-x-auto">
+                      <div className="overflow-x-auto table-scroll">
                         <table className="min-w-full text-left text-[12.5px] text-[#374151]">
                           <thead className="text-[11px] font-semibold text-[#6b7280]">
                             <tr>
@@ -1694,7 +1694,7 @@ export function BidSpecSheetsSection({
                 </div>
 
                 <div
-                  className="overflow-x-auto rounded-xl border border-[#e8ecf1] shadow-sm"
+                  className="overflow-x-auto rounded-xl border border-[#e8ecf1] shadow-sm table-scroll"
                   onMouseOver={(e) => fillValueTooltip(e.target)}
                   onFocus={(e) => fillValueTooltip(e.target)}
                   onChange={(e) => fillValueTooltip(e.target)}

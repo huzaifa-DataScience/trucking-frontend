@@ -136,7 +136,7 @@ export function ProductionHubPage() {
           </Link>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+        <div className="table-scroll rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
           <table className="w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-ink/[0.08] text-[10px] uppercase tracking-wide text-ink/40">
