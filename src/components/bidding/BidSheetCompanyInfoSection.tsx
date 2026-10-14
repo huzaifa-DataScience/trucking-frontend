@@ -23,7 +23,7 @@ export function BidSheetCompanyInfoSection({
     <Card>
       <CardHeader
         title="Client / GC"
-        subtitle="Who this bid is for — separate from your company (GOEL / GOEL DC / DCB)."
+        subtitle="Who this bid is for."
         action={
           bid.jobId ? (
             <button

@@ -251,6 +251,10 @@ export const AGING_BUCKETS = [
 export type AgingBucket = (typeof AGING_BUCKETS)[number];
 
 export interface AgingReportRow {
+  /** Siteline contract id (cached Siteline aging path); links to the billing project page. */
+  contractId?: string;
+  /** Set by the Billing page when "All companies" combines several reports. */
+  entityId?: number;
   projectName: string;
   /** Primary PM for this project, when available (FRONTEND_RECENT_CHANGES_MAR2026.md). */
   leadPmName?: string | null;
@@ -271,6 +275,8 @@ export interface AgingReportTotals extends Record<AgingBucket, number> {
 }
 
 export interface AgingReportResponse {
+  /** When Siteline's aging snapshot behind this report was taken (ISO). */
+  lastAgingBreakdownSync?: string | null;
   buckets: readonly string[];
   rows: AgingReportRow[];
   totals: AgingReportTotals;
@@ -312,6 +318,8 @@ export async function getSitelineAgingReport(
 
 export interface AgingOverdueItem {
   contractId: string;
+  /** Set by the Billing page when "All companies" combines several lists. */
+  entityId?: number;
   projectName: string | null;
   projectNumber: string | null;
   internalProjectNumber: string | null;
@@ -388,3 +396,67 @@ export async function getSitelineReconciliationGaps(params?: {
   );
 }
 
+/** Billing project page: one Siteline contract, its pay apps, and the matching Clearstory project. Money in dollars. */
+export interface SitelineProjectDetailPayApp {
+  id: string;
+  number: number | null;
+  status: string | null;
+  billed: number | null;
+  retention: number | null;
+  /** billed − retention: what the GC owes on this pay app. */
+  amountDue: number | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  dueDate: string | null;
+}
+
+export interface SitelineProjectDetailCor {
+  id: string;
+  corNumber: string | null;
+  title: string | null;
+  status: string | null;
+  requestedAmount: number | null;
+  dateSubmitted: string | null;
+  daysInReview: number | null;
+}
+
+export interface SitelineProjectDetail {
+  contract: {
+    id: string;
+    entityId: number | null;
+    projectName: string | null;
+    internalProjectNumber: string | null;
+    contractNumber: string | null;
+    billingType: string | null;
+    status: string | null;
+    percentComplete: number | null;
+    contractValue: number | null;
+    leadPmName: string | null;
+    leadPmEmail: string | null;
+    lastSyncedAt: string | null;
+  };
+  averageDaysToPaid: number | null;
+  payApps: SitelineProjectDetailPayApp[];
+  clearstory: {
+    projectId: number;
+    name: string | null;
+    customerName: string | null;
+    baseContractValue: number | null;
+    cors: SitelineProjectDetailCor[];
+  } | null;
+}
+
+export async function getSitelineProjectDetail(contractId: string): Promise<SitelineProjectDetail> {
+  return get<SitelineProjectDetail>(`siteline/projects/${encodeURIComponent(contractId)}`);
+}
+
+/** One of our companies (GOEL / GOEL DC / DCB) and the Siteline company it bills as. */
+export interface SitelineEntityConfigRow {
+  entityId: number;
+  entityName: string | null;
+  sitelineCompanyName: string | null;
+}
+
+export async function getSitelineEntityConfig(): Promise<SitelineEntityConfigRow[]> {
+  return get<SitelineEntityConfigRow[]>("siteline/entity-config");
+}

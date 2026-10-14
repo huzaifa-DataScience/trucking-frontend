@@ -34,15 +34,15 @@ export function ContractDetailModal({
       aria-modal="true"
       aria-labelledby="contract-detail-title"
     >
-      <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-xl dark:border-stone-700 dark:bg-stone-900">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-stone-200 bg-white px-6 py-4 dark:border-stone-700 dark:bg-stone-900">
-          <h2 id="contract-detail-title" className="text-lg font-semibold text-stone-900 dark:text-stone-100">
+      <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-white shadow-lg  dark:bg-ink">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-subtle)] bg-white px-6 py-4  dark:bg-ink">
+          <h2 id="contract-detail-title" className="text-lg font-semibold text-ink">
             {contract?.project?.name ?? "Contract"}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-canvas "
           >
             Close
           </button>
@@ -58,62 +58,62 @@ export function ContractDetailModal({
             <>
               <div className="grid gap-3 sm:grid-cols-2">
                 <p className="text-sm">
-                  <span className="font-medium text-stone-500 dark:text-stone-400">Project</span>
-                  <span className="ml-2 text-stone-900 dark:text-stone-100">
+                  <span className="font-medium text-ink-muted">Project</span>
+                  <span className="ml-2 text-ink">
                     {contract.project?.name ?? "—"}
                   </span>
                 </p>
                 <p className="text-sm">
-                  <span className="font-medium text-stone-500 dark:text-stone-400">Project #</span>
-                  <span className="ml-2 text-stone-900 dark:text-stone-100">
+                  <span className="font-medium text-ink-muted">Project #</span>
+                  <span className="ml-2 text-ink">
                     {contract.project?.projectNumber ?? "—"}
                   </span>
                 </p>
                 <p className="text-sm">
-                  <span className="font-medium text-stone-500 dark:text-stone-400">Contract #</span>
-                  <span className="ml-2 text-stone-900 dark:text-stone-100">
+                  <span className="font-medium text-ink-muted">Contract #</span>
+                  <span className="ml-2 text-ink">
                     {contract.sov?.contractNumber ?? "—"}
                   </span>
                 </p>
                 <p className="text-sm">
-                  <span className="font-medium text-stone-500 dark:text-stone-400">Internal project #</span>
-                  <span className="ml-2 text-stone-900 dark:text-stone-100">
+                  <span className="font-medium text-ink-muted">Internal project #</span>
+                  <span className="ml-2 text-ink">
                     {contract.internalProjectNumber ?? "—"}
                   </span>
                 </p>
                 <p className="text-sm">
-                  <span className="font-medium text-stone-500 dark:text-stone-400">Status</span>
-                  <span className="ml-2 text-stone-900 dark:text-stone-100">
+                  <span className="font-medium text-ink-muted">Status</span>
+                  <span className="ml-2 text-ink">
                     {contract.status ?? "—"}
                   </span>
                 </p>
                 <p className="text-sm">
-                  <span className="font-medium text-stone-500 dark:text-stone-400">Billing type</span>
-                  <span className="ml-2 text-stone-900 dark:text-stone-100">
+                  <span className="font-medium text-ink-muted">Billing type</span>
+                  <span className="ml-2 text-ink">
                     {contract.billingType ?? "—"}
                   </span>
                 </p>
                 <p className="text-sm">
-                  <span className="font-medium text-stone-500 dark:text-stone-400">Total value</span>
-                  <span className="ml-2 text-stone-900 dark:text-stone-100">
+                  <span className="font-medium text-ink-muted">Total value</span>
+                  <span className="ml-2 text-ink">
                     {formatCurrency(contract.sov?.totalValue)}
                   </span>
                 </p>
                 <p className="text-sm">
-                  <span className="font-medium text-stone-500 dark:text-stone-400">Total billed</span>
-                  <span className="ml-2 text-stone-900 dark:text-stone-100">
+                  <span className="font-medium text-ink-muted">Total billed</span>
+                  <span className="ml-2 text-ink">
                     {formatCurrency(contract.sov?.totalBilled)}
                   </span>
                 </p>
                 <p className="text-sm">
-                  <span className="font-medium text-stone-500 dark:text-stone-400">Total retention</span>
-                  <span className="ml-2 text-stone-900 dark:text-stone-100">
+                  <span className="font-medium text-ink-muted">Total retention</span>
+                  <span className="ml-2 text-ink">
                     {formatCurrency(contract.sov?.totalRetention)}
                   </span>
                 </p>
                 <p className="text-sm">
-                  <span className="font-medium text-stone-500 dark:text-stone-400">Progress</span>
-                  <span className="ml-2 text-stone-900 dark:text-stone-100">
+                  <span className="font-medium text-ink-muted">Progress</span>
+                  <span className="ml-2 text-ink">
                     {formatPercent(contract.sov?.progressComplete)}
                   </span>
                 </p>
@@ -125,34 +125,34 @@ export function ContractDetailModal({
                   <div className="overflow-x-auto overflow-y-auto max-h-80 -mx-1 px-1 sm:mx-0 sm:px-0">
                     <table className="min-w-full text-sm">
                       <thead>
-                        <tr className="border-b border-stone-200 dark:border-stone-700">
-                          <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Code</th>
-                          <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Name</th>
-                          <th className="text-right px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Original</th>
-                          <th className="text-right px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Latest</th>
-                          <th className="text-right px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Billed</th>
-                          <th className="text-right px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Progress</th>
+                        <tr className="border-b border-[var(--border-subtle)]">
+                          <th className="text-left px-2 py-2 text-xs font-medium text-ink-muted">Code</th>
+                          <th className="text-left px-2 py-2 text-xs font-medium text-ink-muted">Name</th>
+                          <th className="text-right px-2 py-2 text-xs font-medium text-ink-muted">Original</th>
+                          <th className="text-right px-2 py-2 text-xs font-medium text-ink-muted">Latest</th>
+                          <th className="text-right px-2 py-2 text-xs font-medium text-ink-muted">Billed</th>
+                          <th className="text-right px-2 py-2 text-xs font-medium text-ink-muted">Progress</th>
                         </tr>
                       </thead>
                       <tbody>
                         {contract.sov.lineItems.map((item) => (
-                          <tr key={item.id} className="border-b border-stone-100 last:border-0 dark:border-stone-800">
-                            <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                          <tr key={item.id} className="border-b border-[var(--border-subtle)] last:border-0">
+                            <td className="px-2 py-2 text-ink">
                               {item.code ?? "—"}
                             </td>
-                            <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-ink">
                               {item.name ?? "—"}
                             </td>
-                            <td className="px-2 py-2 text-right text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-right text-ink">
                               {formatCurrency(item.originalTotalValue)}
                             </td>
-                            <td className="px-2 py-2 text-right text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-right text-ink">
                               {formatCurrency(item.latestTotalValue)}
                             </td>
-                            <td className="px-2 py-2 text-right text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-right text-ink">
                               {formatCurrency(item.totalBilled)}
                             </td>
-                            <td className="px-2 py-2 text-right text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-right text-ink">
                               {formatPercent(item.progressComplete)}
                             </td>
                           </tr>
@@ -169,35 +169,35 @@ export function ContractDetailModal({
                   <div className="overflow-x-auto overflow-y-auto max-h-80 -mx-1 px-1 sm:mx-0 sm:px-0">
                     <table className="min-w-full text-sm">
                       <thead>
-                        <tr className="border-b border-stone-200 dark:border-stone-700">
-                          <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">#</th>
-                          <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Period</th>
-                          <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Due date</th>
-                          <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Status</th>
-                          <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Updated at</th>
-                          <th className="text-right px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Current billed</th>
-                          <th className="text-right px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">Action</th>
+                        <tr className="border-b border-[var(--border-subtle)]">
+                          <th className="text-left px-2 py-2 text-xs font-medium text-ink-muted">#</th>
+                          <th className="text-left px-2 py-2 text-xs font-medium text-ink-muted">Period</th>
+                          <th className="text-left px-2 py-2 text-xs font-medium text-ink-muted">Due date</th>
+                          <th className="text-left px-2 py-2 text-xs font-medium text-ink-muted">Status</th>
+                          <th className="text-left px-2 py-2 text-xs font-medium text-ink-muted">Updated at</th>
+                          <th className="text-right px-2 py-2 text-xs font-medium text-ink-muted">Current billed</th>
+                          <th className="text-right px-2 py-2 text-xs font-medium text-ink-muted">Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {contract.payApps.map((pa) => (
-                          <tr key={pa.id} className="border-b border-stone-100 last:border-0 dark:border-stone-800">
-                            <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                          <tr key={pa.id} className="border-b border-[var(--border-subtle)] last:border-0">
+                            <td className="px-2 py-2 text-ink">
                               {pa.payAppNumber ?? "—"}
                             </td>
-                            <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-ink">
                               {pa.billingStart && pa.billingEnd ? `${pa.billingStart} – ${pa.billingEnd}` : "—"}
                             </td>
-                            <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-ink">
                               {pa.payAppDueDate ?? "—"}
                             </td>
-                            <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-ink">
                               {pa.status ?? "—"}
                             </td>
-                            <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-ink">
                               {pa.updatedAt ?? "—"}
                             </td>
-                            <td className="px-2 py-2 text-right text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-right text-ink">
                               {formatCurrency(pa.currentBilled)}
                             </td>
                             <td className="px-2 py-2 text-right">
@@ -223,28 +223,28 @@ export function ContractDetailModal({
                   <div className="overflow-x-auto overflow-y-auto max-h-80 -mx-1 px-1 sm:mx-0 sm:px-0">
                     <table className="min-w-full text-sm">
                       <thead>
-                        <tr className="border-b border-stone-200 dark:border-stone-700">
-                          <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                        <tr className="border-b border-[var(--border-subtle)]">
+                          <th className="text-left px-2 py-2 text-xs font-medium text-ink-muted">
                             Internal #
                           </th>
-                          <th className="text-left px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                          <th className="text-left px-2 py-2 text-xs font-medium text-ink-muted">
                             Name
                           </th>
-                          <th className="text-right px-2 py-2 text-xs font-medium text-stone-600 dark:text-stone-400">
+                          <th className="text-right px-2 py-2 text-xs font-medium text-ink-muted">
                             Amount
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {contract.changeOrderRequests.map((co) => (
-                          <tr key={co.id} className="border-b border-stone-100 last:border-0 dark:border-stone-800">
-                            <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                          <tr key={co.id} className="border-b border-[var(--border-subtle)] last:border-0">
+                            <td className="px-2 py-2 text-ink">
                               {co.internalNumber ?? "—"}
                             </td>
-                            <td className="px-2 py-2 text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-ink">
                               {co.name ?? "—"}
                             </td>
-                            <td className="px-2 py-2 text-right text-stone-800 dark:text-stone-200">
+                            <td className="px-2 py-2 text-right text-ink">
                               {formatCurrency(co.amount)}
                             </td>
                           </tr>
