@@ -9,6 +9,8 @@ interface ConfirmModalProps {
   variant?: "danger" | "default";
   onConfirm: () => void;
   onCancel: () => void;
+  /** While true: spinner on confirm, both buttons disabled, backdrop click ignored. */
+  loading?: boolean;
 }
 
 /** In-app confirmation dialog — not `window.confirm`. */
@@ -21,6 +23,7 @@ export function ConfirmModal({
   variant = "default",
   onConfirm,
   onCancel,
+  loading = false,
 }: ConfirmModalProps) {
   if (!isOpen) return null;
 
@@ -35,7 +38,8 @@ export function ConfirmModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
-      onClick={onCancel}
+      onClick={loading ? undefined : onCancel}
+      aria-busy={loading}
       style={{ fontFamily: 'var(--font-geist-sans), "Roboto", system-ui, sans-serif' }}
     >
       <div
@@ -57,15 +61,20 @@ export function ConfirmModal({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-[var(--border-subtle)] bg-white px-3 py-1 text-[11px] font-semibold text-ink-muted transition hover:border-[#94a3b8] hover:bg-canvas hover:text-ink"
+            disabled={loading}
+            className="cursor-pointer rounded-md border border-[var(--border-subtle)] bg-white px-3 py-1 text-[11px] font-semibold text-ink-muted transition hover:border-[#94a3b8] hover:bg-canvas hover:text-ink"
           >
             {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`rounded-md border px-3 py-1 text-[11px] font-semibold transition ${confirmClass}`}
+            disabled={loading}
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1 text-[11px] font-semibold transition disabled:cursor-wait disabled:opacity-80 ${confirmClass}`}
           >
+            {loading ? (
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden />
+            ) : null}
             {confirmLabel}
           </button>
         </div>
