@@ -1437,58 +1437,7 @@ select.cs-soft-control:hover {
   box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.28);
 }
 
-/* Muted CRM checkboxes — replace browser-default blue/black */
-.intake-compact input[type="checkbox"],
-.intake-check {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  margin: 0;
-  flex-shrink: 0;
-  border: 1px solid #dbe2ea;
-  border-radius: 5px;
-  background-color: #fff;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 10px 10px;
-  cursor: pointer;
-  vertical-align: middle;
-}
-
-/* Larger checkboxes for preference / flag groups */
-.intake-compact input[type="checkbox"].intake-check-lg,
-.intake-check-lg {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  background-size: 12px 12px;
-}
-
-.intake-compact input[type="checkbox"]:hover:not(:disabled):not(:checked),
-.intake-check:hover:not(:disabled):not(:checked) {
-  border-color: #94a3b8;
-  background-color: #faf7f0;
-}
-
-.intake-compact input[type="checkbox"]:checked,
-.intake-check:checked {
-  border-color: #333333;
-  background-color: #333333;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M2.5 6.2 5 8.7 9.5 3.5'/%3E%3C/svg%3E");
-}
-
-.intake-compact input[type="checkbox"]:focus-visible,
-.intake-check:focus-visible {
-  outline: 2px solid rgba(90, 83, 64, 0.35);
-  outline-offset: 1px;
-}
-
-.intake-compact input[type="checkbox"]:disabled,
-.intake-check:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
+/* Intake checkboxes use the app-wide checkbox style (end of file). */
 
 /* Soft stage chrome — colors/atmosphere only. Do not restyle every button,
    table, or Tailwind bg-* class (that hides Spec sheets / intake controls). */
@@ -2729,4 +2678,76 @@ select option {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+}
+
+/* ------------------------------------------------------------------
+   App-wide checkbox — one look everywhere (tables, menus, filters, forms).
+   Colours sampled from the approved reference: fill #0782e6, focus halo #ddeffd,
+   graded grey border when empty, grey #b7b7b7 when disabled.
+   Unlayered on purpose so it wins over per-component Tailwind sizes/colors.
+   Hidden checkboxes behind custom toggles (.sr-only) are left alone.
+   ------------------------------------------------------------------ */
+input[type="checkbox"]:not(.sr-only):not([hidden]) {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  border: 1.5px solid #8e8e8e;
+  border-top-color: #b3b3b3;
+  border-bottom-color: #707070;
+  border-radius: 4px;
+  background-color: #fff;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 14px 14px;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.14), 0 1px 0 rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  vertical-align: middle;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* Checked: solid blue, white tick, soft blue shadow underneath */
+input[type="checkbox"]:not(.sr-only):checked {
+  border-color: #0782e6;
+  background-color: #0782e6;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Cpath fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 d=%27M3.6 8.3 6.6 11.1 12.4 4.9%27/%3E%3C/svg%3E");
+  box-shadow: 0 1px 2px rgba(7, 130, 230, 0.4);
+}
+
+/* Partly selected (select-all with some rows ticked) */
+input[type="checkbox"]:not(.sr-only):indeterminate {
+  border-color: #0782e6;
+  background-color: #0782e6;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Cpath fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27 stroke-linecap=%27round%27 d=%27M4.2 8h7.6%27/%3E%3C/svg%3E");
+  box-shadow: 0 1px 2px rgba(7, 130, 230, 0.4);
+}
+
+/* Hover / keyboard focus: light-blue halo around the box */
+input[type="checkbox"]:not(.sr-only):not(:disabled):hover,
+input[type="checkbox"]:not(.sr-only):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px #ddeffd, 0 0 0 5px rgba(221, 239, 253, 0.5);
+}
+input[type="checkbox"]:not(.sr-only):not(:disabled):hover:not(:checked):not(:indeterminate) {
+  border-color: #707070;
+}
+
+/* Disabled */
+input[type="checkbox"]:not(.sr-only):disabled {
+  cursor: not-allowed;
+  border-color: #d0d0d0;
+  background-color: #f5f5f5;
+  box-shadow: none;
+  opacity: 1;
+}
+input[type="checkbox"]:not(.sr-only):disabled:checked,
+input[type="checkbox"]:not(.sr-only):disabled:indeterminate {
+  border-color: #b7b7b7;
+  background-color: #b7b7b7;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
 }
