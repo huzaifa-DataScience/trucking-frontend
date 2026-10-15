@@ -451,8 +451,8 @@ export default function MyTeamPage() {
         />
         <p className="rounded-xl border border-ink/[0.08] bg-surface px-4 py-3 text-sm text-ink/70">
           Your role does not manage an estimating crew.{" "}
-          <Link href="/account" className="font-semibold text-ink underline underline-offset-2 hover:text-ink">
-            Back to Account
+          <Link href="/settings/profile" className="font-semibold text-ink underline underline-offset-2 hover:text-ink">
+            Back to My Profile
           </Link>
         </p>
       </div>

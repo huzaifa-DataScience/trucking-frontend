@@ -10,6 +10,11 @@ export type UserRole = AppRoleId;
 export interface AdminUser {
   id: number;
   email: string;
+  /** Older backends omit these; fall back to email. */
+  firstName?: string | null;
+  lastName?: string | null;
+  /** Relative path (e.g. /auth/avatar/12); null when no photo. */
+  avatarUrl?: string | null;
   role: UserRole;
   status: UserStatus;
   /** Present when backend includes permissions on user admin APIs. Read-only in UI. */
@@ -23,6 +28,8 @@ export interface AdminUsersResponse {
   page: number;
   pageSize: number;
   total: number;
+  /** Users per status for the other active filters; `all` is their sum. */
+  statusCounts?: Partial<Record<UserStatus | "all", number>>;
 }
 
 export interface UserFilters {
@@ -39,6 +46,8 @@ export interface UserFilters {
 export interface UpdateUserPayload {
   role?: UserRole;
   status?: UserStatus;
+  /** Bid team (captains: the team they lead). null clears it. */
+  teamId?: number | null;
 }
 
 /** GET/PATCH /admin/settings/rbac-user-defaults */
