@@ -119,8 +119,7 @@ function GlassSelect({
                     key={option.value}
                     className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-ink hover:bg-white/80"
                   >
-                    <input type="checkbox" className="sr-only" checked={picked.has(option.value)} onChange={() => onPick(option.value)} />
-                    <GlassBox checked={picked.has(option.value)} />
+                    <input type="checkbox" checked={picked.has(option.value)} onChange={() => onPick(option.value)} />
                     <span className="min-w-0 leading-snug">{option.label}</span>
                   </label>
                 ))
@@ -152,29 +151,6 @@ function GlassSelect({
   );
 }
 
-function GlassBox({ checked }: { checked: boolean }) {
-  return (
-    <span
-      aria-hidden
-      className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-md border shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_2px_6px_rgba(91,173,232,0.16)] backdrop-blur-md ${
-        checked
-          ? "border-[rgba(91,173,232,0.25)] bg-[rgba(91,173,232,0.82)]"
-          : "border-[rgba(91,173,232,0.35)] bg-white/70"
-      }`}
-    >
-      <svg
-        className={`h-3 w-3 text-white ${checked ? "opacity-100" : "opacity-0"}`}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={3}
-      >
-        <path d="M5 12.5l4.2 4.2L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
-  );
-}
-
 function GlassChoice({
   checked,
   onChange,
@@ -186,8 +162,7 @@ function GlassChoice({
 }) {
   return (
     <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-white/80 bg-white/55 px-3 py-2 shadow-[0_4px_12px_rgba(91,173,232,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md">
-      <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <GlassBox checked={checked} />
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span className="min-w-0 text-sm leading-snug text-ink">{label}</span>
     </label>
   );
@@ -316,7 +291,7 @@ function FieldControl({
       <div className="flex h-10 items-center">
         <input
           type="checkbox"
-          className="sr-only"
+          aria-label={field.label}
           checked={checked}
           onChange={(e) => {
             if (!e.target.checked) {
@@ -326,7 +301,6 @@ function FieldControl({
             onChange({ id: condition?.id ?? newId(), field: field.key, op: "is", value: "true" });
           }}
         />
-        <GlassBox checked={checked} />
       </div>
     );
   }
