@@ -18,6 +18,8 @@ export function userInitials(user: AuthUser | null): string {
 }
 
 const SIZE_CLASSES = {
+  "2xs": "h-[22px] w-[22px] text-[9px]",
+  xs: "h-8 w-8 text-[11px]",
   sm: "h-9 w-9 text-[11px] sm:h-10 sm:w-10 sm:text-xs",
   lg: "h-14 w-14 text-base",
   xl: "h-24 w-24 text-2xl",
@@ -160,11 +162,14 @@ export function AvatarCircle({
   className = "",
   /** When true (default), clicking a photo opens a large preview. */
   previewable = true,
+  /** Solid background for the initials fallback (lists tell people apart by color). */
+  color,
 }: {
   user: AuthUser | null;
   size?: keyof typeof SIZE_CLASSES;
   className?: string;
   previewable?: boolean;
+  color?: string;
 }) {
   const dims = SIZE_CLASSES[size];
   const revision = useSyncExternalStore(
@@ -292,7 +297,7 @@ export function AvatarCircle({
   return (
     <div
       className={`flex ${dims} shrink-0 items-center justify-center rounded-full font-bold text-white ${className}`}
-      style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%)" }}
+      style={{ background: color ?? "linear-gradient(135deg, var(--brand) 0%, var(--brand-secondary) 100%)" }}
       aria-hidden
     >
       {userInitials(user)}

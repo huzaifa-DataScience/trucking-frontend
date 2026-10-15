@@ -32,8 +32,6 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env / secrets / local dumps
-.env
-.env.*
 !.env.example
 *.bak
 *.dump
