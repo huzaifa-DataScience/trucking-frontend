@@ -372,18 +372,15 @@ const settingsNavItems: SidebarNavItem[] = [
     exact: true,
   },
   {
-    href: "/account",
-    label: "Account",
-    Icon: NavIconCog,
-    exact: true,
-  },
-  {
     href: "/settings/my-team",
     label: "My team",
     Icon: NavIconUsers,
     biddingPermission: "bidding:read",
   },
 ];
+
+/** Roles with an estimating crew — the only ones My team works for (same rule as /settings/my-team). */
+const CREW_ROLES = new Set(["captain", "assistant_estimator", "bid_clerk", "user"]);
 
 const SETTINGS_RAIL_SECTIONS: {
   title: string;
@@ -393,7 +390,6 @@ const SETTINGS_RAIL_SECTIONS: {
     title: "General",
     links: [
       { href: "/settings/profile", label: "My Profile", Icon: NavIconUsers },
-      { href: "/account", label: "Account", Icon: NavIconCog },
     ],
   },
   {
@@ -503,6 +499,7 @@ export function Sidebar({
   const currentView: ViewMode = viewFromPathname(pathname);
   const seesAllChrome = isAdminPanelRole(user?.role);
   const showWfs = canSeeWfs(user?.role);
+  const managesCrew = CREW_ROLES.has(user?.role ?? "");
 
   const hideOpsReportingBilling = user?.role === "assistant_estimator";
 
@@ -589,7 +586,9 @@ export function Sidebar({
         return true;
       });
     }
-    if (view === "settings") return settingsNavItems;
+    if (view === "settings") {
+      return settingsNavItems.filter((item) => item.href !== "/settings/my-team" || managesCrew);
+    }
     if (view === "billings") {
       return canSeeBillings
         ? [{ href: "/billings", label: "Billing", Icon: NavIconInvoice } as SidebarNavItem]
@@ -918,7 +917,12 @@ export function Sidebar({
             }`}
           >
             {currentView === "settings" ? (
-              SETTINGS_RAIL_SECTIONS.map((section, sectionIdx) => (
+              SETTINGS_RAIL_SECTIONS.map((section) => ({
+                ...section,
+                links: section.links.filter((l) => l.href !== "/settings/my-team" || managesCrew),
+              }))
+                .filter((section) => section.links.length > 0)
+                .map((section, sectionIdx) => (
                 <div key={section.title} className={secondaryCollapsed ? "w-full space-y-0.5" : ""}>
                   {!secondaryCollapsed && sectionIdx > 0 ? (
                     <hr className="mb-6 border-0 border-t border-[var(--border-subtle)]" />

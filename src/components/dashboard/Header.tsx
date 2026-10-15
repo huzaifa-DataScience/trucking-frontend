@@ -379,7 +379,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
 
                   <div className="p-2">
                     <Link
-                      href="/account"
+                      href="/settings/profile"
                       onClick={() => setMenuOpen(false)}
                       className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-ink transition hover:bg-ink/[0.05]"
                     >
