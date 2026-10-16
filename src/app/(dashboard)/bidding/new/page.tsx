@@ -240,7 +240,7 @@ export default function NewBidPage() {
                 />
               </BidFormField>
             </div>
-            <BidFormField label="Company bidding" htmlFor="co" hint="Matches header company when set.">
+            <BidFormField label="Office" htmlFor="co" hint="GOEL / GOEL DC / DCB — matches header office when set.">
               <BidSelect id="co" value={entity} onChange={setEntity} options={entityOptions} />
             </BidFormField>
             <BidFormField

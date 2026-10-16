@@ -183,6 +183,10 @@ function itemIsActive(
 ): boolean {
   if (item.exact) return pathname === item.href;
   if (item.href === "/workforce") return pathname === "/workforce";
+  // Haul log owns /operations and /operations/hauls/* — not rates/reports siblings.
+  if (item.href === "/operations") {
+    return pathname === "/operations" || pathname.startsWith("/operations/hauls");
+  }
   if (item.activePathPrefix) {
     return (
       pathname === item.activePathPrefix ||
@@ -193,6 +197,29 @@ function itemIsActive(
 }
 
 const operationsNavItems: SidebarNavItem[] = [
+  {
+    href: "/operations",
+    label: "Haul log",
+    Icon: NavIconTable,
+  },
+  {
+    href: "/operations/hauler-rates",
+    label: "Hauler rates",
+    Icon: NavIconTruck,
+    activePathPrefix: "/operations/hauler-rates",
+  },
+  {
+    href: "/operations/disposal-rates",
+    label: "Disposal rates",
+    Icon: NavIconCube,
+    activePathPrefix: "/operations/disposal-rates",
+  },
+  {
+    href: "/operations/reports/jobs",
+    label: "Cost reports",
+    Icon: NavIconChart,
+    activePathPrefix: "/operations/reports",
+  },
   {
     href: "/job",
     label: "Job Dashboard",
@@ -487,6 +514,7 @@ export function Sidebar({
   useEffect(() => {
     if (user?.role !== "assistant_estimator") return;
     const hidden =
+      pathname.startsWith("/operations") ||
       pathname.startsWith("/job") ||
       pathname.startsWith("/material") ||
       pathname.startsWith("/hauler") ||

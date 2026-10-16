@@ -2,6 +2,7 @@
 
 import { Suspense, use } from "react";
 import { BidSheetProvider } from "@/contexts/BidSheetContext";
+import { ProcessDraftProvider } from "@/contexts/ProcessDraftContext";
 import { BidSheetLayout } from "@/components/bidding/BidSheetLayout";
 import { BidSheetSkeleton } from "@/components/ui/Skeleton";
 
@@ -16,9 +17,11 @@ export default function BidSheetRootLayout({
 
   return (
     <BidSheetProvider bidId={id}>
-      <Suspense fallback={<BidSheetSkeleton />}>
-        <BidSheetLayout>{children}</BidSheetLayout>
-      </Suspense>
+      <ProcessDraftProvider>
+        <Suspense fallback={<BidSheetSkeleton />}>
+          <BidSheetLayout>{children}</BidSheetLayout>
+        </Suspense>
+      </ProcessDraftProvider>
     </BidSheetProvider>
   );
 }

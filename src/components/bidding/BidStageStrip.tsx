@@ -137,7 +137,7 @@ export function BidStageStrip({
 }) {
   const router = useRouter();
   const { user } = useAuth();
-  const { confirmLeaveUnsaved } = useBidSheet();
+  const { confirmLeaveUnsaved, processDirty, saveProcess } = useBidSheet();
   const activeRef = useRef<HTMLButtonElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -156,7 +156,13 @@ export function BidStageStrip({
 
   const go = (href: string) => {
     void (async () => {
-      if (!(await confirmLeaveUnsaved())) return;
+      if (processDirty) {
+        try {
+          await saveProcess();
+        } catch {
+          if (!(await confirmLeaveUnsaved())) return;
+        }
+      }
       router.push(href);
     })();
   };

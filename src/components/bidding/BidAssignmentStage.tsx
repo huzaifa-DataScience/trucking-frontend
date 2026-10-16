@@ -48,6 +48,22 @@ function captainDisplayName(c: BidCaptainLookup): string {
   });
 }
 
+function rosterLabel(name: string | null | undefined): string | null {
+  const text = name?.trim() ?? "";
+  if (!text || text.includes("@")) return null;
+  return text;
+}
+
+function emailLocal(email: string | null | undefined): string {
+  return (email ?? "").split("@")[0].replace(/[._]+/g, " ").trim().toLowerCase();
+}
+
+function samePerson(a: string | null | undefined, b: string | null | undefined): boolean {
+  const left = (a ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const right = (b ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  return Boolean(left && right && left === right);
+}
+
 function contactDisplayName(c: BidContactLookup): string {
   return (
     c.name?.trim() ||
@@ -239,14 +255,26 @@ export function BidAssignmentStage() {
       setAssignment({ captainUserId });
       return;
     }
-    // teamId null → disabled in UI; still don't invent a team
-    const team =
+    const linked =
       cap.teamId != null ? teams.find((t) => t.id === cap.teamId) : undefined;
+    const local = emailLocal(cap.email);
+    const matched =
+      rosterLabel(linked?.captain) != null
+        ? linked
+        : teams.find(
+            (t) =>
+              samePerson(rosterLabel(t.captain), local) ||
+              samePerson(rosterLabel(t.captain), rosterLabel(cap.name)),
+          );
+    const teamId = matched?.id ?? cap.teamId ?? a.teamId ?? null;
+    const team = teams.find((t) => t.id === teamId);
     setAssignment({
       captainUserId: cap.userId,
-      // Optimistic label; BE overwrites captain + teamId on save
-      captain: captainDisplayName(cap),
-      teamId: cap.teamId,
+      captain:
+        rosterLabel(team?.captain) ||
+        rosterLabel(captainDisplayName(cap)) ||
+        captainDisplayName(cap),
+      teamId,
       assistantEstimator:
         team?.assistantEstimator ?? a.assistantEstimator ?? null,
       bidClerk: team?.bidClerk ?? a.bidClerk ?? null,
@@ -265,19 +293,19 @@ export function BidAssignmentStage() {
     }
     const teamId = Number(teamIdRaw);
     const team = teams.find((t) => t.id === teamId);
-    const loginCaptain = captains.find((c) => c.teamId === teamId) ?? null;
+    const roster = rosterLabel(team?.captain);
+    const loginCaptain =
+      captains.find((c) => c.teamId === teamId) ??
+      captains.find((c) => roster != null && samePerson(emailLocal(c.email), roster)) ??
+      captains.find((c) => roster != null && samePerson(rosterLabel(c.name), roster)) ??
+      null;
     setAssignment({
       teamId,
-      ...(loginCaptain
-        ? {
-            captainUserId: loginCaptain.userId,
-            captain: captainDisplayName(loginCaptain),
-          }
-        : {
-            // No active captain login for this team — clear captain
-            captainUserId: null,
-            captain: null,
-          }),
+      captainUserId: loginCaptain?.userId ?? null,
+      captain:
+        roster ||
+        (loginCaptain ? rosterLabel(captainDisplayName(loginCaptain)) : null) ||
+        (loginCaptain ? captainDisplayName(loginCaptain) : null),
       assistantEstimator:
         team?.assistantEstimator ?? a.assistantEstimator ?? null,
       bidClerk: team?.bidClerk ?? a.bidClerk ?? null,

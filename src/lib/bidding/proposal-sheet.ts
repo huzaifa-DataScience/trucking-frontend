@@ -17,21 +17,51 @@ export function proposalSheetMeta(meta: ProcessMeta | null | undefined): Proposa
   return sheet && typeof sheet === "object" ? sheet : {};
 }
 
+function slugBucketId(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+/** Unique bucket defs from process-meta (dedupe; never emit duplicate React keys). */
 export function bucketDefs(meta: ProcessMeta | null | undefined): { value: string; label: string }[] {
+  const defaults = PROPOSAL_SHEET_BUCKETS.map((value) => ({
+    value,
+    label: labelizeBucket(value),
+  }));
   const raw = proposalSheetMeta(meta).buckets;
-  if (Array.isArray(raw) && raw.length > 0) {
-    return raw.map((b) => {
-      if (typeof b === "string") {
-        return { value: b, label: labelizeBucket(b) };
-      }
-      const value = String(b.value ?? "").trim();
-      return {
-        value: value || "bucket",
-        label: (b.label ?? labelizeBucket(value)).trim() || labelizeBucket(value),
-      };
+  if (!Array.isArray(raw) || raw.length === 0) return defaults;
+
+  const out: { value: string; label: string }[] = [];
+  const seen = new Set<string>();
+
+  raw.forEach((b, index) => {
+    if (typeof b === "string") {
+      const value = slugBucketId(b) || `bucket_${index}`;
+      if (seen.has(value)) return;
+      seen.add(value);
+      out.push({ value, label: labelizeBucket(b) });
+      return;
+    }
+    const obj = b as { value?: string; key?: string; label?: string };
+    const label = String(obj.label ?? obj.value ?? obj.key ?? "").trim();
+    const fromFields = slugBucketId(String(obj.value ?? obj.key ?? ""));
+    const fromLabel = slugBucketId(label);
+    let value = fromFields || fromLabel || `bucket_${index}`;
+    if (seen.has(value)) {
+      value = `${value}_${index}`;
+    }
+    if (seen.has(value)) return;
+    seen.add(value);
+    out.push({
+      value,
+      label: label || labelizeBucket(value),
     });
-  }
-  return PROPOSAL_SHEET_BUCKETS.map((value) => ({ value, label: labelizeBucket(value) }));
+  });
+
+  return out.length > 0 ? out : defaults;
 }
 
 /** Fallback exception rows from ProposalExample PDFs when process-meta omits them. */
