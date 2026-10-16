@@ -152,7 +152,7 @@ export function BidSheetForm() {
   const warnings = parseWarnings(c);
   /** Proposal screen is output + calculator — identity is RO (process-meta.proposalEditor). */
   const identityLocked = processMeta?.proposalEditor?.isOutput !== false;
-  /** Company bidding (us) stays read-only on Proposal when meta lists ourEntityId. */
+  /** Office (our entity) stays read-only on Proposal when meta lists ourEntityId. */
   const companyLocked =
     identityLocked ||
     processMetaFlagOn(processMeta?.proposalEditor?.readOnly, "ourEntityId");
@@ -195,7 +195,7 @@ export function BidSheetForm() {
     lookups.wageRates.find((w) => w.rateLabel === b.wageRateLabel)?.id ?? "";
 
   const entityOptions = [
-    { value: "", label: "Select company…" },
+    { value: "", label: "Select office…" },
     ...lookups.ourEntities.map((e) => ({
       value: String(e.id),
       label: e.name,

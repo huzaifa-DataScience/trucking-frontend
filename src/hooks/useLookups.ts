@@ -73,7 +73,7 @@ export function useLookups(companyId?: string, include: LookupField[] = ALL_FIEL
     materials: [{ value: "all", label: "All" }, ...toOptions(materials)],
     haulers: [{ value: "all", label: "All" }, ...toOptions(haulers)],
     truckTypes: [{ value: "all", label: "All" }, ...toOptions(truckTypes)],
-    ourEntities: [{ value: "all", label: "All companies" }, ...toOptions(ourEntities)],
+    ourEntities: [{ value: "all", label: "All offices" }, ...toOptions(ourEntities)],
   };
 
   return { jobs, materials, haulers, truckTypes, ourEntities, filterOptions, loading, error };

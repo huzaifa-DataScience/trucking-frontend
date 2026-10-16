@@ -166,7 +166,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
           </button>
           <label className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial">
             <span className="hidden text-[11px] font-medium uppercase tracking-[0.06em] text-ink-soft sm:inline">
-              Company
+              Office
             </span>
             <span className="relative inline-flex min-w-0 max-w-full flex-1 items-center gap-1.5 sm:max-w-[220px] sm:flex-none">
               {company ? (
@@ -183,10 +183,10 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                     ? `${entityBrandForName(company.name).border} ${entityBrandForName(company.name).text}`
                     : "border-[var(--border-subtle)] text-ink"
                 }`}
-                aria-label="Select company or branch"
+                aria-label="Select office"
               >
                 <SortedOptions>
-                  <option value="all">All companies</option>
+                  <option value="all">All offices</option>
                   {companies.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}

@@ -125,7 +125,7 @@ export function BidSheetHeaderSection({
           )}
         </BidFormField>
         <BidFormField
-          label="Company bidding (us)"
+          label="Office"
           htmlFor="entity"
           hint={
             companyReadOnly

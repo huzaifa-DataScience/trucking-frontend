@@ -608,7 +608,7 @@ export interface ProposalSheet {
 }
 
 export interface ProposalEditorSheetMeta {
-  buckets?: Array<{ value?: string; label?: string } | string>;
+  buckets?: Array<{ value?: string; key?: string; label?: string } | string>;
   boilerplate?: string[];
   exceptions?: Array<{ key?: string; label?: string } | string>;
   /** Print MBE/NAICS cert page when true (DCB). */

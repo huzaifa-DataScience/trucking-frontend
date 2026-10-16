@@ -22,8 +22,8 @@ export function BidSheetCompanyInfoSection({
   return (
     <Card>
       <CardHeader
-        title="Client / GC"
-        subtitle="Who this bid is for."
+        title="Company"
+        subtitle="Mechanical contractor, GC, supplier, or other client company — separate from your Office (GOEL / GOEL DC / DCB)."
         action={
           bid.jobId ? (
             <button

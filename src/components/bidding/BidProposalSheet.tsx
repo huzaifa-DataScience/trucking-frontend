@@ -33,6 +33,45 @@ function moneyInput(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Move letter onto <body>, force Letter/@page CSS, then restore after print. */
+function printProposalLetter() {
+  const root = document.getElementById("proposal-print-root");
+  if (!root || !root.parentNode) {
+    window.print();
+    return;
+  }
+
+  const parent = root.parentNode;
+  const nextSibling = root.nextSibling;
+  const placeholder = document.createComment("proposal-print-placeholder");
+  parent.insertBefore(placeholder, root);
+  document.documentElement.classList.add("proposal-printing");
+  document.body.appendChild(root);
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    document.documentElement.classList.remove("proposal-printing");
+    if (placeholder.parentNode) {
+      placeholder.parentNode.insertBefore(root, placeholder);
+      placeholder.remove();
+    } else if (parent.isConnected) {
+      if (nextSibling && nextSibling.parentNode === parent) {
+        parent.insertBefore(root, nextSibling);
+      } else {
+        parent.appendChild(root);
+      }
+    }
+    window.removeEventListener("afterprint", cleanup);
+  };
+
+  window.addEventListener("afterprint", cleanup);
+  // Some browsers fire afterprint late / never — restore after a beat too.
+  window.setTimeout(cleanup, 60_000);
+  window.print();
+}
+
 /** Proposal letter editor + print preview — FRONTEND_PROPOSAL.md */
 export function BidProposalSheet() {
   const { bid, draft, setField, editable } = useProcessDraft();
@@ -194,7 +233,7 @@ export function BidProposalSheet() {
             <div className="intake-section-body grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
               <ReadOnly label="Estimate #" value={bid.estimateNumber} />
               <ReadOnly label="Bid name" value={bid.bidName || "—"} />
-              <ReadOnly label="Our company" value={entityLabel} />
+              <ReadOnly label="Office" value={entityLabel} />
               <ReadOnly label="Estimator" value={estimatorLabel} />
               {(
                 [
@@ -475,14 +514,14 @@ export function BidProposalSheet() {
                 <button
                   type="button"
                   className="intake-head-btn"
-                  onClick={() => window.print()}
+                  onClick={() => printProposalLetter()}
                 >
                   Print
                 </button>
               </div>
             </div>
             <div className="intake-section-body !bg-[#e8e6e1] !p-3 sm:!p-4">
-              <div className="proposal-letter-stage max-h-[min(78vh,56rem)] overflow-y-auto overflow-x-auto">
+              <div className="proposal-letter-stage max-h-[min(82vh,62rem)] overflow-y-auto overflow-x-auto">
                 <BidProposalLetter
                   sheet={sheet}
                   buckets={buckets}

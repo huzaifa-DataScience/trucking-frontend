@@ -731,7 +731,7 @@ export function BidIntakeStage() {
           />
         </label>
         <label className="intake-row !items-start">
-          <span className={labelClass}>Company bidding (us)</span>
+          <span className={labelClass}>Office</span>
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="relative min-w-0">
               <select
@@ -763,8 +763,8 @@ export function BidIntakeStage() {
             </div>
             <span className="text-[10px] leading-tight text-[#9ca3af]">
               {draft.entityRule?.suggestedOurEntity
-                ? `Rule suggests ${draft.entityRule.suggestedOurEntity.replace(/_/g, " ")} — change anytime on Intake`
-                : "GOEL / GOEL DC / DCB — change anytime on Intake"}
+                ? `Rule suggests ${draft.entityRule.suggestedOurEntity.replace(/_/g, " ")} — change office anytime on Intake`
+                : "GOEL / GOEL DC / DCB — change office anytime on Intake"}
             </span>
           </div>
         </label>
@@ -1055,7 +1055,7 @@ export function BidIntakeStage() {
           <p className="rounded border border-[#e5e7eb] bg-[#f3f4f6] px-2.5 py-1.5 text-[12.5px] text-[#4b5563]">
             {draft.entityRule?.suggestedOurEntity
               ? `Suggests ${draft.entityRule.suggestedOurEntity.replace(/_/g, " ")} — pick above, not locked`
-              : "Suggests GOEL / GOEL DC / DCB from state. Actual company is the dropdown above."}
+                : "Suggests GOEL / GOEL DC / DCB from state. Actual office is the dropdown above."}
           </p>
         </label>
         <label className="intake-row">

@@ -2,77 +2,33 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import * as biddingApi from "@/lib/api/endpoints/bidding";
+import { useState } from "react";
 import { useBidSheet } from "@/contexts/BidSheetContext";
-import { getApiErrorMessage } from "@/lib/api/client";
+import { useProcessDraft } from "@/hooks/useProcessDraft";
 import type { ProcessAward } from "@/lib/bidding/process-types";
 
 /** Awarded / startup — only when workflow.showAward (outcome = awarded). */
 export function BidAwardTab() {
   const router = useRouter();
+  const { bid, canWrite, setJobId, confirmLeaveUnsaved } = useBidSheet();
   const {
-    bid,
-    canWrite,
-    refresh,
-    setJobId,
-    setProcessDirty,
-    registerProcessSave,
-    confirmLeaveUnsaved,
-  } = useBidSheet();
-  const [award, setAward] = useState<ProcessAward>({});
-  const [jobIdDraft, setJobIdDraft] = useState("");
-  const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const awardRef = useRef<ProcessAward>({});
-  const editable = canWrite && bid?.status !== "archived";
-
-  useEffect(() => {
-    if (!bid) return;
-    const next = { ...(bid.process?.award ?? {}) };
-    setAward(next);
-    awardRef.current = next;
-    setJobIdDraft(bid.jobId != null ? String(bid.jobId) : "");
-    setDirty(false);
-    setProcessDirty(false);
-  }, [bid, setProcessDirty]);
-
-  const persist = useCallback(async () => {
-    if (!bid || !editable) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await biddingApi.patchBid(bid.id, {
-        process: { award: awardRef.current },
-      });
-      setDirty(false);
-      setProcessDirty(false);
-      await refresh();
-    } catch (e) {
-      setError(getApiErrorMessage(e, "Failed to save Award"));
-      throw e;
-    } finally {
-      setSaving(false);
-    }
-  }, [bid, editable, refresh, setProcessDirty]);
-
-  useEffect(() => {
-    registerProcessSave(persist);
-    return () => registerProcessSave(null);
-  }, [persist, registerProcessSave]);
-
-  useEffect(() => {
-    setProcessDirty(dirty);
-    return () => setProcessDirty(false);
-  }, [dirty, setProcessDirty]);
+    draft,
+    setField,
+    persist,
+    dirty,
+    saving,
+    error,
+    editable: processEditable,
+  } = useProcessDraft();
+  const [jobIdDraft, setJobIdDraft] = useState(() =>
+    bid?.jobId != null ? String(bid.jobId) : ""
+  );
+  const [jobError, setJobError] = useState<string | null>(null);
+  const editable = processEditable && canWrite && bid?.status !== "archived";
+  const award: ProcessAward = { ...(draft.award ?? {}) };
 
   const patchAward = (next: ProcessAward) => {
-    setAward(next);
-    awardRef.current = next;
-    if (!editable) return;
-    setDirty(true);
-    setProcessDirty(true);
+    setField("award", next);
   };
 
   if (!bid) return null;
@@ -131,9 +87,9 @@ export function BidAwardTab() {
         ) : null}
       </header>
 
-      {error ? (
+      {error || jobError ? (
         <p className="rounded border border-danger/25 bg-danger-tint/40 px-3 py-1.5 text-[12.5px] text-danger">
-          {error}
+          {jobError ?? error}
         </p>
       ) : null}
 
@@ -189,9 +145,10 @@ export function BidAwardTab() {
                   onClick={() => {
                     const n = jobIdDraft.trim() ? Number(jobIdDraft) : null;
                     if (jobIdDraft.trim() && !Number.isFinite(n)) {
-                      setError("Job id must be a number");
+                      setJobError("Job id must be a number");
                       return;
                     }
+                    setJobError(null);
                     void setJobId(n, { prefillCompany: false });
                   }}
                   className="intake-head-btn shrink-0 disabled:opacity-50"
