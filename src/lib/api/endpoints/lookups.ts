@@ -29,7 +29,7 @@ export async function getExternalSites(params?: LookupParams): Promise<LookupIte
   return get<LookupItem[]>("/lookups/external-sites", toLookupParams(params));
 }
 
-// Our internal companies (Ref_OurEntities) for the "Our company" filter.
+// Our offices (Ref_OurEntities — GOEL / GOEL DC / DCB) for the Office filter.
 export async function getOurEntities(): Promise<LookupItem[]> {
   return get<LookupItem[]>("/lookups/our-entities");
 }

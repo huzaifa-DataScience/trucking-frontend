@@ -322,11 +322,11 @@ export const FILTER_FIELDS: FilterFieldDef[] = [
   // --- Companies & Contacts ---
   {
     key: "clientCompanyName",
-    label: "Companies",
+    label: "Company",
     section: "Companies & Contacts",
     kind: "select",
     dynamic: true,
-    placeholder: "Select companies",
+    placeholder: "Select company",
   },
   {
     key: "contactName",

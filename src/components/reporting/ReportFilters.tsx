@@ -12,7 +12,7 @@ export interface FilterConfig {
   haulerId: string;
   truckTypeId: string;
   direction: Direction;
-  /** Our internal company (Ref_OurEntities). "all" / undefined means no company filter. */
+  /** Our office (Ref_OurEntities). "all" / undefined means no office filter. */
   entityId?: string;
 }
 
@@ -33,7 +33,7 @@ interface ReportFiltersProps {
   showHauler?: boolean;
   showTruckType?: boolean;
   showDirection?: boolean;
-  /** Show the "Our company" filter (Ref_OurEntities). */
+  /** Show the Office filter (Ref_OurEntities — GOEL / GOEL DC / DCB). */
   showOurCompany?: boolean;
 }
 
@@ -207,7 +207,7 @@ export function ReportFilters({
         )}
         {showOurCompany && (
           <label className="flex min-w-0 flex-col gap-1.5">
-            <span className={labelClass}>Our company</span>
+            <span className={labelClass}>Office</span>
             <div className="relative">
               <select
                 value={filters.entityId ?? "all"}

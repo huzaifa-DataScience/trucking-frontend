@@ -217,7 +217,7 @@ const OUTCOME_FILTERS = [
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "bidDate", label: "Bid date" },
   { value: "name", label: "Name" },
-  { value: "office", label: "Company" },
+  { value: "office", label: "Office" },
   { value: "captain", label: "Team captain" },
   { value: "baseBid", label: "Base bid" },
   { value: "updated", label: "Last updated" },
@@ -232,7 +232,7 @@ const ESTIMATES_FILTER_CATALOG: { key: string; label: string }[] = [
   { key: "search", label: "Search" },
   { key: "bidDate", label: "Bid date" },
   { key: "captain", label: "Team captain" },
-  { key: "entityId", label: "Company" },
+  { key: "entityId", label: "Office" },
   { key: "workType", label: "Work type" },
   { key: "bidKind", label: "Bid type" },
   { key: "constructionType", label: "Building type" },
@@ -895,7 +895,8 @@ export default function BiddingListPage() {
         visibleBids.map((b) => ({
           "Project #": b.estimateNumber,
           "Bid name": b.bidName,
-          Contractor: b.clientCompanyName ?? "",
+          Company: b.clientCompanyName ?? "",
+          Office: b.companyName ?? "",
           "Team captain": b.captain ?? "",
           "Contract amount": b.contractAmount ?? "",
           "Cash expense": b.cashExpense ?? "",

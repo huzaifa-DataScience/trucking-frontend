@@ -64,7 +64,7 @@ export function FinancialsChrome({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
-            aria-label="Company"
+            aria-label="Office"
             className={fieldClass}
             value={query.entityId ? String(query.entityId) : ""}
             onChange={(e) =>
@@ -72,7 +72,7 @@ export function FinancialsChrome({
             }
           >
             <SortedOptions>
-              <option value="">All companies</option>
+              <option value="">All offices</option>
               {(filters?.companies ?? []).map((c) => (
                 <option key={c.entityId} value={c.entityId}>
                   {c.company}

@@ -87,12 +87,14 @@ function StageRailLink({
   stageId,
   active,
   collapsed,
+  onNavigate,
 }: {
   href: string;
   label: string;
   stageId: BidChromeStage;
   active: boolean;
   collapsed: boolean;
+  onNavigate: (href: string) => void;
 }) {
   const Icon = BID_STAGE_ICONS[stageId];
   return (
@@ -101,6 +103,14 @@ function StageRailLink({
       title={label}
       aria-label={label}
       className={stageRailLinkClass(active, collapsed)}
+      onClick={(e) => {
+        if (active) {
+          e.preventDefault();
+          return;
+        }
+        e.preventDefault();
+        onNavigate(href);
+      }}
     >
       <Icon className="h-4 w-4 shrink-0" />
       {!collapsed ? <span className="min-w-0 truncate">{label}</span> : null}
@@ -110,8 +120,14 @@ function StageRailLink({
 
 /** Shared bid chrome — BIDDING_FRONTEND_API.md §0 (PDF stages + handoff) */
 export function BidSheetLayout({ children }: { children: ReactNode }) {
-  const { bid, initialLoading, unsavedChanges, confirmLeaveUnsaved } =
-    useBidSheet();
+  const {
+    bid,
+    initialLoading,
+    unsavedChanges,
+    confirmLeaveUnsaved,
+    processDirty,
+    saveProcess,
+  } = useBidSheet();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -216,6 +232,20 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
     void (async () => {
       if (!(await confirmLeaveUnsaved())) return;
       router.push("/bidding");
+    })();
+  };
+
+  /** Flush process draft (or confirm discard) before leaving the stage — plain Links were dropping captain/intake edits. */
+  const goToStage = (href: string) => {
+    void (async () => {
+      if (processDirty) {
+        try {
+          await saveProcess();
+        } catch {
+          if (!(await confirmLeaveUnsaved())) return;
+        }
+      }
+      router.push(href);
     })();
   };
 
@@ -336,18 +366,16 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
             <nav className={`space-y-0.5 ${secondaryCollapsed ? "flex w-full flex-col items-center" : ""}`}>
               {BID_HANDOFF_STAGES.map((s) => {
                 const active = stage === s.id;
-                const Icon = BID_STAGE_ICONS[s.id];
                 return (
-                  <Link
+                  <StageRailLink
                     key={s.id}
                     href={stageHref(s.id)}
-                    title={s.label}
-                    aria-label={s.label}
-                    className={stageRailLinkClass(active, secondaryCollapsed)}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {!secondaryCollapsed ? <span className="min-w-0 truncate">{s.label}</span> : null}
-                  </Link>
+                    label={s.label}
+                    stageId={s.id}
+                    active={active}
+                    collapsed={secondaryCollapsed}
+                    onNavigate={goToStage}
+                  />
                 );
               })}
               {/* Post screens — Friday model: Lost = 1 tab; Awarded = Awarded + Production */}
@@ -359,6 +387,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
                     stageId="award"
                     active={stage === "award"}
                     collapsed={secondaryCollapsed}
+                    onNavigate={goToStage}
                   />
                   <StageRailLink
                     href={stageHref("production")}
@@ -366,6 +395,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
                     stageId="production"
                     active={stage === "production"}
                     collapsed={secondaryCollapsed}
+                    onNavigate={goToStage}
                   />
                 </>
               ) : null}
@@ -376,6 +406,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
                   stageId="lost"
                   active={stage === "lost"}
                   collapsed={secondaryCollapsed}
+                  onNavigate={goToStage}
                 />
               ) : null}
             </nav>

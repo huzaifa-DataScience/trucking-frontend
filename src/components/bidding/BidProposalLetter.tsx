@@ -14,6 +14,8 @@ import {
 type BucketDef = { value: string; label: string };
 type ExceptionDef = { key: string; label: string };
 
+const EXCEPTION_ROWS_PER_PAGE = 22;
+
 export function BidProposalLetter({
   sheet,
   buckets,
@@ -45,16 +47,22 @@ export function BidProposalLetter({
     copy
   );
   const title = `${estimateNumber} — ${bidName}`.replace(/\s+/g, " ").trim();
+  const footerTitle = `${estimateNumber} ${bidName}`.replace(/\s+/g, " ").trim();
   const notes = sheet.specialNotes?.trim() || "";
   const hasNotes = Boolean(notes);
   const hasAlts = (sheet.alternates ?? []).length > 0;
   const isDcb = letterhead.kind === "dcb";
 
+  const exceptionPages: ExceptionDef[][] = [];
+  for (let i = 0; i < exDefs.length; i += EXCEPTION_ROWS_PER_PAGE) {
+    exceptionPages.push(exDefs.slice(i, i + EXCEPTION_ROWS_PER_PAGE));
+  }
+
   let page = 0;
   const nextPage = () => ++page;
   const breakdownPage = nextPage();
   const notesPage = hasNotes ? nextPage() : 0;
-  const exceptionPage = exDefs.length > 0 ? nextPage() : 0;
+  const exceptionPageNums = exceptionPages.map(() => nextPage());
   const certPageNum = cert ? nextPage() : 0;
 
   return (
@@ -113,10 +121,11 @@ export function BidProposalLetter({
                 const line = (sheet.lines ?? []).find((l) => l.bucket === b.value);
                 const price = resolveBucketPrice(sheet, b.value, copy);
                 const systems = (line?.systems ?? "").trim();
+                const label = b.label.replace(/:?\s*$/, "");
                 return (
                   <tr key={b.value}>
                     <td>
-                      <span className="proposal-bucket">{b.label}</span>
+                      <span className="proposal-bucket">{label}:</span>
                       <span className={`proposal-systems ${systems ? "" : "proposal-systems--empty"}`}>
                         {systems || "—"}
                       </span>
@@ -168,7 +177,7 @@ export function BidProposalLetter({
 
           <InnerFooter
             isDcb={isDcb}
-            bidName={bidName}
+            title={footerTitle}
             recipient={recipient}
             page={breakdownPage}
           />
@@ -195,28 +204,38 @@ export function BidProposalLetter({
                 );
               })}
             </div>
-            <InnerFooter isDcb={isDcb} bidName={bidName} recipient={recipient} page={notesPage} />
+            <InnerFooter isDcb={isDcb} title={footerTitle} recipient={recipient} page={notesPage} />
           </div>
         </article>
       ) : null}
 
-      {exDefs.length > 0 ? (
-        <article className="proposal-page proposal-page--inner">
+      {exceptionPages.map((chunk, pageIdx) => (
+        <article key={`ex-${pageIdx}`} className="proposal-page proposal-page--inner">
           <div className="proposal-spine" aria-hidden>
             <span className="proposal-spine-dark" />
             <span className="proposal-spine-orange" />
           </div>
           <div className="proposal-inner">
-            <div className="proposal-ex-head">
-              <h2>Exception</h2>
-              <div className="proposal-ex-cols">
-                <span>Included</span>
-                <span>Not included</span>
+            {pageIdx === 0 ? (
+              <div className="proposal-ex-head">
+                <h2>Exception</h2>
+                <div className="proposal-ex-cols">
+                  <span>Included</span>
+                  <span>Not included</span>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="proposal-ex-head proposal-ex-head--cont" aria-hidden>
+                <h2 className="proposal-ex-cont-spacer" />
+                <div className="proposal-ex-cols">
+                  <span />
+                  <span />
+                </div>
+              </div>
+            )}
             <table className="proposal-exceptions">
               <tbody>
-                {exDefs.map((ex) => {
+                {chunk.map((ex) => {
                   const row = (sheet.exceptions ?? []).find((r) => r.key === ex.key);
                   const included = row?.included === true;
                   const excluded = row?.included === false;
@@ -236,13 +255,13 @@ export function BidProposalLetter({
             </table>
             <InnerFooter
               isDcb={isDcb}
-              bidName={bidName}
+              title={footerTitle}
               recipient={recipient}
-              page={exceptionPage}
+              page={exceptionPageNums[pageIdx] ?? pageIdx + 1}
             />
           </div>
         </article>
-      ) : null}
+      ))}
 
       {cert ? (
         <article className="proposal-page proposal-page--inner">
@@ -253,7 +272,12 @@ export function BidProposalLetter({
           <div className="proposal-inner">
             <h2 className="proposal-breakdown-title">MBE certifications</h2>
             <CertBody companyName={letterhead.companyName} />
-            <InnerFooter isDcb={isDcb} bidName={bidName} recipient={recipient} page={certPageNum} />
+            <InnerFooter
+              isDcb={isDcb}
+              title={footerTitle}
+              recipient={recipient}
+              page={certPageNum}
+            />
           </div>
         </article>
       ) : null}
@@ -279,23 +303,30 @@ function GoelCoverPage({
   title: string;
 }) {
   const meta: { label: string; value: string }[] = [
-    { label: "Goel bid number", value: estimateNumber || "—" },
+    { label: "Goel bid number", value: (estimateNumber || "—").toUpperCase() },
     { label: "Goel estimator", value: (estimatorLabel || "—").toUpperCase() },
-    { label: "Drawings/date of drawings", value: sheet.drawings?.trim() || "—" },
+    { label: "Drawings/date of drawings", value: (sheet.drawings?.trim() || "—").toUpperCase() },
     { label: "Date of proposal", value: formatProposalDate(sheet.proposalDate) },
-    { label: "Specifications", value: sheet.specifications?.trim() || "—" },
+    { label: "Specifications", value: (sheet.specifications?.trim() || "—").toUpperCase() },
     { label: "Wage scale", value: (sheet.wageScale?.trim() || "—").toUpperCase() },
     { label: "Amendments / addendums", value: (sheet.addenda?.trim() || "—").toUpperCase() },
     { label: "Proposal revision #", value: sheet.revision?.trim() || "0" },
-    { label: "Mechanical designer", value: sheet.mechanicalDesigner?.trim() || "—" },
+    {
+      label: "Mechanical designer",
+      value: (sheet.mechanicalDesigner?.trim() || "—").toUpperCase(),
+    },
   ];
+
+  const toAddressLines = (copy?.toAddress ?? "")
+    .split(/\n|,/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   return (
     <article className="proposal-page proposal-page--goel-cover">
       <div className="goel-cover-top">
         <div className="goel-cover-photos">
           <div className="goel-photo-grid">
-            {/* Order matches ProposalExample cover: L-top, R-top, L-bot, R-bot */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="goel-photo goel-photo--tl" src="/proposal/goel/hero-3.png" alt="" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -324,7 +355,7 @@ function GoelCoverPage({
             {letterhead.additionalContact ? (
               <>
                 <p className="goel-party-gap" />
-                <h3>Additional questions call:</h3>
+                <h3 className="goel-party-subhead">Additional questions call:</h3>
                 <p className="goel-party-strong">
                   {letterhead.additionalContact.name}, {letterhead.additionalContact.title}
                 </p>
@@ -340,13 +371,9 @@ function GoelCoverPage({
               <>
                 <p className="goel-party-strong">{copy.toName?.trim() || "—"}</p>
                 <p className="goel-party-strong">{copy.toCompany?.trim() || "—"}</p>
-                {copy.toAddress?.trim()
-                  ? copy.toAddress
-                      .split(/\n/)
-                      .map((s) => s.trim())
-                      .filter(Boolean)
-                      .map((line) => <p key={line}>{line}</p>)
-                  : null}
+                {toAddressLines.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
                 <p>Mobile: {copy.toPhone?.trim() || ""}</p>
                 <p>Office:</p>
                 {copy.toEmail?.trim() ? <p>{copy.toEmail}</p> : null}
@@ -554,12 +581,12 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
 
 function InnerFooter({
   isDcb,
-  bidName,
+  title,
   recipient,
   page,
 }: {
   isDcb: boolean;
-  bidName: string;
+  title: string;
   recipient: string;
   page: number;
 }) {
@@ -573,7 +600,7 @@ function InnerFooter({
         />
       </div>
       <p className="proposal-inner-footer-meta">
-        {bidName}
+        {title}
         <span>|</span>
         {recipient}
         <span>|</span>
