@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { getApiErrorMessage } from "@/lib/api/client";
 import { defaultOpsDateRange, qty, tons } from "@/lib/operations/format";
-import type { CostReportResponse, LeedReportRow } from "@/lib/operations/types";
+import type { CostReportResponse, LeedReportPage, LeedReportRow } from "@/lib/operations/types";
 import { AGGREGATE_FIELD_META, LEED_FIELD_META } from "@/lib/operations/types";
 import { OperationsChrome } from "@/components/operations/OperationsChrome";
 import { OpsDateRange } from "@/components/operations/OpsDateRange";
@@ -173,6 +173,7 @@ function ReportPager({
   totalPages,
   total,
   noun,
+  note,
   busy,
   onPage,
 }: {
@@ -180,13 +181,15 @@ function ReportPager({
   totalPages: number;
   total: number;
   noun: string;
+  /** Extra hint after the count. */
+  note?: string;
   busy: boolean;
   onPage: (page: number) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] px-4 py-2.5">
       <span className="text-[12.5px] text-ink-muted">
-        {`Page ${page} of ${totalPages} · ${total.toLocaleString()} ${noun}${total === 1 ? "" : "s"}`}
+        {`Page ${page} of ${totalPages} · ${total.toLocaleString()} ${noun}${total === 1 ? "" : "s"}${note ? ` · ${note}` : ""}`}
       </span>
       {totalPages > 1 ? (
         <span className="flex gap-2">
@@ -212,22 +215,39 @@ const LEED_TH =
   "sticky top-0 z-[2] whitespace-nowrap border-b border-[rgba(15,23,42,0.05)] bg-[var(--brand-tint)] px-3 py-2.5 text-[12px] font-semibold text-ink";
 
 export function LeedReportScreen({
-  load,
+  loadPage,
 }: {
-  load: (q: { from: string; to: string }) => Promise<LeedReportRow[]>;
+  /** One page of jobs (server-side); an older backend returns every job as an array. */
+  loadPage: (q: { from: string; to: string; page: number; pageSize: number }) => Promise<LeedReportPage | LeedReportRow[]>;
 }) {
   const [range, setRange] = useState(defaultOpsDateRange);
-  const [rows, setRows] = useState<LeedReportRow[]>([]);
+  const [data, setData] = useState<LeedReportPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // A new date range goes back to page 1.
+  const filterKey = `${range.from}|${range.to}`;
+  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ key: filterKey, page: next });
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void load(range)
-      .then((next) => {
-        if (!cancelled) setRows(next);
+    void loadPage({ ...range, page, pageSize: REPORT_PAGE_SIZE })
+      .then((res) => {
+        if (cancelled) return;
+        // Older backend: every job came back; page it here.
+        const next: LeedReportPage = Array.isArray(res)
+          ? {
+              rows: res.slice((page - 1) * REPORT_PAGE_SIZE, page * REPORT_PAGE_SIZE),
+              total: res.length,
+              page,
+              pageSize: REPORT_PAGE_SIZE,
+            }
+          : res;
+        setData(next);
       })
       .catch((e) => {
         if (!cancelled) setError(getApiErrorMessage(e, "Could not load LEED report"));
@@ -238,8 +258,9 @@ export function LeedReportScreen({
     return () => {
       cancelled = true;
     };
-  }, [range, load]);
+  }, [range, page, loadPage]);
 
+  const rows = data?.rows ?? [];
   const qtyCols = [...LEED_FIELD_META, ...AGGREGATE_FIELD_META];
 
   return (
@@ -248,7 +269,7 @@ export function LeedReportScreen({
       subtitle="Quantities only — not dollars."
       filters={<OpsDateRange from={range.from} to={range.to} onChange={setRange} />}
     >
-      {loading && rows.length === 0 ? (
+      {loading && !data ? (
         <TableSkeleton rows={8} toolbar={false} />
       ) : error ? (
         <EmptyState message={error} />
@@ -307,10 +328,17 @@ export function LeedReportScreen({
               </tbody>
             </table>
           </div>
-          <div className="border-t border-ink/[0.06] bg-[#f8f9fb] px-3 py-2 text-[11px] text-ink/45">
-            {rows.length.toLocaleString()} job{rows.length === 1 ? "" : "s"} · scroll horizontally
-            for all quantity columns
-          </div>
+          {data ? (
+            <ReportPager
+              page={data.page}
+              totalPages={Math.max(1, Math.ceil(data.total / data.pageSize))}
+              total={data.total}
+              noun="job"
+              note="scroll horizontally for all quantity columns"
+              busy={loading}
+              onPage={setPage}
+            />
+          ) : null}
         </div>
       )}
     </OperationsChrome>
