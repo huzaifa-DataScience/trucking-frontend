@@ -2,7 +2,11 @@
 
 import { useCallback } from "react";
 import * as opsApi from "@/lib/api/endpoints/operations";
+import type { CostReportRow } from "@/lib/operations/types";
 import { CostReportScreen } from "@/components/operations/OpsReportScreen";
+
+/** Kept outside the component so the paged report does not reload on every render. */
+const haulerLabel = (row: CostReportRow) => row.hauler || "—";
 
 export default function OpsHaulersReportPage() {
   const load = useCallback(
@@ -13,8 +17,9 @@ export default function OpsHaulersReportPage() {
     <CostReportScreen
       title="Cost by hauler"
       nameHeader="Hauler"
-      nameOf={(row) => row.hauler || "—"}
+      nameOf={haulerLabel}
       load={load}
+      loadPage={opsApi.reportByHaulersPage}
     />
   );
 }

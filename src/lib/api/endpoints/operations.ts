@@ -9,6 +9,7 @@ import type {
   HaulsPage,
   HaulsQuery,
   HaulWriteBody,
+  LeedReportPage,
   LeedReportRow,
   OperationsHaul,
   HaulerRatesPage,
@@ -135,16 +136,39 @@ export function reportByJobs(query: ReportDateQuery = {}): Promise<CostReportRes
   return get<CostReportResponse>("/operations/reports/jobs", dateParams(query));
 }
 
-/** Cost by job, one page (server-side sort); totals still cover every job. An older backend returns every job. */
-export function reportByJobsPage(
-  query: ReportDateQuery & { page: number; pageSize: number; sortBy: string; sortDir: "asc" | "desc" }
-): Promise<CostReportResponse> {
-  return get<CostReportResponse>("/operations/reports/jobs", {
+type CostReportPageQuery = ReportDateQuery & { page: number; pageSize: number; sortBy: string; sortDir: "asc" | "desc" };
+
+function costReportPage(path: string, query: CostReportPageQuery): Promise<CostReportResponse> {
+  return get<CostReportResponse>(path, {
     ...dateParams(query),
     page: query.page,
     pageSize: query.pageSize,
     sortBy: query.sortBy,
     sortDir: query.sortDir,
+  });
+}
+
+/** Cost by job / hauler / destination, one page (server-side sort); totals still cover every row. An older backend returns every row. */
+export function reportByJobsPage(query: CostReportPageQuery): Promise<CostReportResponse> {
+  return costReportPage("/operations/reports/jobs", query);
+}
+
+export function reportByHaulersPage(query: CostReportPageQuery): Promise<CostReportResponse> {
+  return costReportPage("/operations/reports/haulers", query);
+}
+
+export function reportByDestinationsPage(query: CostReportPageQuery): Promise<CostReportResponse> {
+  return costReportPage("/operations/reports/destinations", query);
+}
+
+/** LEED / aggregates, one page. An older backend returns every job as a bare array. */
+export function reportLeedPage(
+  query: ReportDateQuery & { page: number; pageSize: number }
+): Promise<LeedReportPage | LeedReportRow[]> {
+  return get<LeedReportPage | LeedReportRow[]>("/operations/reports/leed", {
+    ...dateParams(query),
+    page: query.page,
+    pageSize: query.pageSize,
   });
 }
 
