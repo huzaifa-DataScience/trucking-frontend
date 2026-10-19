@@ -1741,6 +1741,99 @@ select.cs-soft-control:hover {
   color: var(--ink);
 }
 
+/* Trucking report dashboards (Job, Material, Hauler, Forensic) */
+/* Cards match the tickets card: rounded corners and a soft shadow. */
+.glass-app main .report-dashboard .cs-content-panel {
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(1, 1, 1, 0.06);
+}
+
+/* Filter row: the Job dropdown gets the same 8px corners as the date fields beside it. */
+/* !important: the app-wide field rule above is more specific and forces 4px corners. */
+.glass-app main .report-dashboard select,
+.glass-app main .report-dashboard input[type="search"] {
+  border-radius: var(--radius-lg) !important;
+}
+
+/* Tickets table: light-blue header, same as the financials tables. */
+.glass-app main .report-dashboard thead tr {
+  background: transparent;
+}
+
+.glass-app main .report-dashboard thead th {
+  background: var(--brand-tint);
+}
+
+.glass-app main .report-dashboard thead th,
+.glass-app main .report-dashboard thead th button {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Summary cards: title sits in a light-blue section bar (like the estimate forms), table runs edge to edge. */
+.glass-app main .report-dashboard .cs-content-panel:has(> .mb-3:first-child) {
+  overflow: hidden;
+  padding: 0;
+}
+
+.glass-app main .report-dashboard .cs-content-panel > .mb-3:first-child {
+  justify-content: center;
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--brand-tint);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+.glass-app main .report-dashboard .cs-content-panel > .mb-3:first-child > .min-w-0 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: 8px;
+}
+
+.glass-app main .report-dashboard .cs-content-panel > .mb-3:first-child h3 {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.glass-app main .report-dashboard .cs-content-panel > .mb-3:first-child > .min-w-0 > p {
+  margin-top: 0;
+}
+
+.glass-app main .report-dashboard .cs-content-panel:has(> .mb-3:first-child) .table-scroll {
+  margin: 0;
+  padding: 0;
+}
+
+/* Column names plain under the bar. */
+.glass-app main .report-dashboard .cs-content-panel thead th {
+  height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.glass-app main .report-dashboard .cs-content-panel thead th,
+.glass-app main .report-dashboard .cs-content-panel thead th button {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.glass-app main .report-dashboard .cs-content-panel th:first-child,
+.glass-app main .report-dashboard .cs-content-panel td:first-child {
+  padding-left: 16px;
+}
+
+.glass-app main .report-dashboard .cs-content-panel th:last-child,
+.glass-app main .report-dashboard .cs-content-panel td:last-child {
+  padding-right: 16px;
+}
+
+
 .glass-app main .cs-data-table tbody td {
   font-size: var(--text-table);
   font-weight: 400;

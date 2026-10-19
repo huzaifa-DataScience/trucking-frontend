@@ -2,110 +2,131 @@
 
 import type { CostReportResponse, CostReportRow } from "@/lib/operations/types";
 import { money, tons } from "@/lib/operations/format";
-import {
-  OPS_SHELL,
-  OPS_TABLE_SCROLL,
-  OPS_TABLE_STICKY_HEAD,
-} from "@/components/operations/tableScroll";
+import { OPS_TABLE_SCROLL } from "@/components/operations/tableScroll";
+import { SortHeader, useTableSort } from "@/hooks/useTableSort";
+import type { SortDir } from "@/lib/sort";
+import type { ReactNode } from "react";
 
+const th =
+  "sticky top-0 z-[1] whitespace-nowrap bg-[var(--brand-tint)] px-4 py-2.5 text-[12px] font-semibold text-ink";
+const td = "px-4 py-2 tabular-nums";
+/** Pinned Total row (same columns as the body). */
+const tf = "sticky bottom-0 z-[1] whitespace-nowrap border-t border-[var(--border-subtle)] bg-[#fafbfc] px-4 py-2.5 font-semibold tabular-nums";
+
+export type CostSortKey = "name" | "loads" | "weightTons" | "truckingCost" | "disposalCost" | "totalCost";
+type SortKey = CostSortKey;
+
+/** Cost report table: sortable columns (Total, high → low, by default) and a Total row pinned at the bottom. */
 export function CostReportTable({
   data,
   nameHeader,
   nameOf,
+  nameMaxWidth = "max-w-[18rem]",
+  serverSort,
+  rowCount,
+  footer,
 }: {
   data: CostReportResponse;
   nameHeader: string;
+  /** Cap for the name column (long destination names need a tighter one). */
+  nameMaxWidth?: string;
   nameOf: (row: CostReportRow) => string;
+  /** Paged reports: rows arrive already sorted, the headers only report clicks. */
+  serverSort?: { key: SortKey; dir: SortDir; onToggle: (key: SortKey) => void };
+  /** Rows in the whole report when `data.rows` is just one page. */
+  rowCount?: number;
+  /** Shown under the table (the pager). */
+  footer?: ReactNode;
 }) {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
-        <Kpi label="Loads" value={String(data.totals.loads)} />
-        <Kpi label="Weight (tons)" value={tons(data.totals.weightTons)} />
-        <Kpi label="Trucking" value={money(data.totals.truckingCost)} />
-        <Kpi label="Disposal" value={money(data.totals.disposalCost)} />
-        <Kpi label="Total cost" value={money(data.totals.totalCost)} emphasis />
-      </div>
+  const localSort = useTableSort<CostReportRow, SortKey>(
+    data.rows,
+    {
+      name: (r) => nameOf(r),
+      loads: (r) => r.loads,
+      weightTons: (r) => r.weightTons,
+      truckingCost: (r) => r.truckingCost,
+      disposalCost: (r) => r.disposalCost,
+      totalCost: (r) => r.totalCost,
+    },
+    { key: "totalCost", dir: "desc" }
+  );
+  const sort = serverSort
+    ? {
+        sorted: data.rows,
+        header: (key: SortKey, label: ReactNode, align?: "left" | "right") => (
+          <SortHeader
+            label={label}
+            active={serverSort.key === key}
+            dir={serverSort.dir}
+            onClick={() => serverSort.onToggle(key)}
+            align={align}
+          />
+        ),
+      }
+    : localSort;
+  const count = rowCount ?? data.rows.length;
+  const noun = nameHeader.toLowerCase();
 
-      <div className={OPS_SHELL}>
-        <div className={OPS_TABLE_SCROLL}>
-          <table className="min-w-[48rem] w-full text-left text-[13px]">
-            <thead>
-              <tr
-                className={`${OPS_TABLE_STICKY_HEAD} text-[11px] font-semibold uppercase tracking-wide text-ink/50`}
-              >
-                <th className="px-3 py-2.5">{nameHeader}</th>
-                <th className="px-3 py-2.5 text-right">Loads</th>
-                <th className="px-3 py-2.5 text-right">Tons</th>
-                <th className="px-3 py-2.5 text-right">Trucking</th>
-                <th className="px-3 py-2.5 text-right">Disposal</th>
-                <th className="px-3 py-2.5 text-right">Total</th>
+  return (
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white shadow-[0_1px_3px_rgba(1,1,1,0.06)]">
+      <div className={OPS_TABLE_SCROLL}>
+        <table className="w-full min-w-[48rem] border-separate border-spacing-0 text-left text-[13px]">
+          <thead>
+            <tr>
+              <th className={th}>{sort.header("name", nameHeader)}</th>
+              <th className={`${th} text-right`}>{sort.header("loads", "Loads", "right")}</th>
+              <th className={`${th} text-right`}>{sort.header("weightTons", "Tons", "right")}</th>
+              <th className={`${th} text-right`}>{sort.header("truckingCost", "Trucking", "right")}</th>
+              <th className={`${th} text-right`}>{sort.header("disposalCost", "Disposal", "right")}</th>
+              <th className={`${th} text-right`}>{sort.header("totalCost", "Total", "right")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {count === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-10 text-center text-ink/45">
+                  No rows in this date range.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {data.rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-3 py-10 text-center text-ink/45">
-                    No rows in this date range.
+            ) : (
+              sort.sorted.map((row, i) => (
+                <tr key={`${nameOf(row)}-${i}`} className="transition-colors hover:bg-brand/[0.04]">
+                  <td className={`${nameMaxWidth} border-t border-[#f0f1f3] px-4 py-2`}>
+                    <p className="truncate font-semibold text-ink" title={nameOf(row)}>
+                      {nameOf(row)}
+                    </p>
+                    {row.jobNumber && row.jobName ? (
+                      <p className="truncate text-[12px] text-ink-muted" title={row.jobName}>
+                        {row.jobName}
+                      </p>
+                    ) : null}
+                  </td>
+                  <td className={`${td} border-t border-[#f0f1f3] text-right`}>{row.loads.toLocaleString()}</td>
+                  <td className={`${td} border-t border-[#f0f1f3] text-right`}>{tons(row.weightTons)}</td>
+                  <td className={`${td} border-t border-[#f0f1f3] text-right`}>{money(row.truckingCost)}</td>
+                  <td className={`${td} border-t border-[#f0f1f3] text-right`}>{money(row.disposalCost)}</td>
+                  <td className={`${td} border-t border-[#f0f1f3] text-right font-semibold text-ink`}>
+                    {money(row.totalCost)}
                   </td>
                 </tr>
-              ) : (
-                data.rows.map((row, i) => (
-                  <tr
-                    key={`${nameOf(row)}-${i}`}
-                    className="border-b border-ink/[0.05] transition hover:bg-brand/[0.04]"
-                  >
-                    <td className="max-w-[20rem] px-3 py-2">
-                      <p className="truncate font-medium text-ink">{nameOf(row)}</p>
-                      {row.jobNumber && row.jobName ? (
-                        <p className="truncate text-[11px] text-ink/45">{row.jobName}</p>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{row.loads}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{tons(row.weightTons)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {money(row.truckingCost)}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {money(row.disposalCost)}
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                      {money(row.totalCost)}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="border-t border-ink/[0.06] bg-[#f8f9fb] px-3 py-2 text-[11px] text-ink/45">
-          {data.rows.length.toLocaleString()} row{data.rows.length === 1 ? "" : "s"} · sorted by
-          total cost
-        </div>
+              ))
+            )}
+          </tbody>
+          {count > 0 ? (
+            <tfoot>
+              <tr>
+                <td className={tf}>{`Total · ${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`}</td>
+                <td className={`${tf} text-right`}>{data.totals.loads.toLocaleString()}</td>
+                <td className={`${tf} text-right`}>{tons(data.totals.weightTons)}</td>
+                <td className={`${tf} text-right`}>{money(data.totals.truckingCost)}</td>
+                <td className={`${tf} text-right`}>{money(data.totals.disposalCost)}</td>
+                <td className={`${tf} text-right`}>{money(data.totals.totalCost)}</td>
+              </tr>
+            </tfoot>
+          ) : null}
+        </table>
       </div>
-    </div>
-  );
-}
-
-function Kpi({
-  label,
-  value,
-  emphasis,
-}: {
-  label: string;
-  value: string;
-  emphasis?: boolean;
-}) {
-  return (
-    <div className={`${OPS_SHELL} px-3.5 py-2.5`}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/40">{label}</p>
-      <p
-        className={`mt-0.5 tabular-nums ${
-          emphasis ? "text-base font-semibold text-ink" : "text-[14px] font-medium text-ink/80"
-        }`}
-      >
-        {value}
-      </p>
+      {footer}
     </div>
   );
 }

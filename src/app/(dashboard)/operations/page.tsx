@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import * as opsApi from "@/lib/api/endpoints/operations";
 import { getApiErrorMessage } from "@/lib/api/client";
 import type {
   DisposalRateCard,
   HaulerRateCard,
+  HaulsPage,
   OperationsHaul,
 } from "@/lib/operations/types";
 import { defaultOpsDateRange, money } from "@/lib/operations/format";
@@ -21,6 +22,27 @@ import { OPS_SHELL } from "@/components/operations/tableScroll";
 import { SortedOptions } from "@/components/ui/SortedOptions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { LoadingBar } from "@/components/ui/LoadingBar";
+
+/** Hauls per page (server-side). */
+const HAULS_PAGE_SIZE = 50;
+
+/**
+ * An older backend ignores `page` and returns the whole list; page it here so the screen still works
+ * until that backend is updated.
+ */
+function asHaulsPage(res: HaulsPage | OperationsHaul[], page: number): HaulsPage {
+  if (!Array.isArray(res)) return res;
+  const sum = (k: "truckingCost" | "disposalCost" | "totalCost") =>
+    res.reduce((t, r) => t + (typeof r[k] === "number" ? (r[k] as number) : 0), 0);
+  return {
+    items: res.slice((page - 1) * HAULS_PAGE_SIZE, page * HAULS_PAGE_SIZE),
+    total: res.length,
+    page,
+    pageSize: HAULS_PAGE_SIZE,
+    totals: { loads: res.length, truckingCost: sum("truckingCost"), disposalCost: sum("disposalCost"), totalCost: sum("totalCost") },
+  };
+}
 
 export default function OperationsHaulLogPage() {
   const [range, setRange] = useState(defaultOpsDateRange);
@@ -28,7 +50,7 @@ export default function OperationsHaulLogPage() {
   const [haulerRateId, setHaulerRateId] = useState("");
   const [disposalRateId, setDisposalRateId] = useState("");
   const [search, setSearch] = useState("");
-  const [rows, setRows] = useState<OperationsHaul[]>([]);
+  const [data, setData] = useState<HaulsPage | null>(null);
   const [haulers, setHaulers] = useState<HaulerRateCard[]>([]);
   const [disposals, setDisposals] = useState<DisposalRateCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,20 +66,40 @@ export default function OperationsHaulLogPage() {
     });
   }, []);
 
+  // Typing in Job # / Search waits a moment before asking the server (one request, not one per key).
+  const [jobNumberQuery, setJobNumberQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      setJobNumberQuery(jobNumber.trim());
+      setSearchQuery(search.trim());
+    }, 350);
+    return () => window.clearTimeout(id);
+  }, [jobNumber, search]);
+
+  // Any filter change starts again at page 1.
+  const filterKey = `${range.from}|${range.to}|${jobNumberQuery}|${haulerRateId}|${disposalRateId}|${searchQuery}`;
+  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ key: filterKey, page: next });
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
     void opsApi
-      .listHauls({
+      .listHaulsPage({
         from: range.from,
         to: range.to,
-        jobNumber: jobNumber.trim() || undefined,
+        jobNumber: jobNumberQuery || undefined,
         haulerRateId: haulerRateId ? Number(haulerRateId) : undefined,
         disposalRateId: disposalRateId ? Number(disposalRateId) : undefined,
+        search: searchQuery || undefined,
+        page,
+        pageSize: HAULS_PAGE_SIZE,
       })
       .then((next) => {
-        if (!cancelled) setRows(next);
+        if (!cancelled) setData(asHaulsPage(next, page));
       })
       .catch((e) => {
         if (!cancelled) setError(getApiErrorMessage(e, "Could not load haul log"));
@@ -68,44 +110,16 @@ export default function OperationsHaulLogPage() {
     return () => {
       cancelled = true;
     };
-  }, [range, jobNumber, haulerRateId, disposalRateId]);
+  }, [range, jobNumberQuery, haulerRateId, disposalRateId, searchQuery, page]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => {
-      const blob = [
-        r.jobNumber,
-        r.jobName,
-        r.haulerLabel,
-        r.disposalLabel,
-        r.goelTicketNumber,
-        r.haulingTicketNumber,
-        r.disposalTicketNumber,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return blob.includes(q);
-    });
-  }, [rows, search]);
-
-  const totals = useMemo(() => {
-    let trucking = 0;
-    let disposal = 0;
-    let total = 0;
-    for (const r of filtered) {
-      if (typeof r.truckingCost === "number") trucking += r.truckingCost;
-      if (typeof r.disposalCost === "number") disposal += r.disposalCost;
-      if (typeof r.totalCost === "number") total += r.totalCost;
-    }
-    return { trucking, disposal, total, loads: filtered.length };
-  }, [filtered]);
+  // Totals come from the server and cover every matching haul, not just this page.
+  const totals = data?.totals ?? { loads: 0, truckingCost: 0, disposalCost: 0, totalCost: 0 };
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   return (
     <OperationsChrome
       title="Haul log"
-      subtitle="Daily trips from the Trucking Record. Costs are painted from the API."
+      subtitle="Every trucking trip, with its trucking and disposal cost."
       action={
         <Link href="/operations/hauls/new" className={opsBtnPrimary}>
           Add haul
@@ -170,18 +184,47 @@ export default function OperationsHaulLogPage() {
       }
     >
       <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryChip label="Loads" value={String(totals.loads)} />
-        <SummaryChip label="Trucking" value={money(totals.trucking)} />
-        <SummaryChip label="Disposal" value={money(totals.disposal)} />
-        <SummaryChip label="Total" value={money(totals.total)} emphasis />
+        <SummaryChip label="Loads" value={totals.loads.toLocaleString()} />
+        <SummaryChip label="Trucking" value={money(totals.truckingCost)} />
+        <SummaryChip label="Disposal" value={money(totals.disposalCost)} />
+        <SummaryChip label="Total" value={money(totals.totalCost)} emphasis />
       </div>
 
-      {loading && rows.length === 0 ? (
+      {loading && !data ? (
         <TableSkeleton rows={10} toolbar={false} />
       ) : error ? (
         <EmptyState message={error} />
       ) : (
-        <HaulLogTable rows={filtered} />
+        // Rows stay on screen while a filter change reloads; the bar shows it is working (same as Estimates).
+        <div className="relative">
+          {loading ? <LoadingBar label="Loading hauls" /> : null}
+          <HaulLogTable rows={data?.items ?? []} />
+          {data && data.total > 0 ? (
+            <div className="mt-2 flex flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-xs font-medium text-ink/45">
+                {`Page ${data.page} of ${totalPages} (${data.total.toLocaleString()} hauls)`}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage(Math.max(1, data.page - 1))}
+                  disabled={data.page <= 1 || loading}
+                  className="cursor-pointer rounded-lg border border-ink/15 bg-surface px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-ink/[0.03] disabled:cursor-default disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage(Math.min(totalPages, data.page + 1))}
+                  disabled={data.page >= totalPages || loading}
+                  className="cursor-pointer rounded-lg border border-ink/15 bg-surface px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-ink/[0.03] disabled:cursor-default disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
       )}
     </OperationsChrome>
   );

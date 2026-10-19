@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FilterConfig } from "@/components/reporting/ReportFilters";
 import { ReportFilters } from "@/components/reporting/ReportFilters";
-import { KPICards } from "@/components/reporting/KPICards";
 import { SummaryTable } from "@/components/reporting/SummaryTable";
 import { TicketGrid } from "@/components/reporting/TicketGrid";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -12,7 +11,8 @@ import { useLookups } from "@/hooks/useLookups";
 import { useJobDashboard } from "@/hooks/useJobDashboard";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { Skeleton, SkeletonStatRow, SkeletonTableRows } from "@/components/ui/Skeleton";
+import { StatTiles } from "@/components/reporting/StatTiles";
+import { Skeleton, SkeletonTableRows } from "@/components/ui/Skeleton";
 import * as jobApi from "@/lib/api/endpoints/job-dashboard";
 import * as biddingApi from "@/lib/api/endpoints/bidding";
 import type { JobBidFile } from "@/lib/api/endpoints/bidding";
@@ -47,7 +47,8 @@ async function openJobFile(file: JobBidFile, asDownload: boolean) {
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-function JobBidFiles({ jobId }: { jobId: string }) {
+/** Shown when one job is picked: the job and its bid files. Its numbers are in the header tiles (they follow the Job filter). */
+function JobCard({ jobId, jobName }: { jobId: string; jobName: string }) {
   const [files, setFiles] = useState<JobBidFile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,34 +70,38 @@ function JobBidFiles({ jobId }: { jobId: string }) {
   }, [jobId]);
 
   return (
-    <section className="rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.06)] sm:p-5">
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-ink/40">Bid files</h2>
-      <p className="mt-1 text-[13px] text-ink/50">Files on bids linked to this job. View or download them here.</p>
+    <section className="cs-content-panel min-w-0 p-5">
+      <h2 className="text-[16px] font-semibold text-ink">{jobName}</h2>
+      <p className="cs-helper mt-0.5">Bid files on this job</p>
       {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
       {files == null && !error ? <p className="mt-3 text-sm text-ink/40">Loading files…</p> : null}
       {files && files.length === 0 ? (
         <p className="mt-3 text-sm text-ink/40">No bid files linked to this job.</p>
       ) : null}
       {files && files.length > 0 ? (
-        <ul className="mt-3 divide-y divide-ink/[0.06]">
+        <ul className="mt-3 flex flex-wrap gap-2">
           {files.map((file) => (
-            <li key={`${file.bidId}-${file.id}`} className="flex flex-wrap items-center gap-3 py-2">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">{file.fileName}</p>
-                <p className="truncate text-[12px] text-ink/40">
+            <li
+              key={`${file.bidId}-${file.id}`}
+              className="flex max-w-full items-center gap-2.5 rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-1.5"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-[12.5px] font-medium text-ink">{file.fileName}</span>
+                {/* Same detail line the old Bid files list showed under each file. */}
+                <span className="block truncate text-[11.5px] text-ink/45">
                   {[file.estimateNumber, file.bidName, file.label].filter(Boolean).join(" · ")}
-                </p>
-              </div>
+                </span>
+              </span>
               <button
                 type="button"
-                className="cursor-pointer text-[12px] font-semibold text-brand hover:underline"
+                className="shrink-0 cursor-pointer text-[12px] font-semibold text-brand hover:underline"
                 onClick={() => void openJobFile(file, false)}
               >
                 View
               </button>
               <button
                 type="button"
-                className="cursor-pointer text-[12px] font-semibold text-ink/60 hover:underline"
+                className="shrink-0 cursor-pointer text-[12px] font-semibold text-ink/60 hover:underline"
                 onClick={() => void openJobFile(file, true)}
               >
                 Download
@@ -107,6 +112,30 @@ function JobBidFiles({ jobId }: { jobId: string }) {
       ) : null}
     </section>
   );
+}
+
+/** "3 Imports / 2 Exports" from the API → bold numbers, muted words. Falls back to the raw text. */
+function FlowBalance({ text }: { text: string }) {
+  const m = /^([\d,]+)\s+Imports\s*\/\s*([\d,]+)\s+Exports$/i.exec(text.trim());
+  if (!m) return <>{text}</>;
+  const word = "text-[12.5px] font-normal text-ink-muted";
+  return (
+    <>
+      {m[1]} <span className={word}>imports</span> <span className="font-normal text-ink-soft">/</span> {m[2]}{" "}
+      <span className={word}>exports</span>
+    </>
+  );
+}
+
+/** API sends YYYY-MM-DD; show it like the rest of the page (Mar 18, 2026). */
+function formatLastActive(value: string | null | undefined): string {
+  const m = value ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null;
+  if (!m) return value || "—";
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function createDefaultFilters(initialJobId?: string | null): FilterConfig {
@@ -218,40 +247,41 @@ export default function JobDashboardPage() {
   const error = lookupsError ?? dataError;
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 sm:gap-8">
-      <PageHeader
-        title="Job Dashboard"
-        subtitle="Supply chain visibility, disposal limits, and compliance in one place."
-      />
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ReportFilters
-          filters={filters}
-          options={filterOptions}
-          onChange={setFilters}
-          showJob
-          showDirection
-        />
-        <div className="flex h-full flex-col rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.06)] sm:p-5">
-          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-ink/40 sm:mb-4">
-            Overview
-          </h2>
-          {loading ? (
-            <SkeletonStatRow count={3} />
-          ) : (
-            <KPICards
-              maxCols={2}
+    <div className="report-dashboard flex min-h-0 min-w-0 flex-1 flex-col gap-4 sm:gap-5">
+      <div className="flex flex-col gap-4">
+        {/* Overview numbers sit beside the title; filters are one row under it. */}
+        <PageHeader
+          title="Job Dashboard"
+          subtitle="Supply chain visibility, disposal limits, and compliance in one place."
+          action={
+            <StatTiles
+              loading={loading}
               items={[
-                { label: "Total Tickets", value: kpis.totalTickets },
-                { label: "Flow Balance", value: kpis.flowBalance },
-                { label: "Last Active", value: kpis.lastActive },
+                { label: "Total tickets", value: kpis.totalTickets.toLocaleString() },
+                { label: "Flow balance", value: <FlowBalance text={kpis.flowBalance} /> },
+                { label: "Last active", value: formatLastActive(kpis.lastActive) },
               ]}
             />
-          )}
+          }
+        />
+        <div className="border-b border-[var(--border-subtle)] pb-4">
+          <ReportFilters
+            filters={filters}
+            options={filterOptions}
+            onChange={setFilters}
+            showJob
+            showDirection
+            layout="bar"
+          />
         </div>
       </div>
 
-      {filters.jobId !== "all" ? <JobBidFiles jobId={filters.jobId} /> : null}
+      {filters.jobId !== "all" ? (
+        <JobCard
+          jobId={filters.jobId}
+          jobName={filterOptions.jobs.find((j) => j.value === filters.jobId)?.label ?? `Job ${filters.jobId}`}
+        />
+      ) : null}
 
       {error && (
         <div className="rounded-2xl border border-danger-border bg-danger-tint px-4 py-3 text-sm text-danger">

@@ -4,14 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FilterConfig } from "@/components/reporting/ReportFilters";
 import { ReportFilters } from "@/components/reporting/ReportFilters";
-import { KPICards } from "@/components/reporting/KPICards";
+import { StatTiles } from "@/components/reporting/StatTiles";
 import { SummaryTable } from "@/components/reporting/SummaryTable";
 import { TicketGrid } from "@/components/reporting/TicketGrid";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useLookups } from "@/hooks/useLookups";
 import { useMaterialDashboard } from "@/hooks/useMaterialDashboard";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { Skeleton, SkeletonStatRow, SkeletonTableRows } from "@/components/ui/Skeleton";
+import { Skeleton, SkeletonTableRows } from "@/components/ui/Skeleton";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import * as materialApi from "@/lib/api/endpoints/material-dashboard";
 
@@ -110,38 +110,34 @@ export default function MaterialDashboardPage() {
   const error = lookupsError ?? dataError;
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 sm:gap-8">
-      <PageHeader
-        title="Material Dashboard"
-        subtitle="Billing reconciliation, sources and destinations, and ticket-level audit."
-      />
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ReportFilters
-          filters={filters}
-          options={filterOptions}
-          onChange={setFilters}
-          showJob
-          showMaterial
-          showDirection
-        />
-        <div className="flex h-full flex-col rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.06)] sm:p-5">
-          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-ink/40 sm:mb-4">
-            Overview
-          </h2>
-          {loading ? (
-            <SkeletonStatRow count={4} />
-          ) : (
-            <KPICards
-              maxCols={2}
+    <div className="report-dashboard flex min-h-0 min-w-0 flex-1 flex-col gap-4 sm:gap-5">
+      <div className="flex flex-col gap-4">
+        {/* Overview numbers sit beside the title; filters are one row under it (same as the Job dashboard). */}
+        <PageHeader
+          title="Material Dashboard"
+          subtitle="Billing reconciliation, sources and destinations, and ticket-level audit."
+          action={
+            <StatTiles
+              loading={loading}
               items={[
-                { label: "Total Tickets", value: kpis.totalTickets },
-                { label: "Top Source", value: kpis.topSource },
-                { label: "Top Destination", value: kpis.topDestination },
-                { label: "Active Jobs", value: kpis.activeJobs },
+                { label: "Total tickets", value: kpis.totalTickets.toLocaleString() },
+                { label: "Active jobs", value: kpis.activeJobs.toLocaleString() },
+                { label: "Top source", value: kpis.topSource || "—", title: kpis.topSource || undefined },
+                { label: "Top destination", value: kpis.topDestination || "—", title: kpis.topDestination || undefined },
               ]}
             />
-          )}
+          }
+        />
+        <div className="border-b border-[var(--border-subtle)] pb-4">
+          <ReportFilters
+            filters={filters}
+            options={filterOptions}
+            onChange={setFilters}
+            showJob
+            showMaterial
+            showDirection
+            layout="bar"
+          />
         </div>
       </div>
 

@@ -85,7 +85,7 @@ export function HaulLogTable({ rows }: { rows: OperationsHaul[] }) {
         </table>
       </div>
       <div className="border-t border-ink/[0.06] bg-[#f8f9fb] px-3 py-2 text-[11px] text-ink/45">
-        {rows.length.toLocaleString()} haul{rows.length === 1 ? "" : "s"} · scroll for more
+        {rows.length.toLocaleString()} haul{rows.length === 1 ? "" : "s"} on this page
       </div>
     </div>
   );

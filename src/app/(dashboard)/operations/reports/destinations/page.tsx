@@ -13,6 +13,7 @@ export default function OpsDestinationsReportPage() {
     <CostReportScreen
       title="Cost by destination"
       nameHeader="Destination"
+      nameMaxWidth="max-w-[15rem]"
       nameOf={(row) => row.destination || "—"}
       load={load}
     />
