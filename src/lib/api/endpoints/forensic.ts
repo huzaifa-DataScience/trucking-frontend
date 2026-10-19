@@ -79,3 +79,81 @@ export async function getEfficiencyOutliers(
     statusLabel: r.statusLabel ?? (r.status === "RED" ? "SLOW (>15%)" : r.status === "Single Load" ? "Single Load" : "Within 15%"),
   }));
 }
+
+export interface ForensicPageQuery {
+  page: number;
+  pageSize: number;
+  sortBy?: string | null;
+  sortDir?: "asc" | "desc";
+}
+
+/** One page of rows plus how many there are in all. */
+export interface ForensicPage<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+const pageParams = (q: ForensicPageQuery) => ({
+  page: q.page,
+  pageSize: q.pageSize,
+  sortBy: q.sortBy || undefined,
+  sortDir: q.sortBy ? q.sortDir : undefined,
+});
+
+/** Paged late submission audit (server-side sort / paging). An older backend returns every row (no `total`). */
+export async function getLateSubmissionsPage(
+  filters: ForensicFilters,
+  q: ForensicPageQuery
+): Promise<ForensicPage<LateSubmissionRow> & { lateTicketsFound: number; paged: boolean }> {
+  const data = await get<ApiLateSubmissionResponse & { total?: number; page?: number; pageSize?: number }>(
+    "/forensic/late-submission",
+    { ...toParams(filters), ...pageParams(q) }
+  );
+  const items = data.items.map((r) => ({
+    ticketNumber: r.ticketNumber,
+    ticketDate: r.ticketDate,
+    systemEntryDate: r.systemEntryDate,
+    lagTime: r.lagTime,
+    signedBy: r.signedBy,
+    jobName: r.jobName,
+    haulerCompanyName: r.haulerCompanyName,
+  }));
+  return {
+    lateTicketsFound: data.lateTicketsFound,
+    items,
+    total: data.total ?? items.length,
+    page: data.page ?? q.page,
+    pageSize: data.pageSize ?? q.pageSize,
+    paged: data.total != null,
+  };
+}
+
+/** Paged efficiency outliers (server-side sort / paging). An older backend returns every row as an array. */
+export async function getEfficiencyOutliersPage(
+  filters: ForensicFilters,
+  q: ForensicPageQuery
+): Promise<ForensicPage<EfficiencyOutlierRow> & { paged: boolean }> {
+  const data = await get<ApiEfficiencyOutlierRow[] | (ForensicPage<ApiEfficiencyOutlierRow>)>(
+    "/forensic/efficiency-outlier",
+    { ...toParams(filters), ...pageParams(q) }
+  );
+  const raw = Array.isArray(data) ? data : data.items;
+  const items = raw.map((r) => ({
+    date: r.date,
+    jobName: r.jobName,
+    route: r.route,
+    truckNumber: r.truckNumber,
+    haulerName: r.haulerName ?? "",
+    totalTickets: r.totalTickets,
+    workDuration: r.workDuration,
+    myAvgCycle: r.myAvgCycle,
+    fleetBenchmark: r.fleetBenchmark,
+    status: r.status,
+    statusLabel: r.statusLabel ?? (r.status === "RED" ? "SLOW (>15%)" : r.status === "Single Load" ? "Single Load" : "Within 15%"),
+  }));
+  return Array.isArray(data)
+    ? { items, total: items.length, page: q.page, pageSize: q.pageSize, paged: false }
+    : { items, total: data.total, page: data.page, pageSize: data.pageSize, paged: true };
+}

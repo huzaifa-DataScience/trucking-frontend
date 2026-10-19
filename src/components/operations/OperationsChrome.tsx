@@ -4,29 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-const NAV: { href: string; label: string; match: (path: string) => boolean }[] = [
-  {
-    href: "/operations",
-    label: "Haul log",
-    match: (p) => p === "/operations" || p.startsWith("/operations/hauls"),
-  },
-  {
-    href: "/operations/hauler-rates",
-    label: "Hauler rates",
-    match: (p) => p.startsWith("/operations/hauler-rates"),
-  },
-  {
-    href: "/operations/disposal-rates",
-    label: "Disposal rates",
-    match: (p) => p.startsWith("/operations/disposal-rates"),
-  },
-  {
-    href: "/operations/reports/jobs",
-    label: "Reports",
-    match: (p) => p.startsWith("/operations/reports"),
-  },
-];
-
 const REPORT_TABS: { href: string; label: string }[] = [
   { href: "/operations/reports/jobs", label: "By job" },
   { href: "/operations/reports/haulers", label: "By hauler" },
@@ -53,59 +30,56 @@ export function OperationsChrome({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 sm:min-w-[22rem]">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-ink/40">
             Trucking · Operations
           </p>
-          <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-ink">{title}</h1>
-          {subtitle ? <p className="mt-0.5 max-w-2xl text-[13px] text-ink/50">{subtitle}</p> : null}
+          <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-ink">
+            {title}
+          </h1>
+          {subtitle ? (
+            <p className="mt-0.5 max-w-2xl text-[13px] text-ink/50">
+              {subtitle}
+            </p>
+          ) : null}
         </div>
-        {action ? <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div> : null}
+        {action ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {action}
+          </div>
+        ) : null}
       </div>
 
-      <nav
-        className="flex h-10 w-fit max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-ink/10 bg-white/80 p-1 shadow-[0_4px_12px_rgba(91,173,232,0.06)]"
-        aria-label="Operations sections"
-      >
-        {NAV.map((item) => {
-          const active = item.match(pathname);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`h-8 shrink-0 rounded-md px-3 text-xs font-semibold transition ${
-                active ? "bg-ink text-white" : "text-ink/50 hover:text-ink"
-              }`}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
+      {/* Section links (Haul log, rates, reports) live in the Trucking sidebar; only report views switch here. */}
       {onReports ? (
-        <nav className="flex flex-wrap gap-1.5" aria-label="Report views">
-          {REPORT_TABS.map((tab) => {
-            const active = pathname === tab.href;
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={`rounded-full px-3 py-1 text-[12px] font-semibold transition ${
-                  active
-                    ? "bg-brand/15 text-brand"
-                    : "bg-ink/[0.04] text-ink/55 hover:bg-ink/[0.07] hover:text-ink"
-                }`}
-              >
-                {tab.label}
-              </Link>
-            );
-          })}
-        </nav>
-      ) : null}
-
-      {filters ? (
+        // Report pages: view switch on the left, date range on the right — one row, like the dashboards.
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">
+          <nav
+            className="inline-flex h-9 w-fit max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-ink/10 bg-white p-[3px]"
+            aria-label="Report views"
+          >
+            {REPORT_TABS.map((tab) => {
+              const active = pathname === tab.href;
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`inline-flex h-7 shrink-0 items-center rounded-md px-3 text-[13px] transition-colors ${
+                    active
+                      ? "bg-brand-tint font-semibold text-brand-secondary"
+                      : "font-medium text-ink-muted hover:bg-ink/[0.04] hover:text-ink"
+                  }`}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </nav>
+          {filters ? <div className="ml-auto">{filters}</div> : null}
+        </div>
+      ) : filters ? (
         <div className="rounded-xl border border-ink/[0.08] bg-white/80 px-3 py-3 shadow-[0_4px_12px_rgba(91,173,232,0.05)] backdrop-blur-sm sm:px-4">
           {filters}
         </div>
