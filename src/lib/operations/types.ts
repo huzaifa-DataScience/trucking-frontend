@@ -173,6 +173,14 @@ export type LeedReportRow = {
 } & Partial<HaulLeed> &
   Partial<HaulAggregates>;
 
+/** One page of the LEED / aggregates report; `total` is the job count. */
+export interface LeedReportPage {
+  rows: LeedReportRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface HaulsQuery {
   from?: string;
   to?: string;
