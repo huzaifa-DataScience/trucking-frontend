@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAdminPanelRole, canSeeWfs } from "@/lib/auth/roles";
 import { can, canBidding, PERMISSIONS } from "@/lib/auth/permissions";
-import { AppLogo } from "@/components/ui/AppLogo";
 import {
   NavIconLayout,
   NavIconCube,
@@ -736,13 +735,14 @@ export function Sidebar({
             aria-label="Home"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.45)]">
-              <AppLogo height={22} />
+              {/* eslint-disable-next-line @next/next/no-img-element -- small static mark; next/image adds nothing here */}
+              <img src="/goel-one-mark.png" alt="" width={24} height={24} className="h-6 w-6" draggable={false} />
             </span>
             <span className={`min-w-0 flex-col ${lgLabelFlex}`}>
               <span className="truncate text-[18px] font-semibold leading-tight text-white">
-                Goel App
+                Goel One
               </span>
-              <span className="mt-0.5 text-[13px] leading-tight text-white/70">GOEL Services</span>
+              <span className="mt-0.5 text-[13px] leading-tight text-white/70">All Goel Companies</span>
             </span>
           </Link>
           <button
