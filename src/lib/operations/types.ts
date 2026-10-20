@@ -160,6 +160,10 @@ export interface CostReportRow extends CostReportTotals {
 export interface CostReportResponse {
   rows: CostReportRow[];
   totals: CostReportTotals;
+  /** Paged reports only: rows in the whole report, and which page `rows` is. */
+  total?: number;
+  page?: number;
+  pageSize?: number;
 }
 
 export type LeedReportRow = {
@@ -169,12 +173,51 @@ export type LeedReportRow = {
 } & Partial<HaulLeed> &
   Partial<HaulAggregates>;
 
+/** One page of the LEED / aggregates report; `total` is the job count. */
+export interface LeedReportPage {
+  rows: LeedReportRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface HaulsQuery {
   from?: string;
   to?: string;
   jobNumber?: string;
   haulerRateId?: number;
   disposalRateId?: number;
+}
+
+/** One page of rate cards; allCount = every card before search / status filters. */
+export interface RateCardsPage<T> {
+  items: T[];
+  total: number;
+  allCount: number;
+  page: number;
+  pageSize: number;
+}
+
+/** Hauler rate cards page, plus the status-switch counts and the company list for the filters. */
+export interface HaulerRatesPage extends RateCardsPage<HaulerRateCard> {
+  // Optional: a backend from before the filter row does not send these.
+  statusCounts?: { active: number; inactive: number; all: number };
+  companies?: string[];
+}
+
+/** Disposal rate cards page, plus the Type switch counts (`all` = every type) and the company list. */
+export interface DisposalRatesPage extends RateCardsPage<DisposalRateCard> {
+  typeCounts: Record<string, number>;
+  companies: string[];
+}
+
+/** One page of the haul log; totals cover every haul that matches, not just this page. */
+export interface HaulsPage {
+  items: OperationsHaul[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totals: { loads: number; truckingCost: number; disposalCost: number; totalCost: number };
 }
 
 export interface ReportDateQuery {

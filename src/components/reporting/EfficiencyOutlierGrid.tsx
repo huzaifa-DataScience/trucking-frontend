@@ -1,37 +1,37 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import type { EfficiencyOutlierRow } from "@/lib/types";
-
-import { useTableSort } from "@/hooks/useTableSort";
-import { asDate } from "@/lib/sort";
-const ROWS_PER_PAGE = 50;
+import type { ForensicPage } from "@/lib/api/endpoints/forensic";
+import type { TableSortState } from "@/hooks/useForensic";
+import { SortHeader } from "@/hooks/useTableSort";
+import { LoadingBar } from "@/components/ui/LoadingBar";
 
 interface EfficiencyOutlierGridProps {
-  rows: EfficiencyOutlierRow[];
+  /** One page from the server; sorting and paging happen there. */
+  data: ForensicPage<EfficiencyOutlierRow>;
+  loading?: boolean;
+  sort: TableSortState;
+  onSort: (key: string) => void;
+  onPage: (page: number) => void;
+  /** Every row (not just this page) for the Excel file. */
+  loadAll: () => Promise<EfficiencyOutlierRow[]>;
 }
 
-export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
-  const [page, setPage] = useState(0);
-  const totalPages = Math.ceil(rows.length / ROWS_PER_PAGE) || 1;
-  const start = page * ROWS_PER_PAGE;
-  // Sort the whole list, then page it, so a header click orders every page.
-  const outlierSort = useTableSort(rows, {
-    date: (r) => asDate(r.date),
-    jobName: (r) => r.jobName,
-    route: (r) => r.route,
-    truck: (r) => r.truckNumber,
-    hauler: (r) => r.haulerName,
-    tickets: (r) => r.totalTickets,
-    duration: (r) => r.workDuration,
-    avgCycle: (r) => r.myAvgCycle,
-    benchmark: (r) => r.fleetBenchmark,
-    status: (r) => r.statusLabel,
-  });
-  const pageRows = outlierSort.sorted.slice(start, start + ROWS_PER_PAGE);
+export function EfficiencyOutlierGrid({ data, loading, sort, onSort, onPage, loadAll }: EfficiencyOutlierGridProps) {
+  const total = data.total;
+  const page = data.page - 1;
+  const totalPages = Math.ceil(total / data.pageSize) || 1;
+  const pageRows = data.items;
+  const [exporting, setExporting] = useState(false);
+  const header = (key: string, label: ReactNode) => (
+    <SortHeader label={label} active={sort.key === key} dir={sort.dir} onClick={() => onSort(key)} />
+  );
 
   const exportExcel = useCallback(() => {
-    import("xlsx").then((XLSX) => {
+    setExporting(true);
+    Promise.all([loadAll(), import("xlsx")])
+      .then(([rows, XLSX]) => {
       const ws = XLSX.utils.json_to_sheet(
         rows.map((r) => ({
           Date: r.date,
@@ -49,19 +49,22 @@ export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Efficiency Outlier");
       XLSX.writeFile(wb, "efficiency-outlier-report.xlsx");
-    });
-  }, [rows]);
+      })
+      .finally(() => setExporting(false));
+  }, [loadAll]);
 
   return (
-    <div className="min-w-0 rounded-xl border border-stone-200/80 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900/50">
+    <div className="relative min-w-0 rounded-xl border border-stone-200/80 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900/50">
+      {loading ? <LoadingBar label="Loading efficiency outliers" /> : null}
       <div className="flex min-w-0 flex-col gap-3 border-b border-stone-200/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-stone-800">
         <span className="block min-w-0 flex-1 truncate text-sm font-medium text-stone-700 dark:text-stone-300">
-          By Date + Job + Destination (Route); compare truck vs fleet average ({rows.length} rows)
+          By Date + Job + Destination (Route); compare truck vs fleet average ({total} rows)
         </span>
         <button
           type="button"
           onClick={exportExcel}
-          className="w-full shrink-0 rounded-lg bg-brand/80 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-secondary sm:w-auto"
+          disabled={exporting}
+          className="w-full shrink-0 rounded-lg bg-brand/80 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-secondary disabled:opacity-60 sm:w-auto"
         >
           Export to Excel
         </button>
@@ -71,16 +74,16 @@ export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
           <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
-              <Th>{outlierSort.header("date", "Date")}</Th>
-              <Th>{outlierSort.header("jobName", "Job Name")}</Th>
-              <Th>{outlierSort.header("route", "Route")}</Th>
-              <Th>{outlierSort.header("truck", "Truck Number")}</Th>
-              <Th>{outlierSort.header("hauler", "Hauler Name")}</Th>
-              <Th>{outlierSort.header("tickets", "Total Tickets")}</Th>
-              <Th>{outlierSort.header("duration", "Work Duration")}</Th>
-              <Th>{outlierSort.header("avgCycle", "My Avg Cycle")}</Th>
-              <Th>{outlierSort.header("benchmark", "Fleet Benchmark")}</Th>
-              <Th>{outlierSort.header("status", "Status")}</Th>
+              <Th>{header("date", "Date")}</Th>
+              <Th>{header("jobName", "Job Name")}</Th>
+              <Th>{header("route", "Route")}</Th>
+              <Th>{header("truck", "Truck Number")}</Th>
+              <Th>{header("hauler", "Hauler Name")}</Th>
+              <Th>{header("tickets", "Total Tickets")}</Th>
+              <Th>{header("duration", "Work Duration")}</Th>
+              <Th>{header("avgCycle", "My Avg Cycle")}</Th>
+              <Th>{header("benchmark", "Fleet Benchmark")}</Th>
+              <Th>{header("status", "Status")}</Th>
             </tr>
           </thead>
           <tbody>
@@ -95,7 +98,7 @@ export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
               return (
                 <tr
                   key={`${row.date}-${row.truckNumber}-${row.route}-${i}`}
-                  className={`border-b hover:bg-stone-50 dark:hover:bg-stone-800/50 ${
+                  className={`border-b border-stone-100 hover:bg-stone-50 dark:border-stone-800 dark:hover:bg-stone-800/50 ${
                     row.status === "RED" ? "bg-red-50/50 dark:bg-red-950/20" : ""
                   }`}
                 >
@@ -122,21 +125,21 @@ export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
         </div>
         <div className="flex flex-col gap-3 border-t border-stone-200/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-stone-800">
           <span className="text-xs text-stone-500 dark:text-stone-400">
-            Page {page + 1} of {totalPages} ({rows.length} total)
+            Page {page + 1} of {totalPages} ({total} total)
           </span>
           <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
+            onClick={() => onPage(Math.max(1, page))}
+            disabled={page === 0 || loading}
             className="rounded border border-stone-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-stone-600"
           >
             Previous
           </button>
           <button
             type="button"
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
+            onClick={() => onPage(Math.min(totalPages, page + 2))}
+            disabled={page >= totalPages - 1 || loading}
             className="rounded border border-stone-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-stone-600"
           >
             Next
@@ -147,7 +150,7 @@ export function EfficiencyOutlierGrid({ rows }: EfficiencyOutlierGridProps) {
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children }: { children: ReactNode }) {
   return (
     <th className="sticky top-0 z-10 whitespace-nowrap bg-stone-50 px-2 py-2 text-left text-xs font-medium text-stone-600 dark:bg-stone-800/50 dark:text-stone-400 sm:px-3">
       {children}
@@ -155,7 +158,7 @@ function Th({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Td({ children }: { children: React.ReactNode }) {
+function Td({ children }: { children: ReactNode }) {
   return (
     <td className="whitespace-nowrap px-2 py-2 text-stone-800 dark:text-stone-200 sm:px-3">
       {children}

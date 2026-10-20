@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, type ComponentType } from "react";
+import { Fragment, useEffect, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAdminPanelRole, canSeeWfs } from "@/lib/auth/roles";
 import { can, canBidding, PERMISSIONS } from "@/lib/auth/permissions";
-import { AppLogo } from "@/components/ui/AppLogo";
 import {
   NavIconLayout,
   NavIconCube,
@@ -111,6 +110,26 @@ export function bidDetailIdFromPath(pathname: string): string | null {
   return id;
 }
 
+/**
+ * Collapse / expand handle sitting on the panel's right edge, half over the panel and half over what's next to it.
+ * Positioned against the fixed <aside> (its containing block), level with the 64px header row.
+ */
+const EDGE_TOGGLE =
+  "absolute right-0 top-[19px] z-50 h-[26px] w-[26px] translate-x-1/2 cursor-pointer items-center justify-center rounded-[7px] border border-[#d9dde3] bg-white text-ink-muted shadow-[0_1px_3px_rgba(16,24,40,0.12)] transition hover:bg-[#f8fafc] hover:text-ink";
+
+/** Panel toggle: ←| while open (collapse), |→ while collapsed (expand). The bar is the panel's edge. */
+function PanelToggleIcon({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg className="h-[15px] w-[15px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      {collapsed ? (
+        <path d="M5 5v14M9 12h10M15 8l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
+      ) : (
+        <path d="M19 5v14M15 12H5M9 8l-4 4 4 4" strokeLinecap="round" strokeLinejoin="round" />
+      )}
+    </svg>
+  );
+}
+
 type SidebarNavItem = {
   href: string;
   label: string;
@@ -122,6 +141,8 @@ type SidebarNavItem = {
   permission?: string;
   /** Bidding keys use legacy canBidding fallback. */
   biddingPermission?: "bidding:read" | "bidding:write" | "bidding:summary";
+  /** Thin line above this item (skipped when it ends up first, e.g. earlier items are hidden by permission). */
+  dividerBefore?: boolean;
 };
 
 function workspaceShowsSecondaryRail(view: ViewMode, pathname: string, canSeeBillings: boolean): boolean {
@@ -196,30 +217,8 @@ function itemIsActive(
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
+// Dashboards first (Trucking opens /job), then a line, then haul log, rates and cost reports.
 const operationsNavItems: SidebarNavItem[] = [
-  {
-    href: "/operations",
-    label: "Haul log",
-    Icon: NavIconTable,
-  },
-  {
-    href: "/operations/hauler-rates",
-    label: "Hauler rates",
-    Icon: NavIconTruck,
-    activePathPrefix: "/operations/hauler-rates",
-  },
-  {
-    href: "/operations/disposal-rates",
-    label: "Disposal rates",
-    Icon: NavIconCube,
-    activePathPrefix: "/operations/disposal-rates",
-  },
-  {
-    href: "/operations/reports/jobs",
-    label: "Cost reports",
-    Icon: NavIconChart,
-    activePathPrefix: "/operations/reports",
-  },
   {
     href: "/job",
     label: "Job Dashboard",
@@ -243,6 +242,30 @@ const operationsNavItems: SidebarNavItem[] = [
     label: "Forensic & Audit",
     Icon: NavIconShield,
     permission: PERMISSIONS.forensicRead,
+  },
+  {
+    href: "/operations",
+    label: "Haul log",
+    Icon: NavIconTable,
+    dividerBefore: true,
+  },
+  {
+    href: "/operations/hauler-rates",
+    label: "Hauler rates",
+    Icon: NavIconTruck,
+    activePathPrefix: "/operations/hauler-rates",
+  },
+  {
+    href: "/operations/disposal-rates",
+    label: "Disposal rates",
+    Icon: NavIconCube,
+    activePathPrefix: "/operations/disposal-rates",
+  },
+  {
+    href: "/operations/reports/jobs",
+    label: "Cost reports",
+    Icon: NavIconChart,
+    activePathPrefix: "/operations/reports",
   },
 ];
 
@@ -697,7 +720,7 @@ export function Sidebar({
         />
       ) : null}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-white/[0.06] bg-sidebar text-white transition-[width,transform] duration-200 sm:translate-x-0 ${
+        className={`fixed left-0 top-0 z-[46] flex h-dvh w-64 flex-col border-r border-white/[0.06] bg-sidebar text-white transition-[width,transform] duration-200 sm:translate-x-0 ${
           collapsed ? "sm:w-16" : "sm:w-64"
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
@@ -712,13 +735,14 @@ export function Sidebar({
             aria-label="Home"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.45)]">
-              <AppLogo height={22} />
+              {/* eslint-disable-next-line @next/next/no-img-element -- small static mark; next/image adds nothing here */}
+              <img src="/goel-one-mark.png" alt="" width={24} height={24} className="h-6 w-6" draggable={false} />
             </span>
             <span className={`min-w-0 flex-col ${lgLabelFlex}`}>
               <span className="truncate text-[18px] font-semibold leading-tight text-white">
-                Goel App
+                Goel One
               </span>
-              <span className="mt-0.5 text-[13px] leading-tight text-white/70">GOEL Services</span>
+              <span className="mt-0.5 text-[13px] leading-tight text-white/70">All Goel Companies</span>
             </span>
           </Link>
           <button
@@ -726,18 +750,9 @@ export function Sidebar({
             onClick={onToggleCollapsed}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="hidden shrink-0 items-center justify-center rounded-lg border border-white/[0.1] bg-white/[0.04] p-2 text-white/55 transition hover:border-white/[0.16] hover:bg-white/[0.08] hover:text-white sm:flex"
+            className={`${EDGE_TOGGLE} hidden sm:flex`}
           >
-            <svg
-              className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.25}
-              aria-hidden
-            >
-              <path d="M14 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <PanelToggleIcon collapsed={collapsed} />
           </button>
           <button
             type="button"
@@ -888,7 +903,7 @@ export function Sidebar({
       {/* Workspace secondary rail — xl+; collapsible to a thin strip */}
       {showSecondaryChrome ? (
         <aside
-          className={`workspace-secondary-rail fixed top-0 z-30 hidden h-dvh max-xl:!hidden shrink-0 flex-col border-r border-[var(--border-subtle)] bg-white transition-[left,width,min-width,max-width] duration-200 xl:flex ${secondaryLeft} ${
+          className={`workspace-secondary-rail fixed top-0 z-[45] hidden h-dvh max-xl:!hidden shrink-0 flex-col border-r border-[var(--border-subtle)] bg-white transition-[left,width,min-width,max-width] duration-200 xl:flex ${secondaryLeft} ${
             secondaryCollapsed
               ? `${SIDEBAR_SECONDARY_COLLAPSED_W} min-w-12 max-w-12`
               : `${SIDEBAR_SECONDARY_W} min-w-[232px] max-w-[232px]`
@@ -900,7 +915,7 @@ export function Sidebar({
           {/* Align with primary logo row; avoid repeating “Estimates” */}
           <div
             className={`flex h-16 shrink-0 items-center border-b border-[var(--border-subtle)] ${
-              secondaryCollapsed ? "justify-center px-1" : "justify-between gap-2 px-3"
+              secondaryCollapsed ? "justify-center px-1" : "justify-between gap-2 pl-7 pr-3"
             }`}
           >
             {!secondaryCollapsed ? (
@@ -918,22 +933,9 @@ export function Sidebar({
               title={secondaryCollapsed ? "Expand sub menu" : "Collapse sub menu"}
               aria-label={secondaryCollapsed ? "Expand sub menu" : "Collapse sub menu"}
               aria-expanded={!secondaryCollapsed}
-              className={`inline-flex cursor-pointer shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-canvas text-ink transition hover:border-ink/20 hover:bg-[#eef1f5] ${
-                secondaryCollapsed ? "h-9 w-9 shadow-sm" : "h-8 w-8 text-ink-muted"
-              }`}
+              className={`${EDGE_TOGGLE} inline-flex`}
             >
-              <svg
-                className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${
-                  secondaryCollapsed ? "rotate-180" : ""
-                }`}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.25}
-                aria-hidden
-              >
-                <path d="M14 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <PanelToggleIcon collapsed={secondaryCollapsed} />
             </button>
           </div>
 
@@ -1089,27 +1091,34 @@ export function Sidebar({
               </>
             ) : (
               <div className={secondaryCollapsed ? "flex flex-col items-center gap-0.5" : "space-y-1"}>
-                {secondaryItems.map((item) => {
+                {secondaryItems.map((item, idx) => {
                   const active = itemIsActive(pathname, item);
                   const Icon = item.Icon;
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={secondaryLinkClass(active)}
-                      title={item.label}
-                      aria-label={item.label}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      {!secondaryCollapsed ? (
-                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                    <Fragment key={item.href}>
+                      {item.dividerBefore && idx > 0 ? (
+                        <hr
+                          className={`border-0 border-t border-[var(--border-subtle)] ${secondaryCollapsed ? "my-1.5 w-6" : "my-2"}`}
+                          aria-hidden
+                        />
                       ) : null}
-                      {!secondaryCollapsed &&
-                      item.href === "/messages" &&
-                      chatUnreadTotal > 0 ? (
-                        <ChatUnreadBadge count={chatUnreadTotal} />
-                      ) : null}
-                    </Link>
+                      <Link
+                        href={item.href}
+                        className={secondaryLinkClass(active)}
+                        title={item.label}
+                        aria-label={item.label}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {!secondaryCollapsed ? (
+                          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                        ) : null}
+                        {!secondaryCollapsed &&
+                        item.href === "/messages" &&
+                        chatUnreadTotal > 0 ? (
+                          <ChatUnreadBadge count={chatUnreadTotal} />
+                        ) : null}
+                      </Link>
+                    </Fragment>
                   );
                 })}
               </div>

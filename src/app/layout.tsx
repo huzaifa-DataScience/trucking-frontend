@@ -17,8 +17,8 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Goel App",
-  description: "Goel App — construction logistics and bidding",
+  title: "Goel One",
+  description: "Goel One — construction logistics and bidding",
 };
 
 export default function RootLayout({
