@@ -379,96 +379,88 @@ export function BidEstimatingSetupStage() {
 
         <section className="intake-section min-w-0 col-span-2 max-[1000px]:col-span-1">
           <h3 className={sectionHead}>Technical review</h3>
-          <div className={`${sectionBody} intake-grid`}>
+          <div className={`${sectionBody} flex flex-col gap-2`}>
+            <p className="text-[12.5px] text-[#6b7280]">
+              Edit technical review on the{" "}
+              <strong className="font-semibold text-[#374151]">Assignment</strong>{" "}
+              tab — kept in one place so Handoff does not duplicate Intake /
+              Assignment fields.
+            </p>
             {bid.workflow?.completeBlockedReason ? (
-              <p className="col-span-full text-[12.5px] text-[#9a3412]">
+              <p className="text-[12.5px] text-[#9a3412]">
                 {bid.workflow.completeBlockedReason}
               </p>
             ) : null}
-            <label className="intake-row">
-              <span className={labelClass}>Prepared by</span>
-              <input
-                className={inputClass}
-                disabled={!editable}
-                value={review.preparedBy ?? ""}
-                onChange={(e) => setReview({ preparedBy: e.target.value || null })}
-              />
-            </label>
-            <label className="intake-row">
-              <span className={labelClass}>Reviewed by</span>
-              <input
-                className={inputClass}
-                disabled={!editable}
-                value={review.reviewedBy ?? ""}
-                onChange={(e) => setReview({ reviewedBy: e.target.value || null })}
-              />
-            </label>
-            <label className="intake-row">
-              <span className={labelClass}>Review date</span>
-              <DatePicker
-                ariaLabel="Review date"
-                className={inputClass}
-                disabled={!editable}
-                value={review.reviewDate?.slice(0, 10) ?? ""}
-                onChange={(v) => setReview({ reviewDate: v || null })}
-              />
-            </label>
-            <label className="intake-row col-span-full">
-              <span className={labelClass}>Comments</span>
-              <textarea
-                className={`${inputClass} min-h-[4.5rem] resize-y`}
-                disabled={!editable}
-                value={review.comments ?? ""}
-                onChange={(e) => setReview({ comments: e.target.value || null })}
-              />
-            </label>
-            <div className="col-span-full flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-2.5 py-2">
-              <div className="min-w-0">
-                <p className="text-[12.5px] font-semibold text-[#1f2937]">
-                  {review.approvedForTakeoff
-                    ? "Approved for takeoff"
-                    : "Takeoff approval required"}
-                </p>
+            <dl className="grid gap-2 text-[12.5px] sm:grid-cols-2">
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9ca3af]">
+                  Prepared by
+                </dt>
+                <dd className="text-[#374151]">{review.preparedBy || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9ca3af]">
+                  Reviewed by
+                </dt>
+                <dd className="text-[#374151]">{review.reviewedBy || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9ca3af]">
+                  Review date
+                </dt>
+                <dd className="text-[#374151]">
+                  {review.reviewDate?.slice(0, 10) || "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9ca3af]">
+                  Takeoff approval
+                </dt>
+                <dd className="text-[#374151]">
+                  {review.approvedForTakeoff ? "Approved" : "Not approved yet"}
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9ca3af]">
+                  Comments
+                </dt>
+                <dd className="whitespace-pre-wrap text-[#374151]">
+                  {review.comments?.trim() || "—"}
+                </dd>
+              </div>
+            </dl>
+            {editable && !review.approvedForTakeoff ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-2.5 py-2">
                 <p className="text-[11px] text-[#6b7280]">
-                  {review.approvedForTakeoff
-                    ? "Setup can hand off to Takeoff. You can revoke if review needs another pass."
-                    : "Complete & Hand Off to Takeoff stays blocked until you approve."}
+                  Approve on Assignment, or quick-approve here to unblock handoff.
                 </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setReview({
+                      approvedForTakeoff: true,
+                      reviewDate:
+                        review.reviewDate ||
+                        new Date().toISOString().slice(0, 10),
+                    })
+                  }
+                  className="intake-head-btn"
+                >
+                  Approve for takeoff
+                </button>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                {review.approvedForTakeoff ? (
-                  <>
-                    <span className="text-[11px] font-semibold text-[#047857]">
-                      Approved
-                    </span>
-                    <button
-                      type="button"
-                      disabled={!editable}
-                      onClick={() => setReview({ approvedForTakeoff: false })}
-                      className="intake-head-btn disabled:opacity-40"
-                    >
-                      Revoke approval
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={!editable}
-                    onClick={() =>
-                      setReview({
-                        approvedForTakeoff: true,
-                        reviewDate:
-                          review.reviewDate ||
-                          new Date().toISOString().slice(0, 10),
-                      })
-                    }
-                    className="intake-head-btn disabled:opacity-40"
-                  >
-                    Approve for takeoff
-                  </button>
-                )}
+            ) : null}
+            {editable && review.approvedForTakeoff ? (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setReview({ approvedForTakeoff: false })}
+                  className="intake-head-btn"
+                >
+                  Revoke approval
+                </button>
               </div>
-            </div>
+            ) : null}
           </div>
         </section>
       </div>

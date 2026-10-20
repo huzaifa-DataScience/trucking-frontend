@@ -164,6 +164,11 @@ export function ProcessDraftProvider({ children }: { children: ReactNode }) {
       snapshot = {
         ...snapshot,
         togal: mergeProcessTogal(bid.process?.togal, snapshot.togal),
+        // Backend rejects null contractTiers.role
+        contractTiers: (snapshot.contractTiers ?? []).map((t) => ({
+          ...t,
+          role: t.role || "other",
+        })),
       };
       if (typeof window !== "undefined") {
         // eslint-disable-next-line no-console

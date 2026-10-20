@@ -131,6 +131,46 @@ function emptyGcOrMech(): ProcessGcOrMech {
   };
 }
 
+/** Backend rejects null roles — invite-synced rows default to "other". */
+const INVITE_TIER_ROLE = "other";
+
+/** Upsert invitation companies into Bidding clients (contractTiers) with invitedUs. */
+function syncInvitesToBiddingClients(
+  nextInvs: ProcessInvitation[],
+  baseTiers: ProcessContractTier[]
+): ProcessContractTier[] {
+  let next = baseTiers.map((t) =>
+    t.role ? t : { ...t, role: INVITE_TIER_ROLE }
+  );
+  for (const inv of nextInvs) {
+    const company = (inv.contact?.company ?? "").trim();
+    if (!company) continue;
+    const key = company.toLowerCase();
+    const i = next.findIndex(
+      (t) => (t.company ?? "").trim().toLowerCase() === key
+    );
+    if (i >= 0) {
+      next[i] = {
+        ...next[i],
+        company,
+        invitedUs: true,
+        role: next[i].role || INVITE_TIER_ROLE,
+      };
+    } else {
+      next.push({
+        sortOrder: next.length,
+        role: INVITE_TIER_ROLE,
+        company,
+        hasTheJob: null,
+        invitedUs: true,
+        isPaying: false,
+      });
+    }
+  }
+  if (next.length === 0) next = [defaultOwnerTier()];
+  return next;
+}
+
 const CONTRACTOR_STATUS_OPTIONS: { value: NonNullable<ProcessGcOrMech["contractorStatus"]>; label: string }[] = [
   { value: "invited", label: "Invited" },
   { value: "bidding", label: "Bidding" },
@@ -148,9 +188,10 @@ const PROPOSAL_STATUS_OPTIONS: { value: NonNullable<ProcessGcOrMech["proposalSta
   { value: "rejected", label: "Rejected" },
 ];
 
-/** Unique companies from invite_contact parties for company-first typeahead. */
+/** Unique companies from a role’s parties for company-first typeahead. */
 function companyOptionsFromParties(
-  parties: BidPartyLookup[]
+  parties: BidPartyLookup[],
+  role: BidPartyLookup["role"] = null
 ): BidPartyLookup[] {
   const seen = new Set<string>();
   const out: BidPartyLookup[] = [];
@@ -167,10 +208,25 @@ function companyOptionsFromParties(
       contactName: null,
       email: null,
       phone: null,
-      role: "invite_contact",
+      role: role ?? p.role ?? null,
     });
   }
   return out;
+}
+
+function gcOrMechFromParty(
+  picked: { name?: string | null; company?: string | null; contactName?: string | null; email?: string | null; phone?: string | null },
+  row: ProcessGcOrMech
+): ProcessGcOrMech {
+  const company = picked.company || picked.name || row.company || null;
+  return {
+    ...row,
+    company,
+    name: company,
+    contactName: picked.contactName || picked.name || row.contactName || null,
+    email: picked.email ?? row.email ?? null,
+    phone: picked.phone ?? row.phone ?? null,
+  };
 }
 
 function contactsForCompany(
@@ -231,11 +287,15 @@ export function BidIntakeStage() {
     architect: BidPartyLookup[];
     mechanical: BidPartyLookup[];
     invite_contact: BidPartyLookup[];
+    gc: BidPartyLookup[];
+    mechanical_contractor: BidPartyLookup[];
   }>({
     owner: [],
     architect: [],
     mechanical: [],
     invite_contact: [],
+    gc: [],
+    mechanical_contractor: [],
   });
   const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -258,10 +318,28 @@ export function BidIntakeStage() {
       biddingPartiesApi.getBiddingParties({ role: "architect" }),
       biddingPartiesApi.getBiddingParties({ role: "mechanical" }),
       biddingPartiesApi.getBiddingParties({ role: "invite_contact" }),
-    ]).then(([owner, architect, mechanical, invite_contact]) => {
-      if (cancelled) return;
-      setPartiesByRole({ owner, architect, mechanical, invite_contact });
-    });
+      biddingPartiesApi.getBiddingParties({ role: "gc" }),
+      biddingPartiesApi.getBiddingParties({ role: "mechanical_contractor" }),
+    ]).then(
+      ([
+        owner,
+        architect,
+        mechanical,
+        invite_contact,
+        gc,
+        mechanical_contractor,
+      ]) => {
+        if (cancelled) return;
+        setPartiesByRole({
+          owner,
+          architect,
+          mechanical,
+          invite_contact,
+          gc,
+          mechanical_contractor,
+        });
+      }
+    );
     return () => {
       cancelled = true;
     };
@@ -299,14 +377,15 @@ export function BidIntakeStage() {
     ? draft.contractTiers
     : [defaultOwnerTier()];
   const inviteCompanyOptions = companyOptionsFromParties(
-    partiesByRole.invite_contact
+    partiesByRole.invite_contact,
+    "invite_contact"
   );
   const whoElse = draft.whoElseBidding ?? {};
   const needsWhoElseResearch = invitations.length < 2;
 
   const emptyTier = (): ProcessContractTier => ({
     sortOrder: tiers.length,
-    role: null,
+    role: INVITE_TIER_ROLE,
     company: null,
     hasTheJob: null,
     invitedUs: false,
@@ -369,7 +448,11 @@ export function BidIntakeStage() {
   };
 
   const setInvitations = (next: ProcessInvitation[]) => {
-    setField("invitations", next);
+    setDraft({
+      ...draft,
+      invitations: next,
+      contractTiers: syncInvitesToBiddingClients(next, tiers),
+    });
   };
 
   const patchInvitation = (index: number, patch: Partial<ProcessInvitation>) => {
@@ -394,8 +477,8 @@ export function BidIntakeStage() {
     p: ProcessParty,
     prev?: ProcessInvitation["contact"] | null
   ): NonNullable<ProcessInvitation["contact"]> => ({
-    name: p.contactName || p.name || prev?.name || null,
-    company: p.company || p.name || prev?.company || null,
+    name: (p.contactName ?? "").trim() || prev?.name || null,
+    company: (p.company ?? "").trim() || prev?.company || null,
     email: p.email || prev?.email || null,
     phone: p.phone || prev?.phone || null,
   });
@@ -422,10 +505,11 @@ export function BidIntakeStage() {
       ...draft,
       mechanicalEngineer: me,
       invitations: nextInvs,
+      contractTiers: syncInvitesToBiddingClients(nextInvs, tiers),
     });
   };
 
-  /** Pick invitation company/contact → fill Mechanical. */
+  /** Pick invitation company/contact → fill Mechanical + Bidding clients. */
   const pickInvitationContact = (
     index: number,
     contact: NonNullable<ProcessInvitation["contact"]>
@@ -438,11 +522,15 @@ export function BidIntakeStage() {
       ...draft,
       invitations: nextInvs,
       mechanicalEngineer: partyFromInviteContact(contact),
+      contractTiers: syncInvitesToBiddingClients(nextInvs, tiers),
     });
   };
 
   const setTiers = (next: ProcessContractTier[]) => {
-    setField("contractTiers", next.length > 0 ? next : [defaultOwnerTier()]);
+    const cleaned = (next.length > 0 ? next : [defaultOwnerTier()]).map(
+      (t) => ({ ...t, role: t.role || INVITE_TIER_ROLE })
+    );
+    setField("contractTiers", cleaned);
   };
 
   const patchTier = (index: number, patch: Partial<ProcessContractTier>) => {
@@ -528,7 +616,7 @@ export function BidIntakeStage() {
         <PartyNameCombobox
           label="Company"
           value={p.company ?? ""}
-          options={companyOptionsFromParties(partiesByRole[role])}
+          options={companyOptionsFromParties(partiesByRole[role], role)}
           addressBookOptions={partiesByRole[role]}
           partyRole={role}
           disabled={!editable}
@@ -1198,37 +1286,105 @@ export function BidIntakeStage() {
               <p className="text-[12.5px] text-[#9ca3af]">None yet.</p>
             ) : (
               <ul className="space-y-2">
-                {list.map((row, index) => (
+                {list.map((row, index) => {
+                  const partyRole =
+                    key === "gc" ? ("gc" as const) : ("mechanical_contractor" as const);
+                  const roleParties = partiesByRole[partyRole];
+                  const companyOpts = companyOptionsFromParties(
+                    roleParties,
+                    partyRole
+                  );
+                  const company = row.company ?? row.name ?? "";
+                  const contactOpts = contactsForCompany(roleParties, company);
+                  return (
                   <li
                     key={`${key}-${index}`}
                     className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-2.5 py-1.5"
                   >
-                    <input
-                      className={`${inputClass} min-w-[10rem] flex-1`}
-                      disabled={!editable}
-                      placeholder="Company"
-                      value={row.company ?? row.name ?? ""}
-                      onChange={(e) => {
-                        const company = e.target.value;
-                        setList(
-                          list.map((r, i) =>
-                            i === index
-                              ? { ...r, company, name: company || null }
-                              : r
-                          )
-                        );
-                      }}
-                    />
-                    <input
-                      className={`${inputClass} min-w-[8rem] flex-1`}
-                      disabled={!editable}
-                      placeholder="Contact name"
-                      value={row.contactName ?? ""}
-                      onChange={(e) => {
-                        const contactName = e.target.value || null;
-                        setList(list.map((r, i) => (i === index ? { ...r, contactName } : r)));
-                      }}
-                    />
+                    <div className="w-full min-w-0 basis-full">
+                      <PartyNameCombobox
+                        variant="inline"
+                        label="Company"
+                        value={company}
+                        options={companyOpts}
+                        addressBookOptions={roleParties}
+                        partyRole={partyRole}
+                        disabled={!editable}
+                        inputClass={inputClass}
+                        labelClass={labelClass}
+                        showPicker
+                        addressBookTitle={
+                          key === "gc"
+                            ? "GC Address Book"
+                            : "Mechanical Contractor Address Book"
+                        }
+                        placeholder="Company"
+                        inputValueFromParty={(picked) =>
+                          picked.company || picked.name || ""
+                        }
+                        onChangeName={(name) => {
+                          setList(
+                            list.map((r, i) =>
+                              i === index
+                                ? {
+                                    ...r,
+                                    company: name || null,
+                                    name: name || null,
+                                  }
+                                : r
+                            )
+                          );
+                        }}
+                        onPickExisting={(picked) => {
+                          setList(
+                            list.map((r, i) =>
+                              i === index ? gcOrMechFromParty(picked, r) : r
+                            )
+                          );
+                        }}
+                      />
+                    </div>
+                    <div className="w-full min-w-0 basis-full">
+                      <PartyNameCombobox
+                        variant="inline"
+                        label="Contact name"
+                        value={row.contactName ?? ""}
+                        options={contactOpts}
+                        addressBookOptions={
+                          company ? contactOpts : roleParties
+                        }
+                        partyRole={partyRole}
+                        disabled={!editable}
+                        inputClass={inputClass}
+                        labelClass={labelClass}
+                        showPicker
+                        addressBookTitle={
+                          key === "gc"
+                            ? "GC Address Book"
+                            : "Mechanical Contractor Address Book"
+                        }
+                        placeholder="Contact name"
+                        inputValueFromParty={(picked) =>
+                          picked.contactName || picked.name || ""
+                        }
+                        onChangeName={(name) => {
+                          setList(
+                            list.map((r, i) =>
+                              i === index
+                                ? { ...r, contactName: name || null }
+                                : r
+                            )
+                          );
+                        }}
+                        onPickExisting={(picked) => {
+                          setList(
+                            list.map((r, i) =>
+                              i === index ? gcOrMechFromParty(picked, r) : r
+                            )
+                          );
+                        }}
+                      />
+                    </div>
                     <input
                       className={`${inputClass} min-w-[10rem] flex-1`}
                       disabled={!editable}
@@ -1361,7 +1517,9 @@ export function BidIntakeStage() {
                                 key === "gc"
                                   ? "Remove GC?"
                                   : "Remove mechanical contractor?",
-                              message: `Remove this ${key === "gc" ? "GC" : "mechanical contractor"}?`,
+                              message: `Remove this ${
+                                key === "gc" ? "GC" : "mechanical contractor"
+                              }?`,
                               confirmLabel: "Remove",
                               variant: "danger",
                             });
@@ -1374,7 +1532,8 @@ export function BidIntakeStage() {
                       </button>
                     ) : null}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
             </div>
@@ -1951,7 +2110,7 @@ export function BidIntakeStage() {
       <section className="intake-section min-w-0">
         <div className="intake-section-head-bar">
           <div>
-            <h3>Contract chain</h3>
+            <h3>Bidding clients</h3>
           </div>
           <span className="intake-head-count">{tiers.length}</span>
           {editable ? (
@@ -1990,13 +2149,14 @@ export function BidIntakeStage() {
                         <select
                           className={selectClass}
                           disabled={!editable}
-                          value={t.role ?? ""}
+                          value={t.role || INVITE_TIER_ROLE}
                           onChange={(e) =>
-                            patchTier(index, { role: e.target.value || null })
+                            patchTier(index, {
+                              role: e.target.value || INVITE_TIER_ROLE,
+                            })
                           }
                         >
                           <SortedOptions>
-                            <option value="">—</option>
                             {tierRoles.map((o) => (
                               <option key={o.value} value={o.value}>
                                 {o.label}
@@ -2112,6 +2272,7 @@ export function BidIntakeStage() {
       <BidAttachmentsSection
         title="Plans, specs, and invitation"
         labels={["drawings", "specifications", "invitation"]}
+        defaultDrawingCategory={draft.drawingCategory}
         attachments={(bid.attachments ?? []).filter(
           (a) =>
             a.category !== "takeoff_markup" &&
