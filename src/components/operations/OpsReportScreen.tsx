@@ -2,41 +2,100 @@
 
 import { useEffect, useState } from "react";
 import { getApiErrorMessage } from "@/lib/api/client";
-import { defaultOpsDateRange, qty } from "@/lib/operations/format";
-import type { CostReportResponse, LeedReportRow } from "@/lib/operations/types";
+import { defaultOpsDateRange, qty, tons } from "@/lib/operations/format";
+import type { CostReportResponse, LeedReportPage, LeedReportRow } from "@/lib/operations/types";
 import { AGGREGATE_FIELD_META, LEED_FIELD_META } from "@/lib/operations/types";
 import { OperationsChrome } from "@/components/operations/OperationsChrome";
 import { OpsDateRange } from "@/components/operations/OpsDateRange";
-import { CostReportTable } from "@/components/operations/CostReportTable";
+import { CostReportTable, type CostSortKey } from "@/components/operations/CostReportTable";
+import { sortRows, type SortDir, type SortValue } from "@/lib/sort";
+import { StatTiles } from "@/components/reporting/StatTiles";
 import {
   OPS_SHELL,
   OPS_TABLE_SCROLL,
-  OPS_TABLE_STICKY_HEAD,
 } from "@/components/operations/tableScroll";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { LoadingBar } from "@/components/ui/LoadingBar";
+
+/** $455K / $1.21M for the header tiles; the table keeps exact amounts. */
+function shortMoney(n: number): string {
+  const a = Math.abs(n);
+  if (a >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (a >= 1_000) return `$${Math.round(n / 1_000)}K`;
+  return `$${Math.round(n)}`;
+}
+
+/** Rows per page on paged cost reports. */
+const REPORT_PAGE_SIZE = 50;
+
+type CostRow = CostReportResponse["rows"][number];
+type PageQuery = { from: string; to: string; page: number; pageSize: number; sortBy: CostSortKey; sortDir: SortDir };
+
+/** An older backend ignores `page` and returns every row; sort and page it here until it is updated. */
+function asReportPage(
+  res: CostReportResponse,
+  q: PageQuery,
+  nameOf: (row: CostRow) => string
+): CostReportResponse {
+  if (res.total != null) return res;
+  const value: Record<CostSortKey, (r: CostRow) => SortValue> = {
+    name: (r) => nameOf(r),
+    loads: (r) => r.loads,
+    weightTons: (r) => r.weightTons,
+    truckingCost: (r) => r.truckingCost,
+    disposalCost: (r) => r.disposalCost,
+    totalCost: (r) => r.totalCost,
+  };
+  const sorted = sortRows(res.rows, value[q.sortBy], q.sortDir);
+  return {
+    rows: sorted.slice((q.page - 1) * q.pageSize, q.page * q.pageSize),
+    totals: res.totals,
+    total: sorted.length,
+    page: q.page,
+    pageSize: q.pageSize,
+  };
+}
 
 export function CostReportScreen({
   title,
   nameHeader,
   nameOf,
+  nameMaxWidth,
   load,
+  loadPage,
 }: {
   title: string;
   nameHeader: string;
-  nameOf: (row: CostReportResponse["rows"][number]) => string;
+  nameMaxWidth?: string;
+  nameOf: (row: CostRow) => string;
   load: (q: { from: string; to: string }) => Promise<CostReportResponse>;
+  /** When given, the report is paged and sorted on the server (50 rows per page). */
+  loadPage?: (q: PageQuery) => Promise<CostReportResponse>;
 }) {
   const [range, setRange] = useState(defaultOpsDateRange);
   const [data, setData] = useState<CostReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Paged mode: sort (Total, high → low, like the unpaged table) and page; a date or sort change goes back to page 1.
+  const [sort, setSort] = useState<{ key: CostSortKey; dir: SortDir }>({ key: "totalCost", dir: "desc" });
+  const toggleSort = (key: CostSortKey) =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+  const filterKey = `${range.from}|${range.to}|${sort.key}|${sort.dir}`;
+  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ key: filterKey, page: next });
+
+  // Only the paged report needs the name for its fallback sort; keep it out of the others' effect (it is a new function each render).
+  const pageNameOf = loadPage ? nameOf : undefined;
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void load(range)
+    const q: PageQuery = { ...range, page, pageSize: REPORT_PAGE_SIZE, sortBy: sort.key, sortDir: sort.dir };
+    void (loadPage && pageNameOf ? loadPage(q).then((res) => asReportPage(res, q, pageNameOf)) : load(range))
       .then((next) => {
         if (!cancelled) setData(next);
       })
@@ -49,12 +108,24 @@ export function CostReportScreen({
     return () => {
       cancelled = true;
     };
-  }, [range, load]);
+  }, [range, load, loadPage, pageNameOf, page, sort.key, sort.dir]);
 
   return (
     <OperationsChrome
       title={title}
-      subtitle="Server totals from the haul log — same cost rules as the Excel."
+      subtitle="Haul costs totaled by job, hauler, destination or LEED / aggregates, calculated the same way as the trucking spreadsheet."
+      action={
+        <StatTiles
+          loading={loading && !data}
+          items={[
+            { label: "Loads", value: data ? data.totals.loads.toLocaleString() : "—" },
+            { label: "Tons", value: data ? tons(data.totals.weightTons) : "—" },
+            { label: "Trucking", value: data ? shortMoney(data.totals.truckingCost) : "—" },
+            { label: "Disposal", value: data ? shortMoney(data.totals.disposalCost) : "—" },
+            { label: "Total cost", value: data ? shortMoney(data.totals.totalCost) : "—" },
+          ]}
+        />
+      }
       filters={<OpsDateRange from={range.from} to={range.to} onChange={setRange} />}
     >
       {loading && !data ? (
@@ -62,29 +133,121 @@ export function CostReportScreen({
       ) : error ? (
         <EmptyState message={error} />
       ) : data ? (
-        <CostReportTable data={data} nameHeader={nameHeader} nameOf={nameOf} />
+        // Old numbers stay up while a new date range loads; the bar shows it is working (same as Estimates).
+        <div className="relative">
+          {loading ? <LoadingBar label="Loading report" /> : null}
+          {loadPage ? (
+            <CostReportTable
+              data={data}
+              nameHeader={nameHeader}
+              nameOf={nameOf}
+              nameMaxWidth={nameMaxWidth}
+              serverSort={{ key: sort.key, dir: sort.dir, onToggle: toggleSort }}
+              rowCount={data.total}
+              footer={
+                <ReportPager
+                  page={data.page ?? 1}
+                  totalPages={Math.max(1, Math.ceil((data.total ?? 0) / (data.pageSize ?? REPORT_PAGE_SIZE)))}
+                  total={data.total ?? 0}
+                  noun={nameHeader.toLowerCase()}
+                  busy={loading}
+                  onPage={setPage}
+                />
+              }
+            />
+          ) : (
+            <CostReportTable data={data} nameHeader={nameHeader} nameOf={nameOf} nameMaxWidth={nameMaxWidth} />
+          )}
+        </div>
       ) : null}
     </OperationsChrome>
   );
 }
 
-export function LeedReportScreen({
-  load,
+const PAGER_BTN =
+  "cursor-pointer rounded-lg border border-ink/15 bg-surface px-3 py-1 text-[12.5px] font-medium text-ink transition hover:bg-ink/[0.03] disabled:cursor-default disabled:opacity-50";
+
+/** "Page X of Y · N jobs" with Previous / Next, under a paged cost report. */
+function ReportPager({
+  page,
+  totalPages,
+  total,
+  noun,
+  note,
+  busy,
+  onPage,
 }: {
-  load: (q: { from: string; to: string }) => Promise<LeedReportRow[]>;
+  page: number;
+  totalPages: number;
+  total: number;
+  noun: string;
+  /** Extra hint after the count. */
+  note?: string;
+  busy: boolean;
+  onPage: (page: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] px-4 py-2.5">
+      <span className="text-[12.5px] text-ink-muted">
+        {`Page ${page} of ${totalPages} · ${total.toLocaleString()} ${noun}${total === 1 ? "" : "s"}${note ? ` · ${note}` : ""}`}
+      </span>
+      {totalPages > 1 ? (
+        <span className="flex gap-2">
+          <button type="button" className={PAGER_BTN} disabled={page <= 1 || busy} onClick={() => onPage(Math.max(1, page - 1))}>
+            Previous
+          </button>
+          <button
+            type="button"
+            className={PAGER_BTN}
+            disabled={page >= totalPages || busy}
+            onClick={() => onPage(Math.min(totalPages, page + 1))}
+          >
+            Next
+          </button>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** Light-blue header like the other app tables; every cell pinned to the top. */
+const LEED_TH =
+  "sticky top-0 z-[2] whitespace-nowrap border-b border-[rgba(15,23,42,0.05)] bg-[var(--brand-tint)] px-3 py-2.5 text-[12px] font-semibold text-ink";
+
+export function LeedReportScreen({
+  loadPage,
+}: {
+  /** One page of jobs (server-side); an older backend returns every job as an array. */
+  loadPage: (q: { from: string; to: string; page: number; pageSize: number }) => Promise<LeedReportPage | LeedReportRow[]>;
 }) {
   const [range, setRange] = useState(defaultOpsDateRange);
-  const [rows, setRows] = useState<LeedReportRow[]>([]);
+  const [data, setData] = useState<LeedReportPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // A new date range goes back to page 1.
+  const filterKey = `${range.from}|${range.to}`;
+  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ key: filterKey, page: next });
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void load(range)
-      .then((next) => {
-        if (!cancelled) setRows(next);
+    void loadPage({ ...range, page, pageSize: REPORT_PAGE_SIZE })
+      .then((res) => {
+        if (cancelled) return;
+        // Older backend: every job came back; page it here.
+        const next: LeedReportPage = Array.isArray(res)
+          ? {
+              rows: res.slice((page - 1) * REPORT_PAGE_SIZE, page * REPORT_PAGE_SIZE),
+              total: res.length,
+              page,
+              pageSize: REPORT_PAGE_SIZE,
+            }
+          : res;
+        setData(next);
       })
       .catch((e) => {
         if (!cancelled) setError(getApiErrorMessage(e, "Could not load LEED report"));
@@ -95,8 +258,9 @@ export function LeedReportScreen({
     return () => {
       cancelled = true;
     };
-  }, [range, load]);
+  }, [range, page, loadPage]);
 
+  const rows = data?.rows ?? [];
   const qtyCols = [...LEED_FIELD_META, ...AGGREGATE_FIELD_META];
 
   return (
@@ -105,24 +269,22 @@ export function LeedReportScreen({
       subtitle="Quantities only — not dollars."
       filters={<OpsDateRange from={range.from} to={range.to} onChange={setRange} />}
     >
-      {loading && rows.length === 0 ? (
+      {loading && !data ? (
         <TableSkeleton rows={8} toolbar={false} />
       ) : error ? (
         <EmptyState message={error} />
       ) : (
-        <div className={OPS_SHELL}>
+        <div className={`relative ${OPS_SHELL}`}>
+          {loading ? <LoadingBar label="Loading LEED report" /> : null}
           <div className={OPS_TABLE_SCROLL}>
-            <table className="min-w-[72rem] w-full text-left text-[12px]">
+            <table className="min-w-[72rem] w-full border-separate border-spacing-0 text-left text-[12px]">
               <thead>
-                <tr
-                  className={`${OPS_TABLE_STICKY_HEAD} text-[10px] font-semibold uppercase tracking-wide text-ink/50`}
-                >
-                  <th className="sticky left-0 z-[2] bg-[#f3f6f9] px-3 py-2.5 shadow-[1px_0_0_rgba(0,0,0,0.06)]">
-                    Job
-                  </th>
-                  <th className="px-3 py-2.5 text-right">Loads</th>
+                {/* Each heading is pinned on its own (a pinned row doesn't carry a cell that is itself pinned left). */}
+                <tr>
+                  <th className={`${LEED_TH} left-0 z-[3] min-w-[18rem] text-left shadow-[1px_0_0_rgba(0,0,0,0.06)]`}>Job</th>
+                  <th className={`${LEED_TH} text-right`}>Loads</th>
                   {qtyCols.map((c) => (
-                    <th key={c.key} className="whitespace-nowrap px-3 py-2.5 text-right">
+                    <th key={c.key} className={`${LEED_TH} text-right`}>
                       {c.label}
                     </th>
                   ))}
@@ -140,10 +302,12 @@ export function LeedReportScreen({
                   </tr>
                 ) : (
                   rows.map((row) => (
-                    <tr key={row.jobNumber} className="border-b border-ink/[0.05] hover:bg-brand/[0.04]">
-                      <td className="sticky left-0 z-[1] bg-white px-3 py-2 shadow-[1px_0_0_rgba(0,0,0,0.04)]">
+                    <tr key={row.jobNumber} className="hover:bg-brand/[0.04] [&>td]:border-b [&>td]:border-ink/[0.05]">
+                      <td className="sticky left-0 z-[1] min-w-[18rem] max-w-[22rem] bg-white px-3 py-2 shadow-[1px_0_0_rgba(0,0,0,0.04)]">
                         <p className="font-medium text-ink">{row.jobNumber}</p>
-                        <p className="text-[11px] text-ink/45">{row.jobName || "—"}</p>
+                        <p className="truncate text-[11px] text-ink/45" title={row.jobName ?? undefined}>
+                          {row.jobName || "—"}
+                        </p>
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums">{row.loads}</td>
                       {qtyCols.map((c) => {
@@ -164,10 +328,17 @@ export function LeedReportScreen({
               </tbody>
             </table>
           </div>
-          <div className="border-t border-ink/[0.06] bg-[#f8f9fb] px-3 py-2 text-[11px] text-ink/45">
-            {rows.length.toLocaleString()} job{rows.length === 1 ? "" : "s"} · scroll horizontally
-            for all quantity columns
-          </div>
+          {data ? (
+            <ReportPager
+              page={data.page}
+              totalPages={Math.max(1, Math.ceil(data.total / data.pageSize))}
+              total={data.total}
+              noun="job"
+              note="scroll horizontally for all quantity columns"
+              busy={loading}
+              onPage={setPage}
+            />
+          ) : null}
         </div>
       )}
     </OperationsChrome>

@@ -7,7 +7,7 @@ export default function DisposalRatesPage() {
   return (
     <OperationsChrome
       title="Disposal rate cards"
-      subtitle="Load / ton / CY rates. Inactive cards stay listed here but drop out of the haul form."
+      subtitle="Disposal prices per load, ton or cubic yard. Inactive rates stay listed but can't be picked for new hauls."
     >
       <DisposalRatesPanel />
     </OperationsChrome>

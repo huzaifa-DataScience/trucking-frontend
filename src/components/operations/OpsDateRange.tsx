@@ -1,6 +1,9 @@
 "use client";
 
-import { opsFieldClass } from "@/components/operations/OperationsChrome";
+import { DatePicker } from "@/components/ui/DatePicker";
+
+/** Same date field as the trucking dashboards (app calendar, rounded), not the browser's native picker. */
+const dateClass = "h-9 w-full min-w-0 max-w-full rounded-lg border border-ink/10 bg-surface px-2.5 text-sm";
 
 export function OpsDateRange({
   from,
@@ -12,24 +15,14 @@ export function OpsDateRange({
   onChange: (next: { from: string; to: string }) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-end gap-2">
-      <label className="flex min-w-[9rem] flex-col gap-1">
-        <span className="text-[11px] font-medium text-ink/45">From</span>
-        <input
-          type="date"
-          className={opsFieldClass}
-          value={from}
-          onChange={(e) => onChange({ from: e.target.value, to })}
-        />
+    <div className="flex flex-wrap items-end gap-3">
+      <label className="flex w-[150px] min-w-0 flex-col gap-1.5">
+        <span className="text-xs font-medium text-ink/45">From</span>
+        <DatePicker ariaLabel="From date" value={from} onChange={(v) => onChange({ from: v, to })} className={dateClass} />
       </label>
-      <label className="flex min-w-[9rem] flex-col gap-1">
-        <span className="text-[11px] font-medium text-ink/45">To</span>
-        <input
-          type="date"
-          className={opsFieldClass}
-          value={to}
-          onChange={(e) => onChange({ from, to: e.target.value })}
-        />
+      <label className="flex w-[150px] min-w-0 flex-col gap-1.5">
+        <span className="text-xs font-medium text-ink/45">To</span>
+        <DatePicker ariaLabel="To date" value={to} onChange={(v) => onChange({ from, to: v })} className={dateClass} />
       </label>
     </div>
   );

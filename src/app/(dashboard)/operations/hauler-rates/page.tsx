@@ -7,7 +7,7 @@ export default function HaulerRatesPage() {
   return (
     <OperationsChrome
       title="Hauler rate cards"
-      subtitle="Add and edit in a modal. Saving a card updates cost on every haul that uses it."
+      subtitle="Trucking prices for each hauler. Changing a rate updates the cost of every haul that uses it."
     >
       <HaulerRatesPanel />
     </OperationsChrome>

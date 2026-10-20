@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import type { FilterConfig } from "@/components/reporting/ReportFilters";
 import { ReportFilters } from "@/components/reporting/ReportFilters";
-import { KPICards } from "@/components/reporting/KPICards";
+import { StatTiles } from "@/components/reporting/StatTiles";
 import { SummaryTable } from "@/components/reporting/SummaryTable";
 import { TicketGrid } from "@/components/reporting/TicketGrid";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -11,7 +11,7 @@ import { useLookups } from "@/hooks/useLookups";
 import { useHaulerDashboard } from "@/hooks/useHaulerDashboard";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { Skeleton, SkeletonStatRow, SkeletonTableRows } from "@/components/ui/Skeleton";
+import { Skeleton, SkeletonTableRows } from "@/components/ui/Skeleton";
 import * as haulerApi from "@/lib/api/endpoints/hauler-dashboard";
 
 function createDefaultFilters(): FilterConfig {
@@ -97,39 +97,35 @@ export default function HaulerDashboardPage() {
   const error = lookupsError ?? dataError;
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 sm:gap-8">
-      <PageHeader
-        title="Hauler (vendor) dashboard"
-        subtitle="Fraud detection and efficiency analysis. The Created At timestamp helps surface late or backdated entries."
-      />
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ReportFilters
-          filters={filters}
-          options={filterOptions}
-          onChange={setFilters}
-          showJob
-          showMaterial
-          showHauler
-          showTruckType
-          showDirection
-        />
-        <div className="flex h-full flex-col rounded-2xl border border-ink/[0.08] bg-surface p-4 shadow-[0_1px_3px_rgba(1,1,1,0.06)] sm:p-5">
-          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-ink/40 sm:mb-4">
-            Overview
-          </h2>
-          {loading ? (
-            <SkeletonStatRow count={3} />
-          ) : (
-            <KPICards
-              maxCols={2}
+    <div className="report-dashboard flex min-h-0 min-w-0 flex-1 flex-col gap-4 sm:gap-5">
+      <div className="flex flex-col gap-4">
+        {/* Overview numbers sit beside the title; filters are one row under it (same as the Job and Material dashboards). */}
+        <PageHeader
+          title="Hauler (vendor) dashboard"
+          subtitle="Fraud detection and efficiency analysis. The Created At timestamp helps surface late or backdated entries."
+          action={
+            <StatTiles
+              loading={loading}
               items={[
-                { label: "Total Tickets", value: kpis.totalTickets },
-                { label: "Unique Trucks", value: kpis.uniqueTrucks },
-                { label: "Active Jobs", value: kpis.activeJobs },
+                { label: "Total tickets", value: kpis.totalTickets.toLocaleString() },
+                { label: "Unique trucks", value: kpis.uniqueTrucks.toLocaleString() },
+                { label: "Active jobs", value: kpis.activeJobs.toLocaleString() },
               ]}
             />
-          )}
+          }
+        />
+        <div className="border-b border-[var(--border-subtle)] pb-4">
+          <ReportFilters
+            filters={filters}
+            options={filterOptions}
+            onChange={setFilters}
+            showJob
+            showMaterial
+            showHauler
+            showTruckType
+            showDirection
+            layout="bar"
+          />
         </div>
       </div>
 

@@ -2,13 +2,17 @@ import { del, get, patch, post } from "@/lib/api/client";
 import type {
   CostReportResponse,
   DisposalRateCard,
+  DisposalRatesPage,
   DisposalRateWriteBody,
   HaulerRateCard,
   HaulerRateWriteBody,
+  HaulsPage,
   HaulsQuery,
   HaulWriteBody,
+  LeedReportPage,
   LeedReportRow,
   OperationsHaul,
+  HaulerRatesPage,
   ReportDateQuery,
 } from "@/lib/operations/types";
 
@@ -28,6 +32,35 @@ function dateParams(q: ReportDateQuery): Record<string, string | number | undefi
 
 export function listHauls(query: HaulsQuery = {}): Promise<OperationsHaul[]> {
   return get<OperationsHaul[]>("/operations/hauls", haulParams(query));
+}
+
+/** Paged hauler rate cards for the Hauler rates page (dropdowns keep using listHaulerRates). */
+export function listHaulerRatesPage(q: {
+  page: number;
+  pageSize: number;
+  search?: string;
+  company?: string;
+  status: "active" | "inactive" | "all";
+}): Promise<HaulerRatesPage | HaulerRateCard[]> {
+  return get<HaulerRatesPage | HaulerRateCard[]>("/operations/hauler-rates", {
+    page: q.page,
+    pageSize: q.pageSize,
+    search: q.search?.trim() || undefined,
+    company: q.company || undefined,
+    status: q.status,
+  });
+}
+
+/** Paged haul log (server-side paging, search and totals). */
+export function listHaulsPage(
+  query: HaulsQuery & { page: number; pageSize: number; search?: string }
+): Promise<HaulsPage | OperationsHaul[]> {
+  return get<HaulsPage | OperationsHaul[]>("/operations/hauls", {
+    ...haulParams(query),
+    page: query.page,
+    pageSize: query.pageSize,
+    search: query.search?.trim() || undefined,
+  });
 }
 
 export function getHaul(id: number): Promise<OperationsHaul> {
@@ -65,6 +98,29 @@ export function listDisposalRates(): Promise<DisposalRateCard[]> {
   return get<DisposalRateCard[]>("/operations/disposal-rates");
 }
 
+/** Paged disposal rate cards (server-side filters, sorting and paging); an older backend returns the full list. */
+export function listDisposalRatesPage(q: {
+  page: number;
+  pageSize: number;
+  search?: string;
+  company?: string;
+  type?: string;
+  status: "active" | "inactive" | "all";
+  sortBy?: string | null;
+  sortDir?: "asc" | "desc";
+}): Promise<DisposalRatesPage | DisposalRateCard[]> {
+  return get<DisposalRatesPage | DisposalRateCard[]>("/operations/disposal-rates", {
+    page: q.page,
+    pageSize: q.pageSize,
+    search: q.search?.trim() || undefined,
+    company: q.company || undefined,
+    type: q.type && q.type !== "all" ? q.type : undefined,
+    status: q.status,
+    sortBy: q.sortBy || undefined,
+    sortDir: q.sortBy ? q.sortDir : undefined,
+  });
+}
+
 export function createDisposalRate(body: DisposalRateWriteBody): Promise<DisposalRateCard> {
   return post<DisposalRateCard>("/operations/disposal-rates", body);
 }
@@ -78,6 +134,42 @@ export function updateDisposalRate(
 
 export function reportByJobs(query: ReportDateQuery = {}): Promise<CostReportResponse> {
   return get<CostReportResponse>("/operations/reports/jobs", dateParams(query));
+}
+
+type CostReportPageQuery = ReportDateQuery & { page: number; pageSize: number; sortBy: string; sortDir: "asc" | "desc" };
+
+function costReportPage(path: string, query: CostReportPageQuery): Promise<CostReportResponse> {
+  return get<CostReportResponse>(path, {
+    ...dateParams(query),
+    page: query.page,
+    pageSize: query.pageSize,
+    sortBy: query.sortBy,
+    sortDir: query.sortDir,
+  });
+}
+
+/** Cost by job / hauler / destination, one page (server-side sort); totals still cover every row. An older backend returns every row. */
+export function reportByJobsPage(query: CostReportPageQuery): Promise<CostReportResponse> {
+  return costReportPage("/operations/reports/jobs", query);
+}
+
+export function reportByHaulersPage(query: CostReportPageQuery): Promise<CostReportResponse> {
+  return costReportPage("/operations/reports/haulers", query);
+}
+
+export function reportByDestinationsPage(query: CostReportPageQuery): Promise<CostReportResponse> {
+  return costReportPage("/operations/reports/destinations", query);
+}
+
+/** LEED / aggregates, one page. An older backend returns every job as a bare array. */
+export function reportLeedPage(
+  query: ReportDateQuery & { page: number; pageSize: number }
+): Promise<LeedReportPage | LeedReportRow[]> {
+  return get<LeedReportPage | LeedReportRow[]>("/operations/reports/leed", {
+    ...dateParams(query),
+    page: query.page,
+    pageSize: query.pageSize,
+  });
 }
 
 export function reportByHaulers(query: ReportDateQuery = {}): Promise<CostReportResponse> {

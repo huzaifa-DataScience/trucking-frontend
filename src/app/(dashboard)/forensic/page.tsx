@@ -11,7 +11,8 @@ import { useLookups } from "@/hooks/useLookups";
 import { useForensic } from "@/hooks/useForensic";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { SkeletonStatRow, TableSkeleton } from "@/components/ui/Skeleton";
+import { StatTiles } from "@/components/reporting/StatTiles";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 // Default to last 7 days for Efficiency Outlier Report (per spec)
 function getDefaultFilters(): FilterConfig {
@@ -34,6 +35,11 @@ const defaultFilters: FilterConfig = getDefaultFilters();
 
 type TabId = "late" | "efficiency";
 
+const TABS: { id: TabId; label: string }[] = [
+  { id: "late", label: "Late submission audit" },
+  { id: "efficiency", label: "Efficiency outlier report" },
+];
+
 export default function ForensicAuditPage() {
   const { companyId } = useCompany();
   const [filters, setFilters] = useState<FilterConfig>(defaultFilters);
@@ -49,7 +55,19 @@ export default function ForensicAuditPage() {
     [fetchDetail, companyId]
   );
 
-  const { lateTicketsFound, lateRows, efficiencyRows, loading: dataLoading, error: dataError } = useForensic({
+  const {
+    lateTicketsFound,
+    late,
+    lateLoading,
+    lateCtl,
+    outliers,
+    outlierLoading,
+    outlierCtl,
+    exportLate,
+    exportOutliers,
+    loading: dataLoading,
+    error: dataError,
+  } = useForensic({
     companyId: companyId ?? undefined,
     startDate: filters.startDate,
     endDate: filters.endDate,
@@ -64,22 +82,30 @@ export default function ForensicAuditPage() {
   const error = lookupsError ?? dataError;
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 sm:gap-8">
-      <PageHeader
-        title="Forensic & audit"
-        subtitle="Late submission audit and efficiency outlier analysis for compliance reviews."
-      />
-
-      <ReportFilters
-        filters={filters}
-        options={filterOptions}
-        onChange={setFilters}
-        showJob
-        showMaterial
-        showHauler
-        showTruckType
-        showDirection
-      />
+    <div className="report-dashboard flex min-h-0 min-w-0 flex-1 flex-col gap-4 sm:gap-5">
+      <div className="flex flex-col gap-4">
+        {/* Same header as the Job / Material / Hauler dashboards: stat tile beside the title, filters in one row. */}
+        <PageHeader
+          title="Forensic & audit"
+          subtitle="Late submission audit and efficiency outlier analysis for compliance reviews."
+          action={
+            <StatTiles loading={loading} items={[{ label: "Late tickets found", value: lateTicketsFound.toLocaleString() }]} />
+          }
+        />
+        <div className="border-b border-[var(--border-subtle)] pb-4">
+          <ReportFilters
+            filters={filters}
+            options={filterOptions}
+            onChange={setFilters}
+            showJob
+            showMaterial
+            showHauler
+            showTruckType
+            showDirection
+            layout="bar"
+          />
+        </div>
+      </div>
 
       {error && (
         <div className="rounded-2xl border border-red-200/80 bg-red-50 px-4 py-3 text-sm text-red-900">
@@ -87,72 +113,72 @@ export default function ForensicAuditPage() {
         </div>
       )}
 
-      {loading && (
-        <div className="space-y-6">
-          <SkeletonStatRow count={1} />
-          <TableSkeleton rows={8} toolbar={false} />
-        </div>
-      )}
+      {loading && <TableSkeleton rows={8} toolbar={false} />}
 
       {!loading && (
         <>
-          <div className="rounded-2xl border border-ink/[0.08] bg-surface px-2 shadow-[0_1px_3px_rgba(1,1,1,0.06)]">
-            <nav className="flex gap-1 sm:gap-2">
-              <button
-                type="button"
-                onClick={() => setTab("late")}
-                className={`rounded-xl border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
-                  tab === "late"
-                    ? "border-brand text-ink"
-                    : "border-transparent text-ink/45 hover:text-ink"
-                }`}
-              >
-                Late submission audit
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("efficiency")}
-                className={`rounded-xl border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
-                  tab === "efficiency"
-                    ? "border-brand text-ink"
-                    : "border-transparent text-ink/45 hover:text-ink"
-                }`}
-              >
-                Efficiency outlier report
-              </button>
+          <div>
+            {/* Underline tabs, same as Project financials. */}
+            <nav className="flex gap-[22px] border-b border-[var(--border-subtle)]" role="tablist">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`relative -mb-px cursor-pointer border-b-2 pb-[11px] pt-2 text-sm transition-colors ${
+                    tab === t.id
+                      ? "border-brand font-semibold text-ink"
+                      : "border-transparent font-medium text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
             </nav>
+            <p className="cs-helper mt-3">
+              {tab === "late" ? (
+                <>
+                  Tickets where <strong>Created At</strong> (system time) is more than 24 hours after{" "}
+                  <strong>Ticket Date</strong>. Use to identify backdating.
+                </>
+              ) : (
+                <>
+                  Grouped by Date + Job + Destination (route). Fleet average loads per truck vs each truck&apos;s actual
+                  loads; implied hours and loads per hour.
+                </>
+              )}
+            </p>
           </div>
 
           {tab === "late" && (
-            <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-1">
-                <div className="rounded-2xl border border-ink/[0.08] bg-surface p-5 shadow-[0_1px_3px_rgba(1,1,1,0.06)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-ink/40">
-                    Late tickets found
-                  </p>
-                  <p className="mt-3 text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-                    {lateTicketsFound}
-                  </p>
-                </div>
-              </div>
-              <p className="text-sm leading-relaxed text-ink/55">
-                Tickets where <strong>Created At</strong> (system time) is more than 24 hours after{" "}
-                <strong>Ticket Date</strong>. Use to identify backdating.
-              </p>
-              <LateSubmissionGrid rows={lateRows} onOpenDetail={openTicketDetail} />
+            <>
+              {late ? (
+                <LateSubmissionGrid
+                  data={late}
+                  loading={lateLoading}
+                  sort={lateCtl.sort}
+                  onSort={lateCtl.toggle}
+                  onPage={lateCtl.setPage}
+                  loadAll={exportLate}
+                  onOpenDetail={openTicketDetail}
+                />
+              ) : null}
               <TicketDetailModal ticket={detailTicket ?? null} onClose={closeDetail} />
-            </div>
+            </>
           )}
 
-          {tab === "efficiency" && (
-            <div className="space-y-6">
-              <p className="text-sm leading-relaxed text-ink/55">
-                Grouped by Date + Job + Destination (route). Fleet average loads per truck vs each
-                truck&apos;s actual loads; implied hours and loads per hour.
-              </p>
-              <EfficiencyOutlierGrid rows={efficiencyRows} />
-            </div>
-          )}
+          {tab === "efficiency" && outliers ? (
+            <EfficiencyOutlierGrid
+              data={outliers}
+              loading={outlierLoading}
+              sort={outlierCtl.sort}
+              onSort={outlierCtl.toggle}
+              onPage={outlierCtl.setPage}
+              loadAll={exportOutliers}
+            />
+          ) : null}
         </>
       )}
     </div>
