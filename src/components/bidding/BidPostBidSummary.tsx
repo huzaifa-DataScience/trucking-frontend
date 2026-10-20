@@ -1,13 +1,25 @@
 "use client";
 
 import { buildBidCrmSnapshot, type CrmContact } from "@/lib/bidding/bid-crm-snapshot";
-import { formatBidDateAndTime, formatMoney, telHref } from "@/lib/bidding/format";
+import {
+  formatBidDateAndTime,
+  formatMoney,
+  mailtoHref,
+  telHref,
+} from "@/lib/bidding/format";
 import { formatWorkType } from "@/lib/bidding/process-types";
 import type { BidDetail } from "@/lib/bidding/types";
 import { BidTeamBadge } from "@/components/bidding/BidTeamBadge";
 
-function ContactLine({ c }: { c: CrmContact }) {
+function ContactLine({
+  c,
+  mailSubject,
+}: {
+  c: CrmContact;
+  mailSubject?: string | null;
+}) {
   const tel = telHref(c.phone);
+  const mail = mailtoHref(c.email, mailSubject);
   const bits = [c.company, c.name].filter(Boolean).join(" · ");
   return (
     <li className="text-[12.5px] text-ink/75">
@@ -22,6 +34,16 @@ function ContactLine({ c }: { c: CrmContact }) {
         </>
       ) : c.phone ? (
         <> · {c.phone}</>
+      ) : null}
+      {mail ? (
+        <>
+          {" · "}
+          <a href={mail} className="font-medium text-brand hover:underline">
+            {c.email ?? "Email"}
+          </a>
+        </>
+      ) : c.email ? (
+        <> · {c.email}</>
       ) : null}
     </li>
   );
@@ -41,6 +63,7 @@ export function BidPostBidSummary({
     dueDate: snap.dueDate,
     dueTime: snap.dueTime,
   });
+  const mailSubject = `Follow-up — ${snap.estimateNumber} ${snap.bidName}`.trim();
 
   return (
     <section className="intake-section min-w-0">
@@ -94,14 +117,18 @@ export function BidPostBidSummary({
 
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-ink/40">
-            Submitted to / invites
+            Proposal sent to
           </p>
           {snap.submittedTo.length === 0 ? (
             <p className="mt-0.5 text-[12.5px] text-ink/40">—</p>
           ) : (
             <ul className="mt-0.5 space-y-0.5">
-              {snap.submittedTo.slice(0, 4).map((c, i) => (
-                <ContactLine key={`${c.label}-${i}`} c={c} />
+              {snap.submittedTo.slice(0, 8).map((c, i) => (
+                <ContactLine
+                  key={`${c.label}-${i}`}
+                  c={c}
+                  mailSubject={mailSubject}
+                />
               ))}
             </ul>
           )}
@@ -123,7 +150,13 @@ export function BidPostBidSummary({
                   phone: g.phone,
                   email: g.email,
                 };
-                return <ContactLine key={`gc-${i}`} c={c} />;
+                return (
+                  <ContactLine
+                    key={`gc-${i}`}
+                    c={c}
+                    mailSubject={mailSubject}
+                  />
+                );
               })}
               {snap.mechanicals.map((m, i) => {
                 const c = {
@@ -133,7 +166,13 @@ export function BidPostBidSummary({
                   phone: m.phone,
                   email: m.email,
                 };
-                return <ContactLine key={`mech-${i}`} c={c} />;
+                return (
+                  <ContactLine
+                    key={`mech-${i}`}
+                    c={c}
+                    mailSubject={mailSubject}
+                  />
+                );
               })}
             </ul>
           )}
@@ -148,7 +187,11 @@ export function BidPostBidSummary({
           ) : (
             <ul className="mt-0.5 space-y-0.5">
               {snap.keyContacts.slice(0, 6).map((c, i) => (
-                <ContactLine key={`${c.label}-${i}`} c={c} />
+                <ContactLine
+                  key={`${c.label}-${i}`}
+                  c={c}
+                  mailSubject={mailSubject}
+                />
               ))}
             </ul>
           )}

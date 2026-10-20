@@ -46,17 +46,26 @@ export function BidTakeoffComparisonPanel() {
     status: (r) => (r.reconciliationRequired ? "Review required" : "Matched"),
   });
 
-  if (!bid || rows.length === 0) return null;
+  if (!bid) return null;
 
   return (
     <section className="intake-section min-w-0">
       <div className="intake-section-head flex flex-wrap items-center justify-between gap-2">
         <span>Takeoff comparison</span>
-        <span className="rounded border border-[#d9d4c8] bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-[#333333]">
-          {rows.filter((row) => row.reconciliationRequired).length} to reconcile
-        </span>
+        {rows.length > 0 ? (
+          <span className="rounded border border-[#d9d4c8] bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-[#333333]">
+            {rows.filter((row) => row.reconciliationRequired).length} to reconcile
+          </span>
+        ) : null}
       </div>
       <div className="intake-section-body overflow-x-auto">
+        {rows.length === 0 ? (
+          <p className="text-[12.5px] text-[#6b7280]">
+            Upload estimator recap CSVs (Mike takeoff files) to populate this
+            variance table. Comparison appears once the server computes
+            takeoffComparisons from those files.
+          </p>
+        ) : (
         <div className="table-scroll rounded-xl border border-[#e8ecf1] shadow-sm">
           <table className="w-full min-w-[32rem] text-left text-[12.5px] text-[#374151]">
             <thead className="bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
@@ -110,6 +119,7 @@ export function BidTakeoffComparisonPanel() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </section>
   );
