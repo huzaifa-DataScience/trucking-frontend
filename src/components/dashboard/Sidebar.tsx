@@ -320,6 +320,13 @@ const biddingNavItems: SidebarNavItem[] = [
     biddingPermission: "bidding:read",
   },
   {
+    href: "/bidding/contractors",
+    label: "Contractors",
+    Icon: NavIconUsers,
+    activePathPrefix: "/bidding/contractors",
+    biddingPermission: "bidding:read",
+  },
+  {
     href: "/bidding/new",
     label: "New bid",
     Icon: NavIconPlus,
