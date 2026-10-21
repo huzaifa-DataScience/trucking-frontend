@@ -33,6 +33,31 @@ function label(value: string | undefined): string {
   return (value ?? "").replace(/([a-z])([0-9])/gi, "$1 $2").replace(/^./, (c) => c.toUpperCase());
 }
 
+type CompareStatus = "matched" | "review" | "incomplete" | "no_data";
+
+/** Empty qty rows must not read as Matched — server may send shell scopes. */
+function compareStatus(row: TakeoffComparison): CompareStatus {
+  const hasA = row.quantityA != null;
+  const hasB = row.quantityB != null;
+  if (!hasA && !hasB) return "no_data";
+  if (!hasA || !hasB) return "incomplete";
+  if (row.reconciliationRequired) return "review";
+  return "matched";
+}
+
+const STATUS_UI: Record<
+  CompareStatus,
+  { label: string; className: string }
+> = {
+  matched: { label: "Matched", className: "text-success" },
+  review: { label: "Review required", className: "font-semibold text-danger" },
+  incomplete: {
+    label: "Incomplete",
+    className: "font-semibold text-warning",
+  },
+  no_data: { label: "No data", className: "text-[#9ca3af]" },
+};
+
 function isRecapFile(a: BidAttachment): boolean {
   const name = a.fileName.toLowerCase();
   const mime = (a.mimeType ?? "").toLowerCase();
@@ -93,8 +118,14 @@ export function BidTakeoffComparisonPanel() {
     diff: (r) => r.difference,
     variance: (r) => r.differencePct,
     final: (r) => r.finalQuantity,
-    status: (r) => (r.reconciliationRequired ? "Review required" : "Matched"),
+    status: (r) => STATUS_UI[compareStatus(r)].label,
   });
+
+  const reviewCount = rows.filter((r) => compareStatus(r) === "review").length;
+  const pendingCount = rows.filter((r) => {
+    const s = compareStatus(r);
+    return s === "no_data" || s === "incomplete";
+  }).length;
 
   if (!bid) return null;
 
@@ -104,7 +135,11 @@ export function BidTakeoffComparisonPanel() {
         <span>Takeoff comparison</span>
         {rows.length > 0 ? (
           <span className="rounded border border-[#d9d4c8] bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-[#333333]">
-            {rows.filter((row) => row.reconciliationRequired).length} to reconcile
+            {reviewCount > 0
+              ? `${reviewCount} to reconcile`
+              : pendingCount > 0
+                ? `${pendingCount} awaiting quantities`
+                : "All matched"}
           </span>
         ) : null}
       </div>
@@ -119,9 +154,9 @@ export function BidTakeoffComparisonPanel() {
           </p>
         ) : null}
         <p className="text-[11px] text-[#9ca3af]">
-          Upload estimator recap CSV / Excel in Takeoff files above. The grid
-          below is quantity A against quantity B when the server returns
-          takeoffComparisons.
+          Recaps are stored on the bid. Quantity rows only fill when the server
+          computes takeoffComparisons from those files — empty scopes show as No
+          data, not Matched.
         </p>
 
         {rows.length === 0 ? (
@@ -144,7 +179,10 @@ export function BidTakeoffComparisonPanel() {
                 </tr>
               </thead>
               <tbody>
-                {compareSort.sorted.map((row) => (
+                {compareSort.sorted.map((row) => {
+                  const status = compareStatus(row);
+                  const ui = STATUS_UI[status];
+                  return (
                   <tr
                     key={`${row.scope}-${row.roleA}-${row.roleB}`}
                     className="border-t border-[#eef2f6]"
@@ -168,18 +206,11 @@ export function BidTakeoffComparisonPanel() {
                       {quantity(row.finalQuantity)}
                     </td>
                     <td className="px-3 py-2.5">
-                      <span
-                        className={
-                          row.reconciliationRequired
-                            ? "font-semibold text-danger"
-                            : "text-success"
-                        }
-                      >
-                        {row.reconciliationRequired ? "Review required" : "Matched"}
-                      </span>
+                      <span className={ui.className}>{ui.label}</span>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
