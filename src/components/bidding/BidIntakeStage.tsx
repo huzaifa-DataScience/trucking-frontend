@@ -215,17 +215,26 @@ function companyOptionsFromParties(
 }
 
 function gcOrMechFromParty(
-  picked: { name?: string | null; company?: string | null; contactName?: string | null; email?: string | null; phone?: string | null },
+  picked: {
+    name?: string | null;
+    company?: string | null;
+    contactName?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  },
   row: ProcessGcOrMech
 ): ProcessGcOrMech {
-  const company = picked.company || picked.name || row.company || null;
+  // Company/person pick replaces contact fields — do not leave the previous person.
+  const pickedCompany = (picked.company ?? "").trim();
+  const company = pickedCompany || row.company || picked.name || null;
   return {
     ...row,
     company,
     name: company,
-    contactName: picked.contactName || picked.name || row.contactName || null,
-    email: picked.email ?? row.email ?? null,
-    phone: picked.phone ?? row.phone ?? null,
+    contactName:
+      (picked.contactName ?? "").trim() || (picked.name ?? "").trim() || null,
+    email: (picked.email ?? "").trim() || null,
+    phone: (picked.phone ?? "").trim() || null,
   };
 }
 
@@ -1330,6 +1339,9 @@ export function BidIntakeStage() {
                                     ...r,
                                     company: name || null,
                                     name: name || null,
+                                    contactName: null,
+                                    email: null,
+                                    phone: null,
                                   }
                                 : r
                             )

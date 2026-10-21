@@ -125,8 +125,31 @@ function BidWorkspaceInner() {
             isEditable={isEditable}
             uploading={saving}
             mode="markup"
-            onUpload={async (file, opts) => uploadAttachment(file, opts)}
-            onUploadMany={async (files, opts) => uploadAttachments(files, opts)}
+            onUpload={async (file, opts) => {
+              const name = file.name.toLowerCase();
+              const isRecap =
+                name.endsWith(".csv") ||
+                name.endsWith(".xls") ||
+                name.endsWith(".xlsx");
+              await uploadAttachment(file, {
+                ...opts,
+                label: isRecap ? "takeoff-recap" : opts?.label ?? "takeoff",
+              });
+            }}
+            onUploadMany={async (files, opts) => {
+              const allRecap = files.every((f) => {
+                const n = f.name.toLowerCase();
+                return (
+                  n.endsWith(".csv") ||
+                  n.endsWith(".xls") ||
+                  n.endsWith(".xlsx")
+                );
+              });
+              await uploadAttachments(files, {
+                ...opts,
+                label: allRecap ? "takeoff-recap" : opts?.label ?? "takeoff",
+              });
+            }}
             onDelete={async (id) => deleteAttachment(id)}
           />
           <div
