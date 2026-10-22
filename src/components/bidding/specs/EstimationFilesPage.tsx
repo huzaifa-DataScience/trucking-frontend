@@ -18,8 +18,75 @@ import {
 } from "@/lib/bidding/uploadMikeSpecs";
 import type { MikeFileInfo } from "@/lib/bidding/specs-types";
 import type { BidListItem } from "@/lib/bidding/types";
+import type { EstimationTakeoffsPage } from "@/lib/api/endpoints/biddingSpecs";
+import { ApiError } from "@/lib/api/client";
+import { SortHeader } from "@/hooks/useTableSort";
+import { sortRows, type SortDir, type SortValue } from "@/lib/sort";
+import { ListPager } from "@/components/bidding/ListPager";
+import { LoadingBar } from "@/components/ui/LoadingBar";
 
-import { useTableSort } from "@/hooks/useTableSort";
+/** Takeoffs per page (server-side). */
+const TAKEOFFS_PAGE_SIZE = 50;
+
+const TAKEOFF_SORT: Record<string, (t: TakeoffRow) => SortValue> = {
+  takeoff: (t) => t.fileName,
+  estimate: (t) => t.estimateNumber,
+  bidName: (t) => t.bidName,
+  rows: (t) => t.totalRows,
+  updated: (t) => t.updatedAt,
+};
+
+/** One takeoff per bid from the raw file list (latest file's name, rows added up), newest first. */
+function takeoffsFromFiles(files: MikeFileInfo[]): TakeoffRow[] {
+  const map = new Map<number, TakeoffRow>();
+  for (const f of files) {
+    const existing = map.get(f.bidId);
+    const updated = f.updatedAt || f.createdAt || null;
+    const name = f.fileName || `File #${f.id}`;
+    if (!existing) {
+      map.set(f.bidId, {
+        bidId: f.bidId,
+        fileId: f.id,
+        fileName: name,
+        estimateNumber: f.estimateNumber ?? null,
+        bidName: f.bidName ?? null,
+        totalRows: f.rowCount ?? 0,
+        updatedAt: updated,
+      });
+    } else {
+      existing.totalRows += f.rowCount ?? 0;
+      if (updated && (!existing.updatedAt || updated > existing.updatedAt)) {
+        existing.updatedAt = updated;
+        existing.fileId = f.id;
+        existing.fileName = name;
+      }
+    }
+  }
+  return [...map.values()].sort((a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
+}
+
+/** A backend without the paged endpoint (404): the old capped list, grouped, sorted and paged here. */
+async function takeoffsPageFallback(
+  search: string,
+  page: number,
+  sort: { key: string | null; dir: SortDir }
+): Promise<EstimationTakeoffsPage> {
+  const files = await biddingSpecsApi.listEstimationFiles({ q: search || undefined, limit: 200 });
+  const needle = search.trim().toLowerCase();
+  let all = takeoffsFromFiles(files).filter(
+    (t) => !needle || [t.fileName, t.estimateNumber, t.bidName].some((v) => (v ?? "").toLowerCase().includes(needle))
+  );
+  if (sort.key && TAKEOFF_SORT[sort.key]) all = sortRows(all, TAKEOFF_SORT[sort.key], sort.dir);
+  const pages = Math.max(1, Math.ceil(all.length / TAKEOFFS_PAGE_SIZE));
+  const p = Math.min(pages, Math.max(1, page));
+  return {
+    items: all.slice((p - 1) * TAKEOFFS_PAGE_SIZE, p * TAKEOFFS_PAGE_SIZE),
+    total: all.length,
+    page: p,
+    pageSize: TAKEOFFS_PAGE_SIZE,
+  };
+}
+
 function fmtWhen(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
@@ -52,88 +119,97 @@ export function EstimationFilesPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [files, setFiles] = useState<MikeFileInfo[]>([]);
+  const [data, setData] = useState<EstimationTakeoffsPage | null>(null);
   const [bids, setBids] = useState<BidListItem[]>([]);
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
+  // Every bid's takeoff name, fetched when the upload dialog opens (the table only holds one page).
+  const [takeoffNames, setTakeoffNames] = useState<{ bidId: number; fileName: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Sorting and paging happen on the server; a search or sort change goes back to page 1.
+  const [sort, setSort] = useState<{ key: string | null; dir: SortDir }>({ key: null, dir: "asc" });
+  const toggleSort = (key: string) =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+  const filterKey = `${search}|${sort.key}|${sort.dir}`;
+  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ key: filterKey, page: next });
+  const header = (key: string, label: string) => (
+    <SortHeader label={label} active={sort.key === key} dir={sort.dir} onClick={() => toggleSort(key)} />
+  );
+
+  // Every estimate's takeoff name, kept from the latest page load: the upload dialog's backup if
+  // the fresh request fails when it opens. Not waited for, and a failure here is ignored.
+  const [loadedNames, setLoadedNames] = useState<{ bidId: number; fileName: string | null }[] | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    void biddingSpecsApi
+      .listTakeoffNames()
+      .then(setLoadedNames)
+      .catch(() => {});
     try {
+      const query = { q: search || undefined, page, pageSize: TAKEOFFS_PAGE_SIZE, sortBy: sort.key, sortDir: sort.dir };
       const [list, bidList] = await Promise.all([
-        biddingSpecsApi.listEstimationFiles({
-          q: search || undefined,
-          limit: 200,
+        biddingSpecsApi.listEstimationTakeoffsPage(query).catch((e) => {
+          // Older backend: no paged endpoint yet.
+          if (e instanceof ApiError && (e.status === 404 || e.status === 400)) return takeoffsPageFallback(search, page, sort);
+          throw e;
         }),
+        // The upload dialog's estimate picker needs every bid.
         biddingApi.listBids().catch(() => [] as BidListItem[]),
       ]);
-      setFiles(list);
+      setData(list);
       setBids(bidList);
     } catch (e) {
       setError(getSpecsErrorMessage(e, "Failed to load estimation files"));
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, page, sort]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const takeoffs = useMemo(() => {
-    const map = new Map<number, TakeoffRow>();
-    for (const f of files) {
-      const existing = map.get(f.bidId);
-      const updated = f.updatedAt || f.createdAt || null;
-      const name = f.fileName || `File #${f.id}`;
-      if (!existing) {
-        map.set(f.bidId, {
-          bidId: f.bidId,
-          fileId: f.id,
-          fileName: name,
-          estimateNumber: f.estimateNumber ?? null,
-          bidName: f.bidName ?? null,
-          totalRows: f.rowCount ?? 0,
-          updatedAt: updated,
-        });
-      } else {
-        existing.totalRows += f.rowCount ?? 0;
-        if (
-          updated &&
-          (!existing.updatedAt || updated > existing.updatedAt)
-        ) {
-          existing.updatedAt = updated;
-          existing.fileId = f.id;
-          existing.fileName = name;
-        }
-      }
-    }
-    return [...map.values()].sort((a, b) =>
-      String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? ""))
-    );
-  }, [files]);
+  const rows = data?.items ?? [];
 
-  const filtered = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    if (!needle) return takeoffs;
-    return takeoffs.filter((t) =>
-      [t.fileName, t.estimateNumber, t.bidName]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(needle))
-    );
-  }, [takeoffs, search]);
-  const fileSort = useTableSort(filtered, {
-    takeoff: (t) => t.fileName,
-    estimate: (t) => t.estimateNumber,
-    bidName: (t) => t.bidName,
-    rows: (t) => t.totalRows,
-    updated: (t) => t.updatedAt,
-  });
+  // The dialog opens only once every estimate's takeoff name is in hand, so picking an estimate
+  // fills its name straight away (as when the whole list was on screen). If both requests fail,
+  // the names from the page load are used, and failing those, the rows on screen.
+  const [preparingUpload, setPreparingUpload] = useState(false);
+  const openUpload = async (list: File[]) => {
+    setPreparingUpload(true);
+    const names = await biddingSpecsApi
+      .listTakeoffNames()
+      .catch(() =>
+        biddingSpecsApi
+          .listEstimationFiles({ limit: 200 })
+          .then((files) => takeoffsFromFiles(files).map((t) => ({ bidId: t.bidId, fileName: t.fileName })))
+      )
+      .catch(() => loadedNames ?? rows.map((t) => ({ bidId: t.bidId, fileName: t.fileName })));
+    setTakeoffNames(names);
+    setPreparingUpload(false);
+    setPendingFiles(list);
+  };
+
+  // Built only when the bids or names change: the dialog re-applies the takeoff name whenever this
+  // list changes, so rebuilding it on every render could overwrite a name the user typed.
+  const dialogBids = useMemo(
+    () =>
+      bids.map((b) => ({
+        id: b.id,
+        estimateNumber: b.estimateNumber,
+        bidName: b.bidName,
+        existingTakeoffName: takeoffNames.find((t) => String(t.bidId) === String(b.id))?.fileName ?? undefined,
+      })),
+    [bids, takeoffNames]
+  );
 
   const confirmUpload = async (values: MikeUploadOptions) => {
     const bidId = values.bidId;
@@ -199,12 +275,12 @@ export function EstimationFilesPage() {
               className="hidden"
               onChange={(e) => {
                 const list = e.target.files ? Array.from(e.target.files) : [];
-                if (list.length) setPendingFiles(list);
+                if (list.length) void openUpload(list);
               }}
             />
             <button
               type="button"
-              disabled={uploading || bids.length === 0}
+              disabled={uploading || preparingUpload || bids.length === 0}
               title={
                 bids.length === 0
                   ? "No estimates available yet"
@@ -246,9 +322,9 @@ export function EstimationFilesPage() {
         </p>
       ) : null}
 
-      {loading ? (
+      {loading && !data ? (
         <EstimationLibrarySkeleton />
-      ) : filtered.length === 0 ? (
+      ) : rows.length === 0 && !loading ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-ink/15 bg-canvas/40 px-6 py-20 text-center">
           <h2 className="text-lg font-semibold text-ink">No takeoffs yet</h2>
           <p className="max-w-md text-sm text-ink/50">
@@ -267,19 +343,21 @@ export function EstimationFilesPage() {
           ) : null}
         </div>
       ) : (
-        <div className="table-scroll min-h-0 flex-1 overflow-auto rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+        <>
+        <div className="table-scroll relative min-h-0 flex-1 overflow-auto rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+          {loading ? <LoadingBar label="Loading estimation files" /> : null}
           <table className="min-w-[720px] w-full border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-surface">
               <tr className="border-b border-ink/[0.08] text-[10px] uppercase tracking-wide text-ink/40">
-                <th className="px-4 py-3 font-semibold">{fileSort.header("takeoff", "Takeoff")}</th>
-                <th className="px-3 py-3 font-semibold">{fileSort.header("estimate", "Estimate #")}</th>
-                <th className="px-3 py-3 font-semibold">{fileSort.header("bidName", "Bid name")}</th>
-                <th className="px-3 py-3 font-semibold">{fileSort.header("rows", "Rows")}</th>
-                <th className="px-3 py-3 font-semibold">{fileSort.header("updated", "Updated")}</th>
+                <th className="px-4 py-3 font-semibold">{header("takeoff", "Takeoff")}</th>
+                <th className="px-3 py-3 font-semibold">{header("estimate", "Estimate #")}</th>
+                <th className="px-3 py-3 font-semibold">{header("bidName", "Bid name")}</th>
+                <th className="px-3 py-3 font-semibold">{header("rows", "Rows")}</th>
+                <th className="px-3 py-3 font-semibold">{header("updated", "Updated")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/[0.05]">
-              {fileSort.sorted.map((t) => (
+              {rows.map((t) => (
                 <tr
                   key={t.bidId}
                   className="cursor-pointer hover:bg-canvas/60"
@@ -307,6 +385,10 @@ export function EstimationFilesPage() {
             </tbody>
           </table>
         </div>
+        {data ? (
+          <ListPager page={data.page} pageSize={data.pageSize} total={data.total} noun="takeoff" busy={loading} onPage={setPage} />
+        ) : null}
+        </>
       )}
 
       <p className="text-center text-xs text-ink/40">
@@ -319,14 +401,7 @@ export function EstimationFilesPage() {
       {pendingFiles ? (
         <MikeUploadDialog
           files={pendingFiles}
-          bids={bids.map((b) => ({
-            id: b.id,
-            estimateNumber: b.estimateNumber,
-            bidName: b.bidName,
-            existingTakeoffName: takeoffs.find(
-              (t) => String(t.bidId) === String(b.id)
-            )?.fileName,
-          }))}
+          bids={dialogBids}
           defaultJobId={null}
           onCancel={() => {
             setPendingFiles(null);

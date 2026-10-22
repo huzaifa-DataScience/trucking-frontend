@@ -5,7 +5,7 @@ import Link from "next/link";
 import { LinkPending } from "@/components/ui/LinkPending";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { buttonClasses } from "@/components/ui/Button";
-import { ClearstorySwaggerTable } from "@/components/clearstory/ClearstorySwaggerTable";
+import { ClearstorySwaggerTable, type SortState } from "@/components/clearstory/ClearstorySwaggerTable";
 import { useClearstoryTable } from "@/hooks/useClearstoryTable";
 
 export default function ClearstoryCorTablePage() {
@@ -18,10 +18,10 @@ export default function ClearstoryCorTablePage() {
     return () => clearTimeout(t);
   }, [projectIdInput]);
 
-  const { rows, total, page, pageSize, setPage, setPageSize, isLoading, error, refetch } = useClearstoryTable(
-    "cors",
-    { projectId }
-  );
+  // Column sort runs on the server across every COR (a new sort goes back to page 1).
+  const [sort, setSort] = useState<SortState>(null);
+  const { rows, total, page, pageSize, setPage, setPageSize, isLoading, error, refetch, sortedOnServer, sortableKeys } =
+    useClearstoryTable("cors", { projectId, sort: sort?.key, sortDir: sort?.dir });
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 ui-animate-in [--radius:10px] [--radius-md:8px]">
@@ -66,6 +66,7 @@ export default function ClearstoryCorTablePage() {
         onPageSizeChange={setPageSize}
         loading={isLoading}
         error={error}
+        serverSort={{ sort, onSortChange: setSort, sortableKeys, applied: sortedOnServer }}
         headerAside={
           <Link
             href="/clearstory/projects"

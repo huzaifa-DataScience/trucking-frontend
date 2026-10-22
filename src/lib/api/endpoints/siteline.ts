@@ -3,7 +3,7 @@
  * Frontend uses ONLY the REST endpoints exposed by our backend (no direct GraphQL).
  */
 
-import { get, getPublic } from "../client";
+import { ApiError, get, getPublic } from "../client";
 
 // --- Core types (aligned with FRONTEND_SITELINE.md) ---
 
@@ -459,4 +459,197 @@ export interface SitelineEntityConfigRow {
 
 export async function getSitelineEntityConfig(): Promise<SitelineEntityConfigRow[]> {
   return get<SitelineEntityConfigRow[]>("siteline/entity-config");
+}
+
+// --- Billing tables, paged on the server (A/R aging + Past due) ---
+
+/** Page / sort for the Billing tables. `all` = every row (CSV export); `nav` = only id + name (project prev / next). */
+export interface BillingPageQuery {
+  entityIds: readonly number[];
+  page?: number;
+  pageSize?: number;
+  sortBy?: string | null;
+  sortDir?: "asc" | "desc";
+  all?: boolean;
+  nav?: boolean;
+}
+
+export interface AgingReportPage extends AgingReportResponse {
+  /** Rows on this page (every row with `all`). */
+  rows: AgingReportRow[];
+  /** Rows matching the filters, all pages. */
+  total: number;
+  page: number;
+  pageSize: number;
+  summary: {
+    /** Projects with an amount in each bucket (all pages). */
+    bucketProjectCounts: Record<AgingBucket, number>;
+    byCompany: { entityId: number; total: number; over90: number; contracts: number }[];
+  };
+}
+
+export interface AgingOverduePage extends AgingOverdueResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  summary: {
+    netTotal: number;
+    count: number;
+    /** Distinct company + contract pairs. */
+    contracts: number;
+    biggest: AgingOverdueItem | null;
+    byCompany: { entityId: number; older: number; withOlder: number; biggest: AgingOverdueItem | null }[];
+  };
+}
+
+function billingPageParams(filters: SitelineAgingFilters, q: BillingPageQuery) {
+  return {
+    entityIds: q.entityIds.join(","),
+    search: filters.search,
+    overdueOnly: filters.overdueOnly ? "true" : undefined,
+    minDaysPastDue: filters.minDaysPastDue,
+    maxDaysPastDue: filters.maxDaysPastDue,
+    minNetDollars: filters.minNetDollars,
+    maxNetDollars: filters.maxNetDollars,
+    includeStatuses: filters.includeStatuses,
+    excludeStatuses: filters.excludeStatuses,
+    page: q.all ? undefined : q.page,
+    pageSize: q.all ? undefined : q.pageSize,
+    sortBy: q.sortBy || undefined,
+    sortDir: q.sortBy ? q.sortDir : undefined,
+    all: q.all ? "1" : undefined,
+    fields: q.all && q.nav ? "nav" : undefined,
+  };
+}
+
+/** A/R aging table: one page for one or more companies, plus totals / summary for every matching row. */
+export async function getSitelineAgingReportPage(
+  filters: SitelineAgingFilters,
+  q: BillingPageQuery
+): Promise<AgingReportPage | SitelineError> {
+  try {
+    return await get<AgingReportPage | SitelineError>("siteline/aging-report/page", billingPageParams(filters, q));
+  } catch (e) {
+    if (isMissingRoute(e)) return agingReportPageFallback(filters, q);
+    throw e;
+  }
+}
+
+/** Past due table: one page for one or more companies, plus a summary of every matching item. */
+export async function getSitelineAgingOverduePage(
+  filters: SitelineAgingFilters,
+  q: BillingPageQuery
+): Promise<AgingOverduePage | SitelineError> {
+  try {
+    return await get<AgingOverduePage | SitelineError>("siteline/aging-overdue/page", {
+      ...billingPageParams(filters, q),
+      minDaysPastDue: filters.minDaysPastDue ?? 51,
+    });
+  } catch (e) {
+    if (isMissingRoute(e)) return agingOverduePageFallback(filters, q);
+    throw e;
+  }
+}
+
+// --- Fallback for a backend without the paged routes (404): the old per-company calls, merged, sorted
+// and paged here with the same rules as the server, so the page works the same either way. ---
+
+const isMissingRoute = (e: unknown) => e instanceof ApiError && e.status === 404;
+
+/** Same order as the server / the old table sort: blanks last, numbers numerically, text with natural numbers. */
+function compareBillingValues(a: unknown, b: unknown, dir: "asc" | "desc"): number {
+  const mul = dir === "asc" ? 1 : -1;
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  if (typeof a === "number" && typeof b === "number") return (a - b) * mul;
+  return String(a).localeCompare(String(b), undefined, { numeric: true }) * mul;
+}
+
+function pageOfRows<T>(rows: T[], q: BillingPageQuery, valueOf: (row: T, key: string) => unknown) {
+  const sorted = q.sortBy
+    ? [...rows].sort((x, y) => compareBillingValues(valueOf(x, q.sortBy!), valueOf(y, q.sortBy!), q.sortDir ?? "asc"))
+    : rows;
+  if (q.all) return { rows: sorted, total: sorted.length, page: 1, pageSize: Math.max(sorted.length, 1) };
+  const pageSize = Math.min(200, Math.max(1, q.pageSize ?? 50));
+  const pages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const page = Math.min(pages, Math.max(1, q.page ?? 1));
+  return { rows: sorted.slice((page - 1) * pageSize, page * pageSize), total: sorted.length, page, pageSize };
+}
+
+async function agingReportPageFallback(
+  filters: SitelineAgingFilters,
+  q: BillingPageQuery
+): Promise<AgingReportPage | SitelineError> {
+  const parts = await Promise.all(
+    q.entityIds.map((entityId) => getSitelineAgingReport({ ...filters, entityId }).then((r) => ({ entityId, r })))
+  );
+  const failed = parts.find((p) => "error" in p.r || (p.r as SitelineError).configured === false);
+  if (failed) return failed.r as SitelineError;
+  const reports = parts.map((p) => ({ entityId: p.entityId, report: p.r as AgingReportResponse }));
+  const rows = reports.flatMap((p) => p.report.rows.map((r) => ({ ...r, entityId: p.entityId })));
+  const totals = { ...reports[0].report.totals };
+  for (const key of Object.keys(totals) as (keyof AgingReportTotals)[]) {
+    totals[key] = reports.reduce((sum, p) => sum + (Number(p.report.totals[key]) || 0), 0);
+  }
+  const bucketProjectCounts = Object.fromEntries(
+    AGING_BUCKETS.map((b) => [b, rows.filter((r) => (r.buckets[b] ?? 0) > 0).length])
+  ) as Record<AgingBucket, number>;
+  const byCompany = q.entityIds.map((entityId) => {
+    const mine = rows.filter((r) => r.entityId === entityId);
+    return {
+      entityId,
+      total: mine.reduce((s, r) => s + (r.projectTotal || 0), 0),
+      over90: mine.reduce((s, r) => s + (r.buckets["91-120 Days"] ?? 0) + (r.buckets[">120 Days"] ?? 0), 0),
+      contracts: mine.length,
+    };
+  });
+  const paged = pageOfRows(rows, q, (r, key) =>
+    key.startsWith("bucket:") ? r.buckets[key.slice(7) as AgingBucket] : (r as unknown as Record<string, unknown>)[key]
+  );
+  return {
+    ...reports[0].report,
+    ...paged,
+    rows: q.all && q.nav ? paged.rows.map((r) => ({ contractId: r.contractId, projectName: r.projectName }) as AgingReportRow) : paged.rows,
+    totals,
+    summary: { bucketProjectCounts, byCompany },
+  };
+}
+
+async function agingOverduePageFallback(
+  filters: SitelineAgingFilters,
+  q: BillingPageQuery
+): Promise<AgingOverduePage | SitelineError> {
+  const parts = await Promise.all(
+    q.entityIds.map((entityId) =>
+      getSitelineAgingOverdue({ ...filters, entityId, minDaysPastDue: filters.minDaysPastDue ?? 51 }).then((r) => ({ entityId, r }))
+    )
+  );
+  const failed = parts.find((p) => "error" in p.r || (p.r as SitelineError).configured === false);
+  if (failed) return failed.r as SitelineError;
+  const items = parts.flatMap((p) => (p.r as AgingOverdueResponse).items.map((it) => ({ ...it, entityId: p.entityId })));
+  const biggestOf = (list: AgingOverdueItem[]) =>
+    list.reduce<AgingOverdueItem | null>((best, it) => (!best || (it.netDollars || 0) > (best.netDollars || 0) ? it : best), null);
+  const paged = pageOfRows(items, q, (it, key) => (it as unknown as Record<string, unknown>)[key]);
+  return {
+    items: q.all && q.nav ? paged.rows.map((it) => ({ contractId: it.contractId, projectName: it.projectName }) as AgingOverdueItem) : paged.rows,
+    total: paged.total,
+    page: paged.page,
+    pageSize: paged.pageSize,
+    summary: {
+      netTotal: items.reduce((s, it) => s + (it.netDollars || 0), 0),
+      count: items.length,
+      contracts: new Set(items.map((it) => `${it.entityId}:${it.contractId}`)).size,
+      biggest: biggestOf(items),
+      byCompany: q.entityIds.map((entityId) => {
+        const late = items.filter((it) => it.entityId === entityId);
+        return {
+          entityId,
+          older: late.reduce((s, it) => s + (it.netDollars || 0), 0),
+          withOlder: new Set(late.map((it) => it.contractId)).size,
+          biggest: biggestOf(late),
+        };
+      }),
+    },
+  };
 }

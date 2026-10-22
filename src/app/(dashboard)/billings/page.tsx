@@ -14,8 +14,8 @@ import {
 import {
   getSitelinePaginatedContracts,
   getSitelinePaginatedPayApps,
-  getSitelineAgingReport,
-  getSitelineAgingOverdue,
+  getSitelineAgingReportPage,
+  getSitelineAgingOverduePage,
   getSitelineEntityConfig,
 } from "@/lib/api/endpoints/siteline";
 import type {
@@ -27,7 +27,9 @@ import type {
   SitelinePayApp,
   SitelineError,
   AgingReportResponse,
-  AgingOverdueResponse,
+  AgingReportPage,
+  AgingOverduePage,
+  AgingReportRow,
   AgingOverdueItem,
   AgingBucket,
   SitelineAgingFilters,
@@ -47,6 +49,7 @@ import {
   describeBillingFilters,
   loadBillingView,
   saveBillingNav,
+  billingNavItems,
   type BillingListKind,
 } from "@/lib/billing-nav";
 import {
@@ -59,6 +62,8 @@ import {
 import { SortedOptions } from "@/components/ui/SortedOptions";
 import { useColumnOrder } from "@/hooks/useColumnOrder";
 import { ColumnPickerButton } from "@/components/clearstory/ClearstorySwaggerTable";
+import { BillingTablePager } from "@/components/billings/BillingTablePager";
+import { LoadingBar } from "@/components/ui/LoadingBar";
 const formatCurrency = (value: number | undefined) =>
   value != null
     ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value)
@@ -151,15 +156,6 @@ function toggleSort(current: SortState, key: string): SortState {
   return { by: key, dir: current.dir === "asc" ? "desc" : "asc" };
 }
 
-function compareValues(a: unknown, b: unknown, dir: SortDir): number {
-  const mul = dir === "asc" ? 1 : -1;
-  if (a == null && b == null) return 0;
-  if (a == null) return 1;
-  if (b == null) return -1;
-  if (typeof a === "number" && typeof b === "number") return (a - b) * mul;
-  return String(a).localeCompare(String(b), undefined, { numeric: true }) * mul;
-}
-
 function BillingSortableTh({
   label,
   sortKey,
@@ -224,19 +220,6 @@ const ALL_ENTITY_IDS = [1, 2, 3] as const;
 const COMPANY_SHORT: Record<number, string> = { 1: "GOEL", 2: "GOEL DC", 3: "DCB" };
 
 /** Sum several companies' aging reports into one (rows tagged with their company). */
-function mergeAgingReports(parts: { entityId: number; report: AgingReportResponse }[]): AgingReportResponse {
-  const [first] = parts;
-  const totals = { ...first.report.totals };
-  for (const key of Object.keys(totals) as (keyof typeof totals)[]) {
-    totals[key] = parts.reduce((sum, p) => sum + (Number(p.report.totals[key]) || 0), 0);
-  }
-  return {
-    ...first.report,
-    rows: parts.flatMap((p) => p.report.rows.map((r) => ({ ...r, entityId: p.entityId }))),
-    totals,
-  };
-}
-
 function isSitelineError(value: unknown): value is SitelineError {
   return (
     value !== null &&
@@ -247,6 +230,13 @@ function isSitelineError(value: unknown): value is SitelineError {
 
 /** Set to true to show the "Contracts & Pay apps" tab again. See ENABLE_SIGNIN.md § Billings. */
 const CONTRACTS_PAYAPPS_TAB_ENABLED = false;
+
+/** Rows per page in the A/R aging and Past due tables. */
+const BILLING_PAGE_SIZE = 50;
+
+/** What a table's page belongs to: a new company, filters, search or sort starts again at page 1. */
+const billingPageKey = (company: string | null | undefined, filters: SitelineAgingFilters, sort: { by: string | null; dir: string }) =>
+  JSON.stringify([company ?? null, filters, sort.by, sort.dir]);
 
 export default function BillingsPage() {
   const { status, error: statusError, loading: statusLoading, refetch: refetchStatus } = useSitelineStatus();
@@ -314,7 +304,7 @@ export default function BillingsPage() {
     CONTRACTS_PAYAPPS_TAB_ENABLED ? "contracts" : "aging"
   );
 
-  const [agingReport, setAgingReport] = useState<AgingReportResponse | null>(null);
+  const [agingReport, setAgingReport] = useState<AgingReportPage | null>(null);
   const [agingLoading, setAgingLoading] = useState(false);
   const [agingError, setAgingError] = useState<string | null>(null);
   const [agingFilters, setAgingFilters] = useState<SitelineAgingFilters>(() => ({
@@ -323,7 +313,7 @@ export default function BillingsPage() {
   }));
   const agingFiltersRef = useRef(agingFilters);
 
-  const [agingOverdue, setAgingOverdue] = useState<AgingOverdueResponse | null>(null);
+  const [agingOverdue, setAgingOverdue] = useState<AgingOverduePage | null>(null);
   const [agingOverdueLoading, setAgingOverdueLoading] = useState(false);
   const [agingOverdueError, setAgingOverdueError] = useState<string | null>(null);
   const [overdueFilters, setOverdueFilters] = useState<SitelineAgingFilters>(() => ({
@@ -423,82 +413,100 @@ export default function BillingsPage() {
     [allCompanies, sitelineEntityId]
   );
 
+  // Both tables are paged and sorted on the server. Changing the page or sort changes the loaders below,
+  // which reloads through the load effect. A new company, filters, search or sort starts again at page 1.
+  const [agingSort, setAgingSort] = useState<SortState>({ by: null, dir: "asc" });
+  const onAgingSort = useCallback((key: string) => setAgingSort((s) => toggleSort(s, key)), []);
+  const [overdueSort, setOverdueSort] = useState<SortState>({ by: null, dir: "asc" });
+  const onOverdueSort = useCallback((key: string) => setOverdueSort((s) => toggleSort(s, key)), []);
+  const [agingPageState, setAgingPageState] = useState({ key: "", page: 1 });
+  const [overduePageState, setOverduePageState] = useState({ key: "", page: 1 });
+  const agingPageKey = billingPageKey(companyId, agingFilters, agingSort);
+  const overduePageKey = billingPageKey(companyId, overdueFilters, overdueSort);
+  const setAgingPage = (page: number) => setAgingPageState({ key: agingPageKey, page });
+  const setOverduePage = (page: number) => setOverduePageState({ key: overduePageKey, page });
+
+  // Several loads can overlap (tab open, company switch, search). Only the newest may update the
+  // table and the loading flag, so an older reply can't turn the bar off early or bring back old rows.
+  const agingRequestSeq = useRef(0);
+  const overdueRequestSeq = useRef(0);
+
   const loadAgingReport = useCallback(async (filtersOverride?: SitelineAgingFilters) => {
     if (!configured) return;
+    const seq = ++agingRequestSeq.current;
     if (entityIds == null) {
       setAgingReport(null);
       setAgingError("Select GOEL, GOEL DC, or DCB in the header to view Siteline billing.");
+      setAgingLoading(false); // any older load still running is now ignored
       return;
     }
     setAgingLoading(true);
     setAgingError(null);
     try {
       const filters = filtersOverride ?? agingFiltersRef.current;
-      const results = await Promise.all(
-        entityIds.map((entityId) => getSitelineAgingReport({ ...filters, entityId }).then((r) => ({ entityId, r })))
-      );
-      const failed = results.find((x) => isSitelineError(x.r));
-      if (failed) {
-        const e = failed.r as SitelineError;
+      // The page the user picked, unless the company / filters / sort changed since (then page 1).
+      const page = agingPageState.key === billingPageKey(companyId, filters, agingSort) ? agingPageState.page : 1;
+      const result = await getSitelineAgingReportPage(filters, {
+        entityIds,
+        page,
+        pageSize: BILLING_PAGE_SIZE,
+        sortBy: agingSort.by,
+        sortDir: agingSort.dir,
+      });
+      if (seq !== agingRequestSeq.current) return; // a newer load is running
+      if (isSitelineError(result)) {
         setAgingReport(null);
-        setAgingError(
-          `${entityIds.length > 1 ? `${COMPANY_SHORT[failed.entityId]}: ` : ""}${e.error ?? e.message ?? "Failed to load aging report"}`
-        );
+        setAgingError(result.error ?? result.message ?? "Failed to load aging report");
       } else {
-        setAgingReport(
-          mergeAgingReports(results.map((x) => ({ entityId: x.entityId, report: x.r as AgingReportResponse })))
-        );
+        setAgingReport(result);
       }
     } catch (e) {
+      if (seq !== agingRequestSeq.current) return;
       setAgingReport(null);
       setAgingError(e instanceof Error ? e.message : "Unknown error");
     } finally {
-      setAgingLoading(false);
+      if (seq === agingRequestSeq.current) setAgingLoading(false);
     }
-  }, [configured, entityIds]);
+  }, [configured, entityIds, companyId, agingSort, agingPageState]);
 
   const loadAgingOverdue = useCallback(async (filtersOverride?: SitelineAgingFilters) => {
     if (!configured) return;
+    const seq = ++overdueRequestSeq.current;
     if (entityIds == null) {
       setAgingOverdue(null);
       setAgingOverdueError("Select GOEL, GOEL DC, or DCB in the header to view Siteline billing.");
+      setAgingOverdueLoading(false); // any older load still running is now ignored
       return;
     }
     setAgingOverdueLoading(true);
     setAgingOverdueError(null);
     try {
       const base = filtersOverride ?? overdueFiltersRef.current;
-      const results = await Promise.all(
-        entityIds.map((entityId) =>
-          getSitelineAgingOverdue({ ...base, entityId, minDaysPastDue: base.minDaysPastDue ?? 51 }).then((r) => ({
-            entityId,
-            r,
-          }))
-        )
-      );
-      const failed = results.find((x) => isSitelineError(x.r));
-      if (failed) {
-        const e = failed.r as SitelineError;
+      const page = overduePageState.key === billingPageKey(companyId, base, overdueSort) ? overduePageState.page : 1;
+      const result = await getSitelineAgingOverduePage(base, {
+        entityIds,
+        page,
+        pageSize: BILLING_PAGE_SIZE,
+        sortBy: overdueSort.by,
+        sortDir: overdueSort.dir,
+      });
+      if (seq !== overdueRequestSeq.current) return; // a newer load is running
+      if (isSitelineError(result)) {
         setAgingOverdue(null);
-        setAgingOverdueError(
-          `${entityIds.length > 1 ? `${COMPANY_SHORT[failed.entityId]}: ` : ""}${e.error ?? e.message ?? "Failed to load overdue aging items"}`
-        );
+        setAgingOverdueError(result.error ?? result.message ?? "Failed to load overdue aging items");
       } else {
-        setAgingOverdue({
-          items: results.flatMap((x) =>
-            (x.r as AgingOverdueResponse).items.map((it) => ({ ...it, entityId: x.entityId }))
-          ),
-        });
+        setAgingOverdue(result);
       }
     } catch (e) {
+      if (seq !== overdueRequestSeq.current) return;
       setAgingOverdue(null);
       setAgingOverdueError(
         e instanceof Error ? e.message : "Unknown error loading overdue items"
       );
     } finally {
-      setAgingOverdueLoading(false);
+      if (seq === overdueRequestSeq.current) setAgingOverdueLoading(false);
     }
-  }, [configured, entityIds]);
+  }, [configured, entityIds, companyId, overdueSort, overduePageState]);
 
   const clearAgingFiltersAndReload = useCallback(async () => {
     setAgingFilters(defaultAgingFilters);
@@ -579,6 +587,11 @@ export default function BillingsPage() {
     setOverdueFilters(view.overdueFilters);
     setActiveTab(view.activeTab);
     pendingSortRestore.current = { aging: view.agingSort, overdue: view.overdueSort };
+    const restoredCompany = view.companyId !== undefined ? view.companyId : companyId;
+    setAgingPageState({ key: billingPageKey(restoredCompany, view.agingFilters, view.agingSort), page: view.agingPage ?? 1 });
+    setOverduePageState({ key: billingPageKey(restoredCompany, view.overdueFilters, view.overdueSort), page: view.overduePage ?? 1 });
+    // Runs once on mount; companyId is only the fallback for views saved before it was stored.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const pendingSortRestore = useRef<{ aging: SortState; overdue: SortState } | null>(null);
 
@@ -610,15 +623,12 @@ export default function BillingsPage() {
     loadAgingOverdue();
   }, [configured, companyId, loadAgingOverdue]);
 
-  const pastDueTotal = useMemo(
-    () => agingOverdue?.items.reduce((sum, item) => sum + (item.netDollars || 0), 0) ?? 0,
-    [agingOverdue]
-  );
-  const pastDueCount = agingOverdue?.items.length ?? 0;
-  const pastDueContracts = useMemo(
-    () => new Set((agingOverdue?.items ?? []).map((it) => `${it.entityId ?? ""}:${it.contractId}`)).size,
-    [agingOverdue]
-  );
+  // Cards, chart, tab counts and "By company" come from the server's summary of every matching row
+  // (the tables only hold one page).
+  const pastDueTotal = agingOverdue?.summary.netTotal ?? 0;
+  const pastDueCount = agingOverdue?.summary.count ?? 0;
+  const pastDueContracts = agingOverdue?.summary.contracts ?? 0;
+  const agingRowCount = agingReport?.total ?? 0;
 
   // Summary row + chart come from the A/R aging report (same buckets the table shows).
   const agingTotal = agingReport?.totals.projectTotal ?? 0;
@@ -630,21 +640,14 @@ export default function BillingsPage() {
           key: bucket,
           label: SITELINE_AGING_DISPLAY_MAP[bucket] ?? bucket,
           amount: agingReport?.totals[key] ?? 0,
-          projects: (agingReport?.rows ?? []).filter((r) => (r.buckets[key] ?? 0) > 0).length,
+          projects: agingReport?.summary.bucketProjectCounts[key] ?? 0,
         };
       }),
     [agingDisplayBuckets, agingReport]
   );
   const over90Total = (agingReport?.totals["91-120 Days"] ?? 0) + (agingReport?.totals[">120 Days"] ?? 0);
   // Contract with the most money billed over 30 days ago (overdue list has one row per contract).
-  const biggestOlder = useMemo(
-    () =>
-      (agingOverdue?.items ?? []).reduce<AgingOverdueItem | null>(
-        (best, it) => (!best || (it.netDollars || 0) > (best.netDollars || 0) ? it : best),
-        null
-      ),
-    [agingOverdue]
-  );
+  const biggestOlder = agingOverdue?.summary.biggest ?? null;
   const agingFiltered = Boolean(
     agingFilters.search?.trim() ||
       agingFilters.overdueOnly ||
@@ -655,26 +658,6 @@ export default function BillingsPage() {
       agingFilters.includeStatuses
   );
 
-  const [agingSort, setAgingSort] = useState<SortState>({ by: null, dir: "asc" });
-  const onAgingSort = useCallback((key: string) => setAgingSort((s) => toggleSort(s, key)), []);
-  const sortedAgingRows = useMemo(() => {
-    const rows = agingReport?.rows ?? [];
-    if (!agingSort.by) return rows;
-    const key = agingSort.by;
-    const copy = [...rows];
-    copy.sort((a, b) => {
-      const va = key.startsWith("bucket:")
-        ? a.buckets[key.slice(7) as keyof typeof a.buckets]
-        : (a as unknown as Record<string, unknown>)[key];
-      const vb = key.startsWith("bucket:")
-        ? b.buckets[key.slice(7) as keyof typeof b.buckets]
-        : (b as unknown as Record<string, unknown>)[key];
-      return compareValues(va, vb, agingSort.dir);
-    });
-    return copy;
-  }, [agingReport, agingSort]);
-
-  const [overdueSort, setOverdueSort] = useState<SortState>({ by: null, dir: "asc" });
   // User-chosen column order per table (saved in this browser). Defaults are the built-in order.
   const agingDefaultOrder = useMemo(
     () => ["project", "company", "pm", "invoiceNumber", "invoiceDate", ...agingDisplayBuckets.map((b) => `bucket:${b}`), "projectTotal"],
@@ -682,21 +665,12 @@ export default function BillingsPage() {
   );
   const agingColOrder = useColumnOrder("billing.columns.aging", agingDefaultOrder);
   const overdueColOrder = useColumnOrder("billing.columns.overdue", OVERDUE_DEFAULT_ORDER);
-  const onOverdueSort = useCallback((key: string) => setOverdueSort((s) => toggleSort(s, key)), []);
-  const sortedOverdueItems = useMemo(() => {
-    const items = agingOverdue?.items ?? [];
-    if (!overdueSort.by) return items;
-    const key = overdueSort.by;
-    const copy = [...items];
-    copy.sort((a, b) =>
-      compareValues(
-        (a as unknown as Record<string, unknown>)[key],
-        (b as unknown as Record<string, unknown>)[key],
-        overdueSort.dir
-      )
-    );
-    return copy;
-  }, [agingOverdue, overdueSort]);
+  // The rows on screen are the server's page, already sorted; page numbers come back with them.
+  const pagedAgingRows = agingReport?.rows ?? [];
+  const agingPage = agingReport?.page ?? 1;
+  const pagedOverdueItems = agingOverdue?.items ?? [];
+  const overduePage = agingOverdue?.page ?? 1;
+  const overdueRowCount = agingOverdue?.total ?? 0;
 
   useEffect(() => {
     const pending = pendingSortRestore.current;
@@ -707,26 +681,23 @@ export default function BillingsPage() {
   }, []);
 
   /** Before opening a project: remember this list (order + filters) for the project page's breadcrumb, Back and prev / next. */
+  // The table holds one page, so this saves that page right away plus the query behind it; the project
+  // page then fetches the whole ordered list (ids + names only) for prev / next.
   const rememberList = (list: BillingListKind) => {
-    const seen = new Set<string>();
-    const items: { id: string; label: string }[] = [];
-    const add = (id: string | undefined | null, name: string | null | undefined) => {
-      if (!id || seen.has(id)) return;
-      seen.add(id);
-      const sp = splitProjectName(name ?? id);
-      items.push({ id, label: `${sp.number ? `${sp.number} · ` : ""}${sp.name}` });
-    };
-    if (list === "aging") sortedAgingRows.forEach((r) => add(r.contractId, r.projectName));
-    else sortedOverdueItems.forEach((it) => add(it.contractId, it.projectName));
+    const filters = list === "aging" ? agingFilters : overdueFilters;
+    const sort = list === "aging" ? agingSort : overdueSort;
     saveBillingNav(
       {
         list,
         listLabel: list === "aging" ? "A/R aging" : "Past due",
         companyId,
-        chips: describeBillingFilters(list, list === "aging" ? agingFilters : overdueFilters),
-        items,
+        chips: describeBillingFilters(list, filters),
+        items: billingNavItems(list === "aging" ? pagedAgingRows : pagedOverdueItems),
+        query: entityIds ? { entityIds, filters, sortBy: sort.by, sortDir: sort.dir } : undefined,
+        offset: ((list === "aging" ? agingPage : overduePage) - 1) * BILLING_PAGE_SIZE,
+        total: list === "aging" ? agingRowCount : overdueRowCount,
       },
-      { activeTab, agingFilters, overdueFilters, agingSort, overdueSort, companyId }
+      { activeTab, agingFilters, overdueFilters, agingSort, overdueSort, companyId, agingPage, overduePage }
     );
   };
 
@@ -738,7 +709,32 @@ export default function BillingsPage() {
   // overdue list, or the Clearstory gap check. Feeding statusLoading into the tab
   // skeletons too (below) means the page goes straight from first paint to shape-matched
   // skeletons to content, with no separate generic loading flash in between.
-  const exportCurrentTab = () => {
+  // CSV holds every matching row in the table's order, so it is fetched from the server when clicked.
+  const [exporting, setExporting] = useState(false);
+  const exportCurrentTab = async () => {
+    if (!entityIds) return;
+    setExporting(true);
+    const query = { entityIds, all: true } as const;
+    let allAgingRows: AgingReportRow[] = [];
+    let allOverdueItems: AgingOverdueItem[] = [];
+    try {
+      if (activeTab === "aging") {
+        const res = await getSitelineAgingReportPage(agingFilters, { ...query, sortBy: agingSort.by, sortDir: agingSort.dir });
+        if (isSitelineError(res)) throw new Error(res.error ?? res.message ?? "Export failed");
+        allAgingRows = res.rows;
+      } else {
+        const res = await getSitelineAgingOverduePage(overdueFilters, { ...query, sortBy: overdueSort.by, sortDir: overdueSort.dir });
+        if (isSitelineError(res)) throw new Error(res.error ?? res.message ?? "Export failed");
+        allOverdueItems = res.items;
+      }
+    } catch (e) {
+      const message = `Export failed: ${e instanceof Error ? e.message : "unknown error"}`;
+      if (activeTab === "aging") setAgingError(message);
+      else setAgingOverdueError(message);
+      setExporting(false);
+      return;
+    }
+    setExporting(false);
     const esc = (v: unknown) => {
       const t = v == null ? "" : String(v);
       return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
@@ -748,7 +744,7 @@ export default function BillingsPage() {
     let lines: unknown[][];
     if (activeTab === "aging") {
       header = ["Project", ...(allCompanies ? ["Company"] : []), "PM", ...agingDisplayBuckets.map((b) => SITELINE_AGING_DISPLAY_MAP[b] ?? b), "Project total"];
-      lines = sortedAgingRows.map((r) => [
+      lines = allAgingRows.map((r) => [
         r.projectName,
         ...(allCompanies ? [company(r.entityId)] : []),
         r.leadPmName ?? "",
@@ -757,7 +753,7 @@ export default function BillingsPage() {
       ]);
     } else {
       header = ["Project", ...(allCompanies ? ["Company"] : []), "Project #", "PM", "Pay app #", "Due date", "Days past due", "Net amount", "Status"];
-      lines = sortedOverdueItems.map((it) => [
+      lines = allOverdueItems.map((it) => [
         it.projectName ?? "",
         ...(allCompanies ? [company(it.entityId)] : []),
         it.internalProjectNumber ?? it.projectNumber ?? "",
@@ -786,8 +782,12 @@ export default function BillingsPage() {
       ? `today, ${lastSync.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
       : lastSync.toLocaleDateString("en-US", { month: "short", day: "numeric" })
     : null;
-  const showAgingSkeleton = statusLoading || agingLoading;
-  const showOverdueSkeleton = statusLoading || agingOverdueLoading;
+  // Skeletons only until the first data arrives. Every page / sort change reloads (the summary comes with
+  // each page), so after that the cards, chart and tables keep their numbers and the table bar shows the reload.
+  const showAgingSkeleton = statusLoading || (agingLoading && !agingReport);
+  const showOverdueSkeleton = statusLoading || (agingOverdueLoading && !agingOverdue);
+  const agingTableSkeleton = showAgingSkeleton;
+  const overdueTableSkeleton = showOverdueSkeleton;
 
   // ---- Table columns: one definition per column (header + cell + totals) so the order is user-configurable. ----
   type AgingRow = AgingReportResponse["rows"][number];
@@ -1043,8 +1043,8 @@ export default function BillingsPage() {
           {configured ? (
             <button
               type="button"
-              onClick={exportCurrentTab}
-              disabled={activeTab === "aging" ? !agingReport?.rows.length : !agingOverdue?.items.length}
+              onClick={() => void exportCurrentTab()}
+              disabled={exporting || (activeTab === "aging" ? !agingRowCount : !overdueRowCount)}
               title={activeTab === "aging" ? "Download the projects table as CSV" : "Download the past-due list as CSV"}
               className="inline-flex h-[30px] items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-white px-3 text-[12.5px] font-medium text-ink-muted transition-colors hover:border-[#d1d5db] hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -1086,7 +1086,7 @@ export default function BillingsPage() {
                 {
                   label: "Total A/R",
                   value: showAgingSkeleton ? null : formatCurrency(agingTotal),
-                  note: agingReport ? `${agingReport.rows.length} contracts` : "",
+                  note: agingReport ? `${agingRowCount} contracts` : "",
                 },
                 {
                   label: "Billed over 30 days ago",
@@ -1097,10 +1097,10 @@ export default function BillingsPage() {
                 {
                   label: "Contracts with older A/R",
                   value: showOverdueSkeleton ? null : pastDueContracts.toLocaleString(),
-                  of: agingReport ? `of ${agingReport.rows.length}` : "",
+                  of: agingReport ? `of ${agingRowCount}` : "",
                   note:
-                    agingReport && agingReport.rows.length > 0
-                      ? `${((pastDueContracts / agingReport.rows.length) * 100).toFixed(1)}% of contracts`
+                    agingReport && agingRowCount > 0
+                      ? `${((pastDueContracts / agingRowCount) * 100).toFixed(1)}% of contracts`
                       : "",
                 },
                 {
@@ -1188,8 +1188,8 @@ export default function BillingsPage() {
             <BillingCompanyBreakdown
               entityIds={ALL_ENTITY_IDS}
               loading={showAgingSkeleton || showOverdueSkeleton}
-              rows={agingReport?.rows ?? []}
-              overdue={agingOverdue?.items ?? []}
+              agingByCompany={agingReport?.summary.byCompany ?? []}
+              overdueByCompany={agingOverdue?.summary.byCompany ?? []}
               onPick={(id) => setCompanyId(String(id))}
               selectedId={allCompanies ? null : sitelineEntityId ?? null}
               onShowAll={() => setCompanyId(null)}
@@ -1208,7 +1208,7 @@ export default function BillingsPage() {
               {(
                 [
                   ...(CONTRACTS_PAYAPPS_TAB_ENABLED ? [{ value: "contracts" as const, label: "Contracts & Pay apps", count: null }] : []),
-                  { value: "aging" as const, label: "A/R aging", count: agingReport ? agingReport.rows.length : null },
+                  { value: "aging" as const, label: "A/R aging", count: agingReport ? agingRowCount : null },
                   { value: "overdue" as const, label: "Past due", count: agingOverdue ? pastDueCount : null },
                 ]
               ).map((t) => {
@@ -1588,12 +1588,15 @@ export default function BillingsPage() {
                   </button>
                 </div>
               )}
-              {!showAgingSkeleton && !agingError && agingReport && agingReport.rows.length === 0 && (
+              {!agingTableSkeleton && !agingError && agingReport && agingRowCount === 0 && (
                 <p className="shrink-0 py-8 text-center text-sm text-ink-muted">
                   No aging data yet. Data syncs every 10 minutes.
                 </p>
               )}
-              {!agingError && (showAgingSkeleton || (agingReport && agingReport.rows.length > 0)) && (
+              {!agingError && (agingTableSkeleton || (agingReport && agingRowCount > 0)) && (
+                <>
+                {/* Zero-height anchor so the bar sits on the table's top edge and does not scroll with the rows. */}
+                <div className="relative h-0 shrink-0">{agingLoading && !agingTableSkeleton ? <LoadingBar label="Loading A/R aging" /> : null}</div>
                 <div className={BILLING_TABLE_FILL_SCROLL}>
                   <table className="w-full min-w-full border-collapse text-left">
                     <thead>
@@ -1612,7 +1615,7 @@ export default function BillingsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {showAgingSkeleton &&
+                      {agingTableSkeleton &&
                         Array.from({ length: 8 }, (_, i) => (
                           <tr key={`skeleton-${i}`} className="border-b border-[var(--border-subtle)] last:border-0">
                             {Array.from({ length: agingTableCols.length }, (_, j) => (
@@ -1622,10 +1625,10 @@ export default function BillingsPage() {
                             ))}
                           </tr>
                         ))}
-                      {!showAgingSkeleton &&
-                        sortedAgingRows.map((row, i) => (
+                      {!agingTableSkeleton &&
+                        pagedAgingRows.map((row, i) => (
                         <tr
-                          key={i}
+                          key={(agingPage - 1) * BILLING_PAGE_SIZE + i}
                           className="border-b border-[var(--border-subtle)] bg-white transition-colors last:border-0 even:bg-canvas/50 hover:bg-canvas"
                         >
                           {agingTableCols.map((c, ci) => (
@@ -1633,7 +1636,7 @@ export default function BillingsPage() {
                           ))}
                         </tr>
                       ))}
-                      {!showAgingSkeleton && agingReport && (
+                      {!agingTableSkeleton && agingReport && (
                         <tr className="border-t-2 border-[var(--border-subtle)] bg-canvas font-semibold">
                           {agingTableCols.map((c, ci) => (
                             <Fragment key={c.key}>
@@ -1655,7 +1658,11 @@ export default function BillingsPage() {
                     </tbody>
                   </table>
                 </div>
+                </>
               )}
+              {!agingError && !agingTableSkeleton && agingRowCount > 0 ? (
+                <BillingTablePager page={agingPage} pageSize={BILLING_PAGE_SIZE} total={agingRowCount} noun="project" busy={agingLoading} onPage={setAgingPage} />
+              ) : null}
             </div>
           )}
 
@@ -1734,16 +1741,18 @@ export default function BillingsPage() {
                   </button>
                 </div>
               )}
-              {!showOverdueSkeleton &&
+              {!overdueTableSkeleton &&
                 !agingOverdueError &&
                 agingOverdue &&
-                agingOverdue.items.length === 0 && (
+                overdueRowCount === 0 && (
                   <p className="shrink-0 py-8 text-center text-sm text-ink-muted">
                     No pay apps at least {overdueMinDays} days past due (with current filters).
                   </p>
                 )}
               {!agingOverdueError &&
-                (showOverdueSkeleton || (agingOverdue && agingOverdue.items.length > 0)) && (
+                (overdueTableSkeleton || (agingOverdue && overdueRowCount > 0)) && (
+                  <>
+                  <div className="relative h-0 shrink-0">{agingOverdueLoading && !overdueTableSkeleton ? <LoadingBar label="Loading past due" /> : null}</div>
                   <div className={BILLING_TABLE_FILL_SCROLL}>
                     <table className="w-full min-w-full border-collapse text-left">
                       <thead>
@@ -1761,7 +1770,7 @@ export default function BillingsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {showOverdueSkeleton &&
+                        {overdueTableSkeleton &&
                           Array.from({ length: 8 }, (_, i) => (
                             <tr key={`skeleton-${i}`} className="border-b border-[var(--border-subtle)] last:border-0">
                               {Array.from({ length: overdueTableCols.length }, (_, j) => (
@@ -1771,8 +1780,8 @@ export default function BillingsPage() {
                               ))}
                             </tr>
                           ))}
-                        {!showOverdueSkeleton &&
-                          sortedOverdueItems.map((item: AgingOverdueItem, idx: number) => (
+                        {!overdueTableSkeleton &&
+                          pagedOverdueItems.map((item: AgingOverdueItem, idx: number) => (
                             <tr
                               key={`${item.contractId}-${idx}`}
                               className="border-b border-[var(--border-subtle)] bg-white transition-colors last:border-0 even:bg-canvas/50 hover:bg-canvas"
@@ -1785,7 +1794,11 @@ export default function BillingsPage() {
                       </tbody>
                     </table>
                   </div>
+                  </>
                 )}
+              {!agingOverdueError && !overdueTableSkeleton && overdueRowCount > 0 ? (
+                <BillingTablePager page={overduePage} pageSize={BILLING_PAGE_SIZE} total={overdueRowCount} noun="pay app" busy={agingOverdueLoading} onPage={setOverduePage} />
+              ) : null}
             </div>
           )}
           </div>
