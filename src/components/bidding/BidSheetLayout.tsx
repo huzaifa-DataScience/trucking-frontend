@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { BidBoardStatusBadge } from "@/components/bidding/BidBoardStatusBadge";
 import { BidStatusBadge } from "@/components/bidding/BidStatusBadge";
 import { BidStageStrip } from "@/components/bidding/BidStageStrip";
 import {
@@ -321,6 +322,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
                     <h1 className="text-[15px] font-semibold tracking-tight text-ink">
                       {bid.estimateNumber}
                     </h1>
+                    <BidBoardStatusBadge status={bid.boardStatus} size="sm" />
                     <BidStatusBadge status={bid.status} size="sm" />
                   </div>
                   <p className="text-[13px] font-medium leading-snug text-ink">
@@ -437,6 +439,7 @@ export function BidSheetLayout({ children }: { children: ReactNode }) {
                 <h1 className="truncate text-[16px] font-semibold tracking-tight text-ink sm:text-[18px]">
                   {bid.estimateNumber}
                 </h1>
+                <BidBoardStatusBadge status={bid.boardStatus} size="sm" />
                 <BidStatusBadge status={bid.status} size="sm" />
               </div>
               <p className="mt-0.5 truncate text-[12.5px] font-medium text-ink sm:mt-1 sm:text-[13px]">
