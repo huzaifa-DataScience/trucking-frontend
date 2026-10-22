@@ -9,8 +9,9 @@ import {
   FINANCIALS_TABLE_STICKY_HEAD,
 } from "@/components/project-financials/tableScroll";
 
-import { useTableSort } from "@/hooks/useTableSort";
-import type { SortValue } from "@/lib/sort";
+import { SortHeader, useTableSort } from "@/hooks/useTableSort";
+import { LoadingBar } from "@/components/ui/LoadingBar";
+import type { SortDir, SortValue } from "@/lib/sort";
 type BookView = "overview" | "contract" | "billing" | "cost";
 
 const STATUS_LABEL: Record<JobStatus, string> = {
@@ -23,7 +24,19 @@ const STATUS_LABEL: Record<JobStatus, string> = {
 const shell =
   "overflow-hidden rounded-xl border border-white/70 bg-white/55 shadow-[0_6px_16px_rgba(91,173,232,0.08)] backdrop-blur-md";
 
-export function JobBookTable({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boolean }) {
+export function JobBookTable({
+  jobs,
+  hideCost,
+  serverSort,
+  loading = false,
+}: {
+  jobs: JobRow[];
+  hideCost: boolean;
+  /** A new page / sort is loading: a bar runs along the top of the table. */
+  loading?: boolean;
+  /** Paged screens: rows arrive sorted from the server; header clicks go to `onSort`. Omit to sort here. */
+  serverSort?: { sort: { key: string; dir: SortDir } | null; onSort: (key: string) => void };
+}) {
   const [view, setView] = useState<BookView>("overview");
   const views: { id: BookView; label: string }[] = [
     { id: "overview", label: "Overview" },
@@ -49,10 +62,11 @@ export function JobBookTable({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boo
         ))}
       </div>
 
-      <div className={shell}>
+      <div className={`relative ${shell}`}>
+        {loading ? <LoadingBar label="Loading jobs" /> : null}
         <div className={FINANCIALS_TABLE_SCROLL}>
           <div
-            className={`hidden grid-cols-[minmax(16rem,1.5fr)_11rem_11rem_10rem_10rem] gap-3 border-b border-[rgba(91,173,232,0.22)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-[#333333] lg:grid ${FINANCIALS_TABLE_STICKY_HEAD}`}
+            className={`hidden min-w-[63rem] grid-cols-[minmax(16rem,1.5fr)_11rem_11rem_10rem_10rem] gap-3 border-b border-[rgba(91,173,232,0.22)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-[#333333] lg:grid ${FINANCIALS_TABLE_STICKY_HEAD}`}
           >
             <span>Job</span>
             {view === "overview" ? (
@@ -88,14 +102,15 @@ export function JobBookTable({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boo
               </>
             ) : null}
           </div>
-          <ul>
+          {/* Same minimum width as the header (the columns need 63rem), so rows, row colours and dividers span every column. */}
+          <ul className="lg:min-w-[63rem]">
             {jobs.map((job) => (
               <JobLine key={job.jobNumber} job={job} view={view} hideCost={hideCost} />
             ))}
           </ul>
         </div>
       </div>
-      <FullSheet jobs={jobs} hideCost={hideCost} />
+      <FullSheet jobs={jobs} hideCost={hideCost} serverSort={serverSort} loading={loading} />
     </div>
   );
 }
@@ -211,7 +226,19 @@ function ReconChips({ alerts }: { alerts: JobRecon["alerts"] }) {
   );
 }
 
-function FullSheet({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boolean }) {
+function FullSheet({
+  jobs,
+  hideCost,
+  serverSort,
+  loading = false,
+}: {
+  jobs: JobRow[];
+  hideCost: boolean;
+  /** A new page / sort is loading: a bar runs along the top of the table. */
+  loading?: boolean;
+  /** Paged screens: rows arrive sorted from the server; header clicks go to `onSort`. Omit to sort here. */
+  serverSort?: { sort: { key: string; dir: SortDir } | null; onSort: (key: string) => void };
+}) {
   // Header label → value the column sorts by (raw numbers, not formatted money).
   const sheetColumns: [string, (j: JobRow) => SortValue][] = [
     ["Job #", (j) => j.jobNumber],
@@ -258,9 +285,24 @@ function FullSheet({ jobs, hideCost }: { jobs: JobRow[]; hideCost: boolean }) {
           ["Cash flow", (j) => (hideCost || !j.sources.foundation ? null : j.cost.cashFlow)],
         ] as [string, (j: JobRow) => SortValue][])),
   ];
-  const sheetSort = useTableSort(jobs, Object.fromEntries(sheetColumns));
+  const localSort = useTableSort(jobs, Object.fromEntries(sheetColumns));
+  // Paged: the server sorted every job; this page is shown as it came.
+  const sheetSort = serverSort
+    ? {
+        sorted: jobs,
+        header: (key: string, label: string) => (
+          <SortHeader
+            label={label}
+            active={serverSort.sort?.key === key}
+            dir={serverSort.sort?.key === key ? serverSort.sort.dir : "asc"}
+            onClick={() => serverSort.onSort(key)}
+          />
+        ),
+      }
+    : localSort;
   return (
-    <div className={shell}>
+    <div className={`relative ${shell}`}>
+      {loading ? <LoadingBar label="Loading jobs" /> : null}
       <h2 className="border-b border-[rgba(91,173,232,0.22)] bg-[rgba(91,173,232,0.18)] px-4 py-3 text-center text-[13px] font-semibold text-[#333333]">
         Full sheet
       </h2>

@@ -363,6 +363,7 @@ export function FilterSidebar({
   listFilterError,
   selectedFieldKeys,
   onToggleField,
+  onRemoveApply,
 }: {
   open: boolean;
   fields: FilterFieldDef[];
@@ -381,6 +382,8 @@ export function FilterSidebar({
   /** When set, Followup fields stay as checkboxes until chosen. Omitted = show every field. */
   selectedFieldKeys?: string[];
   onToggleField?: (key: string, on: boolean) => void;
+  /** When set, deleting a condition / group or pressing Clear applies straight away (the panel stays open). */
+  onRemoveApply?: (groups: FilterGroup[]) => void;
 }) {
   const [groups, setGroups] = useState<FilterGroup[]>(() => (initialGroups?.length ? initialGroups : [emptyGroup()]));
   const [activeGroupIndex, setActiveGroupIndex] = useState(0);
@@ -416,9 +419,11 @@ export function FilterSidebar({
   };
 
   const removeCondition = (groupIndex: number, conditionId: string) => {
-    setGroups((prev) =>
-      prev.map((g, i) => (i === groupIndex ? { ...g, conditions: g.conditions.filter((c) => c.id !== conditionId) } : g))
+    const next = groups.map((g, i) =>
+      i === groupIndex ? { ...g, conditions: g.conditions.filter((c) => c.id !== conditionId) } : g
     );
+    setGroups(next);
+    onRemoveApply?.(next);
   };
 
   const addGroup = () => {
@@ -430,15 +435,16 @@ export function FilterSidebar({
   };
 
   const removeGroup = (groupIndex: number) => {
-    setGroups((prev) => {
-      const next = prev.filter((_, i) => i !== groupIndex);
-      const safe = next.length ? next : [emptyGroup()];
-      setActiveGroupIndex((idx) => Math.min(idx, safe.length - 1));
-      return safe;
-    });
+    const next = groups.filter((_, i) => i !== groupIndex);
+    const safe = next.length ? next : [emptyGroup()];
+    setActiveGroupIndex((idx) => Math.min(idx, safe.length - 1));
+    setGroups(safe);
+    onRemoveApply?.(safe);
   };
 
   const totalConditions = useMemo(() => groups.reduce((n, g) => n + g.conditions.length, 0), [groups]);
+  // Footer buttons look ready to click once any filter value is set, and quiet when nothing is.
+  const hasValues = totalConditions > 0;
 
   const sections = useMemo(() => {
     const bySection = new Map<string, FilterFieldDef[]>();
@@ -705,7 +711,11 @@ export function FilterSidebar({
                 const name = window.prompt('Name this view (e.g. "Bid in Process — Wilder")');
                 if (name?.trim()) onSaveAsView(name.trim(), groups);
               }}
-              className="flex-1 whitespace-nowrap rounded-xl border border-white/80 bg-white/70 px-2 py-2.5 text-xs font-semibold text-ink/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md transition hover:text-ink disabled:pointer-events-none disabled:opacity-40"
+              className={`flex-1 whitespace-nowrap rounded-xl border px-2 py-2.5 text-xs font-semibold transition disabled:pointer-events-none ${
+                hasValues
+                  ? "border-ink/15 bg-white text-ink shadow-[0_1px_2px_rgba(16,24,40,0.06)] hover:border-ink/25 hover:bg-[#f8fafc]"
+                  : "border-ink/[0.06] bg-white/50 text-ink/30"
+              }`}
             >
               Save List
             </button>
@@ -713,17 +723,27 @@ export function FilterSidebar({
               type="button"
               disabled={totalConditions === 0}
               onClick={() => {
-                setGroups([emptyGroup()]);
+                const cleared = [emptyGroup()];
+                setGroups(cleared);
                 setActiveGroupIndex(0);
+                onRemoveApply?.(cleared);
               }}
-              className="flex-1 whitespace-nowrap rounded-xl border border-[rgba(220,38,38,0.25)] bg-white/70 px-2 py-2.5 text-xs font-semibold text-danger shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md transition hover:bg-danger/[0.06] disabled:pointer-events-none disabled:opacity-40"
+              className={`flex-1 whitespace-nowrap rounded-xl border px-2 py-2.5 text-xs font-semibold transition disabled:pointer-events-none ${
+                hasValues
+                  ? "border-[rgba(220,38,38,0.55)] bg-[rgba(220,38,38,0.06)] text-danger shadow-[0_1px_2px_rgba(220,38,38,0.12)] hover:border-danger hover:bg-[rgba(220,38,38,0.12)]"
+                  : "border-ink/[0.06] bg-white/50 text-ink/30"
+              }`}
             >
               Clear
             </button>
             <button
               type="button"
               onClick={() => onApply(groups)}
-              className="flex-1 whitespace-nowrap rounded-xl bg-[rgba(91,173,232,0.92)] px-2 py-2.5 text-xs font-semibold text-white shadow-[0_4px_12px_rgba(91,173,232,0.28)] transition hover:bg-brand-secondary"
+              className={`flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 text-xs font-semibold text-white transition hover:bg-brand-secondary ${
+                hasValues
+                  ? "bg-brand shadow-[0_4px_14px_rgba(91,173,232,0.45)]"
+                  : "bg-[rgba(91,173,232,0.5)] shadow-none"
+              }`}
             >
               Apply
             </button>

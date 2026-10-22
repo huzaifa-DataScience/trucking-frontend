@@ -1,9 +1,16 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BILLING_COMPANY_PARAM, BILLING_NAV_KEY, billingReturnHref, type BillingNavContext } from "@/lib/billing-nav";
+import {
+  BILLING_COMPANY_PARAM,
+  BILLING_NAV_KEY,
+  billingNavItems,
+  billingReturnHref,
+  type BillingNavContext,
+} from "@/lib/billing-nav";
+import { getSitelineAgingOverduePage, getSitelineAgingReportPage } from "@/lib/api/endpoints/siteline";
 
 const COMPANY_NAMES: Record<number, string> = { 1: "GOEL", 2: "GOEL DC", 3: "DCB" };
 
@@ -41,10 +48,47 @@ export function BillingProjectNav({ contractId, entityId }: { contractId: string
     }
   }, [raw]);
 
-  const index = nav ? nav.items.findIndex((i) => i.id === contractId) : -1;
+  // The Billing tables are paged on the server, so the saved list may be just the page the user was on.
+  // Fetch the whole ordered list (ids + names only) once, then keep it for the next projects.
+  const [fullItems, setFullItems] = useState<{ key: string; items: BillingNavContext["items"] } | null>(null);
+  useEffect(() => {
+    if (!nav?.query || nav.complete || !raw) return;
+    let cancelled = false;
+    const { entityIds, filters, sortBy, sortDir } = nav.query;
+    const query = { entityIds, sortBy, sortDir, all: true, nav: true } as const;
+    const load =
+      nav.list === "aging"
+        ? getSitelineAgingReportPage(filters, query).then((r) => ("rows" in r ? r.rows : null))
+        : getSitelineAgingOverduePage(filters, query).then((r) => ("items" in r ? r.items : null));
+    load
+      .then((rows) => {
+        if (cancelled || !rows) return;
+        const items = billingNavItems(rows);
+        setFullItems({ key: raw, items });
+        try {
+          sessionStorage.setItem(BILLING_NAV_KEY, JSON.stringify({ ...nav, items, complete: true }));
+        } catch {
+          /* storage blocked: this page still has the full list */
+        }
+      })
+      .catch(() => {
+        /* keep the saved page: prev / next still work within it */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [nav, raw]);
+
+  const haveFull = Boolean(fullItems && fullItems.key === raw);
+  const items = haveFull ? fullItems!.items : (nav?.items ?? []);
+  // Until the whole list arrives, `items` is one page: show the position in the whole list anyway.
+  const partial = !haveFull && !nav?.complete && nav?.total != null;
+  const index = nav ? items.findIndex((i) => i.id === contractId) : -1;
   const inList = index >= 0;
-  const prev = inList && index > 0 ? nav!.items[index - 1] : null;
-  const next = inList && index < nav!.items.length - 1 ? nav!.items[index + 1] : null;
+  const prev = inList && index > 0 ? items[index - 1] : null;
+  const next = inList && index < items.length - 1 ? items[index + 1] : null;
+  const position = (partial ? (nav!.offset ?? 0) : 0) + index + 1;
+  const listLength = partial ? nav!.total! : items.length;
   const backHref = inList ? billingReturnHref : "/billings";
   const company = entityId != null ? COMPANY_NAMES[entityId] : null;
   const href = (id: string) => `/billings/projects/${encodeURIComponent(id)}`;
@@ -114,7 +158,7 @@ export function BillingProjectNav({ contractId, entityId }: { contractId: string
         ) : null}
       </div>
 
-      {inList && nav!.items.length > 1 ? (
+      {inList && listLength > 1 ? (
         <div className="flex items-center gap-2">
           {next ? (
             <span className="hidden max-w-[16rem] truncate text-[11.5px] text-ink-soft lg:inline" aria-hidden>
@@ -136,7 +180,7 @@ export function BillingProjectNav({ contractId, entityId }: { contractId: string
               </span>
             )}
             <span className="px-1.5 text-[12px] tabular-nums text-ink-muted">
-              {index + 1} of {nav!.items.length}
+              {position} of {listLength}
             </span>
             {next ? (
               <Link href={href(next.id)} className={arrow} aria-label={`Next project: ${next.label}`} title={next.label}>

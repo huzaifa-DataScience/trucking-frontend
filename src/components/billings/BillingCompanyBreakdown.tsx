@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
-import type { AgingOverdueItem, AgingReportRow } from "@/lib/api/endpoints/siteline";
+import type { AgingOverdueItem, AgingOverduePage, AgingReportPage } from "@/lib/api/endpoints/siteline";
 import { splitProjectName } from "@/lib/siteline-project-name";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -68,16 +68,17 @@ const Chevron = ({ up }: { up: boolean }) => (
  */
 export function BillingCompanyBreakdown({
   entityIds,
-  rows,
-  overdue,
+  agingByCompany,
+  overdueByCompany,
   onPick,
   selectedId = null,
   loading = false,
   onShowAll,
 }: {
   entityIds: readonly number[];
-  rows: AgingReportRow[];
-  overdue: AgingOverdueItem[];
+  /** Per-company A/R from the server summary (the tables only hold one page). */
+  agingByCompany: AgingReportPage["summary"]["byCompany"];
+  overdueByCompany: AgingOverduePage["summary"]["byCompany"];
   onPick: (entityId: number) => void;
   /** Company the page is filtered to; null = All companies. */
   selectedId?: number | null;
@@ -89,30 +90,25 @@ export function BillingCompanyBreakdown({
   const open = selectedId == null && stored;
 
   const companies = useMemo(() => {
-    const grand = rows.reduce((s, r) => s + (r.projectTotal || 0), 0);
+    const grand = agingByCompany.reduce((s, c) => s + (c.total || 0), 0);
     return entityIds.map((id) => {
-      const mine = rows.filter((r) => r.entityId === id);
-      const late = overdue.filter((it) => it.entityId === id);
-      const total = mine.reduce((s, r) => s + (r.projectTotal || 0), 0);
-      const over90 = mine.reduce((s, r) => s + (r.buckets["91-120 Days"] ?? 0) + (r.buckets[">120 Days"] ?? 0), 0);
-      const older = late.reduce((s, it) => s + (it.netDollars || 0), 0);
-      const biggest = late.reduce<AgingOverdueItem | null>(
-        (b, it) => (!b || (it.netDollars || 0) > (b.netDollars || 0) ? it : b),
-        null,
-      );
+      // A company that isn't loaded (one company selected) shows zeros, as before.
+      const aging = agingByCompany.find((c) => c.entityId === id);
+      const late = overdueByCompany.find((c) => c.entityId === id);
+      const total = aging?.total ?? 0;
       return {
         id,
         name: COMPANY_SHORT[id] ?? String(id),
         total,
         share: grand > 0 ? total / grand : 0,
-        older,
-        over90,
-        contracts: mine.length,
-        withOlder: new Set(late.map((it) => it.contractId)).size,
-        biggest,
+        older: late?.older ?? 0,
+        over90: aging?.over90 ?? 0,
+        contracts: aging?.contracts ?? 0,
+        withOlder: late?.withOlder ?? 0,
+        biggest: (late?.biggest ?? null) as AgingOverdueItem | null,
       };
     });
-  }, [entityIds, rows, overdue]);
+  }, [entityIds, agingByCompany, overdueByCompany]);
 
   return (
     <div className="bg-white">

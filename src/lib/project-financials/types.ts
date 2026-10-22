@@ -167,6 +167,18 @@ export type JobsResponse = {
   missing: string[];
   alerts: FinancialsAlertCounts;
   jobs: JobRow[];
+  /** Paged requests only: jobs matching the filters (all pages), and which page `jobs` is. */
+  total?: number;
+  page?: number;
+  pageSize?: number;
+};
+
+/** Page + table sort for the Job book / BOM (sorting happens on the server). */
+export type FinancialsPageQuery = {
+  page: number;
+  pageSize: number;
+  sortBy?: string | null;
+  sortDir?: "asc" | "desc";
 };
 
 export type FinancialsQuery = {

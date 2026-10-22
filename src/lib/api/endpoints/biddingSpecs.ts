@@ -371,3 +371,43 @@ export async function autoFromMike(
     replace,
   });
 }
+
+/** One takeoff per bid on the Estimation files page (its latest file). */
+export interface EstimationTakeoffRow {
+  bidId: number;
+  fileId: number;
+  fileName: string;
+  estimateNumber: string | null;
+  bidName: string | null;
+  totalRows: number;
+  updatedAt: string | null;
+}
+
+export interface EstimationTakeoffsPage {
+  items: EstimationTakeoffRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** Paged takeoffs (sorted and paged in SQL). */
+export async function listEstimationTakeoffsPage(params: {
+  q?: string;
+  page: number;
+  pageSize: number;
+  sortBy?: string | null;
+  sortDir?: "asc" | "desc";
+}): Promise<EstimationTakeoffsPage> {
+  return get<EstimationTakeoffsPage>("/estimation-files/takeoffs", {
+    q: params.q || undefined,
+    page: params.page,
+    pageSize: params.pageSize,
+    sortBy: params.sortBy || undefined,
+    sortDir: params.sortBy ? params.sortDir : undefined,
+  });
+}
+
+/** Takeoff name for every bid that has one (upload dialog hint). */
+export async function listTakeoffNames(): Promise<{ bidId: number; fileName: string | null }[]> {
+  return get<{ bidId: number; fileName: string | null }[]>("/estimation-files/takeoff-names");
+}
