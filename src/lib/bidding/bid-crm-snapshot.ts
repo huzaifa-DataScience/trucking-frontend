@@ -84,10 +84,51 @@ export function buildBidCrmSnapshot(bid: BidDetail): BidCrmSnapshot {
   const intel = process?.intelligence;
 
   const submittedTo: CrmContact[] = [];
+  const seenSubmit = new Set<string>();
+  const pushSubmitted = (c: CrmContact) => {
+    const key = `${(c.company ?? "").toLowerCase()}|${(c.email ?? "").toLowerCase()}|${(c.name ?? "").toLowerCase()}`;
+    if (seenSubmit.has(key)) return;
+    seenSubmit.add(key);
+    submittedTo.push(c);
+  };
+
+  // Proposal recipients (who we sent the proposal to) — preferred for post-bid follow-up.
+  for (const copy of process?.proposalSheet?.copies ?? []) {
+    if (!copy.toCompany && !copy.toName && !copy.toEmail) continue;
+    pushSubmitted({
+      label: "Proposal to",
+      name: copy.toName ?? null,
+      company: copy.toCompany ?? null,
+      phone: copy.toPhone ?? null,
+      email: copy.toEmail ?? null,
+    });
+  }
+  for (const g of gcs) {
+    if (g.proposalStatus === "submitted" || g.proposalStatus === "accepted") {
+      pushSubmitted({
+        label: "GC (submitted)",
+        name: g.contactName ?? g.name ?? null,
+        company: g.company ?? null,
+        phone: g.phone ?? null,
+        email: g.email ?? null,
+      });
+    }
+  }
+  for (const m of mechanicals) {
+    if (m.proposalStatus === "submitted" || m.proposalStatus === "accepted") {
+      pushSubmitted({
+        label: "Mech (submitted)",
+        name: m.contactName ?? m.name ?? null,
+        company: m.company ?? null,
+        phone: m.phone ?? null,
+        email: m.email ?? null,
+      });
+    }
+  }
   for (const inv of invitations) {
     const c = inv.contact;
     if (!c) continue;
-    submittedTo.push({
+    pushSubmitted({
       label: "Invite",
       name: c.name ?? null,
       company: c.company ?? null,
@@ -96,7 +137,7 @@ export function buildBidCrmSnapshot(bid: BidDetail): BidCrmSnapshot {
     });
   }
   if (companyInfo?.companyName || companyInfo?.contactName) {
-    submittedTo.push({
+    pushSubmitted({
       label: "Client / GC",
       name: companyInfo.contactName ?? null,
       company: companyInfo.companyName ?? null,
