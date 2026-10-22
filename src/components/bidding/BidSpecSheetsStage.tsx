@@ -53,7 +53,13 @@ export function BidSpecSheetsStage() {
 
       <BidHubFiles
         title="Specs / manuals"
-        attachments={(bid.attachments ?? []).filter((a) => a.label === "specifications")}
+        emptyHint="Upload specs or manuals on Intake (Specs / manuals). They show up here automatically."
+        attachments={(bid.attachments ?? []).filter(
+          (a) =>
+            a.label === "specifications" ||
+            a.label === "specs" ||
+            a.label === "manuals"
+        )}
       />
 
       <BidSpecSheetsSection

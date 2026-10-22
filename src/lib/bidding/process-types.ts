@@ -684,7 +684,14 @@ export interface BidProcess {
   bidKind?: BidKind;
   drawingName?: string | null;
   drawingNumber?: string | null;
-  drawingCategory?: "sd" | "dd" | "cd" | "ifb" | "ifp" | "ifc" | "ifr" | null;
+  drawingCategory?: "sd" | "dd" | "cd" | "ifb" | "ifp" | "ifc" | "ifr" | string | null;
+  /**
+   * Custom drawing-set tabs (Meeting 16 Oct) — beyond fixed SD/DD/CD…
+   * e.g. [{ id: "dd50", label: "DD 50%" }, { id: "dd85", label: "DD 85%" }]
+   */
+  drawingSetCustom?: Array<{ id: string; label: string }> | null;
+  /** Built-in phase ids to hide when unused on this bid */
+  drawingSetHidden?: string[] | null;
   /** Title-block owner/architect # — duplicate key */
   ownerProjectNumber?: string | null;
   /** Engineer of Record — mechanical (title-block #) — duplicate key */

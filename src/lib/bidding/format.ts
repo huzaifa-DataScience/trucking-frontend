@@ -72,3 +72,16 @@ export function telHref(phone: string | null | undefined): string | null {
   if (digits.length < 7) return null;
   return `tel:${digits}`;
 }
+
+/** Open mail client with optional subject (post-bid follow-up). */
+export function mailtoHref(
+  email: string | null | undefined,
+  subject?: string | null
+): string | null {
+  const addr = String(email ?? "").trim();
+  if (!addr || !addr.includes("@")) return null;
+  const q = subject?.trim()
+    ? `?subject=${encodeURIComponent(subject.trim())}`
+    : "";
+  return `mailto:${addr}${q}`;
+}

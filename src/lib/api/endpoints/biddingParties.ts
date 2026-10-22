@@ -1,14 +1,29 @@
 /**
- * Intake party directory — FRONTEND_INTAKE.md (select existing or type new).
- * Backend: GET /lookups/bidding/parties
+ * Intake party directory — select existing or type new.
+ * Backend: GET /lookups/bidding/parties?role=&q=&page=&pageSize=
+ * JWT required. Without `role` the response is empty. pageSize max 50.
+ * Each item is one person (no comma-joined company/contact lists).
+ *
+ * Roles (same endpoint):
+ * - owner, architect, mechanical (EOR engineer — not contractor)
+ * - invite_contact
+ * - gc, mechanical_contractor (both read invite_contact; role echo matches request)
+ *
+ * Create/update: POST /lookups/bidding/parties, PATCH /lookups/bidding/parties/:id
+ * FRONTEND_MEETING_2026-10-21.md
+ *
+ * On pick: company ← `company`, contact ← `contactName`, plus email/phone.
+ * Do not put `name` into both company and contact fields.
  */
-import { get } from "../client";
+import { get, post, patch } from "../client";
 
 export type BidPartyRole =
   | "owner"
   | "architect"
   | "mechanical"
-  | "invite_contact";
+  | "invite_contact"
+  | "gc"
+  | "mechanical_contractor";
 
 export interface BidPartyLookup {
   id: number | string;
@@ -104,8 +119,7 @@ function asPartiesPage(
 }
 
 /**
- * Known Owner / Architect / Mechanical / invite contacts.
- * 404 / missing route → empty page so FE still allows free-text new entry.
+ * Party directory by role. 404 / errors → empty page so FE still allows free-text.
  */
 export async function getBiddingPartiesPage(params?: {
   role?: BidPartyRole | string;
@@ -114,7 +128,7 @@ export async function getBiddingPartiesPage(params?: {
   pageSize?: number;
 }): Promise<BidPartiesPage> {
   const page = params?.page ?? 1;
-  const pageSize = params?.pageSize ?? 10;
+  const pageSize = Math.min(params?.pageSize ?? 10, 50);
   try {
     const raw = await get<unknown>("/lookups/bidding/parties", {
       role: params?.role,
@@ -137,4 +151,52 @@ export async function getBiddingParties(params?: {
 }): Promise<BidPartyLookup[]> {
   const page = await getBiddingPartiesPage(params);
   return page.items;
+}
+
+export type BidPartyWriteBody = {
+  company?: string | null;
+  contactName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  /** Hide from search when true */
+  inactive?: boolean | null;
+};
+
+/** Add a company contact — company or contactName required; email or phone required. */
+export async function createBiddingParty(
+  body: BidPartyWriteBody
+): Promise<BidPartyLookup> {
+  const raw = await post<unknown>("/lookups/bidding/parties", body);
+  const items = asPartyArray(Array.isArray(raw) ? raw : [raw]);
+  if (items[0]) return items[0];
+  return {
+    id: "new",
+    name: body.contactName || body.company || "Contact",
+    company: body.company ?? null,
+    contactName: body.contactName ?? null,
+    email: body.email ?? null,
+    phone: body.phone ?? null,
+  };
+}
+
+/** Update a company contact. `inactive: true` hides from search. */
+export async function updateBiddingParty(
+  id: number | string,
+  body: BidPartyWriteBody
+): Promise<BidPartyLookup> {
+  const raw = await patch<unknown>(
+    `/lookups/bidding/parties/${encodeURIComponent(String(id))}`,
+    body
+  );
+  const items = asPartyArray(Array.isArray(raw) ? raw : [raw]);
+  if (items[0]) return items[0];
+  return {
+    id,
+    name: body.contactName || body.company || String(id),
+    company: body.company ?? null,
+    contactName: body.contactName ?? null,
+    email: body.email ?? null,
+    phone: body.phone ?? null,
+    inactive: body.inactive ?? null,
+  };
 }

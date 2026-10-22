@@ -14,6 +14,7 @@ export type BidListColumnKey =
   | "updated"
   | "stage"
   | "outcome"
+  | "boardStatus"
   | "status"
   | "takeoffTurnedIn"
   | "workType"
@@ -45,6 +46,7 @@ export const BID_LIST_COLUMN_CATALOG: BidListColumnDef[] = [
   { key: "updated", label: "Updated", width: "min-w-[6.5rem]" },
   { key: "stage", label: "Current progress", width: "min-w-[9.5rem]" },
   { key: "outcome", label: "Outcome", width: "min-w-[5.5rem]" },
+  { key: "boardStatus", label: "Status", width: "min-w-[7.5rem]" },
   { key: "status", label: "Record", width: "min-w-[5.5rem]" },
   { key: "takeoffTurnedIn", label: "Turned in", width: "min-w-[5.5rem]" },
   { key: "workType", label: "Work type", width: "min-w-[6.5rem]" },
@@ -57,6 +59,7 @@ export const BID_LIST_COLUMN_CATALOG: BidListColumnDef[] = [
 export const DEFAULT_FULL_LIST_COLUMNS: BidListColumnKey[] = [
   "estimate",
   "name",
+  "boardStatus",
   "bidDate",
   "office",
   "captain",
@@ -71,8 +74,8 @@ export const DEFAULT_INTERNAL_LIST_COLUMNS: BidListColumnKey[] = [
   "internalBidDate",
 ];
 
-export const BIDDING_LIST_COLUMNS_KEY = "bidding-list-columns-v1";
-export const BIDDING_LIST_COLUMNS_INTERNAL_KEY = "bidding-list-columns-internal-v1";
+export const BIDDING_LIST_COLUMNS_KEY = "bidding-list-columns-v2";
+export const BIDDING_LIST_COLUMNS_INTERNAL_KEY = "bidding-list-columns-internal-v2";
 
 const ALLOWED = new Set(BID_LIST_COLUMN_CATALOG.map((c) => c.key));
 const LOCKED = BID_LIST_COLUMN_CATALOG.filter((c) => c.locked).map((c) => c.key);

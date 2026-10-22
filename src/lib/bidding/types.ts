@@ -1,5 +1,6 @@
 /** API-aligned types — see docs/BIDDING_FRONTEND_API.md */
 
+import type { BiddingClientRow } from "./boardStatus";
 import type {
   BidProcess,
   BidWorkflow,
@@ -15,6 +16,7 @@ export type {
   ProcessStage,
   WorkType,
 } from "./process-types";
+export type { BoardStatus, BiddingClientRow } from "./boardStatus";
 
 export type BidStatus = "draft" | "submitted" | "archived";
 
@@ -92,6 +94,13 @@ export interface BidListItem {
   source?: string | null;
   preBidDate?: string | null;
   salesStatus?: string | null;
+  /**
+   * Project board status — FRONTEND_MEETING_2026-10-21.md
+   * not_started | bidding | bid_submitted | won | lost | no_bid | on_hold | cancelled
+   */
+  boardStatus?: string | null;
+  /** Derived GC / mechanical / invitation rows for Bidding clients table. */
+  biddingClientRows?: BiddingClientRow[] | null;
   tradeBidType?: string | null;
   ocipCcipStatus?: string | null;
   bidClerk?: string | null;

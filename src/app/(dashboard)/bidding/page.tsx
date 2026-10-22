@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
+import { BidBoardStatusBadge } from "@/components/bidding/BidBoardStatusBadge";
 import { BidStageProgressBar } from "@/components/bidding/BidStageProgressBar";
 import { BidStatusBadge } from "@/components/bidding/BidStatusBadge";
+import { formatBoardStatus } from "@/lib/bidding/boardStatus";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InlineSpinner, LoadingBar } from "@/components/ui/LoadingBar";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
@@ -79,6 +81,7 @@ type SortKey =
   | "client"
   | "internalBidDate"
   | "takeoffTurnedIn"
+  | "boardStatus"
   | "status"
   | "stage"
   | "outcome"
@@ -858,6 +861,8 @@ export default function BiddingListPage() {
             return (a.internalBidDate ?? "").localeCompare(b.internalBidDate ?? "");
           case "takeoffTurnedIn":
             return Number(a.takeoffTurnedIn === true) - Number(b.takeoffTurnedIn === true);
+          case "boardStatus":
+            return (a.boardStatus ?? "").localeCompare(b.boardStatus ?? "");
           case "status":
             return a.status.localeCompare(b.status);
           case "stage":
@@ -1107,6 +1112,8 @@ export default function BiddingListPage() {
         return bid.contractAmount != null ? formatMoney(bid.contractAmount) : "—";
       case "jobStartDate":
         return bid.jobStartDate ? formatDate(bid.jobStartDate.slice(0, 10)) : "—";
+      case "boardStatus":
+        return formatBoardStatus(bid.boardStatus);
       case "status":
         return bid.status || "—";
       default:
@@ -1538,6 +1545,12 @@ export default function BiddingListPage() {
                                 >
                                   {softBreakText(text)}
                                 </Link>
+                              ) : column.key === "boardStatus" ? (
+                                bid.boardStatus ? (
+                                  <BidBoardStatusBadge status={bid.boardStatus} size="sm" />
+                                ) : (
+                                  <span className="text-ink-muted">—</span>
+                                )
                               ) : column.key === "status" ? (
                                 status === "draft" && bid.status === "draft" ? null : (
                                   <BidStatusBadge status={bid.status} />

@@ -482,8 +482,10 @@ function DrawingsPanel({
   activePhase,
   onPhaseChange,
   onBrowse,
+  onBrowseFolder,
   onDropFiles,
   inputRef,
+  folderInputRef,
   confirmDialog,
   onDelete,
 }: {
@@ -496,8 +498,10 @@ function DrawingsPanel({
   activePhase: string;
   onPhaseChange: (phase: string) => void;
   onBrowse: () => void;
+  onBrowseFolder?: () => void;
   onDropFiles: (files: FileList | null) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
+  folderInputRef?: React.RefObject<HTMLInputElement | null>;
   confirmDialog: ReturnType<typeof useConfirmDialog>;
   onDelete: (id: number) => Promise<void>;
 }) {
@@ -505,26 +509,44 @@ function DrawingsPanel({
   const busy = Boolean(uploading || localUploading);
   const atLimit = attachments.length >= MAX_FILES;
 
+  const UNASSIGNED = "";
   const bucketed = useMemo(
-    () => groupBy(attachments, (a) => a.drawingCategory ?? ""),
+    () => groupBy(attachments, (a) => a.drawingCategory?.trim() || UNASSIGNED),
     [attachments]
   );
-  const phaseFiles = bucketed[activePhase] ?? [];
-  const activeOpt = drawingCategoryOptions.find((o) => o.value === activePhase);
+  const unassignedCount = (bucketed[UNASSIGNED] ?? []).length;
+  const phaseTabs = useMemo(() => {
+    const tabs = [...drawingCategoryOptions];
+    // Intake uploads often have no phase — surface them so they aren't invisible.
+    if (unassignedCount > 0 && !tabs.some((o) => o.value === UNASSIGNED)) {
+      tabs.unshift({ value: UNASSIGNED, label: "Unassigned" });
+    }
+    return tabs;
+  }, [drawingCategoryOptions, unassignedCount]);
+
+  // If active phase was wiped or only Unassigned has files, land on a visible tab.
+  const effectivePhase = phaseTabs.some((o) => o.value === activePhase)
+    ? activePhase
+    : (phaseTabs[0]?.value ?? activePhase);
+
+  const phaseFiles = bucketed[effectivePhase] ?? [];
+  const activeOpt = phaseTabs.find((o) => o.value === effectivePhase);
   const phaseTitle =
-    DRAWING_PHASE_TITLES[activePhase] ??
-    (activeOpt ? `${activeOpt.label}` : activePhase.toUpperCase());
+    effectivePhase === UNASSIGNED
+      ? "Unassigned (from Intake)"
+      : DRAWING_PHASE_TITLES[effectivePhase] ??
+        (activeOpt ? `${activeOpt.label}` : effectivePhase.toUpperCase());
   const fileMeta = phaseFiles.length === 1 ? "1 file" : `${phaseFiles.length} files`;
 
   return (
     <div className="flex flex-col gap-3">
       <nav className="flex flex-wrap gap-1.5" aria-label="Drawing phases">
-        {drawingCategoryOptions.map((o) => {
+        {phaseTabs.map((o) => {
           const count = (bucketed[o.value] ?? []).length;
-          const active = o.value === activePhase;
+          const active = o.value === effectivePhase;
           return (
             <button
-              key={o.value}
+              key={o.value || "__unassigned"}
               type="button"
               onClick={() => onPhaseChange(o.value)}
               className={`inline-flex h-[30px] cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-semibold transition-colors ${
@@ -612,6 +634,19 @@ function DrawingsPanel({
                 >
                   Browse files
                 </button>
+                {onBrowseFolder ? (
+                  <button
+                    type="button"
+                    disabled={busy || atLimit}
+                    className="intake-head-btn cursor-pointer disabled:cursor-default disabled:opacity-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onBrowseFolder();
+                    }}
+                  >
+                    Browse folder
+                  </button>
+                ) : null}
               </div>
               <input
                 ref={inputRef}
@@ -624,6 +659,24 @@ function DrawingsPanel({
                   e.target.value = "";
                 }}
               />
+              {folderInputRef ? (
+                <input
+                  ref={(el) => {
+                    folderInputRef.current = el;
+                    if (el) {
+                      el.setAttribute("webkitdirectory", "");
+                      el.setAttribute("directory", "");
+                    }
+                  }}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    onDropFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              ) : null}
             </div>
           ) : null}
 
@@ -651,6 +704,7 @@ export function BidAttachmentsSection({
   onDelete,
   mode = "general",
   drawingCategoryOptions,
+  defaultDrawingCategory,
   labels,
   title,
 }: {
@@ -671,11 +725,14 @@ export function BidAttachmentsSection({
   mode?: "general" | "drawings" | "markup";
   /** Only used in "drawings" mode — [{value, label}], from processMeta().drawingCategories. */
   drawingCategoryOptions?: { value: string; label: string }[];
+  /** Intake hub: stamp drawings uploads with process drawing phase when set. */
+  defaultDrawingCategory?: string | null;
   /** Limit which upload labels show. Hub uses drawings/specs/invitation; addenda is its own box. */
   labels?: string[];
   title?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const pendingLabelRef = useRef(
     labels?.[0] ?? (mode === "markup" ? "takeoff" : "drawings")
   );
@@ -694,6 +751,8 @@ export function BidAttachmentsSection({
 
   useEffect(() => {
     if (mode !== "drawings" || phaseOptions.length === 0) return;
+    // Empty string = Unassigned tab (Intake files without a phase).
+    if (pendingDrawingCategory === "") return;
     if (!phaseOptions.some((o) => o.value === pendingDrawingCategory)) {
       const fallback = phaseOptions.find((o) => o.value === "cd") ?? phaseOptions[0]!;
       setPendingDrawingCategory(fallback.value);
@@ -711,9 +770,17 @@ export function BidAttachmentsSection({
       if (mode === "markup") {
         return { label: label || "takeoff", category: "takeoff_markup" as const };
       }
-      return { label, category: pendingCategory };
+      const phase =
+        label === "drawings"
+          ? defaultDrawingCategory?.trim() || undefined
+          : undefined;
+      return {
+        label,
+        category: pendingCategory,
+        ...(phase ? { drawingCategory: phase } : {}),
+      };
     },
-    [mode, pendingCategory, pendingDrawingCategory]
+    [mode, pendingCategory, pendingDrawingCategory, defaultDrawingCategory]
   );
 
   const handleFiles = useCallback(
@@ -732,7 +799,14 @@ export function BidAttachmentsSection({
       const opts = uploadOptsFor(label);
       setLocalUploading(true);
       try {
-        if (onUploadMany) {
+        const hasFolderPaths = batch.some(
+          (f) =>
+            Boolean(
+              (f as File & { webkitRelativePath?: string }).webkitRelativePath
+            )
+        );
+        // Folder uploads must keep webkitRelativePath — skip bulk when paths present.
+        if (onUploadMany && !hasFolderPaths) {
           await onUploadMany(batch, opts);
         } else {
           for (const file of batch) {
@@ -763,8 +837,10 @@ export function BidAttachmentsSection({
         activePhase={pendingDrawingCategory}
         onPhaseChange={setPendingDrawingCategory}
         onBrowse={() => inputRef.current?.click()}
+        onBrowseFolder={() => folderInputRef.current?.click()}
         onDropFiles={(files) => void handleFiles(files)}
         inputRef={inputRef}
+        folderInputRef={folderInputRef}
         confirmDialog={confirmDialog}
         onDelete={onDelete}
       />
@@ -809,6 +885,12 @@ export function BidAttachmentsSection({
     inputRef.current?.click();
   };
 
+  const browseFolderForLabel = (label: string) => {
+    setPendingLabel(label);
+    pendingLabelRef.current = label;
+    folderInputRef.current?.click();
+  };
+
   return (
     <section className="intake-section">
       <div className="intake-section-head flex items-center justify-between gap-3">
@@ -820,6 +902,22 @@ export function BidAttachmentsSection({
           ref={inputRef}
           type="file"
           accept={ACCEPT}
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void handleFiles(e.target.files, pendingLabelRef.current);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={(el) => {
+            folderInputRef.current = el;
+            if (el) {
+              el.setAttribute("webkitdirectory", "");
+              el.setAttribute("directory", "");
+            }
+          }}
+          type="file"
           multiple
           className="hidden"
           onChange={(e) => {
@@ -866,6 +964,14 @@ export function BidAttachmentsSection({
             >
               {busy ? "Uploading…" : "Add file"}
             </button>
+            <button
+              type="button"
+              disabled={busy || atLimit}
+              onClick={() => folderInputRef.current?.click()}
+              className="intake-head-btn disabled:opacity-50"
+            >
+              Add folder
+            </button>
           </div>
         ) : null}
 
@@ -894,28 +1000,53 @@ export function BidAttachmentsSection({
                   {o.label}
                 </p>
                 {isEditable && perLabelAdd ? (
-                  <button
-                    type="button"
-                    disabled={busy || atLimit}
-                    onClick={() => browseForLabel(o.value)}
-                    className={`${INTAKE_ADD_BTN} disabled:opacity-50`}
-                    aria-label={
-                      busy && pendingLabel === o.value
-                        ? "Uploading"
-                        : `Add ${o.label}`
-                    }
-                    title={
-                      busy && pendingLabel === o.value
-                        ? "Uploading…"
-                        : `Add ${o.label}`
-                    }
-                  >
-                    {busy && pendingLabel === o.value ? (
-                      <span className="text-[10px] font-semibold">…</span>
-                    ) : (
-                      <PlusIcon />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={busy || atLimit}
+                      onClick={() => browseForLabel(o.value)}
+                      className={`${INTAKE_ADD_BTN} disabled:opacity-50`}
+                      aria-label={
+                        busy && pendingLabel === o.value
+                          ? "Uploading"
+                          : `Add ${o.label}`
+                      }
+                      title={
+                        busy && pendingLabel === o.value
+                          ? "Uploading…"
+                          : `Add ${o.label} files`
+                      }
+                    >
+                      {busy && pendingLabel === o.value ? (
+                        <span className="text-[10px] font-semibold">…</span>
+                      ) : (
+                        <PlusIcon />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy || atLimit}
+                      onClick={() => browseFolderForLabel(o.value)}
+                      className={`${INTAKE_ADD_BTN} disabled:opacity-50`}
+                      aria-label={`Add ${o.label} folder`}
+                      title={`Add ${o.label} folder`}
+                    >
+                      <svg
+                        className="h-3.5 w-3.5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        aria-hidden
+                      >
+                        <path
+                          d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 ) : null}
               </div>
               <AttachmentGrid
