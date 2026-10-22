@@ -8,22 +8,31 @@ import {
   FINANCIALS_TABLE_STICKY_HEAD,
 } from "@/components/project-financials/tableScroll";
 
-import { useTableSort } from "@/hooks/useTableSort";
+import { SortHeader, useTableSort } from "@/hooks/useTableSort";
+import { LoadingBar } from "@/components/ui/LoadingBar";
+import type { SortDir } from "@/lib/sort";
 const shell =
   "overflow-hidden rounded-xl border border-white/70 bg-white/55 shadow-[0_6px_16px_rgba(91,173,232,0.08)] backdrop-blur-md";
 
+// Light blue header (the app-wide table header is grey; BOM keeps its blue). `!` beats that grey rule.
 const th =
-  "px-2.5 py-2 text-right text-[10px] font-semibold uppercase tracking-wide text-[#333333] whitespace-nowrap";
+  "!bg-[#e2f0fb] px-2.5 py-2 text-right text-[10px] font-semibold uppercase tracking-wide text-[#333333] whitespace-nowrap";
 const td = "px-2.5 py-2.5 text-right text-[12.5px] tabular-nums text-ink whitespace-nowrap";
 
 export function BomTable({
   jobs,
   companies,
   hideTrimble,
+  serverSort,
+  loading = false,
 }: {
   jobs: JobRow[];
   companies: FinancialsCompany[];
   hideTrimble: boolean;
+  /** A new page / sort is loading: a bar runs along the top of the table. */
+  loading?: boolean;
+  /** Paged screens: rows arrive sorted from the server; header clicks go to `onSort`. Omit to sort here. */
+  serverSort?: { sort: { key: string; dir: SortDir } | null; onSort: (key: string) => void };
 }) {
   const cols = companies.length
     ? companies
@@ -34,7 +43,7 @@ export function BomTable({
       ];
   const trimbleOf = (j: JobRow) => (hideTrimble || !j.sources.trimble ? null : j.bom.trimble);
   const companyCell = (j: JobRow, entityId: number) => j.bom.companies.find((row) => row.entityId === entityId);
-  const bomSort = useTableSort(jobs, {
+  const localSort = useTableSort(jobs, {
     job: (j) => j.jobNumber,
     ...Object.fromEntries(
       cols.flatMap((c) => [
@@ -61,14 +70,30 @@ export function BomTable({
     matVsCompletion: (j) => j.bom.vsCompletion.materialVsCompletion,
     hrsVsCompletion: (j) => j.bom.vsCompletion.laborVsCompletion,
   } as Record<string, (j: JobRow) => number | string | null | undefined>);
+  // Paged: the server sorted every job; this page is shown as it came.
+  const bomSort = serverSort
+    ? {
+        sorted: jobs,
+        header: (key: string, label: string, align?: "left" | "right") => (
+          <SortHeader
+            label={label}
+            active={serverSort.sort?.key === key}
+            dir={serverSort.sort?.key === key ? serverSort.sort.dir : "asc"}
+            onClick={() => serverSort.onSort(key)}
+            align={align}
+          />
+        ),
+      }
+    : localSort;
 
   return (
-    <div className={shell}>
+    <div className={`relative ${shell}`}>
+      {loading ? <LoadingBar label="Loading jobs" /> : null}
       <div className={FINANCIALS_TABLE_SCROLL}>
       <table className="min-w-max w-full border-collapse text-left">
         <thead>
           <tr className={`border-b border-[rgba(91,173,232,0.22)] ${FINANCIALS_TABLE_STICKY_HEAD}`}>
-            <th className="sticky left-0 z-[2] w-36 max-w-[9rem] bg-[rgba(91,173,232,0.18)] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-[#333333]">
+            <th className="sticky left-0 z-[21] w-36 max-w-[9rem] !bg-[#e2f0fb] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-[#333333]">
               {bomSort.header("job", "Job")}
             </th>
             {cols.map((c) => (

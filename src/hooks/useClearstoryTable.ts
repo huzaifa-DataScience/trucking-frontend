@@ -36,18 +36,25 @@ export function useClearstoryTable(
     }
   }, [filterKey]);
 
+  // Only the newest request may update the table (page / sort clicks can overlap).
+  const requestSeq = useRef(0);
   const refetch = useCallback(async () => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
       const res = await getClearstoryTablePage(module, { page, pageSize, projectId, status, search, sort, sortDir });
+      if (seq !== requestSeq.current) return;
       setData(res);
     } catch (e) {
+      if (seq !== requestSeq.current) return;
       setData(null);
       setError(getApiErrorMessage(e, "Failed to load table"));
     } finally {
-      setLoading(false);
-      setInitialLoading(false);
+      if (seq === requestSeq.current) {
+        setLoading(false);
+        setInitialLoading(false);
+      }
     }
   }, [module, page, pageSize, projectId, status, search, sort, sortDir]);
 
@@ -61,6 +68,8 @@ export function useClearstoryTable(
     rows: data?.rows ?? [],
     total: data?.total ?? 0,
     statusCounts: data?.statusCounts,
+    sortedOnServer: data?.sortedOnServer === true,
+    sortableKeys: data?.sortableKeys,
     page: data?.page ?? page,
     pageSize: data?.pageSize ?? pageSize,
     setPage,

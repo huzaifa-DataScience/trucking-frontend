@@ -8,7 +8,7 @@ import { TableSkeleton } from "@/components/ui/Skeleton";
 import { buttonClasses } from "@/components/ui/Button";
 import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { useClearstoryProjects, useClearstoryStatus } from "@/hooks/useClearstory";
-import { getClearstoryProjects } from "@/lib/api/endpoints/clearstory";
+import { BillingTablePager as TablePager } from "@/components/billings/BillingTablePager";
 import {
   formatUsdWhole,
   normalizeMoney,
@@ -33,7 +33,6 @@ import {
 import { FilterSidebar } from "@/components/filters/FilterSidebar";
 import { SavedViewTabs, conditionKey } from "@/components/filters/SavedViewTabs";
 import {
-  rowMatchesGroups,
   loadSavedViews,
   saveSavedViews,
   type FilterCondition,
@@ -55,31 +54,14 @@ const TABLE_SCROLL =
 
 type SortState = { key: string; dir: SortDir } | null;
 
-function compareValues(a: unknown, b: unknown): number {
-  const aEmpty = a === null || a === undefined || a === "";
-  const bEmpty = b === null || b === undefined || b === "";
-  if (aEmpty && bEmpty) return 0;
-  if (aEmpty) return 1;
-  if (bEmpty) return -1;
-
-  if (typeof a === "number" && typeof b === "number") return a - b;
-  if (typeof a === "boolean" && typeof b === "boolean") return Number(a) - Number(b);
-
-  const aStr = typeof a === "string" ? a : String(a);
-  const bStr = typeof b === "string" ? b : String(b);
-
-  const aNum = Number(aStr);
-  const bNum = Number(bStr);
-  if (aStr !== "" && bStr !== "" && !Number.isNaN(aNum) && !Number.isNaN(bNum)) return aNum - bNum;
-
-  const aDate = Date.parse(aStr);
-  const bDate = Date.parse(bStr);
-  if (!Number.isNaN(aDate) && !Number.isNaN(bDate)) return aDate - bDate;
-
-  return aStr.localeCompare(bStr);
+/** The part of the filters that changes results: non-empty groups, conditions without their ids. */
+function effectiveFilters(groups: FilterGroup[]) {
+  return groups
+    .filter((g) => g.conditions.length > 0)
+    .map((g) => ({
+      conditions: g.conditions.map(({ field, op, value, values, start, end }) => ({ field, op, value, values, start, end })),
+    }));
 }
-
-
 
 function collectProjectColumnKeys(rows: ClearstoryProjectRowAllColumns[]): string[] {
   // Contract-defined order (frontend-clearstory-projects-module.md).
@@ -133,14 +115,25 @@ function ClearstoryProjectsView() {
   const { user } = useAuth();
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch.length >= 2 ? initialSearch : "");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
+  const [sort, setSort] = useState<SortState>(null);
+
+  // Paged, sorted and filtered on the server. A new search, filter or sort starts again at page 1.
+  // Only filters that change results count: an empty group or a new condition id doesn't reload anything.
+  const appliedFilters = useMemo(() => effectiveFilters(filterGroups), [filterGroups]);
+  const appliedFiltersKey = JSON.stringify(appliedFilters);
+  const pageKey = JSON.stringify([debouncedSearch, appliedFiltersKey, sort]);
+  const [pageState, setPageState] = useState({ key: pageKey, page: 1 });
+  const requestedPage = pageState.key === pageKey ? pageState.page : 1;
   const { data: statusData, error: statusError, loading: statusLoading, refetch: refetchStatus } =
     useClearstoryStatus();
   const { data, error, loading, refetch: refetchProjects } = useClearstoryProjects({
     search: debouncedSearch || undefined,
-    page,
-    pageSize,
+    page: requestedPage,
+    pageSize: PAGE_SIZE,
+    sortBy: sort?.key ?? null,
+    sortDir: sort?.dir ?? "asc",
+    filters: appliedFilters,
   });
 
   const [inspect, setInspect] = useState<{
@@ -153,15 +146,10 @@ function ClearstoryProjectsView() {
     const t = setTimeout(() => {
       const s = searchInput.trim();
       setDebouncedSearch(s.length >= 2 ? s : "");
-      setPage(1);
-      setExtraRows([]);
     }, 320);
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  const [extraRows, setExtraRows] = useState<ClearstoryProjectRowAllColumns[]>([]);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [moreError, setMoreError] = useState<string | null>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
   const [atTableBottom, setAtTableBottom] = useState(false);
 
@@ -169,7 +157,6 @@ function ClearstoryProjectsView() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [activeConditionKeys, setActiveConditionKeys] = useState<string[]>([]);
 
@@ -234,19 +221,20 @@ function ClearstoryProjectsView() {
 
   const activeFilterCount = useMemo(() => filterGroups.reduce((n, g) => n + g.conditions.length, 0), [filterGroups]);
 
-  const allProjects = useMemo(() => {
-    const first = ((data && "projects" in data ? data.projects : []) ?? []) as ClearstoryProjectRowAllColumns[];
-    const seen = new Set(first.map((r) => String(r.id)));
-    return [...first, ...extraRows.filter((r) => !seen.has(String(r.id)))];
-  }, [data, extraRows]);
+  // One page, already filtered and sorted (by the server, or by the hook for an older backend).
   const projects = useMemo(
-    () => allProjects.filter((p) => rowMatchesGroups(p as unknown as Record<string, unknown>, filterGroups)),
-    [allProjects, filterGroups]
+    () => ((data && "projects" in data ? data.projects : []) ?? []) as ClearstoryProjectRowAllColumns[],
+    [data]
   );
+  // Projects matching the search and filters, all pages.
   const total = data && "total" in data ? data.total : projects.length;
+  const currentPage = data && "page" in data ? data.page : requestedPage;
+  const setPage = (next: number) => {
+    setPageState({ key: pageKey, page: next });
+    tableScrollRef.current?.scrollTo({ top: 0 });
+  };
   const columnKeys = useMemo(() => collectProjectColumnKeys(projects), [projects]);
 
-  const [sort, setSort] = useState<SortState>(null);
   const toggleSort = (key: string) => {
     setSort((prev) => {
       if (!prev || prev.key !== key) return { key, dir: "asc" };
@@ -254,15 +242,7 @@ function ClearstoryProjectsView() {
       return null;
     });
   };
-  const sortedProjects = useMemo(() => {
-    if (!sort) return projects;
-    const withValues = projects.map((row) => ({
-      row,
-      value: sort.key === "baseContractValue" ? normalizeMoney(row.baseContractValue) : (row as Record<string, unknown>)[sort.key],
-    }));
-    withValues.sort((a, b) => (sort.dir === "asc" ? compareValues(a.value, b.value) : compareValues(b.value, a.value)));
-    return withValues.map((w) => w.row);
-  }, [projects, sort]);
+  const sortedProjects = projects;
 
   const columnsStorageKey = "cs-table-cols-cs-projects";
   const [storedHidden, setHiddenColumns] = useState<Set<string> | null>(() => {
@@ -315,23 +295,6 @@ function ClearstoryProjectsView() {
   const pinnedCellRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
   const pinnedOffsets = useStickyOffsets(activePinnedOrder, pinnedCellRefs, [orderedColumnKeys.length]);
 
-  // If backend clamps/normalizes pagination values, mirror them in UI state.
-  // Only reconcile once a fetch has settled (`!loading`) — reconciling against `data`
-  // while a new page/pageSize request is in flight compares the *stale* previous
-  // response to the *new* local state and snaps the page back before the fetch resolves.
-  useEffect(() => {
-    if (!data || loading) return;
-    if (!("page" in data) || !("pageSize" in data) || !("total" in data)) return;
-    const dPage = data.page;
-    const dPageSize = data.pageSize;
-    if (typeof dPage === "number") setPage((prev) => (dPage !== prev ? dPage : prev));
-    if (typeof dPageSize === "number") setPageSize((prev) => (dPageSize !== prev ? dPageSize : prev));
-    if (typeof dPage === "number" && typeof dPageSize === "number") {
-      const pages = Math.max(1, Math.ceil(data.total / (dPageSize || 50)));
-      if (dPage > pages) setPage(pages);
-    }
-  }, [data, loading]);
-
   const statusReady =
     statusData &&
     (typeof statusData.ready === "boolean"
@@ -364,7 +327,6 @@ function ClearstoryProjectsView() {
     try {
       const res = await postClearstorySync();
       setSyncMessage(res.message ?? (res.ok ? "Sync requested." : "Sync did not start (may already be running)."));
-      setExtraRows([]);
       await refetchProjects();
       await refetchStatus();
     } catch (e) {
@@ -373,30 +335,6 @@ function ClearstoryProjectsView() {
       setSyncing(false);
     }
   }, [refetchProjects, refetchStatus]);
-
-  const loadedCount = allProjects.length;
-  const hasMore = loadedCount < total;
-  const loadMore = useCallback(async () => {
-    setLoadingMore(true);
-    setMoreError(null);
-    try {
-      const nextPage = Math.floor(loadedCount / PAGE_SIZE) + 1;
-      const res = await getClearstoryProjects({
-        search: debouncedSearch || undefined,
-        page: nextPage,
-        pageSize: PAGE_SIZE,
-        allColumns: true,
-        full: true,
-      });
-      const rows = ((res && "projects" in res ? res.projects : []) ?? []) as ClearstoryProjectRowAllColumns[];
-      setExtraRows((prev) => [...prev, ...rows]);
-      setAtTableBottom(false);
-    } catch (e) {
-      setMoreError(getApiErrorMessage(e, "Couldn't load more projects"));
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [loadedCount, debouncedSearch]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 ui-animate-in [--radius:10px] [--radius-md:8px]">
@@ -664,24 +602,8 @@ function ClearstoryProjectsView() {
           ) : null}
         </div>
 
-        {projects.length > 0 ? (
-          <div className="flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] px-5 py-3">
-            <span className="cs-helper">
-              Showing {projects.length.toLocaleString()} of {total.toLocaleString()}
-              {moreError ? <span className="ml-2 text-danger">{moreError}</span> : null}
-            </span>
-            {hasMore ? (
-              <button
-                type="button"
-                onClick={() => void loadMore()}
-                disabled={loadingMore}
-                className="inline-flex items-center gap-1 text-[13px] font-medium text-brand hover:underline disabled:opacity-50"
-              >
-                {loadingMore ? "Loading…" : "View more"}
-                <span aria-hidden>→</span>
-              </button>
-            ) : null}
-          </div>
+        {total > 0 ? (
+          <TablePager page={currentPage} pageSize={PAGE_SIZE} total={total} noun="project" busy={loading} onPage={setPage} />
         ) : null}
       </section>
 
@@ -692,6 +614,13 @@ function ClearstoryProjectsView() {
         initialGroups={filterGroups}
         onClose={() => setFilterOpen(false)}
         onApply={applyFilterGroups}
+        onRemoveApply={(groups) => {
+          // Deleting a filter or pressing Clear updates the list at once (the panel stays open), but only
+          // when it changes what is applied: clearing a draft that was never applied leaves the list alone.
+          if (JSON.stringify(effectiveFilters(groups)) === appliedFiltersKey) return;
+          setActiveConditionKeys([]);
+          setFilterGroups(groups);
+        }}
         onSaveAsView={saveAsView}
       />
     </div>

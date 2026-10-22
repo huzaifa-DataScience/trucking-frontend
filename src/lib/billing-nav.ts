@@ -4,6 +4,7 @@
  * - the Billing view state (tab, filters, sort) so "Back" returns to exactly that list.
  */
 import type { SitelineAgingFilters } from "@/lib/api/endpoints/siteline";
+import { splitProjectName } from "@/lib/siteline-project-name";
 
 export const BILLING_NAV_KEY = "billing:project-nav";
 const VIEW_KEY = "billing:view-state";
@@ -22,9 +23,38 @@ export type BillingNavContext = {
   companyId: string | null;
   /** Short chips describing what Back will restore, e.g. `search "arena"`, `51+ days`. */
   chips: string[];
-  /** The list in on-screen order (Siteline contract ids, de-duplicated). */
+  /** The list in on-screen order (Siteline contract ids, de-duplicated). With `query` this starts as the
+   * page the user was on; the project page then loads the whole list and sets `complete`. */
   items: { id: string; label: string }[];
+  /** How to fetch the whole list (the Billing tables are paged on the server). */
+  query?: {
+    entityIds: number[];
+    filters: SitelineAgingFilters;
+    sortBy: string | null;
+    sortDir: "asc" | "desc";
+  };
+  /** True once `items` holds the whole list. */
+  complete?: boolean;
+  /** While `items` is one page: where it starts in the whole list and how long that list is ("53 of 136"). */
+  offset?: number;
+  total?: number;
 };
+
+/** Prev / next entries from table rows: one per contract, labelled "number · name". */
+export function billingNavItems(
+  rows: readonly { contractId?: string | null; projectName?: string | null }[]
+): { id: string; label: string }[] {
+  const seen = new Set<string>();
+  const items: { id: string; label: string }[] = [];
+  for (const r of rows) {
+    const id = r.contractId;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const sp = splitProjectName(r.projectName ?? id);
+    items.push({ id, label: `${sp.number ? `${sp.number} · ` : ""}${sp.name}` });
+  }
+  return items;
+}
 
 export type BillingSortState = { by: string | null; dir: "asc" | "desc" };
 
@@ -36,6 +66,9 @@ export type BillingViewState = {
   overdueSort: BillingSortState;
   /** Billing's own company choice (null = all companies); absent in views saved before it existed. */
   companyId?: string | null;
+  /** Table page the user was on (1-based); absent in views saved before tables were paged. */
+  agingPage?: number;
+  overduePage?: number;
 };
 
 function write(key: string, value: unknown) {

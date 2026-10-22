@@ -48,3 +48,26 @@ export async function getProductionReport(
 ): Promise<ProductionReport> {
   return get<ProductionReport>(`/bids/${bidId}/production-report`);
 }
+
+/** Paged Production list (sorted and paged in SQL). An older backend ignores `page` and sends the capped list (no `total`). */
+export async function listProductionReportsPage(params: {
+  q?: string;
+  page: number;
+  pageSize: number;
+  sortBy?: string | null;
+  sortDir?: "asc" | "desc";
+}): Promise<ProductionReportListResponse & { total?: number; page?: number; pageSize?: number }> {
+  const raw = await get<unknown>("/production-reports", {
+    q: params.q || undefined,
+    page: params.page,
+    pageSize: params.pageSize,
+    sortBy: params.sortBy || undefined,
+    sortDir: params.sortBy ? params.sortDir : undefined,
+    limit: 200,
+  });
+  const list = normalizeList(raw);
+  const o = (raw && typeof raw === "object" ? raw : {}) as { total?: unknown; page?: unknown; pageSize?: unknown };
+  return typeof o.total === "number"
+    ? { ...list, total: o.total, page: Number(o.page) || params.page, pageSize: Number(o.pageSize) || params.pageSize }
+    : list;
+}

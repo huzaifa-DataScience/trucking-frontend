@@ -19,7 +19,7 @@ import {
 } from "@/lib/clearstory/swaggerTableColumns";
 
 
-type SortState = { key: string; dir: SortDir } | null;
+export type SortState = { key: string; dir: SortDir } | null;
 
 function sortValueFor(row: ClearstoryTableRow, spec: TableColumnSpec): unknown {
   if (spec.kind === "group") {
@@ -484,6 +484,7 @@ export function ClearstorySwaggerTable({
   variant = "card",
   headerAside,
   bare = false,
+  serverSort,
 }: {
   title: string;
   subtitle?: string;
@@ -503,6 +504,17 @@ export function ClearstorySwaggerTable({
   headerAside?: ReactNode;
   /** Panel variant only: drop the outer border and title row, for a table embedded in another box. */
   bare?: boolean;
+  /**
+   * Sort on the server across every row instead of reordering this page. Headers not in `sortableKeys`
+   * aren't clickable. If the server didn't apply the sort (`applied` false, an older backend), this page
+   * is sorted here as before.
+   */
+  serverSort?: {
+    sort: SortState;
+    onSortChange: (next: SortState) => void;
+    sortableKeys?: string[];
+    applied: boolean;
+  };
 }) {
   const paginationIdPrefix = useMemo(() => {
     const slug = title
@@ -583,24 +595,52 @@ export function ClearstorySwaggerTable({
   const pinnedCellRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
   const pinnedOffsets = useStickyOffsets(activePinnedOrder, pinnedCellRefs, [orderedHeaders.length]);
 
-  const [sort, setSort] = useState<SortState>(null);
-
+  const [localSort, setLocalSort] = useState<SortState>(null);
+  // Header keys here are "s:<column>" (plain) or "g:<group>"; the server sorts by the plain column name.
+  const serverKeyOf = (headerKey: string) => (headerKey.startsWith("s:") ? headerKey.slice(2) : null);
+  const serverSortKey = serverSort?.sort?.key;
+  const serverSortDir = serverSort?.sort?.dir;
+  const sort: SortState = useMemo(
+    () =>
+      serverSort
+        ? serverSortKey && serverSortDir
+          ? { key: `s:${serverSortKey}`, dir: serverSortDir }
+          : null
+        : localSort,
+    [serverSort, serverSortKey, serverSortDir, localSort]
+  );
+  // Same three steps as before: up, down, off.
+  const nextSort = (prev: SortState, key: string): SortState => {
+    if (!prev || prev.key !== key) return { key, dir: "asc" };
+    if (prev.dir === "asc") return { key, dir: "desc" };
+    return null;
+  };
   const toggleSort = (key: string) => {
-    setSort((prev) => {
-      if (!prev || prev.key !== key) return { key, dir: "asc" };
-      if (prev.dir === "asc") return { key, dir: "desc" };
-      return null;
-    });
+    if (!serverSort) {
+      setLocalSort((prev) => nextSort(prev, key));
+      return;
+    }
+    const next = nextSort(sort, key);
+    const serverKey = next ? serverKeyOf(next.key) : null;
+    serverSort.onSortChange(next && serverKey ? { key: serverKey, dir: next.dir } : null);
+  };
+  // Server mode: only columns the server can sort are clickable (until it says which, all plain columns are).
+  const isSortable = (key: string) => {
+    if (!serverSort) return true;
+    const serverKey = serverKeyOf(key);
+    if (!serverKey) return !serverSort.sortableKeys; // grouped columns: only in the old-backend fallback
+    return !serverSort.sortableKeys || serverSort.sortableKeys.includes(serverKey);
   };
 
   const sortedRows = useMemo(() => {
     if (!sort) return rows;
+    if (serverSort?.applied) return rows; // already in order from the server
     const spec = columnSpecs.find((s) => dataHeaderKey(s) === sort.key);
     if (!spec) return rows;
     const withValues = rows.map((row) => ({ row, value: sortValueFor(row, spec) }));
     withValues.sort((a, b) => (sort.dir === "asc" ? compareValues(a.value, b.value) : compareValues(b.value, a.value)));
     return withValues.map((w) => w.row);
-  }, [rows, sort, columnSpecs]);
+  }, [rows, sort, columnSpecs, serverSort?.applied]);
 
   const panel = variant === "panel";
 
@@ -653,6 +693,23 @@ export function ClearstorySwaggerTable({
                 const dir = sort?.key === key ? sort.dir : null;
                 const isPinned = pinnedSet.has(key);
                 const isLastPinned = isPinned && activePinnedOrder[activePinnedOrder.length - 1] === key;
+                if (!isSortable(key)) {
+                  return (
+                    <th
+                      key={key}
+                      scope="col"
+                      style={isPinned ? { left: pinnedOffsets[key] ?? 0 } : undefined}
+                      className={`whitespace-nowrap px-3 py-2 text-left font-semibold text-ink/50 ${isPinned ? pinnedHeaderClass(isLastPinned) : ""}`.trim()}
+                      title="Can't sort by this column across all pages"
+                      ref={(el) => {
+                        if (isPinned && el) pinnedCellRefs.current.set(key, el);
+                        else pinnedCellRefs.current.delete(key);
+                      }}
+                    >
+                      {tableColumnLabel(h.spec)}
+                    </th>
+                  );
+                }
                 return (
                   <SortableTh
                     key={key}
