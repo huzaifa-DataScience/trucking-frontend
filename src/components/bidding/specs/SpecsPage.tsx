@@ -63,7 +63,11 @@ export function SpecsPage({
   const editable = canWrite && bid?.status === "draft";
 
   const load = useCallback(async () => {
-    if (!bidId) return;
+    if (!bidId) {
+      setLoading(false);
+      setError("Missing bid id");
+      return;
+    }
     setLoading(true);
     setError(null);
     setLines([]);
@@ -261,7 +265,13 @@ export function SpecsPage({
   const hasMike = mikeFiles.length > 0;
 
   return (
-    <div className="intake-compact flex min-h-0 min-w-0 flex-1 flex-col gap-6">
+    <div
+      className={
+        embedded
+          ? "flex min-w-0 flex-col gap-6"
+          : "intake-compact flex min-h-0 min-w-0 flex-1 flex-col gap-6"
+      }
+    >
       {!embedded ? (
         <div>
           <Link

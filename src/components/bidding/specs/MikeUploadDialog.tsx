@@ -218,6 +218,12 @@ export function MikeUploadDialog({
                 ))}
               </SortedOptions>
             </select>
+            <span className="font-normal text-[11px] text-ink/40">
+              Prefer the bidding / estimate job (not Material Trimble won-job
+              folders). If the list looks wrong, tell backend to filter{" "}
+              <code className="text-[10px]">GET /lookups/jobs</code> for
+              active bids.
+            </span>
           </label>
 
           {jobNumberHint || projectLabel ? (

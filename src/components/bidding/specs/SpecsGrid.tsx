@@ -82,7 +82,7 @@ export function SpecsGrid({
   const showRollCols = lines.some(isRollLine);
 
   return (
-    <div className="intake-section flex min-h-0 min-w-0 flex-1 flex-col">
+    <div className="intake-section flex min-w-0 shrink-0 flex-col">
       <div className="intake-section-head">Specs qty grid</div>
       {/* Section chrome uses overflow:hidden — scroll must live on the body. */}
       <div
@@ -268,7 +268,11 @@ function SpecsLineRow({
   const facingSelectValue = resolveFacingSelectValue(draft.facing, facings);
   const facingOptions: SpecFacing[] =
     facingSelectValue &&
-    !facings.some((f) => f.value.toLowerCase() === facingSelectValue.toLowerCase())
+    !facings.some(
+      (f) =>
+        String(f.value ?? "").toLowerCase() ===
+        facingSelectValue.toLowerCase()
+    )
       ? [...facings, { id: -1, value: facingSelectValue, label: facingSelectValue }]
       : facings;
 
