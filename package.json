@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "node api.js && next dev --webpack -p 3001",
-    "dev:turbo": "next dev -p 3001",
-    "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev --webpack -p 3001",
+    "dev:turbo": "node api.js && next dev -p 3001",
+    "dev:clean": "node api.js && node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev --webpack -p 3001",
     "build": "node api.js && node scripts/next-build.cjs",
     "build:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && node scripts/next-build.cjs",
     "start": "node api.js && next start -p 3002",
