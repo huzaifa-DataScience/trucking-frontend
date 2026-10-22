@@ -1,0 +1,1587 @@
+{
+  "generatedAt": "2026-10-18T11:14:18.986033+00:00",
+  "purpose": "Lift AP/company rows from Project Financials that are absent from Followup CRM; also keep full AP Contacts + AP field enrichment for rows that already exist.",
+  "sources": {
+    "financials": "Project Financials (1).xlsx → AP Contacts",
+    "followupCrm": "BiddingSheet.xlsx → Followup"
+  },
+  "contactBlocksFromFinancialSheet": [
+    {
+      "key": "customer",
+      "label": "Customer",
+      "fields": [
+        "company",
+        "nameOfPmTitle",
+        "email",
+        "cellPhone"
+      ],
+      "hasMasterListInWorkbook": false
+    },
+    {
+      "key": "customer_ap",
+      "label": "Customer AP",
+      "fields": [
+        "company",
+        "nameOfApTitle",
+        "email",
+        "cellPhone"
+      ],
+      "hasMasterListInWorkbook": true,
+      "masterList": "AP Contacts → AP_Contacts"
+    },
+    {
+      "key": "gcs",
+      "label": "GC's",
+      "fields": [
+        "company",
+        "pm",
+        "email",
+        "cellPhone"
+      ],
+      "hasMasterListInWorkbook": false
+    },
+    {
+      "key": "owner",
+      "label": "Owner",
+      "fields": [
+        "company",
+        "nameOfContactTitle",
+        "cellPhone"
+      ],
+      "hasMasterListInWorkbook": false,
+      "notes": "No email in Excel template"
+    }
+  ],
+  "summary": {
+    "apContactsTotal": 50,
+    "followupTotal": 250,
+    "alreadyInFollowup": 34,
+    "missingFromFollowup": 16,
+    "solidMatchThreshold": 0.84
+  },
+  "missingFromFollowup": [
+    {
+      "company": "Baltimore City Public Schools",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Baltimore City Public Schools\nAP Contact: \n\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "James Craft & Son, Inc.",
+        "closestScore": 0.435
+      }
+    },
+    {
+      "company": "Baltimore County Public Schools",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Baltimore County Public Schools\nAP Contact: \n\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Baldwin Mechanical",
+        "closestScore": 0.449
+      }
+    },
+    {
+      "company": "Berward Mechancial",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": "836 Ritchie Hwy, Suite 1\nSeverna Park, MD 21146",
+      "apPhone": "O: (410) 975-5576",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Berward Mechancial\nAP Contact: \nO: (410) 975-5576\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Howard Mechanical Llc",
+        "closestScore": 0.8
+      }
+    },
+    {
+      "company": "Breeden Mechanical",
+      "apDistributionEmail": "@breedencompanies.com",
+      "apContactName": null,
+      "companyAddress": "8101 Flannery Court\nManassas, Virginia 20109",
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Breeden Mechanical\nAP Contact: \n\nSend all Invoices to --> @breedencompanies.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Freedom Mechanical",
+        "closestScore": 0.833
+      }
+    },
+    {
+      "company": "Clark",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Clark\nAP Contact: \n\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Chilmar Corporation",
+        "closestScore": 0.667
+      }
+    },
+    {
+      "company": "Denver-Elek",
+      "apDistributionEmail": "ap@denver-elek.com",
+      "apContactName": "Lisa Puckett. Accounts Payable",
+      "companyAddress": "8860 Kelso Drive\nEssex, MD 21221",
+      "apPhone": "O: 410.574.8400 x254",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Denver-Elek\nAP Contact: Lisa Puckett. Accounts Payable\nO: 410.574.8400 x254\nSend all Invoices to --> ap@denver-elek.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Energesco Mechanical",
+        "closestScore": 0.452
+      }
+    },
+    {
+      "company": "Dynamic Mechancial Corporation",
+      "apDistributionEmail": "https://dmc-mech.com/",
+      "apContactName": null,
+      "companyAddress": "11160 Veirs Mill Rd, Ste LLH-18 #240\nWheaton, MD 20902",
+      "apPhone": "O: 301-252-7667",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Dynamic Mechancial Corporation\nAP Contact: \nO: 301-252-7667\nSend all Invoices to --> https://dmc-mech.com/",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Dc Mechanical, Llc",
+        "closestScore": 0.774
+      }
+    },
+    {
+      "company": "Dulaney Contracting, LLC",
+      "apDistributionEmail": "dulaneycontracting.com",
+      "apContactName": null,
+      "companyAddress": "6801 Kenilworth Avenue\nSuite 300\nRiverdale, MD 20737",
+      "apPhone": "O: 301-643-7387",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Dulaney Contracting, LLC\nAP Contact: \nO: 301-643-7387\nSend all Invoices to --> dulaneycontracting.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Green Contracting Company, Inc.",
+        "closestScore": 0.722
+      }
+    },
+    {
+      "company": "Hensel Phelps",
+      "apDistributionEmail": "@henselphelps.com",
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Hensel Phelps\nAP Contact: \n\nSend all Invoices to --> @henselphelps.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "The Bell Companies",
+        "closestScore": 0.444
+      }
+    },
+    {
+      "company": "John C. Grimberg Co., Inc.",
+      "apDistributionEmail": "gbricker@grimberg.com",
+      "apContactName": "Georgie Bricker, AP",
+      "companyAddress": "3200 Tower Oaks Blvd \nUnit #3\nRockville, MD 20852",
+      "apPhone": "O: 301-881-5120",
+      "apDirectEmail": "gbricker@grimberg.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "John C. Grimberg Co., Inc.\nAP Contact: Georgie Bricker, AP\n <gbricker@grimberg.com>\nO: 301-881-5120\nSend all Invoices to --> gbricker@grimberg.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "John G. Webster",
+        "closestScore": 0.621
+      }
+    },
+    {
+      "company": "Joseph J Magnolia Inc.",
+      "apDistributionEmail": "ap-jjm@magnolia-companies.com",
+      "apContactName": "Deena Disque, Controller",
+      "companyAddress": "600 Gallatin Street NE\nWashington, DC 20017",
+      "apPhone": "O: 202-829-8510 x1514; D: 240-295-6261",
+      "apDirectEmail": "ddisque@magnolia-companies.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Joseph J Magnolia Inc. \nAP Contact: Deena Disque, Controller\n <ddisque@magnolia-companies.com>\nO: 202-829-8510 x1514; D: 240-295-6261    \nSend all Invoices to --> ap-jjm@magnolia-companies.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Joseph M Zimmer Inc",
+        "closestScore": 0.562
+      }
+    },
+    {
+      "company": "Montgomery County Public Schools",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Montgomery County Public Schools\nAP Contact: \n\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Abbott Mechanical Services, Llc",
+        "closestScore": 0.414
+      }
+    },
+    {
+      "company": "Rommel AP - DCB (Cashin, Spinelli & Ferretti, LLC)\n10:2305/Zurich/Rommel Construction/ DCB",
+      "apDistributionEmail": "rommelap@csfllc.com",
+      "apContactName": "Max McAllister, Project Accountant",
+      "companyAddress": "601 Nursery Road\nLinthicum Heights, MD 21090",
+      "apPhone": "O: 631-737-9170",
+      "apDirectEmail": "mmcallister@csfllc.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Rommel AP - DCB (Cashin, Spinelli & Ferretti, LLC)\n10:2305/Zurich/Rommel Construction/ DCB\nAP Contact: Max McAllister, Project Accountant\n <mmcallister@csfllc.com>\nO: 631-737-9170\nSend all Invoices to --> rommelap@csfllc.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Mechanical Engineering And Construction Corporation",
+        "closestScore": 0.424
+      }
+    },
+    {
+      "company": "Rommel AP - Goel (Cashin, Spinelli & Ferretti, LLC)\n10:2305/Zurich/Rommel Construction//Goel",
+      "apDistributionEmail": "rommelap@csfllc.com",
+      "apContactName": "Max McAllister, Project Accountant",
+      "companyAddress": "601 Nursery Road\nLinthicum Heights, MD 21090",
+      "apPhone": "O: 631-737-9170",
+      "apDirectEmail": "mmcallister@csfllc.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Rommel AP - Goel (Cashin, Spinelli & Ferretti, LLC)\n10:2305/Zurich/Rommel Construction//Goel\nAP Contact: Max McAllister, Project Accountant\n <mmcallister@csfllc.com>\nO: 631-737-9170\nSend all Invoices to --> rommelap@csfllc.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Mechanical Engineering And Construction Corporation",
+        "closestScore": 0.417
+      }
+    },
+    {
+      "company": "W.G. Tomko Incorporated Contractors",
+      "apDistributionEmail": "apvendorinvoices@wgtomko.com",
+      "apContactName": "Merrie Columbia; AP Vendor Assistant",
+      "companyAddress": "3710 Commerce Drive\nSuite 1006\nHalethorpe, MD 21227",
+      "apPhone": "O: 724-348-2000 Ext 1701",
+      "apDirectEmail": "mcolumbia@wgtomko.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "W.G. Tomko Incorporated Contractors\nAP Contact: Merrie Columbia; AP Vendor Assistant \n <mcolumbia@wgtomko.com>\nO: 724-348-2000 Ext 1701\nSend all Invoices to --> apvendorinvoices@wgtomko.com",
+      "confirmedBy": "Mary Barotac",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Potomac Mechanical Contractors, Inc.",
+        "closestScore": 0.594
+      }
+    },
+    {
+      "company": "W.G./Welch LLC Mechanical Contractor",
+      "apDistributionEmail": "accountspayable@wgwelchllc.com",
+      "apContactName": "Alex",
+      "companyAddress": "260 Interstate Court\nFrederick, MD 21704",
+      "apPhone": "O: 301-831-8642",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "W.G./Welch LLC Mechanical Contractor\nAP Contact: Alex\nO: 301-831-8642\nSend all Invoices to --> accountspayable@wgwelchllc.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap",
+      "match": {
+        "kind": "missing",
+        "closestFollowup": "Excel Mechanical Contractors, Llc",
+        "closestScore": 0.814
+      }
+    }
+  ],
+  "enrichmentForExistingFollowup": [
+    {
+      "company": "Adrian L. Merton, Inc.",
+      "match": {
+        "kind": "alias",
+        "followupCompany": "A.L. Merton (Adrian L. Merton Inc.)",
+        "followupCompanyId": "10"
+      },
+      "apDistributionEmail": "sball@almerton.com",
+      "apContactName": "Saith Ball, AP",
+      "apPhone": "O: 301-336-2700",
+      "apDirectEmail": null,
+      "companyAddress": "151 Hampton Overlook\nCapitol Heights, MD 20743",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "American Combustion Industries, Inc. (An Exigent Company)",
+      "match": {
+        "kind": "fuzzy",
+        "score": 0.88,
+        "followupCompany": "American Combustion Industries, Inc. (ACI)",
+        "followupCompanyId": "24"
+      },
+      "apDistributionEmail": "ACIAccountsPayable@aciindustries.com",
+      "apContactName": "Serena, AP",
+      "apPhone": "O: (301) 779-3400",
+      "apDirectEmail": null,
+      "companyAddress": "7100 Holladay Tyler Rd #233\nGlenn Dale, MD 20769",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Anchor Mechanical LLC",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Anchor Mechanical",
+        "followupCompanyId": "54"
+      },
+      "apDistributionEmail": "ap@anchormech.com",
+      "apContactName": "Nilly Rivera, Accounts Payable",
+      "apPhone": "D: 443-808-1285; C: 410-452-5601",
+      "apDirectEmail": "nrivera@anchormech.com",
+      "companyAddress": "126 Industry Lane\nSuite 4\nForest Hill, MD 21050",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Ariosa & Company, LLC",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Ariosa & Company Llc",
+        "followupCompanyId": "31"
+      },
+      "apDistributionEmail": "accounting@ariosaco.net",
+      "apContactName": "Jessie Narotski",
+      "apPhone": "O: 410-628-4215  x134",
+      "apDirectEmail": "jnarotski@ariosaco.net",
+      "companyAddress": "16 Stenersen Lane\nCockeysville, MD 21030",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Branair, Inc.",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Branair, Inc.",
+        "followupCompanyId": "72"
+      },
+      "apDistributionEmail": "ap@branair.com",
+      "apContactName": "Angie Chamberlain; Accounting Controller",
+      "apPhone": "C: 571.383.7200; O: 703.396.8330",
+      "apDirectEmail": "achamberlain@branair.com",
+      "companyAddress": "11900 Livingston Rd \nSuite 157\nManassas, VA 20109",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Carey Mechanical (MH Mechanical LLC)",
+      "match": {
+        "kind": "alias",
+        "followupCompany": "Carey's Mechanical Llc",
+        "followupCompanyId": "323"
+      },
+      "apDistributionEmail": null,
+      "apContactName": "Jamie Hanson",
+      "apPhone": "O: 202-715-2692",
+      "apDirectEmail": null,
+      "companyAddress": "3220 O Street, NW\nWashington, DC 2000",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Doyle Systems",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Doyle Systems, Llc",
+        "followupCompanyId": "37"
+      },
+      "apDistributionEmail": "doylesystems.net",
+      "apContactName": null,
+      "apPhone": "O: 301-317-6001",
+      "apDirectEmail": null,
+      "companyAddress": "10610 Iron Bridge Road\nSuite 9\nJessup, MD 20794",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "EMJAY Engineering & Construction Co.",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Emjay Engineering & Construction Co., Inc.",
+        "followupCompanyId": "144"
+      },
+      "apDistributionEmail": "spivakg@emjaycons.com",
+      "apContactName": "Galina Spivak, AP Administrator",
+      "apPhone": "D: (410)298-2000 ext.1051",
+      "apDirectEmail": "spivakg@emjaycons.com",
+      "companyAddress": "1706 Whitehead Road\nGwynn Oak, MD 21207",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "G.E Tignall & Co. Inc.",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "G.e. Tignall & Co., Inc",
+        "followupCompanyId": "177"
+      },
+      "apDistributionEmail": "accounting@getignall.com",
+      "apContactName": "Mickey Glendon, Sr.",
+      "apPhone": "410-666-3000 Office",
+      "apDirectEmail": "mglendon@getignall.com",
+      "companyAddress": "14 McCann Avenue\nCockeysville, MD 21030",
+      "altContact": "Mike Harper",
+      "altEmail": "mharper@getignall.com"
+    },
+    {
+      "company": "Heer Brothers",
+      "match": {
+        "kind": "alias",
+        "followupCompany": "Heer Bros., Inc",
+        "followupCompanyId": "35"
+      },
+      "apDistributionEmail": "@heerbros.com",
+      "apContactName": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "companyAddress": "7500 Energy Court\nSuite 8\nCurtis Bay, MD 21226",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Heffron Company",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Heffron Company, Inc.",
+        "followupCompanyId": "14"
+      },
+      "apDistributionEmail": "@heffroncompany.com",
+      "apContactName": null,
+      "apPhone": "O: (301) 816-2088",
+      "apDirectEmail": null,
+      "companyAddress": "4940 Nicholson Court #100\nKensington, MD 20895",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Heritage Mechanical, LLC",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Heritage Mechanical",
+        "followupCompanyId": "5"
+      },
+      "apDistributionEmail": "accounting@heritagemechanical-llc.com",
+      "apContactName": "Kathy D. Kaleo",
+      "apPhone": "443-223-4402",
+      "apDirectEmail": "kkaleo@heritagemechanical-llc.com",
+      "companyAddress": "2134 Espey Court \nUnit # 7\nCrofton, MD 21114",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Horton Mechanical",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Horton Mechanical",
+        "followupCompanyId": "194"
+      },
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "companyAddress": null,
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "JCM Associates, Inc.",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Jcm Associates, Inc.",
+        "followupCompanyId": "207"
+      },
+      "apDistributionEmail": "@gojcm.com",
+      "apContactName": "Cathy l. Keppler, Project Accountant",
+      "apPhone": "O: 301-390-5500",
+      "apDirectEmail": "ckeppler@gojcm.com",
+      "companyAddress": "301 Prince Georges Blvd \nUnit # C\nUpper Marlboro, MD 20774",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "KDB Mechanical, LLC",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Kdb Mechanical Llc",
+        "followupCompanyId": "214"
+      },
+      "apDistributionEmail": "kdbsub@kdbllc.com",
+      "apContactName": "Tara Walter. AP Admin",
+      "apPhone": "O: 301-424-3410; D: 240-865-8024; M: 571-409-4708",
+      "apDirectEmail": "tsalem@kdbllc.com",
+      "companyAddress": "79 Derwood Circle\nRockville, MD 20850",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Kent Island Mechanical",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Kent Island Mechanical",
+        "followupCompanyId": "220"
+      },
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "apPhone": "O: 301-776-3035",
+      "apDirectEmail": null,
+      "companyAddress": "13340 Mid Atlantic Blvd.\nLaurel, MD 20708",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Kelly HVAC",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Kelly Hvac Inc.",
+        "followupCompanyId": "217"
+      },
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "companyAddress": null,
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Mallick Mechanical Contractors",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Mallick Mechanical Contractors",
+        "followupCompanyId": "238"
+      },
+      "apDistributionEmail": "subbills@mallickmechanical.com",
+      "apContactName": "Nicky Domer",
+      "apPhone": "O: 301-840-5860",
+      "apDirectEmail": "ndomer@mallickmechanical.com",
+      "companyAddress": "8010 Cessna Avenue\nGaithersburg, MD 20879",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Norair Engineering Corporation",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Norair Engineering Corp.",
+        "followupCompanyId": "22"
+      },
+      "apDistributionEmail": "lemory@norair.com",
+      "apContactName": "Cheryl Calderon, Accounting",
+      "apPhone": "O: 301-499-2200",
+      "apDirectEmail": "ccalderon@norair.com",
+      "companyAddress": "337 Brightseat Rd \nSuite # 200\nLandover, MD 20785",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "PC Construction Company",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Pc Construction Company",
+        "followupCompanyId": "280"
+      },
+      "apDistributionEmail": "accountspayable@pcconstruction.com",
+      "apContactName": null,
+      "apPhone": "O: 443-305-2004",
+      "apDirectEmail": null,
+      "companyAddress": "8866 Wagner Station Rd\nCurtis Bay, MD 21226",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Peachtree Mechanical, Inc.",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Peachtree Mechanical, Inc",
+        "followupCompanyId": "179"
+      },
+      "apDistributionEmail": "invoices@peachtreemechanical.com",
+      "apContactName": "Myra Hill",
+      "apPhone": "O: 770-460-5155",
+      "apDirectEmail": "myra.hill@peachtreemechanical.com",
+      "companyAddress": "535 Marksmen Court\nFayetteville, GA 30214",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Protech Construction, Inc.",
+      "match": {
+        "kind": "fuzzy",
+        "score": 0.974,
+        "followupCompany": "Protec Construction, Inc.",
+        "followupCompanyId": "251"
+      },
+      "apDistributionEmail": "@protec.build",
+      "apContactName": "Vic Singh",
+      "apPhone": "O: (202) 232-0080; C: (202) 441-9468",
+      "apDirectEmail": "vik@protec.build",
+      "companyAddress": "1314 8th Street, NW\nWashington , DC 20001",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "R&R Mechanical, LLC",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "R&r Mechanical Llc",
+        "followupCompanyId": "290"
+      },
+      "apDistributionEmail": "invoices@rrmechanical.com",
+      "apContactName": "Kathleen Rice, AP Mngr",
+      "apPhone": "O: 202-636-9451",
+      "apDirectEmail": "krice@rrmechanical.com",
+      "companyAddress": "2902 Bladensburg Road NE\nWashington, DC 20018",
+      "altContact": "Amanda Goff, AP",
+      "altEmail": "(o)202-636-9451"
+    },
+    {
+      "company": "Ronco Mechanical",
+      "match": {
+        "kind": "fuzzy",
+        "score": 0.875,
+        "followupCompany": "Domco Mechanical Inc",
+        "followupCompanyId": "456"
+      },
+      "apDistributionEmail": "cindy@roncomech.com",
+      "apContactName": "Cindy W. Burnett",
+      "apPhone": "O: 301-868-6220 x14",
+      "apDirectEmail": "cindy@roncomech.com",
+      "companyAddress": "8916 Simpson Ln, Clinton, MD 20735",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Shapiro and Duncan, Inc.",
+      "match": {
+        "kind": "fuzzy",
+        "score": 0.882,
+        "followupCompany": "Shapiro & Duncan, Inc.",
+        "followupCompanyId": "35"
+      },
+      "apDistributionEmail": "subbilling@shapiroandduncan.com",
+      "apContactName": "Roland S. Diggs, Jr.",
+      "apPhone": "O: 240-778-2198; C: 301-412-6514",
+      "apDirectEmail": "rdiggs@shapiroandduncan.com",
+      "companyAddress": "14620 Rothgeb Dr, Rockville, MD 20850",
+      "altContact": "Sandrine Djomdom, Acct Mngr",
+      "altEmail": "240-778-2220"
+    },
+    {
+      "company": "Southland Industries / Dulles",
+      "match": {
+        "kind": "alias",
+        "followupCompany": "Southland Industries",
+        "followupCompanyId": "47"
+      },
+      "apDistributionEmail": "southlandind.com",
+      "apContactName": "Carly Banko",
+      "apPhone": "O: 703.834.5570; D: (571) 612-4067",
+      "apDirectEmail": null,
+      "companyAddress": "22340 Dresden Street\nSuite 177\nDulles, VA 20166",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Southland Industries / Laurel",
+      "match": {
+        "kind": "alias",
+        "followupCompany": "Southland Industries",
+        "followupCompanyId": "47"
+      },
+      "apDistributionEmail": "southlandind.com",
+      "apContactName": "Carly Banko",
+      "apPhone": "O: 240.547.5800; D: (571) 612-4067",
+      "apDirectEmail": null,
+      "companyAddress": "13150 Mid-Atlantic Boulevard\nSuite 200\nLaurel, MD 20708",
+      "altContact": "Nomin Bold",
+      "altEmail": null
+    },
+    {
+      "company": "Temp Air Company",
+      "match": {
+        "kind": "alias",
+        "followupCompany": "Temp Air Company (TAC)",
+        "followupCompanyId": "54"
+      },
+      "apDistributionEmail": "emaramba@tempaircompany.com",
+      "apContactName": "Erin Maramba",
+      "apPhone": "O: 410-358-8078",
+      "apDirectEmail": "emaramba@tempaircompany.com",
+      "companyAddress": "51 Gwynns Mill Ct, Owings Mills, MD 21117",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Towson Mechanical Inc.",
+      "match": {
+        "kind": "fuzzy",
+        "score": 0.895,
+        "followupCompany": "Towson Mechanical, Inc. (TMI)",
+        "followupCompanyId": "72"
+      },
+      "apDistributionEmail": "ap@towsonmechanical.com",
+      "apContactName": null,
+      "apPhone": null,
+      "apDirectEmail": "smraver@towsonmechanical.com",
+      "companyAddress": "8651 Oakleigh Road\nParkville, MD 21234",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "W.E. Bowers & Associates Inc. - Beltsville, MD",
+      "match": {
+        "kind": "alias",
+        "followupCompany": "W.E. Bowers",
+        "followupCompanyId": "82"
+      },
+      "apDistributionEmail": "vendorap@webowers.com",
+      "apContactName": "La Tanya Morris",
+      "apPhone": "O: 301 419-2488 Ext: 334",
+      "apDirectEmail": "lmorris@webowers.com",
+      "companyAddress": "12401 Kiln Court,\nBeltsville, MD 20705",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "W.E. Bowers & Associates Inc. - Sterling VA",
+      "match": {
+        "kind": "alias",
+        "followupCompany": "W.E. Bowers",
+        "followupCompanyId": "82"
+      },
+      "apDistributionEmail": "vendorap@webowers.com",
+      "apContactName": "La Tanya Morris",
+      "apPhone": "O: 301 419-2488 Ext: 334",
+      "apDirectEmail": "lmorris@webowers.com",
+      "companyAddress": "22740 Ladbrook Drive\nSterling, VA 20166",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "W.L. Gary Company, Inc.",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "W.l. Gary Company",
+        "followupCompanyId": "85"
+      },
+      "apDistributionEmail": "ap@wlgary.com",
+      "apContactName": "Serina Gregory, Project Accountant",
+      "apPhone": "O: 202.723.0676 ext. 115; D: 202.894.9515",
+      "apDirectEmail": null,
+      "companyAddress": "1140 3rd St NE\nSuite 406\nWashington, DC 20002",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Warner (R.W.), Inc.",
+      "match": {
+        "kind": "alias",
+        "followupCompany": "Warner Mechanical",
+        "followupCompanyId": "94"
+      },
+      "apDistributionEmail": "accountspayable@rwwinc.com",
+      "apContactName": "Ginger Smith, Sr. AP Specialist",
+      "apPhone": "O: 301-662-5387 ext. 229",
+      "apDirectEmail": "ginger.smith@rwwinc.com",
+      "companyAddress": "217 Monroe Avenue\nFrederick, MD 21701",
+      "altContact": null,
+      "altEmail": null
+    },
+    {
+      "company": "Woodlawn Mechanical Contractors Inc.",
+      "match": {
+        "kind": "exact",
+        "followupCompany": "Woodlawn Mechanical Contractors, Inc.",
+        "followupCompanyId": "110"
+      },
+      "apDistributionEmail": "acct@woodlawnmechanical.com",
+      "apContactName": "Kara Collins, AP",
+      "apPhone": "O: 301-948-9141",
+      "apDirectEmail": "kcollins@woodlawnmechanical.com",
+      "companyAddress": "880 Winchester Blvd\nFrederick, MD 21703",
+      "altContact": null,
+      "altEmail": null
+    }
+  ],
+  "allApContacts": [
+    {
+      "company": "Adrian L. Merton, Inc.",
+      "apDistributionEmail": "sball@almerton.com",
+      "apContactName": "Saith Ball, AP",
+      "companyAddress": "151 Hampton Overlook\nCapitol Heights, MD 20743",
+      "apPhone": "O: 301-336-2700",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Adrian L. Merton, Inc.\nAP Contact: Saith Ball, AP\nO: 301-336-2700\nSend all Invoices to --> sball@almerton.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "American Combustion Industries, Inc. (An Exigent Company)",
+      "apDistributionEmail": "ACIAccountsPayable@aciindustries.com",
+      "apContactName": "Serena, AP",
+      "companyAddress": "7100 Holladay Tyler Rd #233\nGlenn Dale, MD 20769",
+      "apPhone": "O: (301) 779-3400",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "American Combustion Industries, Inc. (An Exigent Company)\nAP Contact: Serena, AP\nO: (301) 779-3400\nSend all Invoices to --> ACIAccountsPayable@aciindustries.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Anchor Mechanical LLC",
+      "apDistributionEmail": "ap@anchormech.com",
+      "apContactName": "Nilly Rivera, Accounts Payable",
+      "companyAddress": "126 Industry Lane\nSuite 4\nForest Hill, MD 21050",
+      "apPhone": "D: 443-808-1285; C: 410-452-5601",
+      "apDirectEmail": "nrivera@anchormech.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Anchor Mechanical LLC\nAP Contact: Nilly Rivera, Accounts Payable\n <nrivera@anchormech.com>\nD: 443-808-1285; C: 410-452-5601\nSend all Invoices to --> ap@anchormech.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Ariosa & Company, LLC",
+      "apDistributionEmail": "accounting@ariosaco.net",
+      "apContactName": "Jessie Narotski",
+      "companyAddress": "16 Stenersen Lane\nCockeysville, MD 21030",
+      "apPhone": "O: 410-628-4215  x134",
+      "apDirectEmail": "jnarotski@ariosaco.net",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Ariosa & Company, LLC\nAP Contact: Jessie Narotski\n <jnarotski@ariosaco.net>\nO: 410-628-4215  x134\nSend all Invoices to --> accounting@ariosaco.net",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Baltimore City Public Schools",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Baltimore City Public Schools\nAP Contact: \n\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Baltimore County Public Schools",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Baltimore County Public Schools\nAP Contact: \n\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Berward Mechancial",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": "836 Ritchie Hwy, Suite 1\nSeverna Park, MD 21146",
+      "apPhone": "O: (410) 975-5576",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Berward Mechancial\nAP Contact: \nO: (410) 975-5576\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Branair, Inc.",
+      "apDistributionEmail": "ap@branair.com",
+      "apContactName": "Angie Chamberlain; Accounting Controller",
+      "companyAddress": "11900 Livingston Rd \nSuite 157\nManassas, VA 20109",
+      "apPhone": "C: 571.383.7200; O: 703.396.8330",
+      "apDirectEmail": "achamberlain@branair.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Branair, Inc.\nAP Contact: Angie Chamberlain; Accounting Controller\n <achamberlain@branair.com>\nC: 571.383.7200; O: 703.396.8330\nSend all Invoices to --> ap@branair.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Breeden Mechanical",
+      "apDistributionEmail": "@breedencompanies.com",
+      "apContactName": null,
+      "companyAddress": "8101 Flannery Court\nManassas, Virginia 20109",
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Breeden Mechanical\nAP Contact: \n\nSend all Invoices to --> @breedencompanies.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Carey Mechanical (MH Mechanical LLC)",
+      "apDistributionEmail": null,
+      "apContactName": "Jamie Hanson",
+      "companyAddress": "3220 O Street, NW\nWashington, DC 2000",
+      "apPhone": "O: 202-715-2692",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Carey Mechanical (MH Mechanical LLC)\nAP Contact: Jamie Hanson\nO: 202-715-2692\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Clark",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Clark\nAP Contact: \n\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Denver-Elek",
+      "apDistributionEmail": "ap@denver-elek.com",
+      "apContactName": "Lisa Puckett. Accounts Payable",
+      "companyAddress": "8860 Kelso Drive\nEssex, MD 21221",
+      "apPhone": "O: 410.574.8400 x254",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Denver-Elek\nAP Contact: Lisa Puckett. Accounts Payable\nO: 410.574.8400 x254\nSend all Invoices to --> ap@denver-elek.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Doyle Systems",
+      "apDistributionEmail": "doylesystems.net",
+      "apContactName": null,
+      "companyAddress": "10610 Iron Bridge Road\nSuite 9\nJessup, MD 20794",
+      "apPhone": "O: 301-317-6001",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Doyle Systems\nAP Contact: \nO: 301-317-6001\nSend all Invoices to --> doylesystems.net",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Dynamic Mechancial Corporation",
+      "apDistributionEmail": "https://dmc-mech.com/",
+      "apContactName": null,
+      "companyAddress": "11160 Veirs Mill Rd, Ste LLH-18 #240\nWheaton, MD 20902",
+      "apPhone": "O: 301-252-7667",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Dynamic Mechancial Corporation\nAP Contact: \nO: 301-252-7667\nSend all Invoices to --> https://dmc-mech.com/",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Dulaney Contracting, LLC",
+      "apDistributionEmail": "dulaneycontracting.com",
+      "apContactName": null,
+      "companyAddress": "6801 Kenilworth Avenue\nSuite 300\nRiverdale, MD 20737",
+      "apPhone": "O: 301-643-7387",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Dulaney Contracting, LLC\nAP Contact: \nO: 301-643-7387\nSend all Invoices to --> dulaneycontracting.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "EMJAY Engineering & Construction Co.",
+      "apDistributionEmail": "spivakg@emjaycons.com",
+      "apContactName": "Galina Spivak, AP Administrator",
+      "companyAddress": "1706 Whitehead Road\nGwynn Oak, MD 21207",
+      "apPhone": "D: (410)298-2000 ext.1051",
+      "apDirectEmail": "spivakg@emjaycons.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "EMJAY Engineering & Construction Co. \nAP Contact: Galina Spivak, AP Administrator\n <spivakg@emjaycons.com>\nD: (410)298-2000 ext.1051\nSend all Invoices to --> spivakg@emjaycons.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "G.E Tignall & Co. Inc.",
+      "apDistributionEmail": "accounting@getignall.com",
+      "apContactName": "Mickey Glendon, Sr.",
+      "companyAddress": "14 McCann Avenue\nCockeysville, MD 21030",
+      "apPhone": "410-666-3000 Office",
+      "apDirectEmail": "mglendon@getignall.com",
+      "altContact": "Mike Harper",
+      "altEmail": "mharper@getignall.com",
+      "apCombinedList": "G.E Tignall & Co. Inc.\nAP Contact: Mickey Glendon, Sr.\n <mglendon@getignall.com>\n410-666-3000 Office\nAlt Contact = Mike Harper <mharper@getignall.com>\nSend all Invoices to --> accounting@getignall.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Heer Brothers",
+      "apDistributionEmail": "@heerbros.com",
+      "apContactName": null,
+      "companyAddress": "7500 Energy Court\nSuite 8\nCurtis Bay, MD 21226",
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Heer Brothers\nAP Contact: \n\nSend all Invoices to --> @heerbros.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Heffron Company",
+      "apDistributionEmail": "@heffroncompany.com",
+      "apContactName": null,
+      "companyAddress": "4940 Nicholson Court #100\nKensington, MD 20895",
+      "apPhone": "O: (301) 816-2088",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Heffron Company\nAP Contact: \nO: (301) 816-2088\nSend all Invoices to --> @heffroncompany.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Hensel Phelps",
+      "apDistributionEmail": "@henselphelps.com",
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Hensel Phelps\nAP Contact: \n\nSend all Invoices to --> @henselphelps.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Heritage Mechanical, LLC",
+      "apDistributionEmail": "accounting@heritagemechanical-llc.com",
+      "apContactName": "Kathy D. Kaleo",
+      "companyAddress": "2134 Espey Court \nUnit # 7\nCrofton, MD 21114",
+      "apPhone": "443-223-4402",
+      "apDirectEmail": "kkaleo@heritagemechanical-llc.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Heritage Mechanical, LLC\nAP Contact: Kathy D. Kaleo\n <kkaleo@heritagemechanical-llc.com>\n443-223-4402\nSend all Invoices to --> accounting@heritagemechanical-llc.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Horton Mechanical",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Horton Mechanical\nAP Contact: \n\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "JCM Associates, Inc.",
+      "apDistributionEmail": "@gojcm.com",
+      "apContactName": "Cathy l. Keppler, Project Accountant",
+      "companyAddress": "301 Prince Georges Blvd \nUnit # C\nUpper Marlboro, MD 20774",
+      "apPhone": "O: 301-390-5500",
+      "apDirectEmail": "ckeppler@gojcm.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "JCM Associates, Inc.\nAP Contact: Cathy l. Keppler, Project Accountant\n <ckeppler@gojcm.com>\nO: 301-390-5500\nSend all Invoices to --> @gojcm.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "John C. Grimberg Co., Inc.",
+      "apDistributionEmail": "gbricker@grimberg.com",
+      "apContactName": "Georgie Bricker, AP",
+      "companyAddress": "3200 Tower Oaks Blvd \nUnit #3\nRockville, MD 20852",
+      "apPhone": "O: 301-881-5120",
+      "apDirectEmail": "gbricker@grimberg.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "John C. Grimberg Co., Inc.\nAP Contact: Georgie Bricker, AP\n <gbricker@grimberg.com>\nO: 301-881-5120\nSend all Invoices to --> gbricker@grimberg.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Joseph J Magnolia Inc.",
+      "apDistributionEmail": "ap-jjm@magnolia-companies.com",
+      "apContactName": "Deena Disque, Controller",
+      "companyAddress": "600 Gallatin Street NE\nWashington, DC 20017",
+      "apPhone": "O: 202-829-8510 x1514; D: 240-295-6261",
+      "apDirectEmail": "ddisque@magnolia-companies.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Joseph J Magnolia Inc. \nAP Contact: Deena Disque, Controller\n <ddisque@magnolia-companies.com>\nO: 202-829-8510 x1514; D: 240-295-6261    \nSend all Invoices to --> ap-jjm@magnolia-companies.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "KDB Mechanical, LLC",
+      "apDistributionEmail": "kdbsub@kdbllc.com",
+      "apContactName": "Tara Walter. AP Admin",
+      "companyAddress": "79 Derwood Circle\nRockville, MD 20850",
+      "apPhone": "O: 301-424-3410; D: 240-865-8024; M: 571-409-4708",
+      "apDirectEmail": "tsalem@kdbllc.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "KDB Mechanical, LLC\nAP Contact: Tara Walter. AP Admin\n <tsalem@kdbllc.com>\nO: 301-424-3410; D: 240-865-8024; M: 571-409-4708\nSend all Invoices to --> kdbsub@kdbllc.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Kent Island Mechanical",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": "13340 Mid Atlantic Blvd.\nLaurel, MD 20708",
+      "apPhone": "O: 301-776-3035",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Kent Island Mechanical\nAP Contact: \nO: 301-776-3035\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Kelly HVAC",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Kelly HVAC\nAP Contact: \n\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Mallick Mechanical Contractors",
+      "apDistributionEmail": "subbills@mallickmechanical.com",
+      "apContactName": "Nicky Domer",
+      "companyAddress": "8010 Cessna Avenue\nGaithersburg, MD 20879",
+      "apPhone": "O: 301-840-5860",
+      "apDirectEmail": "ndomer@mallickmechanical.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Mallick Mechanical Contractors\nAP Contact: Nicky Domer\n <ndomer@mallickmechanical.com>\nO: 301-840-5860\nSend all Invoices to --> subbills@mallickmechanical.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Montgomery County Public Schools",
+      "apDistributionEmail": null,
+      "apContactName": null,
+      "companyAddress": null,
+      "apPhone": null,
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Montgomery County Public Schools\nAP Contact: \n\nSend all Invoices to -->",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Norair Engineering Corporation",
+      "apDistributionEmail": "lemory@norair.com",
+      "apContactName": "Cheryl Calderon, Accounting",
+      "companyAddress": "337 Brightseat Rd \nSuite # 200\nLandover, MD 20785",
+      "apPhone": "O: 301-499-2200",
+      "apDirectEmail": "ccalderon@norair.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Norair Engineering Corporation\nAP Contact: Cheryl Calderon, Accounting\n <ccalderon@norair.com>\nO: 301-499-2200\nSend all Invoices to --> lemory@norair.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "PC Construction Company",
+      "apDistributionEmail": "accountspayable@pcconstruction.com",
+      "apContactName": null,
+      "companyAddress": "8866 Wagner Station Rd\nCurtis Bay, MD 21226",
+      "apPhone": "O: 443-305-2004",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "PC Construction Company\n\nAP Contact: \nO: 443-305-2004\nSend all Invoices to --> accountspayable@pcconstruction.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Peachtree Mechanical, Inc.",
+      "apDistributionEmail": "invoices@peachtreemechanical.com",
+      "apContactName": "Myra Hill",
+      "companyAddress": "535 Marksmen Court\nFayetteville, GA 30214",
+      "apPhone": "O: 770-460-5155",
+      "apDirectEmail": "myra.hill@peachtreemechanical.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Peachtree Mechanical, Inc.\nAP Contact: Myra Hill\n <myra.hill@peachtreemechanical.com>\nO: 770-460-5155\nSend all Invoices to --> invoices@peachtreemechanical.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Protech Construction, Inc.",
+      "apDistributionEmail": "@protec.build",
+      "apContactName": "Vic Singh",
+      "companyAddress": "1314 8th Street, NW\nWashington , DC 20001",
+      "apPhone": "O: (202) 232-0080; C: (202) 441-9468",
+      "apDirectEmail": "vik@protec.build",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Protech Construction, Inc.\nAP Contact: Vic Singh\n <vik@protec.build>\nO: (202) 232-0080; C: (202) 441-9468\nSend all Invoices to --> @protec.build",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "R&R Mechanical, LLC",
+      "apDistributionEmail": "invoices@rrmechanical.com",
+      "apContactName": "Kathleen Rice, AP Mngr",
+      "companyAddress": "2902 Bladensburg Road NE\nWashington, DC 20018",
+      "apPhone": "O: 202-636-9451",
+      "apDirectEmail": "krice@rrmechanical.com",
+      "altContact": "Amanda Goff, AP",
+      "altEmail": "(o)202-636-9451",
+      "apCombinedList": "R&R Mechanical, LLC\nAP Contact: Kathleen Rice, AP Mngr\n <krice@rrmechanical.com>\nO: 202-636-9451\nAlt Contact = Amanda Goff, AP <(o)202-636-9451>\nSend all Invoices to --> invoices@rrmechanical.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Rommel AP - DCB (Cashin, Spinelli & Ferretti, LLC)\n10:2305/Zurich/Rommel Construction/ DCB",
+      "apDistributionEmail": "rommelap@csfllc.com",
+      "apContactName": "Max McAllister, Project Accountant",
+      "companyAddress": "601 Nursery Road\nLinthicum Heights, MD 21090",
+      "apPhone": "O: 631-737-9170",
+      "apDirectEmail": "mmcallister@csfllc.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Rommel AP - DCB (Cashin, Spinelli & Ferretti, LLC)\n10:2305/Zurich/Rommel Construction/ DCB\nAP Contact: Max McAllister, Project Accountant\n <mmcallister@csfllc.com>\nO: 631-737-9170\nSend all Invoices to --> rommelap@csfllc.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Rommel AP - Goel (Cashin, Spinelli & Ferretti, LLC)\n10:2305/Zurich/Rommel Construction//Goel",
+      "apDistributionEmail": "rommelap@csfllc.com",
+      "apContactName": "Max McAllister, Project Accountant",
+      "companyAddress": "601 Nursery Road\nLinthicum Heights, MD 21090",
+      "apPhone": "O: 631-737-9170",
+      "apDirectEmail": "mmcallister@csfllc.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Rommel AP - Goel (Cashin, Spinelli & Ferretti, LLC)\n10:2305/Zurich/Rommel Construction//Goel\nAP Contact: Max McAllister, Project Accountant\n <mmcallister@csfllc.com>\nO: 631-737-9170\nSend all Invoices to --> rommelap@csfllc.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Ronco Mechanical",
+      "apDistributionEmail": "cindy@roncomech.com",
+      "apContactName": "Cindy W. Burnett",
+      "companyAddress": "8916 Simpson Ln, Clinton, MD 20735",
+      "apPhone": "O: 301-868-6220 x14",
+      "apDirectEmail": "cindy@roncomech.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Ronco Mechanical\nAP Contact: Cindy W. Burnett\n <cindy@roncomech.com>\nO: 301-868-6220 x14\nSend all Invoices to --> cindy@roncomech.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Shapiro and Duncan, Inc.",
+      "apDistributionEmail": "subbilling@shapiroandduncan.com",
+      "apContactName": "Roland S. Diggs, Jr.",
+      "companyAddress": "14620 Rothgeb Dr, Rockville, MD 20850",
+      "apPhone": "O: 240-778-2198; C: 301-412-6514",
+      "apDirectEmail": "rdiggs@shapiroandduncan.com",
+      "altContact": "Sandrine Djomdom, Acct Mngr",
+      "altEmail": "240-778-2220",
+      "apCombinedList": "Shapiro and Duncan, Inc.\nAP Contact: Roland S. Diggs, Jr.\n <rdiggs@shapiroandduncan.com>\nO: 240-778-2198; C: 301-412-6514\nAlt Contact = Sandrine Djomdom, Acct Mngr  <240-778-2220 >\nSend all Invoices to --> subbilling@shapiroandduncan.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Southland Industries / Dulles",
+      "apDistributionEmail": "southlandind.com",
+      "apContactName": "Carly Banko",
+      "companyAddress": "22340 Dresden Street\nSuite 177\nDulles, VA 20166",
+      "apPhone": "O: 703.834.5570; D: (571) 612-4067",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Southland Industries / Dulles\nAP Contact: Carly Banko\nO: 703.834.5570; D: (571) 612-4067 \nSend all Invoices to --> southlandind.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Southland Industries / Laurel",
+      "apDistributionEmail": "southlandind.com",
+      "apContactName": "Carly Banko",
+      "companyAddress": "13150 Mid-Atlantic Boulevard\nSuite 200\nLaurel, MD 20708",
+      "apPhone": "O: 240.547.5800; D: (571) 612-4067",
+      "apDirectEmail": null,
+      "altContact": "Nomin Bold",
+      "altEmail": null,
+      "apCombinedList": "Southland Industries / Laurel\nAP Contact: Carly Banko\nO: 240.547.5800; D: (571) 612-4067 \nAlt Contact = Nomin Bold <>\nSend all Invoices to --> southlandind.com",
+      "confirmedBy": null,
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Temp Air Company",
+      "apDistributionEmail": "emaramba@tempaircompany.com",
+      "apContactName": "Erin Maramba",
+      "companyAddress": "51 Gwynns Mill Ct, Owings Mills, MD 21117",
+      "apPhone": "O: 410-358-8078",
+      "apDirectEmail": "emaramba@tempaircompany.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Temp Air Company\nAP Contact: Erin Maramba\n <emaramba@tempaircompany.com>\nO: 410-358-8078 \nSend all Invoices to --> emaramba@tempaircompany.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Towson Mechanical Inc.",
+      "apDistributionEmail": "ap@towsonmechanical.com",
+      "apContactName": null,
+      "companyAddress": "8651 Oakleigh Road\nParkville, MD 21234",
+      "apPhone": null,
+      "apDirectEmail": "smraver@towsonmechanical.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Towson Mechanical Inc.\nAP Contact: \n <smraver@towsonmechanical.com>\n\nSend all Invoices to --> ap@towsonmechanical.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "W.E. Bowers & Associates Inc. - Beltsville, MD",
+      "apDistributionEmail": "vendorap@webowers.com",
+      "apContactName": "La Tanya Morris",
+      "companyAddress": "12401 Kiln Court,\nBeltsville, MD 20705",
+      "apPhone": "O: 301 419-2488 Ext: 334",
+      "apDirectEmail": "lmorris@webowers.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "W.E. Bowers & Associates Inc. - Beltsville, MD\nAP Contact: La Tanya Morris\n <lmorris@webowers.com>\nO: 301 419-2488 Ext: 334\nSend all Invoices to --> vendorap@webowers.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "W.E. Bowers & Associates Inc. - Sterling VA",
+      "apDistributionEmail": "vendorap@webowers.com",
+      "apContactName": "La Tanya Morris",
+      "companyAddress": "22740 Ladbrook Drive\nSterling, VA 20166",
+      "apPhone": "O: 301 419-2488 Ext: 334",
+      "apDirectEmail": "lmorris@webowers.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "W.E. Bowers & Associates Inc. - Sterling VA\nAP Contact: La Tanya Morris\n <lmorris@webowers.com>\nO: 301 419-2488 Ext: 334\nSend all Invoices to --> vendorap@webowers.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "W.G. Tomko Incorporated Contractors",
+      "apDistributionEmail": "apvendorinvoices@wgtomko.com",
+      "apContactName": "Merrie Columbia; AP Vendor Assistant",
+      "companyAddress": "3710 Commerce Drive\nSuite 1006\nHalethorpe, MD 21227",
+      "apPhone": "O: 724-348-2000 Ext 1701",
+      "apDirectEmail": "mcolumbia@wgtomko.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "W.G. Tomko Incorporated Contractors\nAP Contact: Merrie Columbia; AP Vendor Assistant \n <mcolumbia@wgtomko.com>\nO: 724-348-2000 Ext 1701\nSend all Invoices to --> apvendorinvoices@wgtomko.com",
+      "confirmedBy": "Mary Barotac",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "W.G./Welch LLC Mechanical Contractor",
+      "apDistributionEmail": "accountspayable@wgwelchllc.com",
+      "apContactName": "Alex",
+      "companyAddress": "260 Interstate Court\nFrederick, MD 21704",
+      "apPhone": "O: 301-831-8642",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "W.G./Welch LLC Mechanical Contractor\nAP Contact: Alex\nO: 301-831-8642\nSend all Invoices to --> accountspayable@wgwelchllc.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "W.L. Gary Company, Inc.",
+      "apDistributionEmail": "ap@wlgary.com",
+      "apContactName": "Serina Gregory, Project Accountant",
+      "companyAddress": "1140 3rd St NE\nSuite 406\nWashington, DC 20002",
+      "apPhone": "O: 202.723.0676 ext. 115; D: 202.894.9515",
+      "apDirectEmail": null,
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "W.L. Gary Company, Inc.\nAP Contact: Serina Gregory, Project Accountant\nO: 202.723.0676 ext. 115; D: 202.894.9515\nSend all Invoices to --> ap@wlgary.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Warner (R.W.), Inc.",
+      "apDistributionEmail": "accountspayable@rwwinc.com",
+      "apContactName": "Ginger Smith, Sr. AP Specialist",
+      "companyAddress": "217 Monroe Avenue\nFrederick, MD 21701",
+      "apPhone": "O: 301-662-5387 ext. 229",
+      "apDirectEmail": "ginger.smith@rwwinc.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Warner (R.W.), Inc.\nAP Contact: Ginger Smith, Sr. AP Specialist\n <ginger.smith@rwwinc.com>\nO: 301-662-5387 ext. 229\nSend all Invoices to --> accountspayable@rwwinc.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    },
+    {
+      "company": "Woodlawn Mechanical Contractors Inc.",
+      "apDistributionEmail": "acct@woodlawnmechanical.com",
+      "apContactName": "Kara Collins, AP",
+      "companyAddress": "880 Winchester Blvd\nFrederick, MD 21703",
+      "apPhone": "O: 301-948-9141",
+      "apDirectEmail": "kcollins@woodlawnmechanical.com",
+      "altContact": null,
+      "altEmail": null,
+      "apCombinedList": "Woodlawn Mechanical Contractors Inc. \nAP Contact: Kara Collins, AP\n <kcollins@woodlawnmechanical.com>\nO: 301-948-9141\nSend all Invoices to --> acct@woodlawnmechanical.com",
+      "confirmedBy": "PJ Goel",
+      "source": "Project Financials (1).xlsx / AP Contacts",
+      "roleHint": "customer_ap"
+    }
+  ]
+}

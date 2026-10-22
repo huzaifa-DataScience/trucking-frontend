@@ -564,7 +564,35 @@ export function BidAssignmentStage() {
                   className={inputClass}
                   disabled={!editable}
                   value={a.internalEstimateDue?.slice(0, 10) ?? ""}
-                  onChange={(v) => setAssignment({ internalEstimateDue: v || null })}
+                  onChange={(v) => {
+                    const due = v || null;
+                    setAssignment({ internalEstimateDue: due });
+                    // Cascade onto takeoff rows with no due date yet (new project default).
+                    if (due) {
+                      const roleList = TAKEOFF_GROUPS.flatMap((g) => g.roles);
+                      const next: ProcessTakeoffAssignment[] = roleList.map(
+                        ({ role }) => {
+                          const existing = rows.find((r) => r.role === role);
+                          return {
+                            ...(existing ?? { role }),
+                            role,
+                            dueAt: existing?.dueAt?.trim()
+                              ? existing.dueAt
+                              : due,
+                          };
+                        }
+                      );
+                      for (const r of rows) {
+                        if (
+                          r.role &&
+                          !next.some((n) => n.role === r.role)
+                        ) {
+                          next.push(r);
+                        }
+                      }
+                      setField("takeoffAssignments", next);
+                    }
+                  }}
                 />
               </div>
               <div className={fieldWrap}>
