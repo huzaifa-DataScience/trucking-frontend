@@ -12,6 +12,39 @@ import type { ProcessParty } from "@/lib/bidding/process-types";
 import { compareText } from "@/lib/sort";
 const PAGE_SIZE = 10;
 
+function PartiesSearchLoader({ label = "Searching…" }: { label?: string }) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-2 px-3 py-8 text-[12.5px] text-[#9ca3af]"
+      role="status"
+      aria-live="polite"
+    >
+      <svg
+        className="h-5 w-5 animate-spin text-[#94a3b8]"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="9"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          className="opacity-25"
+        />
+        <path
+          d="M21 12a9 9 0 0 1-9 9"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+      </svg>
+      <span>{label}</span>
+    </div>
+  );
+}
+
 /** Stable viewport-fixed host — escapes transformed ancestors (e.g. bid-animate-in). */
 function getModalRoot(): HTMLElement {
   const id = "app-viewport-modal-root";
@@ -252,11 +285,11 @@ function AddressBookModal({
           </h3>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2 border-b border-[var(--border-subtle)] bg-canvas px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-4">
-          <span className="inline-flex w-fit items-center rounded-md border border-brand/25 bg-brand-tint px-2.5 py-1 text-[11px] font-semibold text-ink">
+        <div className="flex shrink-0 flex-col gap-2 border-b border-[var(--border-subtle)] bg-canvas px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
+          <span className="inline-flex w-fit shrink-0 items-center rounded-md border border-brand/25 bg-brand-tint px-2.5 py-1 text-[11px] font-semibold text-ink">
             Email Address Book
           </span>
-          <div className="relative w-full min-w-0 flex-1 sm:max-w-sm">
+          <div className="relative min-w-0 w-full flex-1">
             <span
               className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9ca3af]"
               aria-hidden
@@ -277,19 +310,21 @@ function AddressBookModal({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name or email…"
-              className="h-9 w-full rounded-md border border-[#cfd5dd] bg-white pl-8 pr-2.5 text-[13.5px] text-[#374151] outline-none transition focus:border-[#94a3b8] focus:shadow-[0_0_0_2px_rgba(148,163,184,0.28)] sm:h-8"
+              className="h-9 w-full rounded-md border border-[#cfd5dd] bg-white pl-8 pr-2.5 text-[13.5px] text-[#374151] outline-none transition focus:border-[#94a3b8] focus:shadow-[0_0_0_2px_rgba(148,163,184,0.28)] sm:h-9"
             />
           </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto">
+          {loading ? (
+            <PartiesSearchLoader
+              label={debouncedQ ? "Searching…" : "Loading contacts…"}
+            />
+          ) : (
+            <>
           {/* Phone / tablet: cards with + always visible — no sideways scroll */}
           <ul className="divide-y divide-[var(--border-subtle)] md:hidden">
-            {loading && pageRows.length === 0 ? (
-              <li className="px-3 py-8 text-center text-[12.5px] text-[#9ca3af]">
-                Loading contacts…
-              </li>
-            ) : pageRows.length === 0 ? (
+            {pageRows.length === 0 ? (
               <li className="px-3 py-8 text-center text-[12.5px] text-[#9ca3af]">
                 No contacts match.
               </li>
@@ -357,16 +392,7 @@ function AddressBookModal({
               </tr>
             </thead>
             <tbody>
-              {loading && pageRows.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-3 py-8 text-center text-[12.5px] text-[#9ca3af]"
-                  >
-                    Loading contacts…
-                  </td>
-                </tr>
-              ) : pageRows.length === 0 ? (
+              {pageRows.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
@@ -424,6 +450,8 @@ function AddressBookModal({
               )}
             </tbody>
           </table>
+            </>
+          )}
         </div>
 
         {query.trim() && !exactHit ? (
@@ -519,6 +547,8 @@ export function PartyNameCombobox({
   addressBookOptions,
   inputValueFromParty,
   partyRole,
+  /** Dense row (GC/mech lists): no intake-row label grid — full-width field + optional +. */
+  variant = "row",
   onChangeName,
   onPickExisting,
 }: {
@@ -535,9 +565,11 @@ export function PartyNameCombobox({
   inputValueFromParty?: (party: ProcessParty) => string;
   /** When set, typeahead + address book call GET /lookups/bidding/parties?role=&q= */
   partyRole?: BidPartyRole | string;
+  variant?: "row" | "inline";
   onChangeName: (name: string) => void;
   onPickExisting: (party: ProcessParty) => void;
 }) {
+  const inline = variant === "inline";
   const listId = useId();
   const wrapRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -546,6 +578,7 @@ export function PartyNameCombobox({
   const [remoteOptions, setRemoteOptions] = useState<BidPartyLookup[] | null>(
     null
   );
+  const [searching, setSearching] = useState(false);
   const typeaheadGen = useRef(0);
 
   const resolveInput = (party: ProcessParty) =>
@@ -572,18 +605,25 @@ export function PartyNameCombobox({
     const q = query.trim();
     if (!q) {
       setRemoteOptions(null);
+      setSearching(false);
       return;
     }
     const gen = ++typeaheadGen.current;
+    setSearching(true);
     const t = window.setTimeout(() => {
       void biddingPartiesApi
         .getBiddingParties({ role: partyRole, q })
         .then((list) => {
           if (typeaheadGen.current !== gen) return;
           setRemoteOptions(list);
+        })
+        .finally(() => {
+          if (typeaheadGen.current === gen) setSearching(false);
         });
     }, 200);
-    return () => window.clearTimeout(t);
+    return () => {
+      window.clearTimeout(t);
+    };
   }, [query, partyRole, disabled]);
 
   const filtered = useMemo(() => {
@@ -617,12 +657,23 @@ export function PartyNameCombobox({
   };
 
   return (
-    <div className="relative intake-row" ref={wrapRef}>
-      <span className={labelClass}>{label}</span>
-      <div className="relative min-w-0">
-        <div className="flex min-w-0 items-center gap-1">
+    <div
+      className={
+        inline ? "relative w-full min-w-0" : "relative intake-row"
+      }
+      ref={wrapRef}
+    >
+      {inline ? (
+        <span className="sr-only">{label}</span>
+      ) : (
+        <span className={labelClass}>{label}</span>
+      )}
+      <div className={inline ? "relative w-full min-w-0" : "relative min-w-0"}>
+        <div className="flex w-full min-w-0 items-center gap-1">
           <input
-            className={inputClass}
+            className={
+              inline ? `${inputClass} min-w-0 flex-1` : inputClass
+            }
             disabled={disabled}
             value={query}
             placeholder={placeholder}
@@ -630,6 +681,7 @@ export function PartyNameCombobox({
             role="combobox"
             aria-expanded={open}
             aria-controls={listId}
+            aria-label={inline ? label : undefined}
             onFocus={() => setOpen(true)}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -683,12 +735,19 @@ export function PartyNameCombobox({
             </button>
           ) : null}
         </div>
-        {open && !disabled && (filtered.length > 0 || query.trim()) ? (
+        {open && !disabled && (searching || filtered.length > 0 || query.trim()) ? (
           <ul
             id={listId}
             role="listbox"
+            aria-busy={searching || undefined}
             className="absolute left-0 right-0 top-full z-30 mt-0.5 max-h-48 overflow-auto rounded border border-[#cfd5dd] bg-white py-1 shadow-md"
           >
+            {searching ? (
+              <li>
+                <PartiesSearchLoader />
+              </li>
+            ) : (
+              <>
             {filtered.map((o) => (
               <li key={String(o.id)}>
                 <button
@@ -729,6 +788,8 @@ export function PartyNameCombobox({
             {filtered.length === 0 && !query.trim() ? (
               <li className="px-3 py-1.5 text-[11px] text-[#9ca3af]">No saved parties yet</li>
             ) : null}
+              </>
+            )}
           </ul>
         ) : null}
       </div>

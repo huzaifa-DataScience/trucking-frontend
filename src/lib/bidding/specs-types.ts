@@ -195,8 +195,8 @@ export function resolveFacingSelectValue(
   if (!n) return "";
   const hit = facings.find(
     (f) =>
-      f.value.toLowerCase() === n.toLowerCase() ||
-      f.label.toLowerCase() === n.toLowerCase()
+      String(f.value ?? "").toLowerCase() === n.toLowerCase() ||
+      String(f.label ?? "").toLowerCase() === n.toLowerCase()
   );
   return hit?.value ?? n;
 }

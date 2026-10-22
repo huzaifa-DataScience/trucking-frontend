@@ -8,7 +8,6 @@ import { BidAssignmentStage } from "@/components/bidding/BidAssignmentStage";
 import { BidEstimatingSetupStage } from "@/components/bidding/BidEstimatingSetupStage";
 import { BidDrawingsStage } from "@/components/bidding/BidDrawingsStage";
 import { BidTakeoffComparisonPanel } from "@/components/bidding/BidTakeoffComparisonPanel";
-import { BidAttachmentsSection } from "@/components/bidding/BidAttachmentsSection";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProcessDraft } from "@/hooks/useProcessDraft";
@@ -28,7 +27,7 @@ import { parseChromeStage } from "@/lib/bidding/process-types";
 function BidWorkspaceInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { bid, isEditable, updateSystemRow, uploadAttachment, uploadAttachments, deleteAttachment, saving } = useBidSheet();
+  const { bid, isEditable, updateSystemRow } = useBidSheet();
   const { user } = useAuth();
   const { draft, setField, editable: processEditable } = useProcessDraft();
   const bidId = bid?.id ?? "";
@@ -88,63 +87,52 @@ function BidWorkspaceInner() {
     case "spec_sheets":
       return <BidSpecSheetsStage />;
     case "takeoff": {
-      const hasComparison =
-        Array.isArray(bid.workflow?.takeoffComparisons) &&
-        (bid.workflow?.takeoffComparisons?.length ?? 0) > 0;
       return (
-        <div className="intake-compact flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-auto">
-          <header>
-            <h2 className="intake-title">Takeoff</h2>
+        <div className="intake-compact flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto">
+          {/*
+            shrink-0 on blocks: .intake-section uses overflow:hidden, so default
+            flex-shrink collapses Specs qty (and siblings) to ~0 in this column.
+          */}
+          <header className="flex shrink-0 flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="intake-title">Takeoff</h2>
+              <p className="intake-sub mt-0.5">
+                Compare estimator recaps in fixed Group A / Group B boxes, then
+                systems and Mike specs.
+              </p>
+            </div>
+            <section className="intake-section max-w-xs min-w-[12rem] shrink-0 !mb-0">
+              <div className="intake-section-body !py-2">
+                <label className="intake-row !mb-0">
+                  <span className="intake-label">Turn-in date</span>
+                  <DatePicker
+                    ariaLabel="Internal bid date"
+                    className="intake-field"
+                    disabled={!processEditable}
+                    value={draft.internalBidDate?.slice(0, 10) ?? ""}
+                    onChange={(v) => setField("internalBidDate", v || null)}
+                  />
+                </label>
+              </div>
+            </section>
           </header>
-          <section className="intake-section max-w-md min-w-0">
-            <h3 className="intake-section-head">Internal bid date</h3>
-            <div className="intake-section-body">
-              <label className="intake-row">
-                <span className="intake-label">Turn-in date</span>
-                <DatePicker
-                  ariaLabel="Internal bid date"
-                  className="intake-field"
-                  disabled={!processEditable}
-                  value={draft.internalBidDate?.slice(0, 10) ?? ""}
-                  onChange={(v) => setField("internalBidDate", v || null)}
-                />
-              </label>
-            </div>
-          </section>
-          <BidAttachmentsSection
-            title="Takeoff files"
-            attachments={(bid.attachments ?? []).filter(
-              (a) =>
-                a.category === "takeoff_markup" ||
-                a.label === "takeoff" ||
-                a.label === "takeoff-zip" ||
-                a.label === "takeoff-snap" ||
-                a.label === "takeoff-recap" ||
-                a.label === "master-scan"
-            )}
-            isEditable={isEditable}
-            uploading={saving}
-            mode="markup"
-            onUpload={async (file, opts) => uploadAttachment(file, opts)}
-            onUploadMany={async (files, opts) => uploadAttachments(files, opts)}
-            onDelete={async (id) => deleteAttachment(id)}
-          />
-          <div
-            className={`grid grid-cols-1 items-start gap-3 ${
-              hasComparison ? "xl:grid-cols-2" : ""
-            }`}
-          >
+
+          <div className="shrink-0">
             <BidTakeoffComparisonPanel />
-            <div className={hasComparison ? "min-w-0" : "min-w-0 xl:col-span-full"}>
-              <BidSystemsInputTable
-                systems={bid.systems ?? []}
-                systemsComputed={parseSystemsComputed(bid.computed)}
-                isEditable={isEditable}
-                onUpdateRow={updateSystemRow}
-              />
-            </div>
           </div>
-          <SpecsPage bidId={bidId} embedded />
+
+          <div className="shrink-0">
+            <BidSystemsInputTable
+              systems={bid.systems ?? []}
+              systemsComputed={parseSystemsComputed(bid.computed)}
+              isEditable={isEditable}
+              onUpdateRow={updateSystemRow}
+            />
+          </div>
+
+          <div className="min-w-0 shrink-0">
+            <SpecsPage bidId={bidId} embedded />
+          </div>
         </div>
       );
     }
