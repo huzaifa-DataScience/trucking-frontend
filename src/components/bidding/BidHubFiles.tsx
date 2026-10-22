@@ -31,10 +31,12 @@ export function BidHubFiles({
   title,
   attachments,
   drawingCategoryOptions,
+  emptyHint,
 }: {
   title: string;
   attachments: BidAttachment[];
   drawingCategoryOptions?: { value: string; label: string }[];
+  emptyHint?: string;
 }) {
   const { bid, refresh } = useBidSheet();
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +98,9 @@ export function BidHubFiles({
       <div className="intake-section-body flex flex-col gap-2">
         {error ? <p className="text-[12.5px] text-danger">{error}</p> : null}
         {attachments.length === 0 ? (
-          <p className="text-[13px] text-[#6b7280]">None on this bid yet. Upload them on Intake.</p>
+          <p className="text-[13px] text-[#6b7280]">
+            {emptyHint ?? "None on this bid yet. Upload them on Intake."}
+          </p>
         ) : (
           <div className="flex flex-col gap-3">
             {groups.map(({ folder, items }) => (

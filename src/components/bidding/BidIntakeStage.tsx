@@ -26,7 +26,11 @@ import {
   type ProcessMeta,
   type ProcessParty,
 } from "@/lib/bidding/process-types";
-import type { BidListItem, LookupNameItem } from "@/lib/bidding/types";
+import type {
+  BidAttachment,
+  BidListItem,
+  LookupNameItem,
+} from "@/lib/bidding/types";
 import { newId } from "@/lib/bidding/newId";
 import {
   INTAKE_ADD_BTN,
@@ -36,6 +40,130 @@ import {
 } from "@/components/bidding/intakeIcons";
 
 import { SortedOptions } from "@/components/ui/SortedOptions";
+
+const ARCHITECT_IMAGE_LABEL = "architect-image";
+
+function ArchitectImageField({
+  attachments,
+  editable,
+  uploading,
+  onUpload,
+  onDelete,
+}: {
+  attachments: BidAttachment[];
+  editable: boolean;
+  uploading?: boolean;
+  onUpload: (file: File) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const image =
+    [...attachments]
+      .filter((a) => a.label === ARCHITECT_IMAGE_LABEL)
+      .sort((a, b) => b.id - a.id)[0] ?? null;
+
+  useEffect(() => {
+    let revoked: string | null = null;
+    let cancelled = false;
+    if (!image) {
+      setPreviewUrl(null);
+      return;
+    }
+    void (async () => {
+      try {
+        const blob = await biddingApi.fetchBidAttachmentBlob(image.downloadPath);
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        revoked = url;
+        setPreviewUrl(url);
+      } catch {
+        if (!cancelled) setPreviewUrl(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (revoked) URL.revokeObjectURL(revoked);
+    };
+  }, [image?.id, image?.downloadPath]);
+
+  return (
+    <div className="intake-row">
+      <span className="intake-label">Image</span>
+      <div className="flex min-w-0 flex-col gap-2">
+        {previewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={previewUrl}
+            alt="Architect"
+            className="h-28 w-full max-w-[14rem] rounded-lg border border-[#e5e7eb] object-cover"
+          />
+        ) : (
+          <div className="flex h-28 w-full max-w-[14rem] items-center justify-center rounded-lg border border-dashed border-[#d5dbe3] bg-[#fafbfc] text-[12px] text-[#9ca3af]">
+            No image
+          </div>
+        )}
+        {error ? <p className="text-[11px] text-danger">{error}</p> : null}
+        {editable ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="intake-head-btn !h-7 !px-2 !text-[11px]"
+              disabled={busy || uploading}
+              onClick={() => inputRef.current?.click()}
+            >
+              {busy ? "Uploading…" : image ? "Replace image" : "Upload image"}
+            </button>
+            {image ? (
+              <button
+                type="button"
+                className="intake-head-btn !h-7 !px-2 !text-[11px] text-danger"
+                disabled={busy || uploading}
+                onClick={() => {
+                  void (async () => {
+                    setBusy(true);
+                    setError(null);
+                    try {
+                      await onDelete(image.id);
+                    } catch (e) {
+                      setError(getApiErrorMessage(e, "Could not remove image"));
+                    } finally {
+                      setBusy(false);
+                    }
+                  })();
+                }}
+              >
+                Remove
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/*"
+          className="hidden"
+          disabled={busy || uploading || !editable}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            setBusy(true);
+            setError(null);
+            void onUpload(file)
+              .catch((err) => {
+                setError(getApiErrorMessage(err, "Could not upload image"));
+              })
+              .finally(() => setBusy(false));
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function SelectChevron() {
   return (
     <svg
@@ -131,6 +259,46 @@ function emptyGcOrMech(): ProcessGcOrMech {
   };
 }
 
+/** Backend rejects null roles — invite-synced rows default to "other". */
+const INVITE_TIER_ROLE = "other";
+
+/** Upsert invitation companies into Bidding clients (contractTiers) with invitedUs. */
+function syncInvitesToBiddingClients(
+  nextInvs: ProcessInvitation[],
+  baseTiers: ProcessContractTier[]
+): ProcessContractTier[] {
+  let next = baseTiers.map((t) =>
+    t.role ? t : { ...t, role: INVITE_TIER_ROLE }
+  );
+  for (const inv of nextInvs) {
+    const company = (inv.contact?.company ?? "").trim();
+    if (!company) continue;
+    const key = company.toLowerCase();
+    const i = next.findIndex(
+      (t) => (t.company ?? "").trim().toLowerCase() === key
+    );
+    if (i >= 0) {
+      next[i] = {
+        ...next[i],
+        company,
+        invitedUs: true,
+        role: next[i].role || INVITE_TIER_ROLE,
+      };
+    } else {
+      next.push({
+        sortOrder: next.length,
+        role: INVITE_TIER_ROLE,
+        company,
+        hasTheJob: null,
+        invitedUs: true,
+        isPaying: false,
+      });
+    }
+  }
+  if (next.length === 0) next = [defaultOwnerTier()];
+  return next;
+}
+
 const CONTRACTOR_STATUS_OPTIONS: { value: NonNullable<ProcessGcOrMech["contractorStatus"]>; label: string }[] = [
   { value: "invited", label: "Invited" },
   { value: "bidding", label: "Bidding" },
@@ -148,9 +316,10 @@ const PROPOSAL_STATUS_OPTIONS: { value: NonNullable<ProcessGcOrMech["proposalSta
   { value: "rejected", label: "Rejected" },
 ];
 
-/** Unique companies from invite_contact parties for company-first typeahead. */
+/** Unique companies from a role’s parties for company-first typeahead. */
 function companyOptionsFromParties(
-  parties: BidPartyLookup[]
+  parties: BidPartyLookup[],
+  role: BidPartyLookup["role"] = null
 ): BidPartyLookup[] {
   const seen = new Set<string>();
   const out: BidPartyLookup[] = [];
@@ -167,10 +336,34 @@ function companyOptionsFromParties(
       contactName: null,
       email: null,
       phone: null,
-      role: "invite_contact",
+      role: role ?? p.role ?? null,
     });
   }
   return out;
+}
+
+function gcOrMechFromParty(
+  picked: {
+    name?: string | null;
+    company?: string | null;
+    contactName?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  },
+  row: ProcessGcOrMech
+): ProcessGcOrMech {
+  // Company/person pick replaces contact fields — do not leave the previous person.
+  const pickedCompany = (picked.company ?? "").trim();
+  const company = pickedCompany || row.company || picked.name || null;
+  return {
+    ...row,
+    company,
+    name: company,
+    contactName:
+      (picked.contactName ?? "").trim() || (picked.name ?? "").trim() || null,
+    email: (picked.email ?? "").trim() || null,
+    phone: (picked.phone ?? "").trim() || null,
+  };
 }
 
 function contactsForCompany(
@@ -231,11 +424,15 @@ export function BidIntakeStage() {
     architect: BidPartyLookup[];
     mechanical: BidPartyLookup[];
     invite_contact: BidPartyLookup[];
+    gc: BidPartyLookup[];
+    mechanical_contractor: BidPartyLookup[];
   }>({
     owner: [],
     architect: [],
     mechanical: [],
     invite_contact: [],
+    gc: [],
+    mechanical_contractor: [],
   });
   const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -258,10 +455,28 @@ export function BidIntakeStage() {
       biddingPartiesApi.getBiddingParties({ role: "architect" }),
       biddingPartiesApi.getBiddingParties({ role: "mechanical" }),
       biddingPartiesApi.getBiddingParties({ role: "invite_contact" }),
-    ]).then(([owner, architect, mechanical, invite_contact]) => {
-      if (cancelled) return;
-      setPartiesByRole({ owner, architect, mechanical, invite_contact });
-    });
+      biddingPartiesApi.getBiddingParties({ role: "gc" }),
+      biddingPartiesApi.getBiddingParties({ role: "mechanical_contractor" }),
+    ]).then(
+      ([
+        owner,
+        architect,
+        mechanical,
+        invite_contact,
+        gc,
+        mechanical_contractor,
+      ]) => {
+        if (cancelled) return;
+        setPartiesByRole({
+          owner,
+          architect,
+          mechanical,
+          invite_contact,
+          gc,
+          mechanical_contractor,
+        });
+      }
+    );
     return () => {
       cancelled = true;
     };
@@ -299,14 +514,15 @@ export function BidIntakeStage() {
     ? draft.contractTiers
     : [defaultOwnerTier()];
   const inviteCompanyOptions = companyOptionsFromParties(
-    partiesByRole.invite_contact
+    partiesByRole.invite_contact,
+    "invite_contact"
   );
   const whoElse = draft.whoElseBidding ?? {};
   const needsWhoElseResearch = invitations.length < 2;
 
   const emptyTier = (): ProcessContractTier => ({
     sortOrder: tiers.length,
-    role: null,
+    role: INVITE_TIER_ROLE,
     company: null,
     hasTheJob: null,
     invitedUs: false,
@@ -369,7 +585,11 @@ export function BidIntakeStage() {
   };
 
   const setInvitations = (next: ProcessInvitation[]) => {
-    setField("invitations", next);
+    setDraft({
+      ...draft,
+      invitations: next,
+      contractTiers: syncInvitesToBiddingClients(next, tiers),
+    });
   };
 
   const patchInvitation = (index: number, patch: Partial<ProcessInvitation>) => {
@@ -394,8 +614,8 @@ export function BidIntakeStage() {
     p: ProcessParty,
     prev?: ProcessInvitation["contact"] | null
   ): NonNullable<ProcessInvitation["contact"]> => ({
-    name: p.contactName || p.name || prev?.name || null,
-    company: p.company || p.name || prev?.company || null,
+    name: (p.contactName ?? "").trim() || prev?.name || null,
+    company: (p.company ?? "").trim() || prev?.company || null,
     email: p.email || prev?.email || null,
     phone: p.phone || prev?.phone || null,
   });
@@ -422,10 +642,11 @@ export function BidIntakeStage() {
       ...draft,
       mechanicalEngineer: me,
       invitations: nextInvs,
+      contractTiers: syncInvitesToBiddingClients(nextInvs, tiers),
     });
   };
 
-  /** Pick invitation company/contact → fill Mechanical. */
+  /** Pick invitation company/contact → fill Mechanical + Bidding clients. */
   const pickInvitationContact = (
     index: number,
     contact: NonNullable<ProcessInvitation["contact"]>
@@ -438,11 +659,15 @@ export function BidIntakeStage() {
       ...draft,
       invitations: nextInvs,
       mechanicalEngineer: partyFromInviteContact(contact),
+      contractTiers: syncInvitesToBiddingClients(nextInvs, tiers),
     });
   };
 
   const setTiers = (next: ProcessContractTier[]) => {
-    setField("contractTiers", next.length > 0 ? next : [defaultOwnerTier()]);
+    const cleaned = (next.length > 0 ? next : [defaultOwnerTier()]).map(
+      (t) => ({ ...t, role: t.role || INVITE_TIER_ROLE })
+    );
+    setField("contractTiers", cleaned);
   };
 
   const patchTier = (index: number, patch: Partial<ProcessContractTier>) => {
@@ -528,7 +753,7 @@ export function BidIntakeStage() {
         <PartyNameCombobox
           label="Company"
           value={p.company ?? ""}
-          options={companyOptionsFromParties(partiesByRole[role])}
+          options={companyOptionsFromParties(partiesByRole[role], role)}
           addressBookOptions={partiesByRole[role]}
           partyRole={role}
           disabled={!editable}
@@ -644,6 +869,340 @@ export function BidIntakeStage() {
             placeholder="Matches email or phone above"
           />
         </label>
+        {key === "architect" && bid ? (
+          <ArchitectImageField
+            attachments={bid.attachments ?? []}
+            editable={editable}
+            uploading={saving}
+            onUpload={async (file: File) => {
+              await uploadAttachment(file, {
+                label: ARCHITECT_IMAGE_LABEL,
+                category: "project_documents",
+              });
+            }}
+            onDelete={async (id: number) => {
+              await deleteAttachment(id);
+            }}
+          />
+        ) : null}
+        </div>
+      </section>
+    );
+  }
+
+  function renderContractorPanel(
+    key: "gc" | "mech",
+    title: string
+  ) {
+    const list = key === "gc" ? gcs : mechs;
+    const setList = key === "gc" ? setGcs : setMechs;
+    const partyRole =
+      key === "gc" ? ("gc" as const) : ("mechanical_contractor" as const);
+    const roleParties = partiesByRole[partyRole];
+    return (
+      <section className="intake-section flex h-full max-h-full min-h-0 min-w-0 flex-col overflow-hidden">
+        <div className="intake-section-head-bar shrink-0">
+          <div>
+            <h3>{title}</h3>
+          </div>
+          <span className="intake-head-count">{list.length}</span>
+          {editable ? (
+            <button
+              type="button"
+              className={addBtnClass}
+              aria-label={`Add ${title.toLowerCase().replace(/s$/, "")}`}
+              title={`Add ${title.toLowerCase().replace(/s$/, "")}`}
+              onClick={() => setList([...list, emptyGcOrMech()])}
+            >
+              <PlusIcon />
+            </button>
+          ) : null}
+        </div>
+        <div
+          className={`${sectionBody} intake-trio-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-auto`}
+        >
+          {list.length === 0 ? (
+            <p className="text-[12.5px] text-[#9ca3af]">None yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {list.map((row, index) => {
+                const companyOpts = companyOptionsFromParties(
+                  roleParties,
+                  partyRole
+                );
+                const company = row.company ?? row.name ?? "";
+                const contactOpts = contactsForCompany(roleParties, company);
+                return (
+                  <li
+                    key={`${key}-${index}`}
+                    className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-2.5 py-1.5"
+                  >
+                    <div className="w-full min-w-0 basis-full">
+                      <PartyNameCombobox
+                        variant="inline"
+                        label="Company"
+                        value={company}
+                        options={companyOpts}
+                        addressBookOptions={roleParties}
+                        partyRole={partyRole}
+                        disabled={!editable}
+                        inputClass={inputClass}
+                        labelClass={labelClass}
+                        showPicker
+                        addressBookTitle={
+                          key === "gc"
+                            ? "GC Address Book"
+                            : "Mechanical Contractor Address Book"
+                        }
+                        placeholder="Company"
+                        inputValueFromParty={(picked) =>
+                          picked.company || picked.name || ""
+                        }
+                        onChangeName={(name) => {
+                          setList(
+                            list.map((r, i) =>
+                              i === index
+                                ? {
+                                    ...r,
+                                    company: name || null,
+                                    name: name || null,
+                                    contactName: null,
+                                    email: null,
+                                    phone: null,
+                                  }
+                                : r
+                            )
+                          );
+                        }}
+                        onPickExisting={(picked) => {
+                          setList(
+                            list.map((r, i) =>
+                              i === index ? gcOrMechFromParty(picked, r) : r
+                            )
+                          );
+                        }}
+                      />
+                    </div>
+                    <div className="w-full min-w-0 basis-full">
+                      <PartyNameCombobox
+                        variant="inline"
+                        label="Contact name"
+                        value={row.contactName ?? ""}
+                        options={contactOpts}
+                        addressBookOptions={
+                          company ? contactOpts : roleParties
+                        }
+                        partyRole={partyRole}
+                        disabled={!editable}
+                        inputClass={inputClass}
+                        labelClass={labelClass}
+                        showPicker
+                        addressBookTitle={
+                          key === "gc"
+                            ? "GC Address Book"
+                            : "Mechanical Contractor Address Book"
+                        }
+                        placeholder="Contact name"
+                        inputValueFromParty={(picked) =>
+                          picked.contactName || picked.name || ""
+                        }
+                        onChangeName={(name) => {
+                          setList(
+                            list.map((r, i) =>
+                              i === index
+                                ? { ...r, contactName: name || null }
+                                : r
+                            )
+                          );
+                        }}
+                        onPickExisting={(picked) => {
+                          setList(
+                            list.map((r, i) =>
+                              i === index ? gcOrMechFromParty(picked, r) : r
+                            )
+                          );
+                        }}
+                      />
+                    </div>
+                    <input
+                      className={`${inputClass} min-w-[10rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Email"
+                      value={row.email ?? ""}
+                      onChange={(e) => {
+                        const email = e.target.value || null;
+                        setList(
+                          list.map((r, i) =>
+                            i === index ? { ...r, email } : r
+                          )
+                        );
+                      }}
+                    />
+                    <input
+                      className={`${inputClass} min-w-[7rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Bid price"
+                      inputMode="decimal"
+                      value={row.bidPrice ?? ""}
+                      onChange={(e) => {
+                        const raw = e.target.value
+                          .trim()
+                          .replace(/[$,\s]/g, "");
+                        const bidPrice =
+                          raw === ""
+                            ? null
+                            : Number.isFinite(Number(raw))
+                              ? Number(raw)
+                              : row.bidPrice;
+                        setList(
+                          list.map((r, i) =>
+                            i === index ? { ...r, bidPrice } : r
+                          )
+                        );
+                      }}
+                    />
+                    <input
+                      className={`${inputClass} min-w-[8rem] flex-1`}
+                      disabled={!editable}
+                      placeholder="Phone"
+                      value={row.phone ?? ""}
+                      onChange={(e) => {
+                        const phone = e.target.value || null;
+                        setList(
+                          list.map((r, i) =>
+                            i === index ? { ...r, phone } : r
+                          )
+                        );
+                      }}
+                    />
+                    <label className="flex items-center gap-1.5 text-[11px] text-[#4b5563]">
+                      <input
+                        type="checkbox"
+                        disabled={!editable}
+                        checked={row.hasTheJob === true}
+                        onChange={(e) =>
+                          setList(
+                            list.map((r, i) =>
+                              i === index
+                                ? {
+                                    ...r,
+                                    hasTheJob: e.target.checked ? true : null,
+                                  }
+                                : r
+                            )
+                          )
+                        }
+                      />
+                      Has the job
+                    </label>
+                    <label className="flex items-center gap-1.5 text-[11px] text-[#4b5563]">
+                      <input
+                        type="checkbox"
+                        disabled={!editable}
+                        checked={row.stillBidding === true}
+                        onChange={(e) =>
+                          setList(
+                            list.map((r, i) =>
+                              i === index
+                                ? {
+                                    ...r,
+                                    stillBidding: e.target.checked
+                                      ? true
+                                      : null,
+                                  }
+                                : r
+                            )
+                          )
+                        }
+                      />
+                      Still bidding
+                    </label>
+                    <select
+                      className={`${inputClass} w-40`}
+                      disabled={!editable}
+                      value={row.contractorStatus ?? ""}
+                      onChange={(e) => {
+                        const contractorStatus = (e.target.value ||
+                          null) as ProcessGcOrMech["contractorStatus"];
+                        setList(
+                          list.map((r, i) =>
+                            i === index ? { ...r, contractorStatus } : r
+                          )
+                        );
+                      }}
+                    >
+                      <SortedOptions>
+                        <option value="">Contractor status</option>
+                        {CONTRACTOR_STATUS_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </SortedOptions>
+                    </select>
+                    <select
+                      className={`${inputClass} w-40`}
+                      disabled={!editable}
+                      value={row.proposalStatus ?? ""}
+                      onChange={(e) => {
+                        const proposalStatus = (e.target.value ||
+                          null) as ProcessGcOrMech["proposalStatus"];
+                        setList(
+                          list.map((r, i) =>
+                            i === index ? { ...r, proposalStatus } : r
+                          )
+                        );
+                      }}
+                    >
+                      <SortedOptions>
+                        <option value="">Proposal status</option>
+                        {PROPOSAL_STATUS_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </SortedOptions>
+                    </select>
+                    {editable ? (
+                      <button
+                        type="button"
+                        className={removeBtnClass}
+                        aria-label={
+                          key === "gc"
+                            ? "Remove GC"
+                            : "Remove mechanical contractor"
+                        }
+                        title={
+                          key === "gc"
+                            ? "Remove GC"
+                            : "Remove mechanical contractor"
+                        }
+                        onClick={() => {
+                          void (async () => {
+                            const ok = await confirmDialog({
+                              title:
+                                key === "gc"
+                                  ? "Remove GC?"
+                                  : "Remove mechanical contractor?",
+                              message: `Remove this ${
+                                key === "gc" ? "GC" : "mechanical contractor"
+                              }?`,
+                              confirmLabel: "Remove",
+                              variant: "danger",
+                            });
+                            if (!ok) return;
+                            setList(list.filter((_, i) => i !== index));
+                          })();
+                        }}
+                      >
+                        <TrashIcon />
+                      </button>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       </section>
     );
@@ -1145,704 +1704,434 @@ export function BidIntakeStage() {
           </div>
         </section>
         {renderPartySection("owner", "Owner", "owner")}
-        <div className="min-w-0 2xl:col-span-2">
-          {renderPartySection("architect", "Architect", "architect")}
-        </div>
-      </div>
-
-      <div className="intake-trio-row grid grid-cols-1 items-start gap-4 sm:gap-5 2xl:grid-cols-3 2xl:items-stretch 2xl:gap-6">
-      <section className="intake-section flex h-full max-h-full min-h-0 min-w-0 flex-col overflow-hidden">
-        <div className={`${sectionHead} shrink-0`}>
-          GCs / mechanical contractors
-          <span className="intake-head-count">{gcs.length + mechs.length}</span>
-        </div>
-        <div className={`${sectionBody} intake-trio-scroll flex min-h-0 flex-1 flex-col gap-3`}>
-        {(
-          [
-            {
-              key: "gc" as const,
-              title: "General contractors",
-              list: gcs,
-              setList: setGcs,
-            },
-            {
-              key: "mech" as const,
-              title: "Mechanical contractors",
-              list: mechs,
-              setList: setMechs,
-            },
-          ] as const
-        ).map(({ key, title, list, setList }) => (
-          <div key={key}>
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
-                {title}
-              </p>
-              <div className="flex items-center gap-2">
-                {editable ? (
-                  <button
-                    type="button"
-                    className={addBtnClass}
-                    aria-label={`Add ${title.toLowerCase().replace(/s$/, "")}`}
-                    title={`Add ${title.toLowerCase().replace(/s$/, "")}`}
-                    onClick={() => setList([...list, emptyGcOrMech()])}
-                  >
-                    <PlusIcon />
-                  </button>
-                ) : null}
-                <span className="intake-head-count">{list.length}</span>
-              </div>
+        {renderPartySection("architect", "Architect", "architect")}
+        <section className="intake-section flex h-full max-h-full min-h-0 min-w-0 flex-col overflow-hidden">
+          <div className="intake-section-head-bar shrink-0">
+            <div>
+              <h3>Invitations</h3>
             </div>
-            <div className="mt-2">
-            {list.length === 0 ? (
-              <p className="text-[12.5px] text-[#9ca3af]">None yet.</p>
+            <span className="intake-head-count">{invitations.length}</span>
+            {editable ? (
+              <button
+                type="button"
+                className={addBtnClass}
+                aria-label="Add invitation"
+                title="Add invitation"
+                onClick={() =>
+                  setInvitations([...invitations, emptyInvitation()])
+                }
+              >
+                <PlusIcon />
+              </button>
+            ) : null}
+          </div>
+          <div
+            className={`${sectionBody} intake-trio-scroll flex min-h-0 flex-1 flex-col gap-2`}
+          >
+            {invitations.length === 0 ? (
+              <p className="text-[12.5px] text-[#6b7280]">
+                No invitations yet.
+              </p>
             ) : (
-              <ul className="space-y-2">
-                {list.map((row, index) => (
-                  <li
-                    key={`${key}-${index}`}
-                    className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-2.5 py-1.5"
+              invitations.map((inv, index) => {
+                const company = inv.contact?.company ?? "";
+                const contactOptions = contactsForCompany(
+                  partiesByRole.invite_contact,
+                  company
+                );
+                const addenda = inv.addenda ?? [];
+                return (
+                  <div
+                    key={inv.id ?? index}
+                    className="intake-stack shrink-0 rounded border border-[#e5e7eb] bg-[#f8fafc] p-2.5"
                   >
-                    <input
-                      className={`${inputClass} min-w-[10rem] flex-1`}
+                    <PartyNameCombobox
+                      label="Company"
+                      value={company}
+                      options={inviteCompanyOptions}
+                      addressBookOptions={partiesByRole.invite_contact}
+                      partyRole="invite_contact"
                       disabled={!editable}
-                      placeholder="Company"
-                      value={row.company ?? row.name ?? ""}
-                      onChange={(e) => {
-                        const company = e.target.value;
-                        setList(
-                          list.map((r, i) =>
-                            i === index
-                              ? { ...r, company, name: company || null }
-                              : r
-                          )
-                        );
-                      }}
+                      inputClass={inputClass}
+                      labelClass={labelClass}
+                      showPicker
+                      addressBookTitle="Company Address Book"
+                      placeholder="Which company sent the invite…"
+                      inputValueFromParty={(picked) =>
+                        picked.company || picked.name || ""
+                      }
+                      onChangeName={(name) =>
+                        patchInvitation(index, {
+                          contact: {
+                            ...(inv.contact ?? {}),
+                            company: name || null,
+                          },
+                        })
+                      }
+                      onPickExisting={(picked) =>
+                        pickInvitationContact(index, {
+                          ...(inv.contact ?? {}),
+                          company: picked.company || picked.name || null,
+                          name:
+                            inv.contact?.name ||
+                            picked.contactName ||
+                            picked.name ||
+                            null,
+                          email: picked.email ?? inv.contact?.email ?? null,
+                          phone: picked.phone ?? inv.contact?.phone ?? null,
+                        })
+                      }
                     />
-                    <input
-                      className={`${inputClass} min-w-[8rem] flex-1`}
-                      disabled={!editable}
-                      placeholder="Contact name"
-                      value={row.contactName ?? ""}
-                      onChange={(e) => {
-                        const contactName = e.target.value || null;
-                        setList(list.map((r, i) => (i === index ? { ...r, contactName } : r)));
-                      }}
-                    />
-                    <input
-                      className={`${inputClass} min-w-[10rem] flex-1`}
-                      disabled={!editable}
-                      placeholder="Email"
-                      value={row.email ?? ""}
-                      onChange={(e) => {
-                        const email = e.target.value || null;
-                        setList(list.map((r, i) => (i === index ? { ...r, email } : r)));
-                      }}
-                    />
-                    <input
-                      className={`${inputClass} min-w-[7rem] flex-1`}
-                      disabled={!editable}
-                      placeholder="Bid price"
-                      inputMode="decimal"
-                      value={row.bidPrice ?? ""}
-                      onChange={(e) => {
-                        const raw = e.target.value.trim().replace(/[$,\s]/g, "");
-                        const bidPrice =
-                          raw === "" ? null : Number.isFinite(Number(raw)) ? Number(raw) : row.bidPrice;
-                        setList(list.map((r, i) => (i === index ? { ...r, bidPrice } : r)));
-                      }}
-                    />
-                    <input
-                      className={`${inputClass} min-w-[8rem] flex-1`}
-                      disabled={!editable}
-                      placeholder="Phone"
-                      value={row.phone ?? ""}
-                      onChange={(e) => {
-                        const phone = e.target.value || null;
-                        setList(list.map((r, i) => (i === index ? { ...r, phone } : r)));
-                      }}
-                    />
-                    <label className="flex items-center gap-1.5 text-[11px] text-[#4b5563]">
-                      <input
-                        type="checkbox"
+                    <div className="intake-row">
+                      <span className={labelClass}>Received</span>
+                      <DatePicker
+                        ariaLabel="Received"
+                        className={inputClass}
                         disabled={!editable}
-                        checked={row.hasTheJob === true}
-                        onChange={(e) =>
-                          setList(
-                            list.map((r, i) =>
-                              i === index
-                                ? {
-                                    ...r,
-                                    hasTheJob: e.target.checked ? true : null,
-                                  }
-                                : r
-                            )
-                          )
+                        value={inv.receivedAt?.slice(0, 10) ?? ""}
+                        onChange={(v) =>
+                          patchInvitation(index, {
+                            receivedAt: v || null,
+                          })
                         }
                       />
-                      Has the job
-                    </label>
-                    <label className="flex items-center gap-1.5 text-[11px] text-[#4b5563]">
+                    </div>
+                    <PartyNameCombobox
+                      label="Contact name"
+                      value={inv.contact?.name ?? ""}
+                      options={contactOptions}
+                      addressBookOptions={
+                        company
+                          ? contactOptions
+                          : partiesByRole.invite_contact
+                      }
+                      partyRole="invite_contact"
+                      disabled={!editable}
+                      inputClass={inputClass}
+                      labelClass={labelClass}
+                      showPicker
+                      addressBookTitle="Company Address Book"
+                      placeholder={
+                        company
+                          ? "Search contacts at this company…"
+                          : "Search or type new contact…"
+                      }
+                      inputValueFromParty={(picked) =>
+                        picked.contactName || picked.name || ""
+                      }
+                      onChangeName={(name) =>
+                        patchInvitation(index, {
+                          contact: {
+                            ...(inv.contact ?? {}),
+                            name: name || null,
+                          },
+                        })
+                      }
+                      onPickExisting={(picked) =>
+                        pickInvitationContact(index, {
+                          name: picked.name ?? null,
+                          company:
+                            picked.company || inv.contact?.company || null,
+                          email: picked.email ?? null,
+                          phone: picked.phone ?? null,
+                        })
+                      }
+                    />
+                    <label className="intake-row">
+                      <span className={labelClass}>Email</span>
                       <input
-                        type="checkbox"
+                        className={inputClass}
                         disabled={!editable}
-                        checked={row.stillBidding === true}
+                        value={inv.contact?.email ?? ""}
                         onChange={(e) =>
-                          setList(
-                            list.map((r, i) =>
-                              i === index
-                                ? {
-                                    ...r,
-                                    stillBidding: e.target.checked
-                                      ? true
-                                      : null,
-                                  }
-                                : r
-                            )
-                          )
+                          patchInvitation(index, {
+                            contact: {
+                              ...(inv.contact ?? {}),
+                              email: e.target.value || null,
+                            },
+                          })
                         }
                       />
-                      Still bidding
                     </label>
-                    <select
-                      className={`${inputClass} w-40`}
-                      disabled={!editable}
-                      value={row.contractorStatus ?? ""}
-                      onChange={(e) => {
-                        const contractorStatus = (e.target.value || null) as ProcessGcOrMech["contractorStatus"];
-                        setList(list.map((r, i) => (i === index ? { ...r, contractorStatus } : r)));
-                      }}
-                    >
-                      <SortedOptions>
-                        <option value="">Contractor status</option>
-                        {CONTRACTOR_STATUS_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </SortedOptions>
-                    </select>
-                    <select
-                      className={`${inputClass} w-40`}
-                      disabled={!editable}
-                      value={row.proposalStatus ?? ""}
-                      onChange={(e) => {
-                        const proposalStatus = (e.target.value || null) as ProcessGcOrMech["proposalStatus"];
-                        setList(list.map((r, i) => (i === index ? { ...r, proposalStatus } : r)));
-                      }}
-                    >
-                      <SortedOptions>
-                        <option value="">Proposal status</option>
-                        {PROPOSAL_STATUS_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </SortedOptions>
-                    </select>
-                    {editable ? (
+                    <label className="intake-row">
+                      <span className={labelClass}>Phone</span>
+                      <input
+                        className={inputClass}
+                        disabled={!editable}
+                        value={inv.contact?.phone ?? ""}
+                        onChange={(e) =>
+                          patchInvitation(index, {
+                            contact: {
+                              ...(inv.contact ?? {}),
+                              phone: e.target.value || null,
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="intake-row">
+                      <span className={labelClass}>Preferred contact</span>
+                      <div className="relative">
+                        <select
+                          className={selectClass}
+                          disabled={!editable}
+                          value={inv.contact?.preferredContact ?? ""}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            patchInvitation(index, {
+                              contact: {
+                                ...(inv.contact ?? {}),
+                                preferredContact:
+                                  v === "email" || v === "phone" ? v : null,
+                              },
+                            });
+                          }}
+                        >
+                          <SortedOptions>
+                            <option value="">—</option>
+                            <option value="email">Email</option>
+                            <option value="phone">Phone</option>
+                          </SortedOptions>
+                        </select>
+                        <SelectChevron />
+                      </div>
+                    </label>
+                    <label className="intake-row">
+                      <span className={labelClass}>Preferred value</span>
+                      <input
+                        className={inputClass}
+                        disabled
+                        readOnly
+                        value={preferredContactValue(inv.contact ?? {})}
+                        placeholder="Matches email or phone"
+                      />
+                    </label>
+                    <label className="intake-row col-span-full">
+                      <span className={labelClass}>
+                        Invitation email (paste full)
+                      </span>
+                      <textarea
+                        className={`${inputClass} min-h-[6rem] resize-y`}
+                        disabled={!editable}
+                        value={inv.inviteBody ?? ""}
+                        placeholder="Paste the full invite email / portal dump…"
+                        maxLength={50000}
+                        onChange={(e) =>
+                          patchInvitation(index, {
+                            inviteBody:
+                              e.target.value.slice(0, 50000) || null,
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="intake-row col-span-full">
+                      <span className={labelClass}>Clerk notes</span>
+                      <textarea
+                        className={`${inputClass} min-h-[3.5rem] resize-y`}
+                        disabled={!editable}
+                        value={inv.notes ?? ""}
+                        placeholder="Internal notes (not the invite paste)"
+                        onChange={(e) =>
+                          patchInvitation(index, {
+                            notes: e.target.value || null,
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="intake-row col-span-full">
+                      <span className={labelClass}>Inviter drawing link</span>
+                      <input
+                        className={inputClass}
+                        disabled={!editable}
+                        value={inv.links?.[0]?.url ?? ""}
+                        placeholder="https://…"
+                        onChange={(e) => {
+                          const url = e.target.value;
+                          const links: ProcessDocumentLink[] = url
+                            ? [
+                                {
+                                  url,
+                                  label:
+                                    inv.links?.[0]?.label ?? "Invite set",
+                                  source: "inviter",
+                                },
+                              ]
+                            : [];
+                          patchInvitation(index, { links });
+                        }}
+                      />
+                    </label>
+
+                    <div className="col-span-full flex flex-col gap-2 rounded-xl border border-[#e8ecf1] bg-[#fff] p-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold text-[#6b7280]">
+                          Addenda from this inviter
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {editable ? (
+                            <button
+                              type="button"
+                              className={addBtnClass}
+                              aria-label="Add addendum"
+                              title="Add addendum"
+                              onClick={() =>
+                                patchInvitation(index, {
+                                  addenda: [...addenda, emptyAddendum()],
+                                })
+                              }
+                            >
+                              <PlusIcon />
+                            </button>
+                          ) : null}
+                          <span className="intake-head-count">
+                            {addenda.length}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="intake-rows-scroll flex flex-col gap-2">
+                        {addenda.length === 0 ? (
+                          <p className="text-[11px] text-[#9ca3af]">
+                            No addenda yet.
+                          </p>
+                        ) : (
+                          addenda.map((ad, adIndex) => (
+                            <div
+                              key={adIndex}
+                              className="grid gap-2 sm:grid-cols-[6rem_1fr_1fr_auto]"
+                            >
+                              <label className="intake-row">
+                                <span className={labelClass}>#</span>
+                                <input
+                                  className={inputClass}
+                                  disabled={!editable}
+                                  value={ad.number ?? ""}
+                                  placeholder="2"
+                                  onChange={(e) => {
+                                    const next = addenda.map((row, i) =>
+                                      i === adIndex
+                                        ? {
+                                            ...row,
+                                            number: e.target.value || null,
+                                          }
+                                        : row
+                                    );
+                                    patchInvitation(index, {
+                                      addenda: next,
+                                    });
+                                  }}
+                                />
+                              </label>
+                              <div className="intake-row">
+                                <span className={labelClass}>Received</span>
+                                <DatePicker
+                                  ariaLabel="Received"
+                                  className={inputClass}
+                                  disabled={!editable}
+                                  value={ad.receivedAt?.slice(0, 10) ?? ""}
+                                  onChange={(v) => {
+                                    const next = addenda.map((row, i) =>
+                                      i === adIndex
+                                        ? {
+                                            ...row,
+                                            receivedAt: v || null,
+                                          }
+                                        : row
+                                    );
+                                    patchInvitation(index, {
+                                      addenda: next,
+                                    });
+                                  }}
+                                />
+                              </div>
+                              <label className="intake-row">
+                                <span className={labelClass}>Notes</span>
+                                <input
+                                  className={inputClass}
+                                  disabled={!editable}
+                                  value={ad.notes ?? ""}
+                                  onChange={(e) => {
+                                    const next = addenda.map((row, i) =>
+                                      i === adIndex
+                                        ? {
+                                            ...row,
+                                            notes: e.target.value || null,
+                                          }
+                                        : row
+                                    );
+                                    patchInvitation(index, {
+                                      addenda: next,
+                                    });
+                                  }}
+                                />
+                              </label>
+                              {editable ? (
+                                <button
+                                  type="button"
+                                  aria-label="Remove addendum"
+                                  title="Remove addendum"
+                                  className={`${removeBtnClass} ml-auto self-end`}
+                                  onClick={() => {
+                                    void (async () => {
+                                      const ok = await confirmDialog({
+                                        title: "Remove addendum?",
+                                        message:
+                                          "Remove this addendum from the invitation?",
+                                        confirmLabel: "Remove",
+                                        variant: "danger",
+                                      });
+                                      if (!ok) return;
+                                      patchInvitation(index, {
+                                        addenda: addenda.filter(
+                                          (_, i) => i !== adIndex
+                                        ),
+                                      });
+                                    })();
+                                  }}
+                                >
+                                  <TrashIcon />
+                                </button>
+                              ) : null}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {editable && invitations.length > 1 ? (
                       <button
                         type="button"
-                        className={removeBtnClass}
-                        aria-label={
-                          key === "gc"
-                            ? "Remove GC"
-                            : "Remove mechanical contractor"
-                        }
-                        title={
-                          key === "gc"
-                            ? "Remove GC"
-                            : "Remove mechanical contractor"
-                        }
+                        aria-label="Remove invitation"
+                        title="Remove invitation"
+                        className={`${removeBtnClass} col-span-full justify-self-end`}
                         onClick={() => {
                           void (async () => {
                             const ok = await confirmDialog({
-                              title:
-                                key === "gc"
-                                  ? "Remove GC?"
-                                  : "Remove mechanical contractor?",
-                              message: `Remove this ${key === "gc" ? "GC" : "mechanical contractor"}?`,
+                              title: "Remove invitation?",
+                              message: "Remove this invitation row?",
                               confirmLabel: "Remove",
                               variant: "danger",
                             });
                             if (!ok) return;
-                            setList(list.filter((_, i) => i !== index));
+                            setInvitations(
+                              invitations.filter((_, i) => i !== index)
+                            );
                           })();
                         }}
                       >
                         <TrashIcon />
                       </button>
                     ) : null}
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                );
+              })
             )}
-            </div>
           </div>
-        ))}
-        </div>
-      </section>
-
-      <section className="intake-section flex h-full max-h-full min-h-0 min-w-0 flex-col overflow-hidden">
-        <div className="intake-section-head-bar shrink-0">
-          <div>
-            <h3>Invitations</h3>
-          </div>
-          <span className="intake-head-count">{invitations.length}</span>
-          {editable ? (
-            <button
-              type="button"
-              className={addBtnClass}
-              aria-label="Add invitation"
-              title="Add invitation"
-              onClick={() =>
-                setInvitations([...invitations, emptyInvitation()])
-              }
-            >
-              <PlusIcon />
-            </button>
-          ) : null}
-        </div>
-        <div className={`${sectionBody} intake-trio-scroll flex min-h-0 flex-1 flex-col gap-2`}>
-        {invitations.length === 0 ? (
-          <p className="text-[12.5px] text-[#6b7280]">No invitations yet.</p>
-        ) : (
-          invitations.map((inv, index) => {
-            const company = inv.contact?.company ?? "";
-            const contactOptions = contactsForCompany(
-              partiesByRole.invite_contact,
-              company
-            );
-            const addenda = inv.addenda ?? [];
-            return (
-              <div
-                key={inv.id ?? index}
-                className="intake-stack shrink-0 rounded border border-[#e5e7eb] bg-[#f8fafc] p-2.5"
-              >
-                <PartyNameCombobox
-                  label="Company"
-                  value={company}
-                  options={inviteCompanyOptions}
-                  addressBookOptions={partiesByRole.invite_contact}
-                  partyRole="invite_contact"
-                  disabled={!editable}
-                  inputClass={inputClass}
-                  labelClass={labelClass}
-                  showPicker
-                  addressBookTitle="Company Address Book"
-                  placeholder="Which company sent the invite…"
-                  inputValueFromParty={(picked) =>
-                    picked.company || picked.name || ""
-                  }
-                  onChangeName={(name) =>
-                    patchInvitation(index, {
-                      contact: {
-                        ...(inv.contact ?? {}),
-                        company: name || null,
-                      },
-                    })
-                  }
-                  onPickExisting={(picked) =>
-                    pickInvitationContact(index, {
-                      ...(inv.contact ?? {}),
-                      company: picked.company || picked.name || null,
-                      name:
-                        inv.contact?.name ||
-                        picked.contactName ||
-                        picked.name ||
-                        null,
-                      email: picked.email ?? inv.contact?.email ?? null,
-                      phone: picked.phone ?? inv.contact?.phone ?? null,
-                    })
-                  }
-                />
-                <div className="intake-row">
-                  <span className={labelClass}>Received</span>
-                  <DatePicker
-                    ariaLabel="Received"
-                    className={inputClass}
-                    disabled={!editable}
-                    value={inv.receivedAt?.slice(0, 10) ?? ""}
-                    onChange={(v) =>
-                      patchInvitation(index, {
-                        receivedAt: v || null,
-                      })
-                    }
-                  />
-                </div>
-                <PartyNameCombobox
-                  label="Contact name"
-                  value={inv.contact?.name ?? ""}
-                  options={contactOptions}
-                  addressBookOptions={
-                    company
-                      ? contactOptions
-                      : partiesByRole.invite_contact
-                  }
-                  partyRole="invite_contact"
-                  disabled={!editable}
-                  inputClass={inputClass}
-                  labelClass={labelClass}
-                  showPicker
-                  addressBookTitle="Company Address Book"
-                  placeholder={
-                    company
-                      ? "Search contacts at this company…"
-                      : "Search or type new contact…"
-                  }
-                  inputValueFromParty={(picked) =>
-                    picked.contactName || picked.name || ""
-                  }
-                  onChangeName={(name) =>
-                    patchInvitation(index, {
-                      contact: {
-                        ...(inv.contact ?? {}),
-                        name: name || null,
-                      },
-                    })
-                  }
-                  onPickExisting={(picked) =>
-                    pickInvitationContact(index, {
-                      name: picked.name ?? null,
-                      company:
-                        picked.company ||
-                        inv.contact?.company ||
-                        null,
-                      email: picked.email ?? null,
-                      phone: picked.phone ?? null,
-                    })
-                  }
-                />
-                <label className="intake-row">
-                  <span className={labelClass}>Email</span>
-                  <input
-                    className={inputClass}
-                    disabled={!editable}
-                    value={inv.contact?.email ?? ""}
-                    onChange={(e) =>
-                      patchInvitation(index, {
-                        contact: {
-                          ...(inv.contact ?? {}),
-                          email: e.target.value || null,
-                        },
-                      })
-                    }
-                  />
-                </label>
-                <label className="intake-row">
-                  <span className={labelClass}>Phone</span>
-                  <input
-                    className={inputClass}
-                    disabled={!editable}
-                    value={inv.contact?.phone ?? ""}
-                    onChange={(e) =>
-                      patchInvitation(index, {
-                        contact: {
-                          ...(inv.contact ?? {}),
-                          phone: e.target.value || null,
-                        },
-                      })
-                    }
-                  />
-                </label>
-                <label className="intake-row">
-                  <span className={labelClass}>Preferred contact</span>
-                  <div className="relative">
-                    <select
-                      className={selectClass}
-                      disabled={!editable}
-                      value={inv.contact?.preferredContact ?? ""}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        patchInvitation(index, {
-                          contact: {
-                            ...(inv.contact ?? {}),
-                            preferredContact:
-                              v === "email" || v === "phone" ? v : null,
-                          },
-                        });
-                      }}
-                    >
-                      <SortedOptions>
-                        <option value="">—</option>
-                        <option value="email">Email</option>
-                        <option value="phone">Phone</option>
-                      </SortedOptions>
-                    </select>
-                    <SelectChevron />
-                  </div>
-                </label>
-                <label className="intake-row">
-                  <span className={labelClass}>Preferred value</span>
-                  <input
-                    className={inputClass}
-                    disabled
-                    readOnly
-                    value={preferredContactValue(inv.contact ?? {})}
-                    placeholder="Matches email or phone"
-                  />
-                </label>
-                <label className="intake-row col-span-full">
-                  <span className={labelClass}>
-                    Invitation email (paste full)
-                  </span>
-                  <textarea
-                    className={`${inputClass} min-h-[6rem] resize-y`}
-                    disabled={!editable}
-                    value={inv.inviteBody ?? ""}
-                    placeholder="Paste the full invite email / portal dump…"
-                    maxLength={50000}
-                    onChange={(e) =>
-                      patchInvitation(index, {
-                        inviteBody: e.target.value.slice(0, 50000) || null,
-                      })
-                    }
-                  />
-                </label>
-                <label className="intake-row col-span-full">
-                  <span className={labelClass}>Clerk notes</span>
-                  <textarea
-                    className={`${inputClass} min-h-[3.5rem] resize-y`}
-                    disabled={!editable}
-                    value={inv.notes ?? ""}
-                    placeholder="Internal notes (not the invite paste)"
-                    onChange={(e) =>
-                      patchInvitation(index, {
-                        notes: e.target.value || null,
-                      })
-                    }
-                  />
-                </label>
-                <label className="intake-row col-span-full">
-                  <span className={labelClass}>Inviter drawing link</span>
-                  <input
-                    className={inputClass}
-                    disabled={!editable}
-                    value={inv.links?.[0]?.url ?? ""}
-                    placeholder="https://…"
-                    onChange={(e) => {
-                      const url = e.target.value;
-                      const links: ProcessDocumentLink[] = url
-                        ? [
-                            {
-                              url,
-                              label: inv.links?.[0]?.label ?? "Invite set",
-                              source: "inviter",
-                            },
-                          ]
-                        : [];
-                      patchInvitation(index, { links });
-                    }}
-                  />
-                </label>
-
-                <div className="col-span-full flex flex-col gap-2 rounded-xl border border-[#e8ecf1] bg-[#fff] p-2.5">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[11px] font-semibold text-[#6b7280]">
-                      Addenda from this inviter
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {editable ? (
-                        <button
-                          type="button"
-                          className={addBtnClass}
-                          aria-label="Add addendum"
-                          title="Add addendum"
-                          onClick={() =>
-                            patchInvitation(index, {
-                              addenda: [...addenda, emptyAddendum()],
-                            })
-                          }
-                        >
-                          <PlusIcon />
-                        </button>
-                      ) : null}
-                      <span className="intake-head-count">{addenda.length}</span>
-                    </div>
-                  </div>
-                  <div className="intake-rows-scroll flex flex-col gap-2">
-                  {addenda.length === 0 ? (
-                    <p className="text-[11px] text-[#9ca3af]">No addenda yet.</p>
-                  ) : (
-                    addenda.map((ad, adIndex) => (
-                      <div
-                        key={adIndex}
-                        className="grid gap-2 sm:grid-cols-[6rem_1fr_1fr_auto]"
-                      >
-                        <label className="intake-row">
-                          <span className={labelClass}>#</span>
-                          <input
-                            className={inputClass}
-                            disabled={!editable}
-                            value={ad.number ?? ""}
-                            placeholder="2"
-                            onChange={(e) => {
-                              const next = addenda.map((row, i) =>
-                                i === adIndex
-                                  ? {
-                                      ...row,
-                                      number: e.target.value || null,
-                                    }
-                                  : row
-                              );
-                              patchInvitation(index, { addenda: next });
-                            }}
-                          />
-                        </label>
-                        <div className="intake-row">
-                          <span className={labelClass}>Received</span>
-                          <DatePicker
-                            ariaLabel="Received"
-                            className={inputClass}
-                            disabled={!editable}
-                            value={ad.receivedAt?.slice(0, 10) ?? ""}
-                            onChange={(v) => {
-                              const next = addenda.map((row, i) =>
-                                i === adIndex
-                                  ? {
-                                      ...row,
-                                      receivedAt: v || null,
-                                    }
-                                  : row
-                              );
-                              patchInvitation(index, { addenda: next });
-                            }}
-                          />
-                        </div>
-                        <label className="intake-row">
-                          <span className={labelClass}>Notes</span>
-                          <input
-                            className={inputClass}
-                            disabled={!editable}
-                            value={ad.notes ?? ""}
-                            onChange={(e) => {
-                              const next = addenda.map((row, i) =>
-                                i === adIndex
-                                  ? {
-                                      ...row,
-                                      notes: e.target.value || null,
-                                    }
-                                  : row
-                              );
-                              patchInvitation(index, { addenda: next });
-                            }}
-                          />
-                        </label>
-                        {editable ? (
-                          <button
-                            type="button"
-                            aria-label="Remove addendum"
-                            title="Remove addendum"
-                            className={`${removeBtnClass} ml-auto self-end`}
-                            onClick={() => {
-                              void (async () => {
-                                const ok = await confirmDialog({
-                                  title: "Remove addendum?",
-                                  message:
-                                    "Remove this addendum from the invitation?",
-                                  confirmLabel: "Remove",
-                                  variant: "danger",
-                                });
-                                if (!ok) return;
-                                patchInvitation(index, {
-                                  addenda: addenda.filter(
-                                    (_, i) => i !== adIndex
-                                  ),
-                                });
-                              })();
-                            }}
-                          >
-                            <TrashIcon />
-                          </button>
-                        ) : null}
-                      </div>
-                    ))
-                  )}
-                  </div>
-                </div>
-
-                {editable && invitations.length > 1 ? (
-                  <button
-                    type="button"
-                    aria-label="Remove invitation"
-                    title="Remove invitation"
-                    className={`${removeBtnClass} col-span-full justify-self-end`}
-                    onClick={() => {
-                      void (async () => {
-                        const ok = await confirmDialog({
-                          title: "Remove invitation?",
-                          message: "Remove this invitation row?",
-                          confirmLabel: "Remove",
-                          variant: "danger",
-                        });
-                        if (!ok) return;
-                        setInvitations(
-                          invitations.filter((_, i) => i !== index)
-                        );
-                      })();
-                    }}
-                  >
-                    <TrashIcon />
-                  </button>
-                ) : null}
-              </div>
-            );
-          })
-        )}
-        </div>
-      </section>
-
-      <div className="flex h-full max-h-full min-h-0 min-w-0 flex-col gap-6 overflow-hidden">
-      <section className="intake-section min-w-0 shrink-0">
-        <div className={sectionHead}>
-          Who else is bidding?
-        </div>
-        <div className={`${sectionBody} flex flex-col gap-2`}>
-        {needsWhoElseResearch ? (
-          <p className="rounded border border-amber-500/30 bg-amber-50/60 px-2.5 py-1.5 text-[11px] text-[#4b5563]">
-            {bid.workflow?.completeBlockedReason ||
-              "Researched is required to hand off when there are fewer than two invitations."}
-          </p>
-        ) : null}
-        <label className="flex items-center gap-2 text-[12.5px] text-[#374151]">
-          <input
-            type="checkbox"
-            disabled={!editable}
-            checked={whoElse.researched === true}
-            onChange={(e) =>
-              setField("whoElseBidding", {
-                ...whoElse,
-                researched: e.target.checked,
-              })
-            }
-          />
-          <span className="font-medium">
-            Researched
-            {needsWhoElseResearch ? " (required for handoff)" : ""}
-          </span>
-        </label>
-        <label className="intake-row">
-          <span className={labelClass}>Notes</span>
-          <textarea
-            className={`${inputClass} min-h-[4.5rem] resize-y`}
-            disabled={!editable}
-            value={whoElse.notes ?? ""}
-            placeholder="e.g. Called Clark — two other mechanicals"
-            onChange={(e) =>
-              setField("whoElseBidding", {
-                ...whoElse,
-                notes: e.target.value || null,
-              })
-            }
-          />
-        </label>
-        </div>
-      </section>
-
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {renderPartySection("mechanicalEngineer", "Mechanical", "mechanical")}
+        </section>
       </div>
-      </div>
+
+      <div className="intake-trio-row grid grid-cols-1 items-start gap-4 sm:gap-5 xl:grid-cols-2 xl:items-stretch xl:gap-6">
+        {renderContractorPanel("gc", "General contractors")}
+        {renderContractorPanel("mech", "Mechanical contractors")}
       </div>
 
       <div className="grid grid-cols-1 items-start gap-4 sm:gap-5 xl:grid-cols-2 xl:gap-6">
@@ -1951,7 +2240,7 @@ export function BidIntakeStage() {
       <section className="intake-section min-w-0">
         <div className="intake-section-head-bar">
           <div>
-            <h3>Contract chain</h3>
+            <h3>Bidding clients</h3>
           </div>
           <span className="intake-head-count">{tiers.length}</span>
           {editable ? (
@@ -1990,13 +2279,14 @@ export function BidIntakeStage() {
                         <select
                           className={selectClass}
                           disabled={!editable}
-                          value={t.role ?? ""}
+                          value={t.role || INVITE_TIER_ROLE}
                           onChange={(e) =>
-                            patchTier(index, { role: e.target.value || null })
+                            patchTier(index, {
+                              role: e.target.value || INVITE_TIER_ROLE,
+                            })
                           }
                         >
                           <SortedOptions>
-                            <option value="">—</option>
                             {tierRoles.map((o) => (
                               <option key={o.value} value={o.value}>
                                 {o.label}
@@ -2112,6 +2402,7 @@ export function BidIntakeStage() {
       <BidAttachmentsSection
         title="Plans, specs, and invitation"
         labels={["drawings", "specifications", "invitation"]}
+        defaultDrawingCategory={draft.drawingCategory}
         attachments={(bid.attachments ?? []).filter(
           (a) =>
             a.category !== "takeoff_markup" &&

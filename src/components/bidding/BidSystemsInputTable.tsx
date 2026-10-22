@@ -1,7 +1,11 @@
 "use client";
 
 import { BidNumberInput } from "@/components/bidding/BidFormField";
-import { BID_SYSTEM_KEYS, BID_SYSTEM_LABELS } from "@/lib/bidding/constants";
+import {
+  BID_SYSTEM_KEYS,
+  BID_SYSTEM_LABELS,
+  normalizeSystems,
+} from "@/lib/bidding/constants";
 import { formatMoneyPrecise } from "@/lib/bidding/format";
 import type { BidSystemRow } from "@/lib/bidding/types";
 import type { SystemComputed } from "@/lib/bidding/engine/types";
@@ -17,10 +21,11 @@ export function BidSystemsInputTable({
   isEditable: boolean;
   onUpdateRow: (key: BidSystemRow["key"], patch: Partial<BidSystemRow>) => void;
 }) {
+  const rows = normalizeSystems(systems);
   const computedByKey = new Map(systemsComputed.map((r) => [r.key, r]));
 
   return (
-    <section className="intake-section min-w-0">
+    <section className="intake-section min-w-0 shrink-0">
       <div className="intake-section-head">Systems — inputs</div>
       <div className="intake-section-body">
         <div className="overflow-x-auto rounded-xl border border-[#e8ecf1] shadow-sm table-scroll">
@@ -65,8 +70,8 @@ export function BidSystemsInputTable({
               </tr>
             </thead>
             <tbody>
-              {BID_SYSTEM_KEYS.map((key) => {
-                const row = systems.find((s) => s.key === key)!;
+              {rows.map((row) => {
+                const key = row.key;
                 const active = Boolean(row.used);
                 const calc = computedByKey.get(key);
                 return (
