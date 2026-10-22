@@ -61,7 +61,14 @@ export interface ClearstoryProjectRowAllColumns {
 
 export type ClearstoryProjectsResponse =
   | { projects: ClearstoryProjectRowAllColumns[] }
-  | { page: number; pageSize: number; total: number; projects: ClearstoryProjectRowAllColumns[] };
+  | {
+      page: number;
+      pageSize: number;
+      total: number;
+      projects: ClearstoryProjectRowAllColumns[];
+      /** Set when the server applied sortBy / filters (an older backend ignores them). */
+      sortedAndFilteredOnServer?: boolean;
+    };
 
 export interface ClearstoryProjectDetail {
   id: string;
@@ -142,19 +149,40 @@ export interface ClearstoryStatusResponse {
   ok?: boolean;
 }
 
+/** One Filters-sidebar group for the projects list: conditions AND together, groups OR together. */
+export type ClearstoryProjectFilterGroup = {
+  conditions: { field: string; op: string; value?: string; values?: string[]; start?: string; end?: string }[];
+};
+
 export async function getClearstoryProjects(params?: {
   search?: string;
   page?: number;
   pageSize?: number;
   allColumns?: boolean;
   full?: boolean;
+  /** Column sort, done on the server across every matching project. */
+  sortBy?: string | null;
+  sortDir?: "asc" | "desc";
+  /** Filters sidebar groups (OR'd groups of AND'd conditions), applied on the server. */
+  filters?: ClearstoryProjectFilterGroup[];
 }): Promise<ClearstoryProjectsResponse> {
+  const groups = (params?.filters ?? []).filter((g) => g.conditions.length > 0);
   return get<ClearstoryProjectsResponse>("clearstory/projects", {
     search: params?.search?.trim() || undefined,
     page: params?.page,
     pageSize: params?.pageSize,
     allColumns: params?.allColumns ? "true" : undefined,
     full: params?.full ? "true" : undefined,
+    sortBy: params?.sortBy || undefined,
+    sortDir: params?.sortBy ? params.sortDir : undefined,
+    // Only what the matching needs (no ids), to keep the URL short.
+    filters: groups.length
+      ? JSON.stringify(
+          groups.map((g) => ({
+            conditions: g.conditions.map(({ field, op, value, values, start, end }) => ({ field, op, value, values, start, end })),
+          }))
+        )
+      : undefined,
   });
 }
 
@@ -270,6 +298,10 @@ export interface ClearstoryTablePageResponse {
   rows: ClearstoryTableRow[];
   /** Tags only: counts per status for the current project/search filter (status filter not applied). */
   statusCounts?: Record<string, number>;
+  /** CORs: true when the server applied `sort` (an older backend ignores it). */
+  sortedOnServer?: boolean;
+  /** CORs: column keys the server can sort by. */
+  sortableKeys?: string[];
 }
 
 export interface ClearstoryCompanyTableResponse {

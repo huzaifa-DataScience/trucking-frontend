@@ -10,8 +10,22 @@ import { RestrictedState } from "@/components/ui/RestrictedState";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { ProductionHubSkeleton } from "@/components/bidding/MikeModuleSkeletons";
 import type { ProductionReportListRow } from "@/lib/bidding/production-types";
+import { SortHeader } from "@/hooks/useTableSort";
+import { sortRows, type SortDir, type SortValue } from "@/lib/sort";
+import { ListPager } from "@/components/bidding/ListPager";
+import { LoadingBar } from "@/components/ui/LoadingBar";
 
-import { useTableSort } from "@/hooks/useTableSort";
+/** Bids per page (server-side). */
+const PRODUCTION_PAGE_SIZE = 50;
+
+const PRODUCTION_SORT: Record<string, (r: ProductionReportListRow) => SortValue> = {
+  estimate: (r) => r.estimateNumber ?? r.bidId,
+  bidName: (r) => r.bidName,
+  job: (r) => r.jobNumber,
+  files: (r) => r.fileCount,
+  specs: (r) => r.specLineCount,
+  updated: (r) => r.latestUploadAt,
+};
 function fmtWhen(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
@@ -33,35 +47,53 @@ export function ProductionHubPage() {
   const { canRead } = useBiddingAccess();
   const router = useRouter();
   const [rows, setRows] = useState<ProductionReportListRow[]>([]);
-  const hubSort = useTableSort(rows, {
-    estimate: (r) => r.estimateNumber ?? r.bidId,
-    bidName: (r) => r.bidName,
-    job: (r) => r.jobNumber,
-    files: (r) => r.fileCount,
-    specs: (r) => r.specLineCount,
-    updated: (r) => r.latestUploadAt,
-  });
+  const [paging, setPaging] = useState<{ total: number; page: number; pageSize: number } | null>(null);
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Sorting and paging happen on the server; a search or sort change goes back to page 1.
+  const [sort, setSort] = useState<{ key: string | null; dir: SortDir }>({ key: null, dir: "asc" });
+  const toggleSort = (key: string) =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+  const filterKey = `${search}|${sort.key}|${sort.dir}`;
+  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ key: filterKey, page: next });
+  const header = (key: string, label: string) => (
+    <SortHeader label={label} active={sort.key === key} dir={sort.dir} onClick={() => toggleSort(key)} />
+  );
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await productionApi.listProductionReports({
+      const res = await productionApi.listProductionReportsPage({
         q: search || undefined,
-        limit: 200,
+        page,
+        pageSize: PRODUCTION_PAGE_SIZE,
+        sortBy: sort.key,
+        sortDir: sort.dir,
       });
-      setRows(res.rows ?? []);
+      if (res.total != null) {
+        setRows(res.rows ?? []);
+        setPaging({ total: res.total, page: res.page ?? page, pageSize: res.pageSize ?? PRODUCTION_PAGE_SIZE });
+      } else {
+        // Older backend: the capped list came back; sort and page it here.
+        const all = sort.key && PRODUCTION_SORT[sort.key] ? sortRows(res.rows ?? [], PRODUCTION_SORT[sort.key], sort.dir) : res.rows ?? [];
+        const p = Math.min(Math.max(1, Math.ceil(all.length / PRODUCTION_PAGE_SIZE)), page);
+        setRows(all.slice((p - 1) * PRODUCTION_PAGE_SIZE, p * PRODUCTION_PAGE_SIZE));
+        setPaging({ total: all.length, page: p, pageSize: PRODUCTION_PAGE_SIZE });
+      }
     } catch (e) {
       setError(getApiErrorMessage(e, "Failed to load production list"));
       setRows([]);
+      setPaging(null);
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, page, sort]);
 
   useEffect(() => {
     void load();
@@ -116,9 +148,9 @@ export function ProductionHubPage() {
         </p>
       ) : null}
 
-      {loading ? (
+      {loading && !paging ? (
         <ProductionHubSkeleton />
-      ) : rows.length === 0 ? (
+      ) : rows.length === 0 && !loading ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-ink/15 bg-canvas/40 px-6 py-20 text-center">
           <h3 className="text-base font-semibold text-ink">
             Upload Mike + generate Specs on a bid first
@@ -136,22 +168,24 @@ export function ProductionHubPage() {
           </Link>
         </div>
       ) : (
-        <div className="table-scroll rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+        <>
+        <div className="table-scroll relative rounded-2xl border border-ink/[0.08] bg-surface shadow-[0_1px_3px_rgba(1,1,1,0.04)]">
+          {loading ? <LoadingBar label="Loading production list" /> : null}
           <table className="w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-ink/[0.08] text-[10px] uppercase tracking-wide text-ink/40">
-                <th className="px-4 py-3 font-semibold">{hubSort.header("estimate", "Estimate #")}</th>
-                <th className="px-4 py-3 font-semibold">{hubSort.header("bidName", "Bid name")}</th>
-                <th className="px-4 py-3 font-semibold">{hubSort.header("job", "Job #")}</th>
+                <th className="px-4 py-3 font-semibold">{header("estimate", "Estimate #")}</th>
+                <th className="px-4 py-3 font-semibold">{header("bidName", "Bid name")}</th>
+                <th className="px-4 py-3 font-semibold">{header("job", "Job #")}</th>
                 <th className="min-w-[12rem] px-4 py-3 font-semibold">
-                  {hubSort.header("files", "Files (combined)")}
+                  {header("files", "Files (combined)")}
                 </th>
-                <th className="px-4 py-3 font-semibold">{hubSort.header("specs", "Specs ready?")}</th>
-                <th className="px-4 py-3 font-semibold">{hubSort.header("updated", "Updated")}</th>
+                <th className="px-4 py-3 font-semibold">{header("specs", "Specs ready?")}</th>
+                <th className="px-4 py-3 font-semibold">{header("updated", "Updated")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/[0.05]">
-              {hubSort.sorted.map((row) => {
+              {rows.map((row) => {
                 const canOpen =
                   Boolean(row.fileCount > 0) && row.specLineCount > 0;
                 return (
@@ -204,6 +238,10 @@ export function ProductionHubPage() {
             </tbody>
           </table>
         </div>
+        {paging ? (
+          <ListPager page={paging.page} pageSize={paging.pageSize} total={paging.total} noun="bid" busy={loading} onPage={setPage} />
+        ) : null}
+        </>
       )}
     </div>
   );
