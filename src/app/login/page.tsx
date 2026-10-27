@@ -9,6 +9,7 @@ import { homePathForRole } from "@/lib/auth/roles";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { AuthCard, AuthError, AuthField, AuthSubmit } from "@/components/auth/AuthForm";
+import { markLocationConfirmed, useLocationFields } from "@/components/auth/useLocationFields";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +18,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { fields, resolve, locating } = useLocationFields(
+    !authLoading && !user,
+    "Your location and floor are saved when you sign in."
+  );
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -29,8 +34,10 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const data = await login({ email, password });
+      const location = await resolve();
+      const data = await login({ email, password, location });
       loginSuccess(data);
+      markLocationConfirmed(data.user.id);
       // Login only succeeds for active users; pending users get 401 with backend message.
       router.push(homePathForRole(data.user.role));
       router.refresh();
@@ -91,7 +98,8 @@ export default function LoginPage() {
               Forgot password?
             </Link>
           </div>
-          <AuthSubmit loading={loading} label="Sign in" loadingLabel="Signing in…" />
+          {fields}
+          <AuthSubmit loading={loading} label="Sign in" loadingLabel={locating ? "Finding your location…" : "Signing in…"} />
         </form>
         <p className="mt-7 text-center text-[15px] text-[#6b7280]">
           New here?{" "}

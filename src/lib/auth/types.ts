@@ -39,9 +39,21 @@ export interface LoginResponse {
   message?: string;
 }
 
+/** Browser location at sign-in plus the floor the person picked. */
+export interface SignInLocation {
+  latitude: number;
+  longitude: number;
+  /** Accuracy radius in metres. */
+  accuracy: number;
+  /** Office the person confirmed; null = not at an office. */
+  officeId: number | null;
+  floor: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
+  location: SignInLocation;
 }
 
 export interface RegisterRequest {
