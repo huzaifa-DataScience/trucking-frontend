@@ -29,6 +29,8 @@ export function clearAuth(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  // Next sign-in asks for location again (see useLocationFields).
+  localStorage.removeItem("construction-logistics-location-confirmed");
   document.cookie = `${SESSION_COOKIE_NAME}=; path=/; max-age=0`;
 }
 
