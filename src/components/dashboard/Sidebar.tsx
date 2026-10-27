@@ -418,6 +418,24 @@ const adminNavItems: SidebarNavItem[] = [
     Icon: NavIconUsers,
     permission: PERMISSIONS.adminUsers,
   },
+  {
+    href: "/admin/sign-in-locations",
+    label: "Sign-in locations",
+    Icon: NavIconShield,
+    permission: PERMISSIONS.adminUsers,
+  },
+  {
+    href: "/admin/offices",
+    label: "Offices",
+    Icon: NavIconLayers,
+    permission: PERMISSIONS.adminUsers,
+  },
+  {
+    href: "/admin/tracking",
+    label: "Tracking",
+    Icon: NavIconClock,
+    permission: PERMISSIONS.adminUsers,
+  },
   { href: "/admin/settings", label: "Settings", Icon: NavIconCog },
 ];
 

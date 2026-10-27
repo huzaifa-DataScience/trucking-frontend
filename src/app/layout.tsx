@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import { LocationTracker } from "@/components/auth/LocationTracker";
+import { LocationGate } from "@/components/auth/LocationGate";
 import "./globals.css";
 
 const roboto = Roboto({
@@ -32,6 +34,8 @@ export default function RootLayout({
         className={`${roboto.variable} ${robotoMono.variable} ${roboto.className} min-h-screen bg-surface text-ink antialiased`}
       >
         <AuthProvider>
+          <LocationTracker />
+          <LocationGate />
           <ToastProvider>{children}</ToastProvider>
         </AuthProvider>
       </body>

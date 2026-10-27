@@ -197,3 +197,66 @@ export async function patchRbacRolePermissions(
     { permissions }
   );
 }
+
+/** One sign-in: who, where (browser location), how accurate, which floor. */
+export interface SignInLocationRow {
+  id: number;
+  userId: number;
+  name: string;
+  email: string;
+  /** Office the person confirmed; null = not at an office. */
+  officeName: string | null;
+  /** The office's exact spot, when the person confirmed an office. */
+  officeLatitude: number | null;
+  officeLongitude: number | null;
+  /** Readable address looked up from the coordinates; null until found. */
+  address: string | null;
+  latitude: number;
+  longitude: number;
+  accuracyM: number;
+  floor: string;
+  signedInAt: string;
+}
+
+/** GET /auth/sign-in-locations: newest first (admin only). */
+export function getSignInLocations(limit = 500): Promise<SignInLocationRow[]> {
+  return get<SignInLocationRow[]>("/auth/sign-in-locations", { limit });
+}
+
+/** A known office: name and exact spot. */
+export interface OfficeRow {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
+export function getOffices(): Promise<OfficeRow[]> {
+  return get<OfficeRow[]>("/admin/offices");
+}
+
+export function createOffice(body: { name: string; latitude: number; longitude: number }): Promise<OfficeRow> {
+  return post<OfficeRow>("/admin/offices", body);
+}
+
+export function deleteOffice(id: number): Promise<void> {
+  return del<void>(`/admin/offices/${id}`);
+}
+
+/** One person's tracked day: stretches of time, Live/Stopped, and the trail. */
+export interface TrackedPerson {
+  userId: number;
+  name: string;
+  email: string;
+  stretches: Array<{ start: string; end: string; minutes: number }>;
+  trackedMinutes: number;
+  live: boolean;
+  lastPingAt: string | null;
+  last: { latitude: number; longitude: number; accuracyM: number } | null;
+  trail: Array<{ latitude: number; longitude: number; accuracyM: number; at: string }>;
+}
+
+/** GET /admin/tracking: from/to are the start and end of the viewer's local day. */
+export function getTracking(from: string, to: string): Promise<TrackedPerson[]> {
+  return get<TrackedPerson[]>("/admin/tracking", { from, to });
+}
