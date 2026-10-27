@@ -101,6 +101,28 @@ export async function login(body: LoginRequest): Promise<LoginResponse> {
   return { access_token: data.access_token, user };
 }
 
+/** An office with its distance from where the browser thinks we are. */
+export interface NearbyOffice {
+  id: number;
+  name: string;
+  distanceM: number;
+}
+
+/** Sign-in page (no token yet): offices nearest first, plus the one to pre-select. */
+export async function nearbyOffices(at: {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+}): Promise<{ offices: NearbyOffice[]; suggestedId: number | null; address: string | null }> {
+  const res = await fetch(`${BASE()}/auth/offices/nearby`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(at),
+  });
+  if (!res.ok) throw new Error("Couldn’t load offices");
+  return res.json();
+}
+
 /** Shared error text from a Nest error body (message may be a string or a list). */
 function errorMessage(data: { message?: string | string[] }, fallback: string): string {
   const msg = Array.isArray(data.message) ? data.message.join(" ") : data.message;
